@@ -1,3 +1,14 @@
-
-/fuet_magico
 /.vscode
+/venv
+.env
+*.pyc
+__pycache__/
+db.sqlite3
+/media
+/staticfiles
+*.log
+.DS_Store
+
+# Temp folder - track directory but ignore contents
+/temp/*
+!/temp/.gitkeep

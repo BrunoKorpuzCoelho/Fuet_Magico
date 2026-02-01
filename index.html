@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="pt-PT" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuet Mágico by Daisy - Bolos Artesanais Personalizados</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .hero-bg {
+            background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), 
+                              url('https://v0-fuet-magico.vercel.app/elegant-white-wedding-cake-with-delicate-sugar-flo.jpg');
+            background-size: cover;
+            background-position: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur">
+        <div class="container mx-auto px-4">
+            <div class="flex h-16 items-center justify-between">
+                <a href="#inicio" class="flex items-center gap-2">
+                    <span class="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Fuet Mágico</span>
+                    <span class="text-sm text-gray-600">by Daisy</span>
+                </a>
+                <nav class="hidden md:flex items-center gap-6">
+                    <a href="#inicio" class="text-sm font-medium hover:text-purple-600 transition-colors">Início</a>
+                    <a href="#sobre" class="text-sm font-medium hover:text-purple-600 transition-colors">Sobre Nós</a>
+                    <a href="#portfolio" class="text-sm font-medium hover:text-purple-600 transition-colors">Portfólio</a>
+                    <a href="#precos" class="text-sm font-medium hover:text-purple-600 transition-colors">Preços</a>
+                    <a href="#contacto" class="text-sm font-medium hover:text-purple-600 transition-colors">Contacto</a>
+                </nav>
+                <a href="#contacto" class="hidden md:inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity">Fazer Encomenda</a>
+                <button class="md:hidden" id="menu-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="hidden md:hidden pb-4" id="mobile-menu">
+                <nav class="flex flex-col gap-2">
+                    <a href="#inicio" class="py-2 text-sm font-medium">Início</a>
+                    <a href="#sobre" class="py-2 text-sm font-medium">Sobre Nós</a>
+                    <a href="#portfolio" class="py-2 text-sm font-medium">Portfólio</a>
+                    <a href="#precos" class="py-2 text-sm font-medium">Preços</a>
+                    <a href="#contacto" class="py-2 text-sm font-medium">Contacto</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section id="inicio" class="hero-bg min-h-screen flex items-center justify-center text-white">
+        <div class="container mx-auto px-4 text-center">
+            <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">Transforme Momentos Especiais<br>em Memórias Deliciosas</h1>
+            <p class="text-lg md:text-xl mb-8 max-w-2xl mx-auto">Bolos artesanais personalizados, feitos com amor e dedicação para o seu evento único</p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="#portfolio" class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-3 font-medium text-white hover:opacity-90 transition-opacity">Ver Portfólio</a>
+                <a href="#contacto" class="inline-flex items-center justify-center rounded-full bg-white px-8 py-3 font-medium text-purple-600 hover:bg-gray-100 transition-colors">Fazer Encomenda</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sobre -->
+    <section id="sobre" class="py-20 bg-gray-50">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <p class="text-purple-600 font-semibold mb-2 uppercase tracking-wide text-sm">Sobre Nós</p>
+                <h2 class="text-4xl md:text-5xl font-bold">A Magia por Trás de Cada Bolo</h2>
+            </div>
+            <div class="grid md:grid-cols-2 gap-12 items-center max-w-6xl mx-auto">
+                <img src="https://v0-fuet-magico.vercel.app/professional-baker-woman-decorating-elegant-cake-i.jpg" alt="Daisy Fortes" class="rounded-2xl shadow-xl w-full">
+                <div>
+                    <p class="text-lg text-gray-700 mb-4">Olá! Sou a <strong>Daisy Fortes</strong>, e transformar sonhos em bolos é a minha paixão.</p>
+                    <p class="text-gray-600 mb-4">Cada bolo que crio é uma obra de arte personalizada, pensada ao detalhe para celebrar os seus momentos mais especiais. Desde festas de aniversário infantis repletas de cor e diversão, até celebrações elegantes de marcos importantes da vida.</p>
+                    <p class="text-gray-600 mb-6">Com anos de experiência em confeitaria artesanal, combino técnicas tradicionais com criatividade moderna para entregar não apenas um bolo, mas uma experiência memorável.</p>
+                    <p class="text-lg font-semibold text-purple-600">O seu momento especial merece um bolo igualmente especial. Vamos criar magia juntos?</p>
+                    <div class="grid grid-cols-3 gap-6 mt-8">
+                        <div class="text-center"><div class="text-3xl font-bold text-purple-600">305+</div><div class="text-sm text-gray-600">Bolos Criados</div></div>
+                        <div class="text-center"><div class="text-3xl font-bold text-purple-600">6.380+</div><div class="text-sm text-gray-600">Clientes Felizes</div></div>
+                        <div class="text-center"><div class="text-3xl font-bold text-purple-600">100%</div><div class="text-sm text-gray-600">Feito à Mão</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Portfolio -->
+    <section id="portfolio" class="py-20">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">O Nosso Portfólio</h2>
+                <p class="text-xl text-gray-600">Cada bolo conta uma história única</p>
+            </div>
+            <div class="flex flex-wrap justify-center gap-3 mb-12">
+                <button class="filter-btn px-6 py-2 rounded-full bg-purple-600 text-white text-sm font-medium" data-filter="all">Todos</button>
+                <button class="filter-btn px-6 py-2 rounded-full bg-gray-200 text-gray-700 text-sm font-medium hover:bg-purple-600 hover:text-white transition" data-filter="infantis">Bolos Infantis</button>
+                <button class="filter-btn px-6 py-2 rounded-full bg-gray-200 text-gray-700 text-sm font-medium hover:bg-purple-600 hover:text-white transition" data-filter="adultos">Bolos Adultos</button>
+                <button class="filter-btn px-6 py-2 rounded-full bg-gray-200 text-gray-700 text-sm font-medium hover:bg-purple-600 hover:text-white transition" data-filter="casamento">Bolos Casamento</button>
+                <button class="filter-btn px-6 py-2 rounded-full bg-gray-200 text-gray-700 text-sm font-medium hover:bg-purple-600 hover:text-white transition" data-filter="minimalistas">Minimalistas</button>
+                <button class="filter-btn px-6 py-2 rounded-full bg-gray-200 text-gray-700 text-sm font-medium hover:bg-purple-600 hover:text-white transition" data-filter="tematicos">Temáticos</button>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="infantis">
+                    <img src="https://v0-fuet-magico.vercel.app/images/bolo-stitch.jpg" alt="Bolo Stitch" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
+                        <div><h3 class="text-white font-bold">Bolo Stitch</h3><p class="text-gray-300 text-sm">Bolos Infantis</p></div>
+                    </div>
+                </div>
+                <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="infantis">
+                    <img src="https://v0-fuet-magico.vercel.app/images/bolo-vampirina.jpg" alt="Bolo Vampirina" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
+                        <div><h3 class="text-white font-bold">Bolo Vampirina</h3><p class="text-gray-300 text-sm">Bolos Infantis</p></div>
+                    </div>
+                </div>
+                <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="adultos">
+                    <img src="https://v0-fuet-magico.vercel.app/images/celebracao-60-anos.jpg" alt="Celebração 60 Anos" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
+                        <div><h3 class="text-white font-bold">Celebração 60 Anos</h3><p class="text-gray-300 text-sm">Bolos Adultos</p></div>
+                    </div>
+                </div>
+                <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="minimalistas">
+                    <img src="https://v0-fuet-magico.vercel.app/images/elegancia-branca.jpg" alt="Elegância Branca" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
+                        <div><h3 class="text-white font-bold">Elegância Branca</h3><p class="text-gray-300 text-sm">Minimalistas</p></div>
+                    </div>
+                </div>
+                <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="casamento">
+                    <img src="https://v0-fuet-magico.vercel.app/images/romance-eterno.jpg" alt="Romance Eterno" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
+                        <div><h3 class="text-white font-bold">Romance Eterno</h3><p class="text-gray-300 text-sm">Bolos Casamento</p></div>
+                    </div>
+                </div>
+                <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="tematicos">
+                    <img src="https://v0-fuet-magico.vercel.app/images/super-herois.jpg" alt="Super-Heróis" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
+                        <div><h3 class="text-white font-bold">Super-Heróis</h3><p class="text-gray-300 text-sm">Temáticos</p></div>
+                    </div>
+                </div>
+                <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="adultos">
+                    <img src="https://v0-fuet-magico.vercel.app/images/aniversario-sofisticado.jpg" alt="Aniversário Sofisticado" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
+                        <div><h3 class="text-white font-bold">Aniversário Sofisticado</h3><p class="text-gray-300 text-sm">Bolos Adultos</p></div>
+                    </div>
+                </div>
+                <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="minimalistas">
+                    <img src="https://v0-fuet-magico.vercel.app/images/naked-cake.jpg" alt="Naked Cake" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
+                        <div><h3 class="text-white font-bold">Naked Cake</h3><p class="text-gray-300 text-sm">Minimalistas</p></div>
+                    </div>
+                </div>
+                <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="casamento">
+                    <img src="https://v0-fuet-magico.vercel.app/images/minimalista-dourado.jpg" alt="Minimalista Dourado" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
+                        <div><h3 class="text-white font-bold">Minimalista Dourado</h3><p class="text-gray-300 text-sm">Bolos Casamento</p></div>
+                    </div>
+                </div>
+                <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="tematicos">
+                    <img src="https://v0-fuet-magico.vercel.app/images/castelo-princesa.jpg" alt="Castelo Princesa" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
+                        <div><h3 class="text-white font-bold">Castelo Princesa</h3><p class="text-gray-300 text-sm">Temáticos</p></div>
+                    </div>
+                </div>
+                <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="infantis">
+                    <img src="https://v0-fuet-magico.vercel.app/images/unicornio-magico.jpg" alt="Unicórnio Mágico" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
+                        <div><h3 class="text-white font-bold">Unicórnio Mágico</h3><p class="text-gray-300 text-sm">Bolos Infantis</p></div>
+                    </div>
+                </div>
+                <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="adultos">
+                    <img src="https://v0-fuet-magico.vercel.app/images/sofisticacao-negra.jpg" alt="Sofisticação Negra" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
+                        <div><h3 class="text-white font-bold">Sofisticação Negra</h3><p class="text-gray-300 text-sm">Bolos Adultos</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Serviços -->
+    <section class="py-20 bg-gray-50">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl md:text-5xl font-bold">Os Nossos Serviços</h2>
+            </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition">
+                    <div class="text-5xl mb-4">🎂</div>
+                    <h3 class="text-xl font-bold mb-3">Bolos Temáticos Infantis</h3>
+                    <p class="text-gray-600 mb-3">Personagens favoritos, cores vibrantes e muita diversão para tornar o aniversário inesquecível</p>
+                    <p class="text-sm text-purple-600 font-semibold">Stitch, Vampirina, Super-Heróis, Princesas</p>
+                </div>
+                <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition">
+                    <div class="text-5xl mb-4">✨</div>
+                    <h3 class="text-xl font-bold mb-3">Celebrações Elegantes</h3>
+                    <p class="text-gray-600 mb-3">Designs sofisticados para aniversários especiais, bodas e celebrações de marcos importantes</p>
+                    <p class="text-sm text-purple-600 font-semibold">18 anos, 50/60 anos, Bodas, Formaturas</p>
+                </div>
+                <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition">
+                    <div class="text-5xl mb-4">💍</div>
+                    <h3 class="text-xl font-bold mb-3">Casamentos & Eventos</h3>
+                    <p class="text-gray-600 mb-3">Bolos de casamento clássicos e modernos, naked cakes, bolos de noivado</p>
+                    <p class="text-sm text-purple-600 font-semibold">Naked cakes, Multi-tier, Minimalistas</p>
+                </div>
+                <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition">
+                    <div class="text-5xl mb-4">🏢</div>
+                    <h3 class="text-xl font-bold mb-3">Bolos Corporativos</h3>
+                    <p class="text-gray-600 mb-3">Eventos empresariais, inaugurações, branding personalizado em pasta de açúcar</p>
+                    <p class="text-sm text-purple-600 font-semibold">Eventos, Inaugurações, Branding</p>
+                </div>
+                <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition">
+                    <div class="text-5xl mb-4">🤍</div>
+                    <h3 class="text-xl font-bold mb-3">Minimalistas & Modernos</h3>
+                    <p class="text-gray-600 mb-3">Linhas limpas, elegância atemporal, decorações delicadas e sofisticadas</p>
+                    <p class="text-sm text-purple-600 font-semibold">Clean design, Elegância, Sutileza</p>
+                </div>
+                <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition">
+                    <div class="text-5xl mb-4">🎨</div>
+                    <h3 class="text-xl font-bold mb-3">Encomendas Personalizadas</h3>
+                    <p class="text-gray-600 mb-3">Tem uma ideia única? Trabalhamos consigo para criar o bolo dos seus sonhos</p>
+                    <p class="text-sm text-purple-600 font-semibold">Criatividade, Personalização, Sonhos</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Preços -->
+    <section id="precos" class="py-20">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">Investimento</h2>
+                <p class="text-xl text-gray-600">Preços transparentes para o seu orçamento</p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
+                    <div class="text-center mb-6">
+                        <p class="text-sm text-gray-600 font-semibold mb-2">Pacote Básico</p>
+                        <h3 class="text-2xl font-bold mb-2">Doçura Simples</h3>
+                        <div class="mb-1"><span class="text-4xl font-bold text-purple-600">€45</span></div>
+                        <p class="text-sm text-gray-500">A partir de</p>
+                    </div>
+                    <ul class="space-y-3 mb-8 text-sm">
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Bolo redondo 15cm (6-8 pessoas)</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>1 sabor à escolha</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Cobertura buttercream</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Decoração simples</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Topper personalizado básico</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Entrega na área local</span></li>
+                    </ul>
+                    <a href="#contacto" class="block text-center bg-gray-200 text-gray-700 px-6 py-3 rounded-full font-semibold hover:bg-gray-300 transition">Escolher Pacote</a>
+                </div>
+                <div class="bg-white p-8 rounded-2xl shadow-2xl border-4 border-purple-600 relative transform scale-105">
+                    <div class="absolute -top-4 left-1/2 -translate-x-1/2"><span class="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-6 py-1.5 rounded-full text-xs font-bold uppercase">Mais Popular</span></div>
+                    <div class="text-center mb-6 mt-2">
+                        <p class="text-sm text-gray-600 font-semibold mb-2">Pacote Standard</p>
+                        <h3 class="text-2xl font-bold mb-2">Momento Especial</h3>
+                        <div class="mb-1"><span class="text-4xl font-bold text-purple-600">€85</span></div>
+                        <p class="text-sm text-gray-500">A partir de</p>
+                    </div>
+                    <ul class="space-y-3 mb-8 text-sm">
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Bolo redondo 20cm (12-15 pessoas)</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>2 sabores à escolha</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Cobertura premium (fondant/buttercream)</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Decoração personalizada média</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Topper personalizado + flores açúcar</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Cores customizadas</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Entrega premium</span></li>
+                    </ul>
+                    <a href="#contacto" class="block text-center bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 transition">Escolher Pacote</a>
+                </div>
+                <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
+                    <div class="text-center mb-6">
+                        <p class="text-sm text-gray-600 font-semibold mb-2">Pacote Premium</p>
+                        <h3 class="text-2xl font-bold mb-2">Sonho Realizado</h3>
+                        <div class="mb-1"><span class="text-4xl font-bold text-purple-600">€150</span></div>
+                        <p class="text-sm text-gray-500">A partir de</p>
+                    </div>
+                    <ul class="space-y-3 mb-8 text-sm">
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Multi-tier ou tamanho XL (25+ pessoas)</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>3+ sabores à escolha</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Decoração complexa e artística</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Flores naturais/pasta açúcar premium</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Toppers sculpted personalizados</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Texturas douradas/prateadas</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Sessão de design detalhada</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Entrega e setup incluídos</span></li>
+                    </ul>
+                    <a href="#contacto" class="block text-center bg-gray-200 text-gray-700 px-6 py-3 rounded-full font-semibold hover:bg-gray-300 transition">Escolher Pacote</a>
+                </div>
+            </div>
+            <div class="text-center mt-12">
+                <p class="text-sm text-gray-600 mb-4">*Os preços são indicativos e variam conforme complexidade, tamanho e decoração.<br>Contacte-nos para orçamento personalizado.</p>
+                <a href="#contacto" class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-3 font-medium text-white hover:opacity-90">Pedir Orçamento Gratuito</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testemunhos -->
+    <section class="py-20 bg-gray-50">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl md:text-5xl font-bold">O Que Dizem os Nossos Clientes</h2>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                <div class="bg-white p-8 rounded-xl shadow-lg">
+                    <div class="flex gap-1 mb-4 text-yellow-400 text-xl">★★★★★</div>
+                    <p class="text-gray-700 mb-6 italic">"O bolo da Vampirina para os 6 anos da minha filha foi absolutamente perfeito! A Daisy captou exatamente o que queríamos. A Emília não parou de falar no bolo durante semanas!"</p>
+                    <div class="flex items-center gap-3">
+                        <img src="https://v0-fuet-magico.vercel.app/smiling-woman-avatar.png" alt="Maria Santos" class="w-12 h-12 rounded-full">
+                        <div><div class="font-bold">Maria Santos</div><div class="text-sm text-gray-600">Cliente</div></div>
+                    </div>
+                </div>
+                <div class="bg-white p-8 rounded-xl shadow-lg">
+                    <div class="flex gap-1 mb-4 text-yellow-400 text-xl">★★★★★</div>
+                    <p class="text-gray-700 mb-6 italic">"Encomendei um bolo de 60 anos para a minha mãe e foi uma obra de arte! Elegante, delicioso e com atenção a cada detalhe. Recomendo vivamente!"</p>
+                    <div class="flex items-center gap-3">
+                        <img src="https://v0-fuet-magico.vercel.app/smiling-man-avatar.png" alt="João Pereira" class="w-12 h-12 rounded-full">
+                        <div><div class="font-bold">João Pereira</div><div class="text-sm text-gray-600">Cliente</div></div>
+                    </div>
+                </div>
+                <div class="bg-white p-8 rounded-xl shadow-lg">
+                    <div class="flex gap-1 mb-4 text-yellow-400 text-xl">★★★★★</div>
+                    <p class="text-gray-700 mb-6 italic">"Profissionalismo incrível! A Daisy ajudou-nos a escolher o design perfeito para o nosso casamento. O bolo foi o destaque da festa. Obrigada!"</p>
+                    <div class="flex items-center gap-3">
+                        <img src="https://v0-fuet-magico.vercel.app/professional-woman-avatar.png" alt="Ana Costa" class="w-12 h-12 rounded-full">
+                        <div><div class="font-bold">Ana Costa</div><div class="text-sm text-gray-600">Cliente</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Processo -->
+    <section class="py-20">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">Como Fazemos a Sua Encomenda</h2>
+                <p class="text-xl text-gray-600">Simples, rápido e personalizado</p>
+            </div>
+            <div class="grid md:grid-cols-4 gap-8 max-w-6xl mx-auto">
+                <div class="text-center">
+                    <div class="bg-purple-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"><span class="text-3xl font-bold text-purple-600">1</span></div>
+                    <h3 class="text-xl font-bold mb-3">Contacte-nos</h3>
+                    <p class="text-gray-600">Envie-nos a sua ideia por Instagram, WhatsApp ou formulário</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-purple-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"><span class="text-3xl font-bold text-purple-600">2</span></div>
+                    <h3 class="text-xl font-bold mb-3">Design & Orçamento</h3>
+                    <p class="text-gray-600">Criamos um design personalizado e enviamos orçamento detalhado</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-purple-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"><span class="text-3xl font-bold text-purple-600">3</span></div>
+                    <h3 class="text-xl font-bold mb-3">Produção Artesanal</h3>
+                    <p class="text-gray-600">O seu bolo é feito à mão com ingredientes premium</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-purple-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"><span class="text-3xl font-bold text-purple-600">4</span></div>
+                    <h3 class="text-xl font-bold mb-3">Entrega ou Recolha</h3>
+                    <p class="text-gray-600">Entregamos ou pode levantar no dia acordado</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sabores -->
+    <section class="py-20 bg-purple-50">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl md:text-5xl font-bold">Sabores Irresistíveis</h2>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 max-w-6xl mx-auto">
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍫</div><div class="text-sm font-semibold">Chocolate Belga</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🌼</div><div class="text-sm font-semibold">Baunilha Madagascar</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">❤️</div><div class="text-sm font-semibold">Red Velvet</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍋</div><div class="text-sm font-semibold">Limão Siciliano</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍓</div><div class="text-sm font-semibold">Morango Fresco</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🥜</div><div class="text-sm font-semibold">Noz & Caramelo</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🌰</div><div class="text-sm font-semibold">Nutella</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🥥</div><div class="text-sm font-semibold">Coco</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">☕</div><div class="text-sm font-semibold">Café</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍬</div><div class="text-sm font-semibold">Brigadeiro Gourmet</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🥛</div><div class="text-sm font-semibold">Doce de Leite</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🫐</div><div class="text-sm font-semibold">Frutas Vermelhas</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🧀</div><div class="text-sm font-semibold">Cheesecake</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍫</div><div class="text-sm font-semibold">Ferrero Rocher</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍫</div><div class="text-sm font-semibold">Kinder Bueno</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍪</div><div class="text-sm font-semibold">Oreo</div></div>
+            </div>
+            <div class="text-center mt-8"><p class="text-lg font-semibold">Sugestão especial? Fale connosco!</p></div>
+        </div>
+    </section>
+
+    <!-- Contacto -->
+    <section id="contacto" class="py-20">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl md:text-5xl font-bold">Vamos Criar Algo Mágico Juntos</h2>
+            </div>
+            <div class="grid md:grid-cols-2 gap-12 max-w-5xl mx-auto">
+                <form class="space-y-4">
+                    <div><label class="block text-sm font-medium mb-2">Nome Completo *</label><input type="text" required class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"></div>
+                    <div><label class="block text-sm font-medium mb-2">Email *</label><input type="email" required class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"></div>
+                    <div><label class="block text-sm font-medium mb-2">Telefone/WhatsApp *</label><input type="tel" required class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"></div>
+                    <div><label class="block text-sm font-medium mb-2">Tipo de Evento *</label><select required class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"><option value="">Selecione o tipo de evento</option><option>Aniversário Infantil</option><option>Aniversário Adulto</option><option>Casamento</option><option>Batizado</option><option>Evento Corporativo</option><option>Outro</option></select></div>
+                    <div><label class="block text-sm font-medium mb-2">Data do Evento *</label><input type="date" required class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"></div>
+                    <div><label class="block text-sm font-medium mb-2">Número de Pessoas</label><input type="number" class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"></div>
+                    <div><label class="block text-sm font-medium mb-2">Descrição do Bolo Desejado *</label><textarea required rows="4" class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"></textarea></div>
+                    <button type="submit" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-4 rounded-full font-semibold hover:opacity-90">Enviar Pedido de Orçamento</button>
+                </form>
+                <div>
+                    <h3 class="text-2xl font-bold mb-6">Informações de Contacto</h3>
+                    <div class="space-y-6">
+                        <div class="flex items-start gap-4">
+                            <div class="bg-purple-100 p-3 rounded-full"><svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></div>
+                            <div><div class="font-bold mb-1">Morada</div><div class="text-gray-600">Portugal</div></div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="bg-purple-100 p-3 rounded-full"><svg class="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
+                            <div><div class="font-bold mb-1">WhatsApp</div><div class="text-gray-600">+351 XXX XXX XXX</div></div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="bg-purple-100 p-3 rounded-full"><svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg></div>
+                            <div><div class="font-bold mb-1">Email</div><div class="text-gray-600">fuetmagico@example.com</div></div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="bg-purple-100 p-3 rounded-full"><svg class="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></div>
+                            <div><div class="font-bold mb-1">Instagram</div><a href="https://instagram.com/fuet_magico_by_daisy_" class="text-purple-600 hover:underline">@fuet_magico_by_daisy_</a></div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="bg-purple-100 p-3 rounded-full"><svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+                            <div><div class="font-bold mb-1">Horário de Encomendas</div><div class="text-gray-600">48h de antecedência mínima</div></div>
+                        </div>
+                    </div>
+                    <img src="https://v0-fuet-magico.vercel.app/portugal-map-location-pin.jpg" alt="Mapa Portugal" class="rounded-lg shadow-lg w-full mt-6">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12 py-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">Pronto Para o Bolo dos Seus Sonhos?</h2>
+                <p class="text-xl mb-6">Vamos tornar o seu evento ainda mais especial</p>
+                <a href="#contacto" class="inline-flex items-center justify-center bg-white text-purple-600 px-8 py-3 rounded-full font-semibold hover:bg-gray-100">Fazer Encomenda Agora</a>
+                <p class="mt-4 text-sm">✨ Resposta garantida em 24h</p>
+            </div>
+            <div class="grid md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Fuet Mágico</h3>
+                    <p class="text-sm text-gray-400 mb-2">by Daisy</p>
+                    <p class="text-gray-400 mb-4 text-sm">Criando momentos mágicos através de bolos artesanais personalizados desde 2018</p>
+                    <a href="https://instagram.com/fuet_magico_by_daisy_" class="text-2xl text-gray-400 hover:text-white"><svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></a>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4">Links Rápidos</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#inicio" class="text-gray-400 hover:text-white">Início</a></li>
+                        <li><a href="#sobre" class="text-gray-400 hover:text-white">Sobre Nós</a></li>
+                        <li><a href="#portfolio" class="text-gray-400 hover:text-white">Portfólio</a></li>
+                        <li><a href="#precos" class="text-gray-400 hover:text-white">Preços</a></li>
+                        <li><a href="#contacto" class="text-gray-400 hover:text-white">Contacto</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4">Informação</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="text-gray-400 hover:text-white">FAQ</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Política de Privacidade</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Termos e Condições</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Política de Encomendas</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Métodos de Pagamento</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4">Receba Novidades</h4>
+                    <p class="text-gray-400 mb-4 text-sm">Promoções e inspirações direto no seu email</p>
+                    <form class="flex">
+                        <input type="email" placeholder="Seu email" class="flex-1 px-4 py-2 rounded-l-lg text-gray-900 text-sm">
+                        <button class="bg-purple-600 px-4 py-2 rounded-r-lg hover:bg-purple-700"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg></button>
+                    </form>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 pt-8 text-center text-sm text-gray-400">
+                <p class="mb-2">© 2026 Fuet Mágico by Daisy. Todos os direitos reservados.</p>
+                <p>Desenvolvido por <a href="https://www.linkedin.com/in/bruno-coelho-aa4071212/" class="text-purple-400 hover:text-purple-300">Bruno Coelho</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- WhatsApp Button -->
+    <a href="https://wa.me/351XXXXXXXXX?text=Olá!%20Gostaria%20de%20encomendar%20um%20bolo." class="fixed bottom-6 right-6 bg-green-500 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-xl hover:bg-green-600 transition z-50">
+        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    </a>
+
+    <script>
+        document.getElementById('menu-btn').addEventListener('click', () => {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const portfolioItems = document.querySelectorAll('.portfolio-item');
+        
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => {
+                    b.classList.remove('bg-purple-600', 'text-white');
+                    b.classList.add('bg-gray-200', 'text-gray-700');
+                });
+                btn.classList.remove('bg-gray-200', 'text-gray-700');
+                btn.classList.add('bg-purple-600', 'text-white');
+                
+                const filter = btn.getAttribute('data-filter');
+                portfolioItems.forEach(item => {
+                    if (filter === 'all' || item.getAttribute('data-category') === filter) {
+                        item.style.display = 'block';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

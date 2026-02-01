@@ -1,0 +1,26 @@
+# Fuet Mágico - Python Dependencies
+# Django Framework
+Django==5.0.*
+
+# Database
+psycopg2-binary
+
+# Cache & Task Queue
+redis
+celery
+
+# Environment Variables
+python-dotenv
+
+# Image Processing
+Pillow
+
+# PDF Generation & Processing
+reportlab
+PyPDF2
+
+# HTTP Requests
+requests
+
+# Date/Time Utilities
+python-dateutil
