@@ -250,48 +250,80 @@ Configurar repositório Git para controlo de versão.
 
 ---
 
-## 2.1 Análise e Extração do HTML
+## 2.1 Análise e Extração do HTML ✅
 
 Extrair todo o código HTML do website de referência.
 
-- [ ] **Acessar e analisar website**
-  - [ ] Abrir https://v0-fuet-magico.vercel.app/
-  - [ ] Inspecionar código fonte (View Page Source)
-  - [ ] Identificar estrutura: header, sections, footer
+- [x] **Acessar e analisar website**
+  - [x] Abrir https://v0-fuet-magico.vercel.app/
+  - [x] Inspecionar código fonte (View Page Source)
+  - [x] Identificar estrutura: header, sections, footer
 
-- [ ] **Extrair HTML completo**
-  - [ ] Copiar todo o HTML da página
-  - [ ] Identificar todos os recursos externos (imagens, fonts, etc.)
-  - [ ] Listar todos os links de CDN (Tailwind CSS, etc.)
+- [x] **Extrair HTML completo**
+  - [x] Copiar todo o HTML da página
+  - [x] Identificar todos os recursos externos (imagens, fonts, etc.)
+  - [x] Listar todos os links de CDN (Tailwind CSS, etc.)
 
-- [ ] **Documentar estrutura**
-  - [ ] Criar documento com lista de seções
-  - [ ] Documentar IDs e classes importantes
+- [x] **Documentar estrutura**
+  - [x] Criar documento com lista de seções
+  - [x] Documentar IDs e classes importantes
 
-- [ ] **Testing - Extração**
-  - [ ] Test: HTML copiado está completo
-  - [ ] Test: todas as URLs de recursos identificadas
+- [x] **Testing - Extração**
+  - [x] Test: HTML copiado está completo
+  - [x] Test: todas as URLs de recursos identificadas
+
+**Implementação Completa em:** `templates/website/home.html` (586 linhas)
+
+**Estrutura Identificada:**
+- Header: Navbar com logo "Fuet Mágico by Daisy" (fixed, scroll-responsive)
+- Secções: #inicio (hero), #sobre, #portfolio, #servicos, #precos, #testemunhos, #contacto
+- Footer: Completo com informações de contacto e redes sociais
+
+**Recursos Externos:**
+- CDN: Tailwind CSS (https://cdn.tailwindcss.com)
+- Fonts: Google Fonts - Delius (https://fonts.googleapis.com/css2?family=Delius)
+- Imagens: Hospedadas em https://v0-fuet-magico.vercel.app/ (hero bg, portfolio, about, etc.)
+
+**JavaScript Incluído:**
+- Mobile menu toggle
+- Portfolio filter system (all, infantis, adultos, casamento, minimalistas, tematicos)
+- Smooth scroll navigation
+- Navbar scroll behavior (transparent → white)
 
 ---
 
-## 2.2 Criação do Template Base
+## 2.2 Criação do Template Base ✅
 
 Criar template Django com o HTML extraído.
 
-- [ ] **Criar home template**
-  - [ ] Criar `templates/website/home.html`
-  - [ ] Colar HTML completo extraído
-  - [ ] Adicionar `{% load static %}` no topo
-  - [ ] Manter estrutura HTML exatamente como está
+- [x] **Criar home template**
+  - [x] Criar `templates/website/home.html`
+  - [x] Colar HTML completo extraído
+  - [x] Adicionar `{% load static %}` no topo
+  - [x] Manter estrutura HTML exatamente como está
 
-- [ ] **Configurar Tailwind CSS via CDN**
-  - [ ] Verificar link CDN do Tailwind no <head>
-  - [ ] Garantir que está exatamente como no website original
-  - [ ] Não modificar configurações do Tailwind
+- [x] **Configurar Tailwind CSS via CDN**
+  - [x] Verificar link CDN do Tailwind no <head>
+  - [x] Garantir que está exatamente como no website original
+  - [x] Não modificar configurações do Tailwind
 
-- [ ] **Testing - Template**
-  - [ ] Test: template criado em `templates/website/home.html`
-  - [ ] Test: {% load static %} no início do arquivo
+- [x] **Testing - Template**
+  - [x] Test: template criado em `templates/website/home.html`
+  - [x] Test: {% load static %} no início do arquivo
+
+- [x] **Configurar View e URL**
+  - [x] Criar `apps/website/views.py` com função `home()`
+  - [x] Criar `apps/website/urls.py` com rota raiz
+  - [x] Incluir URLs do website em `config/urls.py`
+
+**Implementação Completa:**
+- Template: `templates/website/home.html` (762 linhas)
+- View: `apps/website/views.py` - função home()
+- URLs: rota raiz (`/`) configurada
+- Tailwind CSS e Google Fonts (Delius) configurados
+- Todas as cores personalizadas (#e6a3a7) aplicadas
+- Carrossel de testemunhos funcionando
+- Formulário de contacto com validação
 
 ---
 
