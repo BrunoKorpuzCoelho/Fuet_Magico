@@ -1,0 +1,592 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Fuet Mágico 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-04 00:00+0000\n"
+"PO-Revision-Date: 2026-02-04 01:30+0000\n"
+"Last-Translator: Cubix <contato@cubix.pt>\n"
+"Language-Team: French <fr@li.org>\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+# Login Page
+msgid "Login"
+msgstr "Connexion"
+
+msgid "Bem-vindo"
+msgstr "Bienvenue"
+
+msgid "Inicie sessão para criar magia"
+msgstr "Connectez-vous pour créer de la magie"
+
+msgid "Email"
+msgstr "E-mail"
+
+msgid "seu@email.com"
+msgstr "votre@email.com"
+
+msgid "Palavra-passe"
+msgstr "Mot de passe"
+
+msgid "Iniciar sessão"
+msgstr "Se connecter"
+
+# Navigation
+msgid "Início"
+msgstr "Accueil"
+
+msgid "Sobre Nós"
+msgstr "À Propos"
+
+msgid "Portfólio"
+msgstr "Portfolio"
+
+msgid "Serviços"
+msgstr "Services"
+
+msgid "Preços"
+msgstr "Tarifs"
+
+msgid "Testemunhos"
+msgstr "Témoignages"
+
+msgid "Contacto"
+msgstr "Contact"
+
+msgid "Faça a sua Encomenda"
+msgstr "Passez Votre Commande"
+
+# Hero Section
+msgid "Transforme Momentos Especiais"
+msgstr "Transformez les Moments Spéciaux"
+
+msgid "em Memórias Deliciosas"
+msgstr "en Souvenirs Délicieux"
+
+msgid "Bolos artesanais personalizados, feitos com amor e dedicação para o seu evento único"
+msgstr "Gâteaux artisanaux personnalisés, faits avec amour et dévouement pour votre événement unique"
+
+msgid "Ver Portfólio"
+msgstr "Voir le Portfolio"
+
+msgid "Fazer Encomenda"
+msgstr "Passer Commande"
+
+# About Section
+msgid "A Magia por Trás de Cada Bolo"
+msgstr "La Magie Derrière Chaque Gâteau"
+
+msgid "Anos de Experiência"
+msgstr "Années d'Expérience"
+
+msgid "Olá! Sou a"
+msgstr "Bonjour ! Je suis"
+
+msgid "e transformar sonhos em bolos é a minha paixão."
+msgstr "et transformer les rêves en gâteaux est ma passion."
+
+msgid "Cada bolo que crio é uma obra de arte personalizada, pensada ao detalhe para celebrar os seus momentos mais especiais. Desde festas de aniversário infantis repletas de cor e diversão, até celebrações elegantes de marcos importantes da vida."
+msgstr "Chaque gâteau que je crée est une œuvre d'art personnalisée, conçue avec soin pour célébrer vos moments les plus spéciaux. Des fêtes d'anniversaire pour enfants pleines de couleur et de plaisir, aux célébrations élégantes des étapes importantes de la vie."
+
+msgid "Com anos de experiência em confeitaria artesanal, combino técnicas tradicionais com criatividade moderna para entregar não apenas um bolo, mas uma experiência memorável."
+msgstr "Avec des années d'expérience en pâtisserie artisanale, je combine des techniques traditionnelles avec une créativité moderne pour offrir non seulement un gâteau, mais une expérience mémorable."
+
+msgid "O seu momento especial merece um bolo igualmente especial. Vamos criar magia juntos?"
+msgstr "Votre moment spécial mérite un gâteau tout aussi spécial. Créons de la magie ensemble ?"
+
+msgid "Bolos Criados"
+msgstr "Gâteaux Créés"
+
+msgid "Clientes Felizes"
+msgstr "Clients Satisfaits"
+
+msgid "Feito à Mão"
+msgstr "Fait à la Main"
+
+# Portfolio
+msgid "O Nosso Portfólio"
+msgstr "Notre Portfolio"
+
+msgid "Cada bolo conta uma história única"
+msgstr "Chaque gâteau raconte une histoire unique"
+
+msgid "Todos"
+msgstr "Tous"
+
+msgid "Bolos Infantis"
+msgstr "Gâteaux pour Enfants"
+
+msgid "Bolos Adultos"
+msgstr "Gâteaux pour Adultes"
+
+msgid "Bolos Casamento"
+msgstr "Gâteaux de Mariage"
+
+msgid "Minimalistas"
+msgstr "Minimalistes"
+
+msgid "Temáticos"
+msgstr "Thématiques"
+
+# Services
+msgid "Os Nossos Serviços"
+msgstr "Nos Services"
+
+msgid "Bolos Temáticos Infantis"
+msgstr "Gâteaux Thématiques pour Enfants"
+
+msgid "Personagens favoritos, cores vibrantes e muita diversão para tornar o aniversário inesquecível"
+msgstr "Personnages préférés, couleurs vibrantes et beaucoup de plaisir pour rendre l'anniversaire inoubliable"
+
+msgid "Stitch, Vampirina, Super-Heróis, Princesas"
+msgstr "Stitch, Vampirina, Super-héros, Princesses"
+
+msgid "Celebrações Elegantes"
+msgstr "Célébrations Élégantes"
+
+msgid "Designs sofisticados para aniversários especiais, bodas e celebrações de marcos importantes"
+msgstr "Designs sophistiqués pour les anniversaires spéciaux, les noces et les célébrations d'étapes importantes"
+
+msgid "18 anos, 50/60 anos, Bodas, Formaturas"
+msgstr "18 ans, 50/60 ans, Noces, Remises de diplômes"
+
+msgid "Casamentos & Eventos"
+msgstr "Mariages & Événements"
+
+msgid "Bolos de casamento clássicos e modernos, naked cakes, bolos de noivado"
+msgstr "Gâteaux de mariage classiques et modernes, naked cakes, gâteaux de fiançailles"
+
+msgid "Naked cakes, Multi-tier, Minimalistas"
+msgstr "Naked cakes, Multi-étages, Minimalistes"
+
+msgid "Bolos Corporativos"
+msgstr "Gâteaux d'Entreprise"
+
+msgid "Eventos empresariais, inaugurações, branding personalizado em pasta de açúcar"
+msgstr "Événements d'entreprise, inaugurations, branding personnalisé en pâte à sucre"
+
+msgid "Eventos, Inaugurações, Branding"
+msgstr "Événements, Inaugurations, Branding"
+
+msgid "Minimalistas & Modernos"
+msgstr "Minimalistes & Modernes"
+
+msgid "Linhas limpas, elegância atemporal, decorações delicadas e sofisticadas"
+msgstr "Lignes épurées, élégance intemporelle, décorations délicates et sophistiquées"
+
+msgid "Clean design, Elegância, Sutileza"
+msgstr "Design épuré, Élégance, Subtilité"
+
+msgid "Encomendas Personalizadas"
+msgstr "Commandes Personnalisées"
+
+msgid "Tem uma ideia única? Trabalhamos consigo para criar o bolo dos seus sonhos"
+msgstr "Vous avez une idée unique ? Nous travaillons avec vous pour créer le gâteau de vos rêves"
+
+msgid "Criatividade, Personalização, Sonhos"
+msgstr "Créativité, Personnalisation, Rêves"
+
+# Pricing
+msgid "Investimento"
+msgstr "Investissement"
+
+msgid "Preços transparentes para o seu orçamento"
+msgstr "Prix transparents pour votre budget"
+
+msgid "Pacote Básico"
+msgstr "Forfait de Base"
+
+msgid "Doçura Simples"
+msgstr "Douceur Simple"
+
+msgid "A partir de"
+msgstr "À partir de"
+
+msgid "Bolo redondo 15cm (6-8 pessoas)"
+msgstr "Gâteau rond 15cm (6-8 personnes)"
+
+msgid "1 sabor à escolha"
+msgstr "1 parfum au choix"
+
+msgid "Cobertura buttercream"
+msgstr "Glaçage buttercream"
+
+msgid "Decoração simples"
+msgstr "Décoration simple"
+
+msgid "Topper personalizado básico"
+msgstr "Topper personnalisé basique"
+
+msgid "Entrega na área local"
+msgstr "Livraison locale"
+
+msgid "Escolher Pacote"
+msgstr "Choisir le Forfait"
+
+msgid "Pacote Standard"
+msgstr "Forfait Standard"
+
+msgid "Momento Especial"
+msgstr "Moment Spécial"
+
+msgid "Mais Popular"
+msgstr "Le Plus Populaire"
+
+msgid "Bolo redondo 20cm (12-15 pessoas)"
+msgstr "Gâteau rond 20cm (12-15 personnes)"
+
+msgid "2 sabores à escolha"
+msgstr "2 parfums au choix"
+
+msgid "Cobertura premium (fondant/buttercream)"
+msgstr "Glaçage premium (fondant/buttercream)"
+
+msgid "Decoração personalizada média"
+msgstr "Décoration personnalisée moyenne"
+
+msgid "Topper personalizado + flores açúcar"
+msgstr "Topper personnalisé + fleurs en sucre"
+
+msgid "Cores customizadas"
+msgstr "Couleurs personnalisées"
+
+msgid "Entrega premium"
+msgstr "Livraison premium"
+
+msgid "Pacote Premium"
+msgstr "Forfait Premium"
+
+msgid "Sonho Realizado"
+msgstr "Rêve Réalisé"
+
+msgid "Multi-tier ou tamanho XL (25+ pessoas)"
+msgstr "Multi-étages ou taille XL (25+ personnes)"
+
+msgid "3+ sabores à escolha"
+msgstr "3+ parfums au choix"
+
+msgid "Decoração complexa e artística"
+msgstr "Décoration complexe et artistique"
+
+msgid "Flores naturais/pasta açúcar premium"
+msgstr "Fleurs naturelles/pâte à sucre premium"
+
+msgid "Toppers sculpted personalizados"
+msgstr "Toppers sculptés personnalisés"
+
+msgid "Texturas douradas/prateadas"
+msgstr "Textures dorées/argentées"
+
+msgid "Sessão de design detalhada"
+msgstr "Session de design détaillée"
+
+msgid "Entrega e setup incluídos"
+msgstr "Livraison et installation incluses"
+
+msgid "*Os preços são indicativos e variam conforme complexidade, tamanho e decoração.<br>Contacte-nos para orçamento personalizado."
+msgstr "*Les prix sont indicatifs et varient selon la complexité, la taille et la décoration.<br>Contactez-nous pour un devis personnalisé."
+
+msgid "Pedir Orçamento Gratuito"
+msgstr "Demander un Devis Gratuit"
+
+# Testimonials
+msgid "O Que Dizem os Nossos Clientes"
+msgstr "Ce Que Disent Nos Clients"
+
+msgid "Cliente"
+msgstr "Client"
+
+# Process
+msgid "Como Fazemos a Sua Encomenda"
+msgstr "Comment Nous Réalisons Votre Commande"
+
+msgid "Simples, rápido e personalizado"
+msgstr "Simple, rapide et personnalisé"
+
+msgid "Contacte-nos"
+msgstr "Contactez-nous"
+
+msgid "Ligue, envie mensagem no WhatsApp ou preencha o formulário. Conte-nos sobre o seu evento e as suas ideias."
+msgstr "Appelez, WhatsApp ou remplissez le formulaire. Parlez-nous de votre événement et de vos idées."
+
+msgid "Design & Orçamento"
+msgstr "Design & Devis"
+
+msgid "Criamos um design personalizado para si e apresentamos um orçamento detalhado. Ajustamos até ficar perfeito!"
+msgstr "Nous créons un design personnalisé pour vous et présentons un devis détaillé. Nous ajustons jusqu'à ce que ce soit parfait !"
+
+msgid "Produção Artesanal"
+msgstr "Production Artisanale"
+
+msgid "Preparamos o seu bolo com ingredientes premium, atenção aos detalhes e muito amor. Cada elemento é feito à mão."
+msgstr "Nous préparons votre gâteau avec des ingrédients premium, une attention aux détails et beaucoup d'amour. Chaque élément est fait à la main."
+
+msgid "Entrega ou Recolha"
+msgstr "Livraison ou Retrait"
+
+msgid "Entregamos no local do evento ou pode recolher no nosso atelier. O seu bolo chega perfeito para o grande momento!"
+msgstr "Nous livrons sur le lieu de l'événement ou vous pouvez retirer à notre atelier. Votre gâteau arrive parfait pour le grand moment !"
+
+# Flavors
+msgid "Sabores Irresistíveis"
+msgstr "Saveurs Irrésistibles"
+
+msgid "Chocolate Belga"
+msgstr "Chocolat Belge"
+
+msgid "Chocolate premium de alta qualidade"
+msgstr "Chocolat premium de haute qualité"
+
+msgid "Baunilha Madagascar"
+msgstr "Vanille de Madagascar"
+
+msgid "Baunilha autêntica pura"
+msgstr "Vanille authentique pure"
+
+msgid "Red Velvet"
+msgstr "Red Velvet"
+
+msgid "Clássico aveludado com cream cheese"
+msgstr "Classique velouté avec cream cheese"
+
+msgid "Limão Siciliano"
+msgstr "Citron de Sicile"
+
+msgid "Fresco e aromático"
+msgstr "Frais et aromatique"
+
+msgid "Morango Fresco"
+msgstr "Fraise Fraîche"
+
+msgid "Morangos naturais e creme"
+msgstr "Fraises naturelles et crème"
+
+msgid "Noz & Caramelo"
+msgstr "Noix & Caramel"
+
+msgid "Doce de leite e nozes tostadas"
+msgstr "Dulce de leche et noix grillées"
+
+msgid "Café Expresso"
+msgstr "Café Expresso"
+
+msgid "Sabor intenso de café"
+msgstr "Saveur de café intense"
+
+msgid "Pistache"
+msgstr "Pistache"
+
+msgid "Delicado e sofisticado"
+msgstr "Délicat et sophistiqué"
+
+msgid "Ferrero Rocher"
+msgstr "Ferrero Rocher"
+
+msgid "Avelã e chocolate ao leite"
+msgstr "Noisette et chocolat au lait"
+
+msgid "Oreo"
+msgstr "Oreo"
+
+msgid "Biscoito crocante e creme"
+msgstr "Biscuit croquant et crème"
+
+msgid "Coco"
+msgstr "Noix de Coco"
+
+msgid "Tropical e refrescante"
+msgstr "Tropical et rafraîchissant"
+
+msgid "Framboesa"
+msgstr "Framboise"
+
+msgid "Frutos vermelhos frescos"
+msgstr "Fruits rouges frais"
+
+msgid "Nutella"
+msgstr "Nutella"
+
+msgid "Cremoso e irresistível"
+msgstr "Crémeux et irrésistible"
+
+msgid "Trufa Negra"
+msgstr "Truffe Noire"
+
+msgid "Chocolate extra negro"
+msgstr "Chocolat extra noir"
+
+msgid "Maracujá"
+msgstr "Fruit de la Passion"
+
+msgid "Exótico e tropical"
+msgstr "Exotique et tropical"
+
+msgid "Kinder Bueno"
+msgstr "Kinder Bueno"
+
+msgid "Wafer crocante e creme"
+msgstr "Gaufrette croquante et crème"
+
+msgid "Sugestão especial? Fale connosco!"
+msgstr "Suggestion spéciale ? Contactez-nous !"
+
+# Contact
+msgid "Vamos Criar Algo Mágico Juntos"
+msgstr "Créons Quelque Chose de Magique Ensemble"
+
+msgid "Informações de Contacto"
+msgstr "Informations de Contact"
+
+msgid "Morada"
+msgstr "Adresse"
+
+msgid "Horário de Encomendas"
+msgstr "Heures de Commande"
+
+msgid "48h de antecedência mínima"
+msgstr "48h de préavis minimum"
+
+msgid "O Seu Nome"
+msgstr "Votre Nom"
+
+msgid "Digite o seu nome completo"
+msgstr "Entrez votre nom complet"
+
+msgid "O Seu Email"
+msgstr "Votre Email"
+
+msgid "seuemail@exemplo.com"
+msgstr "votreemail@exemple.com"
+
+msgid "Telefone/WhatsApp"
+msgstr "Téléphone/WhatsApp"
+
+msgid "+351 XXX XXX XXX"
+msgstr "+351 XXX XXX XXX"
+
+msgid "Tipo de Evento"
+msgstr "Type d'Événement"
+
+msgid "Selecione o tipo de evento"
+msgstr "Sélectionnez le type d'événement"
+
+msgid "Aniversário Infantil"
+msgstr "Anniversaire d'Enfant"
+
+msgid "Aniversário Adulto"
+msgstr "Anniversaire d'Adulte"
+
+msgid "Casamento"
+msgstr "Mariage"
+
+msgid "Batizado/Comunhão"
+msgstr "Baptême/Communion"
+
+msgid "Evento Corporativo"
+msgstr "Événement d'Entreprise"
+
+msgid "Outro"
+msgstr "Autre"
+
+msgid "Data do Evento"
+msgstr "Date de l'Événement"
+
+msgid "A Sua Mensagem"
+msgstr "Votre Message"
+
+msgid "Conte-nos sobre o seu evento, tema desejado, número de pessoas, cores preferidas, etc."
+msgstr "Parlez-nous de votre événement, thème souhaité, nombre d'invités, couleurs préférées, etc."
+
+msgid "Aceito a Política de Privacidade"
+msgstr "J'accepte la Politique de Confidentialité"
+
+msgid "Enviar Pedido de Orçamento"
+msgstr "Envoyer une Demande de Devis"
+
+# CTA Section
+msgid "Pronto Para o Bolo dos Seus Sonhos?"
+msgstr "Prêt pour le Gâteau de Vos Rêves ?"
+
+msgid "Vamos tornar o seu evento ainda mais especial com um bolo personalizado que todos vão adorar"
+msgstr "Rendons votre événement encore plus spécial avec un gâteau personnalisé que tout le monde adorera"
+
+msgid "Fazer Encomenda Agora"
+msgstr "Commander Maintenant"
+
+msgid "Resposta garantida em 24h"
+msgstr "Réponse garantie sous 24h"
+
+# Footer
+msgid "by Daisy"
+msgstr "par Daisy"
+
+msgid "Criando momentos deliciosos e memoráveis desde 2018. Cada bolo é feito com amor, dedicação e ingredientes premium."
+msgstr "Créer des moments délicieux et mémorables depuis 2018. Chaque gâteau est fait avec amour, dévouement et des ingrédients premium."
+
+msgid "Links Rápidos"
+msgstr "Liens Rapides"
+
+msgid "Informação"
+msgstr "Information"
+
+msgid "Política de Privacidade"
+msgstr "Politique de Confidentialité"
+
+msgid "Termos e Condições"
+msgstr "Termes et Conditions"
+
+msgid "FAQs"
+msgstr "FAQs"
+
+msgid "Blog"
+msgstr "Blog"
+
+msgid "Receba Novidades"
+msgstr "Recevoir des Nouvelles"
+
+msgid "Subscreva para receber ofertas exclusivas, novidades e inspiração diretamente no seu email."
+msgstr "Abonnez-vous pour recevoir des offres exclusives, des nouvelles et de l'inspiration directement dans votre email."
+
+msgid "Seu email"
+msgstr "Votre email"
+
+msgid "Subscrever"
+msgstr "S'abonner"
+
+msgid "Todos os direitos reservados."
+msgstr "Tous droits réservés."
+
+msgid "Desenvolvido por"
+msgstr "Développé par"
+
+msgid "Nome Completo"
+msgstr "Nom Complet"
+
+msgid "Número de Pessoas"
+msgstr "Nombre d'Invités"
+
+msgid "Descrição do Bolo Desejado"
+msgstr "Description du Gâteau Désiré"
+
+msgid "Promoções e inspirações direto no seu email"
+msgstr "Promotions et inspirations directement dans votre email"
+
+msgid "Vamos tornar o seu evento ainda mais especial"
+msgstr "Rendons votre événement encore plus spécial"
+
+msgid "Criando momentos mágicos através de bolos artesanais personalizados desde 2018"
+msgstr "Créer des moments magiques grâce à des gâteaux artisanaux personnalisés depuis 2018"
+
+msgid "Política de Encomendas"
+msgstr "Politique de Commande"
+
+msgid "Métodos de Pagamento"
+msgstr "Méthodes de Paiement"

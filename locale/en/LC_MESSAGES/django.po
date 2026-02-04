@@ -1,0 +1,592 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Fuet Mágico 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-04 00:00+0000\n"
+"PO-Revision-Date: 2026-02-04 01:30+0000\n"
+"Last-Translator: Cubix <contato@cubix.pt>\n"
+"Language-Team: English <en@li.org>\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# Login Page
+msgid "Login"
+msgstr "Login"
+
+msgid "Bem-vindo"
+msgstr "Welcome"
+
+msgid "Inicie sessão para criar magia"
+msgstr "Sign in to create magic"
+
+msgid "Email"
+msgstr "Email"
+
+msgid "seu@email.com"
+msgstr "your@email.com"
+
+msgid "Palavra-passe"
+msgstr "Password"
+
+msgid "Iniciar sessão"
+msgstr "Sign in"
+
+# Navigation
+msgid "Início"
+msgstr "Home"
+
+msgid "Sobre Nós"
+msgstr "About Us"
+
+msgid "Portfólio"
+msgstr "Portfolio"
+
+msgid "Serviços"
+msgstr "Services"
+
+msgid "Preços"
+msgstr "Pricing"
+
+msgid "Testemunhos"
+msgstr "Testimonials"
+
+msgid "Contacto"
+msgstr "Contact"
+
+msgid "Faça a sua Encomenda"
+msgstr "Place Your Order"
+
+# Hero Section
+msgid "Transforme Momentos Especiais"
+msgstr "Transform Special Moments"
+
+msgid "em Memórias Deliciosas"
+msgstr "into Delicious Memories"
+
+msgid "Bolos artesanais personalizados, feitos com amor e dedicação para o seu evento único"
+msgstr "Handcrafted custom cakes, made with love and dedication for your unique event"
+
+msgid "Ver Portfólio"
+msgstr "View Portfolio"
+
+msgid "Fazer Encomenda"
+msgstr "Place Order"
+
+# About Section
+msgid "A Magia por Trás de Cada Bolo"
+msgstr "The Magic Behind Every Cake"
+
+msgid "Anos de Experiência"
+msgstr "Years of Experience"
+
+msgid "Olá! Sou a"
+msgstr "Hello! I'm"
+
+msgid "e transformar sonhos em bolos é a minha paixão."
+msgstr "and turning dreams into cakes is my passion."
+
+msgid "Cada bolo que crio é uma obra de arte personalizada, pensada ao detalhe para celebrar os seus momentos mais especiais. Desde festas de aniversário infantis repletas de cor e diversão, até celebrações elegantes de marcos importantes da vida."
+msgstr "Every cake I create is a personalized work of art, thoughtfully designed to celebrate your most special moments. From children's birthday parties full of color and fun, to elegant celebrations of important life milestones."
+
+msgid "Com anos de experiência em confeitaria artesanal, combino técnicas tradicionais com criatividade moderna para entregar não apenas um bolo, mas uma experiência memorável."
+msgstr "With years of experience in artisan confectionery, I combine traditional techniques with modern creativity to deliver not just a cake, but a memorable experience."
+
+msgid "O seu momento especial merece um bolo igualmente especial. Vamos criar magia juntos?"
+msgstr "Your special moment deserves an equally special cake. Let's create magic together?"
+
+msgid "Bolos Criados"
+msgstr "Cakes Created"
+
+msgid "Clientes Felizes"
+msgstr "Happy Clients"
+
+msgid "Feito à Mão"
+msgstr "Handmade"
+
+# Portfolio
+msgid "O Nosso Portfólio"
+msgstr "Our Portfolio"
+
+msgid "Cada bolo conta uma história única"
+msgstr "Every cake tells a unique story"
+
+msgid "Todos"
+msgstr "All"
+
+msgid "Bolos Infantis"
+msgstr "Children's Cakes"
+
+msgid "Bolos Adultos"
+msgstr "Adult Cakes"
+
+msgid "Bolos Casamento"
+msgstr "Wedding Cakes"
+
+msgid "Minimalistas"
+msgstr "Minimalist"
+
+msgid "Temáticos"
+msgstr "Themed"
+
+# Services
+msgid "Os Nossos Serviços"
+msgstr "Our Services"
+
+msgid "Bolos Temáticos Infantis"
+msgstr "Children's Themed Cakes"
+
+msgid "Personagens favoritos, cores vibrantes e muita diversão para tornar o aniversário inesquecível"
+msgstr "Favorite characters, vibrant colors and lots of fun to make the birthday unforgettable"
+
+msgid "Stitch, Vampirina, Super-Heróis, Princesas"
+msgstr "Stitch, Vampirina, Superheroes, Princesses"
+
+msgid "Celebrações Elegantes"
+msgstr "Elegant Celebrations"
+
+msgid "Designs sofisticados para aniversários especiais, bodas e celebrações de marcos importantes"
+msgstr "Sophisticated designs for special birthdays, anniversaries and milestone celebrations"
+
+msgid "18 anos, 50/60 anos, Bodas, Formaturas"
+msgstr "18th birthday, 50/60 years, Anniversaries, Graduations"
+
+msgid "Casamentos & Eventos"
+msgstr "Weddings & Events"
+
+msgid "Bolos de casamento clássicos e modernos, naked cakes, bolos de noivado"
+msgstr "Classic and modern wedding cakes, naked cakes, engagement cakes"
+
+msgid "Naked cakes, Multi-tier, Minimalistas"
+msgstr "Naked cakes, Multi-tier, Minimalist"
+
+msgid "Bolos Corporativos"
+msgstr "Corporate Cakes"
+
+msgid "Eventos empresariais, inaugurações, branding personalizado em pasta de açúcar"
+msgstr "Corporate events, inaugurations, personalized branding in sugar paste"
+
+msgid "Eventos, Inaugurações, Branding"
+msgstr "Events, Inaugurations, Branding"
+
+msgid "Minimalistas & Modernos"
+msgstr "Minimalist & Modern"
+
+msgid "Linhas limpas, elegância atemporal, decorações delicadas e sofisticadas"
+msgstr "Clean lines, timeless elegance, delicate and sophisticated decorations"
+
+msgid "Clean design, Elegância, Sutileza"
+msgstr "Clean design, Elegance, Subtlety"
+
+msgid "Encomendas Personalizadas"
+msgstr "Custom Orders"
+
+msgid "Tem uma ideia única? Trabalhamos consigo para criar o bolo dos seus sonhos"
+msgstr "Have a unique idea? We work with you to create your dream cake"
+
+msgid "Criatividade, Personalização, Sonhos"
+msgstr "Creativity, Customization, Dreams"
+
+# Pricing
+msgid "Investimento"
+msgstr "Investment"
+
+msgid "Preços transparentes para o seu orçamento"
+msgstr "Transparent prices for your budget"
+
+msgid "Pacote Básico"
+msgstr "Basic Package"
+
+msgid "Doçura Simples"
+msgstr "Simple Sweetness"
+
+msgid "A partir de"
+msgstr "Starting from"
+
+msgid "Bolo redondo 15cm (6-8 pessoas)"
+msgstr "Round cake 15cm (6-8 servings)"
+
+msgid "1 sabor à escolha"
+msgstr "1 flavor of choice"
+
+msgid "Cobertura buttercream"
+msgstr "Buttercream frosting"
+
+msgid "Decoração simples"
+msgstr "Simple decoration"
+
+msgid "Topper personalizado básico"
+msgstr "Basic custom topper"
+
+msgid "Entrega na área local"
+msgstr "Local area delivery"
+
+msgid "Escolher Pacote"
+msgstr "Choose Package"
+
+msgid "Pacote Standard"
+msgstr "Standard Package"
+
+msgid "Momento Especial"
+msgstr "Special Moment"
+
+msgid "Mais Popular"
+msgstr "Most Popular"
+
+msgid "Bolo redondo 20cm (12-15 pessoas)"
+msgstr "Round cake 20cm (12-15 servings)"
+
+msgid "2 sabores à escolha"
+msgstr "2 flavors of choice"
+
+msgid "Cobertura premium (fondant/buttercream)"
+msgstr "Premium frosting (fondant/buttercream)"
+
+msgid "Decoração personalizada média"
+msgstr "Medium custom decoration"
+
+msgid "Topper personalizado + flores açúcar"
+msgstr "Custom topper + sugar flowers"
+
+msgid "Cores customizadas"
+msgstr "Custom colors"
+
+msgid "Entrega premium"
+msgstr "Premium delivery"
+
+msgid "Pacote Premium"
+msgstr "Premium Package"
+
+msgid "Sonho Realizado"
+msgstr "Dream Come True"
+
+msgid "Multi-tier ou tamanho XL (25+ pessoas)"
+msgstr "Multi-tier or XL size (25+ servings)"
+
+msgid "3+ sabores à escolha"
+msgstr "3+ flavors of choice"
+
+msgid "Decoração complexa e artística"
+msgstr "Complex and artistic decoration"
+
+msgid "Flores naturais/pasta açúcar premium"
+msgstr "Natural flowers/premium sugar paste"
+
+msgid "Toppers sculpted personalizados"
+msgstr "Custom sculpted toppers"
+
+msgid "Texturas douradas/prateadas"
+msgstr "Gold/silver textures"
+
+msgid "Sessão de design detalhada"
+msgstr "Detailed design session"
+
+msgid "Entrega e setup incluídos"
+msgstr "Delivery and setup included"
+
+msgid "*Os preços são indicativos e variam conforme complexidade, tamanho e decoração.<br>Contacte-nos para orçamento personalizado."
+msgstr "*Prices are indicative and vary according to complexity, size and decoration.<br>Contact us for a custom quote."
+
+msgid "Pedir Orçamento Gratuito"
+msgstr "Request Free Quote"
+
+# Testimonials
+msgid "O Que Dizem os Nossos Clientes"
+msgstr "What Our Clients Say"
+
+msgid "Cliente"
+msgstr "Client"
+
+# Process
+msgid "Como Fazemos a Sua Encomenda"
+msgstr "How We Make Your Order"
+
+msgid "Simples, rápido e personalizado"
+msgstr "Simple, fast and personalized"
+
+msgid "Contacte-nos"
+msgstr "Contact Us"
+
+msgid "Ligue, envie mensagem no WhatsApp ou preencha o formulário. Conte-nos sobre o seu evento e as suas ideias."
+msgstr "Call, WhatsApp or fill out the form. Tell us about your event and your ideas."
+
+msgid "Design & Orçamento"
+msgstr "Design & Quote"
+
+msgid "Criamos um design personalizado para si e apresentamos um orçamento detalhado. Ajustamos até ficar perfeito!"
+msgstr "We create a custom design for you and present a detailed quote. We adjust until it's perfect!"
+
+msgid "Produção Artesanal"
+msgstr "Artisan Production"
+
+msgid "Preparamos o seu bolo com ingredientes premium, atenção aos detalhes e muito amor. Cada elemento é feito à mão."
+msgstr "We prepare your cake with premium ingredients, attention to detail and lots of love. Every element is handmade."
+
+msgid "Entrega ou Recolha"
+msgstr "Delivery or Pickup"
+
+msgid "Entregamos no local do evento ou pode recolher no nosso atelier. O seu bolo chega perfeito para o grande momento!"
+msgstr "We deliver to the event venue or you can pick up at our studio. Your cake arrives perfect for the big moment!"
+
+# Flavors
+msgid "Sabores Irresistíveis"
+msgstr "Irresistible Flavors"
+
+msgid "Chocolate Belga"
+msgstr "Belgian Chocolate"
+
+msgid "Chocolate premium de alta qualidade"
+msgstr "Premium high-quality chocolate"
+
+msgid "Baunilha Madagascar"
+msgstr "Madagascar Vanilla"
+
+msgid "Baunilha autêntica pura"
+msgstr "Pure authentic vanilla"
+
+msgid "Red Velvet"
+msgstr "Red Velvet"
+
+msgid "Clássico aveludado com cream cheese"
+msgstr "Classic velvety with cream cheese"
+
+msgid "Limão Siciliano"
+msgstr "Sicilian Lemon"
+
+msgid "Fresco e aromático"
+msgstr "Fresh and aromatic"
+
+msgid "Morango Fresco"
+msgstr "Fresh Strawberry"
+
+msgid "Morangos naturais e creme"
+msgstr "Natural strawberries and cream"
+
+msgid "Noz & Caramelo"
+msgstr "Walnut & Caramel"
+
+msgid "Doce de leite e nozes tostadas"
+msgstr "Dulce de leche and toasted walnuts"
+
+msgid "Café Expresso"
+msgstr "Espresso Coffee"
+
+msgid "Sabor intenso de café"
+msgstr "Intense coffee flavor"
+
+msgid "Pistache"
+msgstr "Pistachio"
+
+msgid "Delicado e sofisticado"
+msgstr "Delicate and sophisticated"
+
+msgid "Ferrero Rocher"
+msgstr "Ferrero Rocher"
+
+msgid "Avelã e chocolate ao leite"
+msgstr "Hazelnut and milk chocolate"
+
+msgid "Oreo"
+msgstr "Oreo"
+
+msgid "Biscoito crocante e creme"
+msgstr "Crunchy cookie and cream"
+
+msgid "Coco"
+msgstr "Coconut"
+
+msgid "Tropical e refrescante"
+msgstr "Tropical and refreshing"
+
+msgid "Framboesa"
+msgstr "Raspberry"
+
+msgid "Frutos vermelhos frescos"
+msgstr "Fresh red berries"
+
+msgid "Nutella"
+msgstr "Nutella"
+
+msgid "Cremoso e irresistível"
+msgstr "Creamy and irresistible"
+
+msgid "Trufa Negra"
+msgstr "Black Truffle"
+
+msgid "Chocolate extra negro"
+msgstr "Extra dark chocolate"
+
+msgid "Maracujá"
+msgstr "Passion Fruit"
+
+msgid "Exótico e tropical"
+msgstr "Exotic and tropical"
+
+msgid "Kinder Bueno"
+msgstr "Kinder Bueno"
+
+msgid "Wafer crocante e creme"
+msgstr "Crunchy wafer and cream"
+
+msgid "Sugestão especial? Fale connosco!"
+msgstr "Special suggestion? Contact us!"
+
+# Contact
+msgid "Vamos Criar Algo Mágico Juntos"
+msgstr "Let's Create Something Magical Together"
+
+msgid "Informações de Contacto"
+msgstr "Contact Information"
+
+msgid "Morada"
+msgstr "Address"
+
+msgid "Horário de Encomendas"
+msgstr "Order Hours"
+
+msgid "48h de antecedência mínima"
+msgstr "48h minimum advance notice"
+
+msgid "O Seu Nome"
+msgstr "Your Name"
+
+msgid "Digite o seu nome completo"
+msgstr "Enter your full name"
+
+msgid "O Seu Email"
+msgstr "Your Email"
+
+msgid "seuemail@exemplo.com"
+msgstr "youremail@example.com"
+
+msgid "Telefone/WhatsApp"
+msgstr "Phone/WhatsApp"
+
+msgid "+351 XXX XXX XXX"
+msgstr "+351 XXX XXX XXX"
+
+msgid "Tipo de Evento"
+msgstr "Event Type"
+
+msgid "Selecione o tipo de evento"
+msgstr "Select event type"
+
+msgid "Aniversário Infantil"
+msgstr "Children's Birthday"
+
+msgid "Aniversário Adulto"
+msgstr "Adult Birthday"
+
+msgid "Casamento"
+msgstr "Wedding"
+
+msgid "Batizado/Comunhão"
+msgstr "Baptism/Communion"
+
+msgid "Evento Corporativo"
+msgstr "Corporate Event"
+
+msgid "Outro"
+msgstr "Other"
+
+msgid "Data do Evento"
+msgstr "Event Date"
+
+msgid "A Sua Mensagem"
+msgstr "Your Message"
+
+msgid "Conte-nos sobre o seu evento, tema desejado, número de pessoas, cores preferidas, etc."
+msgstr "Tell us about your event, desired theme, number of guests, preferred colors, etc."
+
+msgid "Aceito a Política de Privacidade"
+msgstr "I accept the Privacy Policy"
+
+msgid "Enviar Pedido de Orçamento"
+msgstr "Send Quote Request"
+
+# CTA Section
+msgid "Pronto Para o Bolo dos Seus Sonhos?"
+msgstr "Ready for Your Dream Cake?"
+
+msgid "Vamos tornar o seu evento ainda mais especial com um bolo personalizado que todos vão adorar"
+msgstr "Let's make your event even more special with a custom cake that everyone will love"
+
+msgid "Fazer Encomenda Agora"
+msgstr "Order Now"
+
+msgid "Resposta garantida em 24h"
+msgstr "Response guaranteed within 24h"
+
+# Footer
+msgid "by Daisy"
+msgstr "by Daisy"
+
+msgid "Criando momentos deliciosos e memoráveis desde 2018. Cada bolo é feito com amor, dedicação e ingredientes premium."
+msgstr "Creating delicious and memorable moments since 2018. Every cake is made with love, dedication and premium ingredients."
+
+msgid "Links Rápidos"
+msgstr "Quick Links"
+
+msgid "Informação"
+msgstr "Information"
+
+msgid "Política de Privacidade"
+msgstr "Privacy Policy"
+
+msgid "Termos e Condições"
+msgstr "Terms and Conditions"
+
+msgid "FAQs"
+msgstr "FAQs"
+
+msgid "Blog"
+msgstr "Blog"
+
+msgid "Receba Novidades"
+msgstr "Receive News"
+
+msgid "Subscreva para receber ofertas exclusivas, novidades e inspiração diretamente no seu email."
+msgstr "Subscribe to receive exclusive offers, news and inspiration directly to your email."
+
+msgid "Seu email"
+msgstr "Your email"
+
+msgid "Subscrever"
+msgstr "Subscribe"
+
+msgid "Todos os direitos reservados."
+msgstr "All rights reserved."
+
+msgid "Desenvolvido por"
+msgstr "Developed by"
+
+msgid "Nome Completo"
+msgstr "Full Name"
+
+msgid "Número de Pessoas"
+msgstr "Number of Guests"
+
+msgid "Descrição do Bolo Desejado"
+msgstr "Desired Cake Description"
+
+msgid "Promoções e inspirações direto no seu email"
+msgstr "Promotions and inspirations straight to your email"
+
+msgid "Vamos tornar o seu evento ainda mais especial"
+msgstr "Let's make your event even more special"
+
+msgid "Criando momentos mágicos através de bolos artesanais personalizados desde 2018"
+msgstr "Creating magical moments through handcrafted custom cakes since 2018"
+
+msgid "Política de Encomendas"
+msgstr "Order Policy"
+
+msgid "Métodos de Pagamento"
+msgstr "Payment Methods"

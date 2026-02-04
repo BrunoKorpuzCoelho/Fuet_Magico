@@ -1,4 +1,5 @@
 {% load static %}
+{% load i18n %}
 <!DOCTYPE html>
 <html lang="pt-PT" class="scroll-smooth">
 <head>
@@ -15,7 +16,7 @@
         }
         .hero-bg {
             background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), 
-                              url('https://v0-fuet-magico.vercel.app/elegant-white-wedding-cake-with-delicate-sugar-flo.jpg');
+                              url('{% static "images/hero-background.jpg" %}');
             background-size: cover;
             background-position: center;
         }
@@ -30,28 +31,42 @@
                     <span id="logo-sub" class="text-xs text-gray-300 transition-colors duration-300">by Daisy</span>
                 </a>
                 <nav class="hidden md:flex items-center gap-8">
-                    <a href="#inicio" class="nav-link text-base font-medium text-white hover:text-pink-300 transition-colors">Início</a>
-                    <a href="#sobre" class="nav-link text-base font-medium text-white hover:text-pink-300 transition-colors">Sobre Nós</a>
-                    <a href="#portfolio" class="nav-link text-base font-medium text-white hover:text-pink-300 transition-colors">Portfólio</a>
-                    <a href="#servicos" class="nav-link text-base font-medium text-white hover:text-pink-300 transition-colors">Serviços</a>
-                    <a href="#precos" class="nav-link text-base font-medium text-white hover:text-pink-300 transition-colors">Preços</a>
-                    <a href="#testemunhos" class="nav-link text-base font-medium text-white hover:text-pink-300 transition-colors">Testemunhos</a>
-                    <a href="#contacto" class="nav-link text-base font-medium text-white hover:text-pink-300 transition-colors">Contacto</a>
+                    <a href="#inicio" class="nav-link text-base font-medium text-white hover:text-pink-300 transition-colors">{% trans "Início" %}</a>
+                    <a href="#sobre" class="nav-link text-base font-medium text-white hover:text-pink-300 transition-colors">{% trans "Sobre Nós" %}</a>
+                    <a href="#portfolio" class="nav-link text-base font-medium text-white hover:text-pink-300 transition-colors">{% trans "Portfólio" %}</a>
+                    <a href="#servicos" class="nav-link text-base font-medium text-white hover:text-pink-300 transition-colors">{% trans "Serviços" %}</a>
+                    <a href="#precos" class="nav-link text-base font-medium text-white hover:text-pink-300 transition-colors">{% trans "Preços" %}</a>
+                    <a href="#testemunhos" class="nav-link text-base font-medium text-white hover:text-pink-300 transition-colors">{% trans "Testemunhos" %}</a>
+                    <a href="#contacto" class="nav-link text-base font-medium text-white hover:text-pink-300 transition-colors">{% trans "Contacto" %}</a>
                 </nav>
-                <a href="#contacto" class="hidden md:inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-base font-semibold transition-all h-10 px-6 py-2 text-white hover:opacity-90" style="background-color: #dbc693;">Faça a sua Encomenda</a>
+                <div class="hidden md:flex items-center gap-3">
+                    <select id="language-selector" class="bg-white/10 backdrop-blur-sm text-white border border-white/20 rounded-md px-3 py-2 text-sm font-medium cursor-pointer hover:bg-white/20 transition-all focus:outline-none focus:ring-2 focus:ring-white/30">
+                        <option value="pt" class="bg-gray-800">🇵🇹 PT</option>
+                        <option value="en" class="bg-gray-800">🇬🇧 EN</option>
+                        <option value="fr" class="bg-gray-800">🇫🇷 FR</option>
+                    </select>
+                    <a href="#contacto" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-base font-semibold transition-all h-10 px-6 py-2 text-white hover:opacity-90" style="background-color: #dbc693;">{% trans "Faça a sua Encomenda" %}</a>
+                </div>
                 <button class="md:hidden transition-colors duration-300" id="menu-btn">
                     <svg class="menu-icon text-white transition-colors duration-300" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </button>
             </div>
             <div class="hidden md:hidden pb-4" id="mobile-menu">
                 <nav class="flex flex-col gap-2 bg-gray-900/95 p-4 rounded-lg mt-2">
-                    <a href="#inicio" class="py-2 text-sm font-medium text-white">Início</a>
-                    <a href="#sobre" class="py-2 text-sm font-medium text-white">Sobre Nós</a>
-                    <a href="#portfolio" class="py-2 text-sm font-medium text-white">Portfólio</a>
-                    <a href="#servicos" class="py-2 text-sm font-medium text-white">Serviços</a>
-                    <a href="#precos" class="py-2 text-sm font-medium text-white">Preços</a>
-                    <a href="#testemunhos" class="py-2 text-sm font-medium text-white">Testemunhos</a>
-                    <a href="#contacto" class="py-2 text-sm font-medium text-white">Contacto</a>
+                    <a href="#inicio" class="py-2 text-sm font-medium text-white">{% trans "Início" %}</a>
+                    <a href="#sobre" class="py-2 text-sm font-medium text-white">{% trans "Sobre Nós" %}</a>
+                    <a href="#portfolio" class="py-2 text-sm font-medium text-white">{% trans "Portfólio" %}</a>
+                    <a href="#servicos" class="py-2 text-sm font-medium text-white">{% trans "Serviços" %}</a>
+                    <a href="#precos" class="py-2 text-sm font-medium text-white">{% trans "Preços" %}</a>
+                    <a href="#testemunhos" class="py-2 text-sm font-medium text-white">{% trans "Testemunhos" %}</a>
+                    <a href="#contacto" class="py-2 text-sm font-medium text-white">{% trans "Contacto" %}</a>
+                    <div class="border-t border-white/20 mt-2 pt-2">
+                        <select id="language-selector-mobile" class="w-full bg-white/10 backdrop-blur-sm text-white border border-white/20 rounded-md px-3 py-2 text-sm font-medium cursor-pointer hover:bg-white/20 transition-all focus:outline-none focus:ring-2 focus:ring-white/30">
+                            <option value="pt" class="bg-gray-800">🇵🇹 Português</option>
+                            <option value="en" class="bg-gray-800">🇬🇧 English</option>
+                            <option value="fr" class="bg-gray-800">🇫🇷 Français</option>
+                        </select>
+                    </div>
                 </nav>
             </div>
         </div>
@@ -59,11 +74,11 @@
 
     <section id="inicio" class="hero-bg min-h-screen flex items-center justify-center text-white">
         <div class="container mx-auto px-4 text-center">
-            <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">Transforme Momentos Especiais<br>em Memórias Deliciosas</h1>
-            <p class="text-lg md:text-xl mb-8 max-w-2xl mx-auto">Bolos artesanais personalizados, feitos com amor e dedicação para o seu evento único</p>
+            <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">{% trans "Transforme Momentos Especiais" %}<br>{% trans "em Memórias Deliciosas" %}</h1>
+            <p class="text-lg md:text-xl mb-8 max-w-2xl mx-auto">{% trans "Bolos artesanais personalizados, feitos com amor e dedicação para o seu evento único" %}</p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <a href="#portfolio" class="inline-flex items-center justify-center rounded-md px-8 py-3 font-semibold text-white hover:opacity-90 transition-all" style="background-color: #dbc693;">Ver Portfólio</a>
-                <a href="#contacto" class="inline-flex items-center justify-center rounded-md border-2 border-white bg-transparent px-8 py-3 font-semibold text-white hover:bg-white hover:text-gray-900 transition-all">Fazer Encomenda</a>
+                <a href="#portfolio" class="inline-flex items-center justify-center rounded-md px-8 py-3 font-semibold text-white hover:opacity-90 transition-all" style="background-color: #dbc693;">{% trans "Ver Portfólio" %}</a>
+                <a href="#contacto" class="inline-flex items-center justify-center rounded-md border-2 border-white bg-transparent px-8 py-3 font-semibold text-white hover:bg-white hover:text-gray-900 transition-all">{% trans "Fazer Encomenda" %}</a>
             </div>
         </div>
     </section>
@@ -71,26 +86,26 @@
     <section id="sobre" class="py-20 bg-gray-50">
         <div class="container mx-auto px-4">
             <div class="text-center mb-12">
-                <p class="font-semibold mb-2 uppercase tracking-wide text-sm" style="color: #dbc693;">Sobre Nós</p>
-                <h2 class="text-4xl md:text-5xl font-bold">A Magia por Trás de Cada Bolo</h2>
+                <p class="font-semibold mb-2 uppercase tracking-wide text-sm" style="color: #dbc693;">{% trans "Sobre Nós" %}</p>
+                <h2 class="text-4xl md:text-5xl font-bold">{% trans "A Magia por Trás de Cada Bolo" %}</h2>
             </div>
             <div class="grid md:grid-cols-2 gap-12 items-center max-w-6xl mx-auto">
                 <div class="relative">
-                    <img src="https://v0-fuet-magico.vercel.app/professional-baker-woman-decorating-elegant-cake-i.jpg" alt="Daisy Fortes" class="rounded-2xl shadow-xl w-full">
+                    <img src="{% static 'images/baker-daisy.jpg' %}" alt="Daisy Fortes" class="rounded-2xl shadow-xl w-full">
                     <div class="absolute bottom-6 left-6 bg-gradient-to-r from-yellow-500 to-yellow-600 text-gray-900 px-6 py-4 rounded-xl shadow-lg">
                         <div class="text-3xl font-bold">6+</div>
-                        <div class="text-sm font-medium">Anos de Experiência</div>
+                        <div class="text-sm font-medium">{% trans "Anos de Experiência" %}</div>
                     </div>
                 </div>
                 <div>
-                    <p class="text-lg text-gray-700 mb-4">Olá! Sou a <strong>Daisy Fortes</strong>, e transformar sonhos em bolos é a minha paixão.</p>
-                    <p class="text-gray-600 mb-4">Cada bolo que crio é uma obra de arte personalizada, pensada ao detalhe para celebrar os seus momentos mais especiais. Desde festas de aniversário infantis repletas de cor e diversão, até celebrações elegantes de marcos importantes da vida.</p>
-                    <p class="text-gray-600 mb-6">Com anos de experiência em confeitaria artesanal, combino técnicas tradicionais com criatividade moderna para entregar não apenas um bolo, mas uma experiência memorável.</p>
-                    <p class="text-lg font-semibold" style="color: #dbc693;">O seu momento especial merece um bolo igualmente especial. Vamos criar magia juntos?</p>
+                    <p class="text-lg text-gray-700 mb-4">{% trans "Olá! Sou a" %} <strong>Daisy Fortes</strong>, {% trans "e transformar sonhos em bolos é a minha paixão." %}</p>
+                    <p class="text-gray-600 mb-4">{% trans "Cada bolo que crio é uma obra de arte personalizada, pensada ao detalhe para celebrar os seus momentos mais especiais. Desde festas de aniversário infantis repletas de cor e diversão, até celebrações elegantes de marcos importantes da vida." %}</p>
+                    <p class="text-gray-600 mb-6">{% trans "Com anos de experiência em confeitaria artesanal, combino técnicas tradicionais com criatividade moderna para entregar não apenas um bolo, mas uma experiência memorável." %}</p>
+                    <p class="text-lg font-semibold" style="color: #dbc693;">{% trans "O seu momento especial merece um bolo igualmente especial. Vamos criar magia juntos?" %}</p>
                     <div class="grid grid-cols-3 gap-6 mt-8">
-                        <div class="text-center"><div class="text-3xl font-bold" style="color: #dbc693;">305+</div><div class="text-sm text-gray-600">Bolos Criados</div></div>
-                        <div class="text-center"><div class="text-3xl font-bold" style="color: #dbc693;">6.380+</div><div class="text-sm text-gray-600">Clientes Felizes</div></div>
-                        <div class="text-center"><div class="text-3xl font-bold" style="color: #dbc693;">100%</div><div class="text-sm text-gray-600">Feito à Mão</div></div>
+                        <div class="text-center"><div class="text-3xl font-bold" style="color: #dbc693;">305+</div><div class="text-sm text-gray-600">{% trans "Bolos Criados" %}</div></div>
+                        <div class="text-center"><div class="text-3xl font-bold" style="color: #dbc693;">6.380+</div><div class="text-sm text-gray-600">{% trans "Clientes Felizes" %}</div></div>
+                        <div class="text-center"><div class="text-3xl font-bold" style="color: #dbc693;">100%</div><div class="text-sm text-gray-600">{% trans "Feito à Mão" %}</div></div>
                     </div>
                 </div>
             </div>
@@ -100,86 +115,86 @@
     <section id="portfolio" class="py-20">
         <div class="container mx-auto px-4">
             <div class="text-center mb-12">
-                <h2 class="text-4xl md:text-5xl font-bold mb-4">O Nosso Portfólio</h2>
-                <p class="text-xl text-gray-600">Cada bolo conta uma história única</p>
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">{% trans "O Nosso Portfólio" %}</h2>
+                <p class="text-xl text-gray-600">{% trans "Cada bolo conta uma história única" %}</p>
             </div>
             <div class="flex flex-wrap justify-center gap-3 mb-12">
-                <button class="filter-btn px-6 py-2 rounded-md border-2 text-white text-sm font-medium" style="background-color: #dbc693; border-color: #dbc693;" data-filter="all">Todos</button>
-                <button class="filter-btn px-6 py-2 rounded-md border-2 border-black bg-transparent text-black text-sm font-medium transition" data-filter="infantis">Bolos Infantis</button>
-                <button class="filter-btn px-6 py-2 rounded-md border-2 border-black bg-transparent text-black text-sm font-medium transition" data-filter="adultos">Bolos Adultos</button>
-                <button class="filter-btn px-6 py-2 rounded-md border-2 border-black bg-transparent text-black text-sm font-medium transition" data-filter="casamento">Bolos Casamento</button>
-                <button class="filter-btn px-6 py-2 rounded-md border-2 border-black bg-transparent text-black text-sm font-medium transition" data-filter="minimalistas">Minimalistas</button>
-                <button class="filter-btn px-6 py-2 rounded-md border-2 border-black bg-transparent text-black text-sm font-medium transition" data-filter="tematicos">Temáticos</button>
+                <button class="filter-btn px-6 py-2 rounded-md border-2 text-white text-sm font-medium" style="background-color: #dbc693; border-color: #dbc693;" data-filter="all">{% trans "Todos" %}</button>
+                <button class="filter-btn px-6 py-2 rounded-md border-2 border-black bg-transparent text-black text-sm font-medium transition" data-filter="infantis">{% trans "Bolos Infantis" %}</button>
+                <button class="filter-btn px-6 py-2 rounded-md border-2 border-black bg-transparent text-black text-sm font-medium transition" data-filter="adultos">{% trans "Bolos Adultos" %}</button>
+                <button class="filter-btn px-6 py-2 rounded-md border-2 border-black bg-transparent text-black text-sm font-medium transition" data-filter="casamento">{% trans "Bolos Casamento" %}</button>
+                <button class="filter-btn px-6 py-2 rounded-md border-2 border-black bg-transparent text-black text-sm font-medium transition" data-filter="minimalistas">{% trans "Minimalistas" %}</button>
+                <button class="filter-btn px-6 py-2 rounded-md border-2 border-black bg-transparent text-black text-sm font-medium transition" data-filter="tematicos">{% trans "Temáticos" %}</button>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="infantis">
-                    <img src="https://v0-fuet-magico.vercel.app/images/bolo-stitch.jpg" alt="Bolo Stitch" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <img src="{% static 'images/cakes/bolo-stitch.jpg' %}" alt="Bolo Stitch" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
                         <div><h3 class="text-white font-bold">Bolo Stitch</h3><p class="text-gray-300 text-sm">Bolos Infantis</p></div>
                     </div>
                 </div>
                 <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="infantis">
-                    <img src="https://v0-fuet-magico.vercel.app/images/bolo-vampirina.jpg" alt="Bolo Vampirina" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <img src="{% static 'images/cakes/bolo-vampirina.jpg' %}" alt="Bolo Vampirina" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
                         <div><h3 class="text-white font-bold">Bolo Vampirina</h3><p class="text-gray-300 text-sm">Bolos Infantis</p></div>
                     </div>
                 </div>
                 <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="adultos">
-                    <img src="https://v0-fuet-magico.vercel.app/images/celebracao-60-anos.jpg" alt="Celebração 60 Anos" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <img src="{% static 'images/cakes/celebracao-60-anos.jpg' %}" alt="Celebração 60 Anos" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
                         <div><h3 class="text-white font-bold">Celebração 60 Anos</h3><p class="text-gray-300 text-sm">Bolos Adultos</p></div>
                     </div>
                 </div>
                 <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="minimalistas">
-                    <img src="https://v0-fuet-magico.vercel.app/images/elegancia-branca.jpg" alt="Elegância Branca" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <img src="{% static 'images/cakes/elegancia-branca.jpg' %}" alt="Elegância Branca" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
                         <div><h3 class="text-white font-bold">Elegância Branca</h3><p class="text-gray-300 text-sm">Minimalistas</p></div>
                     </div>
                 </div>
                 <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="casamento">
-                    <img src="https://v0-fuet-magico.vercel.app/images/romance-eterno.jpg" alt="Romance Eterno" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <img src="{% static 'images/cakes/romance-eterno.jpg' %}" alt="Romance Eterno" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
                         <div><h3 class="text-white font-bold">Romance Eterno</h3><p class="text-gray-300 text-sm">Bolos Casamento</p></div>
                     </div>
                 </div>
                 <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="tematicos">
-                    <img src="https://v0-fuet-magico.vercel.app/images/super-herois.jpg" alt="Super-Heróis" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <img src="{% static 'images/cakes/super-herois.jpg' %}" alt="Super-Heróis" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
                         <div><h3 class="text-white font-bold">Super-Heróis</h3><p class="text-gray-300 text-sm">Temáticos</p></div>
                     </div>
                 </div>
                 <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="adultos">
-                    <img src="https://v0-fuet-magico.vercel.app/images/aniversario-sofisticado.jpg" alt="Aniversário Sofisticado" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <img src="{% static 'images/cakes/aniversario-sofisticado.jpg' %}" alt="Aniversário Sofisticado" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
                         <div><h3 class="text-white font-bold">Aniversário Sofisticado</h3><p class="text-gray-300 text-sm">Bolos Adultos</p></div>
                     </div>
                 </div>
                 <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="minimalistas">
-                    <img src="https://v0-fuet-magico.vercel.app/images/naked-cake.jpg" alt="Naked Cake" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <img src="{% static 'images/cakes/naked-cake.jpg' %}" alt="Naked Cake" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
                         <div><h3 class="text-white font-bold">Naked Cake</h3><p class="text-gray-300 text-sm">Minimalistas</p></div>
                     </div>
                 </div>
                 <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="casamento">
-                    <img src="https://v0-fuet-magico.vercel.app/images/minimalista-dourado.jpg" alt="Minimalista Dourado" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <img src="{% static 'images/cakes/minimalista-dourado.jpg' %}" alt="Minimalista Dourado" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
                         <div><h3 class="text-white font-bold">Minimalista Dourado</h3><p class="text-gray-300 text-sm">Bolos Casamento</p></div>
                     </div>
                 </div>
                 <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="tematicos">
-                    <img src="https://v0-fuet-magico.vercel.app/images/castelo-princesa.jpg" alt="Castelo Princesa" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <img src="{% static 'images/cakes/castelo-princesa.jpg' %}" alt="Castelo Princesa" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
                         <div><h3 class="text-white font-bold">Castelo Princesa</h3><p class="text-gray-300 text-sm">Temáticos</p></div>
                     </div>
                 </div>
                 <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="infantis">
-                    <img src="https://v0-fuet-magico.vercel.app/images/unicornio-magico.jpg" alt="Unicórnio Mágico" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <img src="{% static 'images/cakes/unicornio-magico.jpg' %}" alt="Unicórnio Mágico" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
                         <div><h3 class="text-white font-bold">Unicórnio Mágico</h3><p class="text-gray-300 text-sm">Bolos Infantis</p></div>
                     </div>
                 </div>
                 <div class="portfolio-item group relative overflow-hidden rounded-lg" data-category="adultos">
-                    <img src="https://v0-fuet-magico.vercel.app/images/sofisticacao-negra.jpg" alt="Sofisticação Negra" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
+                    <img src="{% static 'images/cakes/sofisticacao-negra.jpg' %}" alt="Sofisticação Negra" class="w-full h-64 object-cover group-hover:scale-110 transition duration-300">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-4">
                         <div><h3 class="text-white font-bold">Sofisticação Negra</h3><p class="text-gray-300 text-sm">Bolos Adultos</p></div>
                     </div>
@@ -191,44 +206,44 @@
     <section id="servicos" class="py-20" style="background-color: #f4f0e7;">
         <div class="container mx-auto px-4">
             <div class="text-center mb-12">
-                <h2 class="text-4xl md:text-5xl font-bold">Os Nossos Serviços</h2>
+                <h2 class="text-4xl md:text-5xl font-bold">{% trans "Os Nossos Serviços" %}</h2>
             </div>
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
                 <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition">
                     <div class="text-5xl mb-4">🎂</div>
-                    <h3 class="text-xl font-bold mb-3">Bolos Temáticos Infantis</h3>
-                    <p class="text-gray-600 mb-3">Personagens favoritos, cores vibrantes e muita diversão para tornar o aniversário inesquecível</p>
-                    <p class="text-sm font-semibold" style="color: #dbc693;">Stitch, Vampirina, Super-Heróis, Princesas</p>
+                    <h3 class="text-xl font-bold mb-3">{% trans "Bolos Temáticos Infantis" %}</h3>
+                    <p class="text-gray-600 mb-3">{% trans "Personagens favoritos, cores vibrantes e muita diversão para tornar o aniversário inesquecível" %}</p>
+                    <p class="text-sm font-semibold" style="color: #dbc693;">{% trans "Stitch, Vampirina, Super-Heróis, Princesas" %}</p>
                 </div>
                 <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition">
                     <div class="text-5xl mb-4">✨</div>
-                    <h3 class="text-xl font-bold mb-3">Celebrações Elegantes</h3>
-                    <p class="text-gray-600 mb-3">Designs sofisticados para aniversários especiais, bodas e celebrações de marcos importantes</p>
-                    <p class="text-sm font-semibold" style="color: #dbc693;">18 anos, 50/60 anos, Bodas, Formaturas</p>
+                    <h3 class="text-xl font-bold mb-3">{% trans "Celebrações Elegantes" %}</h3>
+                    <p class="text-gray-600 mb-3">{% trans "Designs sofisticados para aniversários especiais, bodas e celebrações de marcos importantes" %}</p>
+                    <p class="text-sm font-semibold" style="color: #dbc693;">{% trans "18 anos, 50/60 anos, Bodas, Formaturas" %}</p>
                 </div>
                 <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition">
                     <div class="text-5xl mb-4">💍</div>
-                    <h3 class="text-xl font-bold mb-3">Casamentos & Eventos</h3>
-                    <p class="text-gray-600 mb-3">Bolos de casamento clássicos e modernos, naked cakes, bolos de noivado</p>
-                    <p class="text-sm font-semibold" style="color: #dbc693;">Naked cakes, Multi-tier, Minimalistas</p>
+                    <h3 class="text-xl font-bold mb-3">{% trans "Casamentos & Eventos" %}</h3>
+                    <p class="text-gray-600 mb-3">{% trans "Bolos de casamento clássicos e modernos, naked cakes, bolos de noivado" %}</p>
+                    <p class="text-sm font-semibold" style="color: #dbc693;">{% trans "Naked cakes, Multi-tier, Minimalistas" %}</p>
                 </div>
                 <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition">
                     <div class="text-5xl mb-4">🏢</div>
-                    <h3 class="text-xl font-bold mb-3">Bolos Corporativos</h3>
-                    <p class="text-gray-600 mb-3">Eventos empresariais, inaugurações, branding personalizado em pasta de açúcar</p>
-                    <p class="text-sm font-semibold" style="color: #dbc693;">Eventos, Inaugurações, Branding</p>
+                    <h3 class="text-xl font-bold mb-3">{% trans "Bolos Corporativos" %}</h3>
+                    <p class="text-gray-600 mb-3">{% trans "Eventos empresariais, inaugurações, branding personalizado em pasta de açúcar" %}</p>
+                    <p class="text-sm font-semibold" style="color: #dbc693;">{% trans "Eventos, Inaugurações, Branding" %}</p>
                 </div>
                 <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition">
                     <div class="text-5xl mb-4">🤍</div>
-                    <h3 class="text-xl font-bold mb-3">Minimalistas & Modernos</h3>
-                    <p class="text-gray-600 mb-3">Linhas limpas, elegância atemporal, decorações delicadas e sofisticadas</p>
-                    <p class="text-sm font-semibold" style="color: #dbc693;">Clean design, Elegância, Sutileza</p>
+                    <h3 class="text-xl font-bold mb-3">{% trans "Minimalistas & Modernos" %}</h3>
+                    <p class="text-gray-600 mb-3">{% trans "Linhas limpas, elegância atemporal, decorações delicadas e sofisticadas" %}</p>
+                    <p class="text-sm font-semibold" style="color: #dbc693;">{% trans "Clean design, Elegância, Sutileza" %}</p>
                 </div>
                 <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition">
                     <div class="text-5xl mb-4">🎨</div>
-                    <h3 class="text-xl font-bold mb-3">Encomendas Personalizadas</h3>
-                    <p class="text-gray-600 mb-3">Tem uma ideia única? Trabalhamos consigo para criar o bolo dos seus sonhos</p>
-                    <p class="text-sm font-semibold" style="color: #dbc693;">Criatividade, Personalização, Sonhos</p>
+                    <h3 class="text-xl font-bold mb-3">{% trans "Encomendas Personalizadas" %}</h3>
+                    <p class="text-gray-600 mb-3">{% trans "Tem uma ideia única? Trabalhamos consigo para criar o bolo dos seus sonhos" %}</p>
+                    <p class="text-sm font-semibold" style="color: #dbc693;">{% trans "Criatividade, Personalização, Sonhos" %}</p>
                 </div>
             </div>
         </div>
@@ -237,69 +252,69 @@
     <section id="precos" class="py-20">
         <div class="container mx-auto px-4">
             <div class="text-center mb-12">
-                <h2 class="text-4xl md:text-5xl font-bold mb-4">Investimento</h2>
-                <p class="text-xl text-gray-600">Preços transparentes para o seu orçamento</p>
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">{% trans "Investimento" %}</h2>
+                <p class="text-xl text-gray-600">{% trans "Preços transparentes para o seu orçamento" %}</p>
             </div>
             <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
                 <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
                     <div class="text-center mb-6">
-                        <p class="text-sm text-gray-600 font-semibold mb-2">Pacote Básico</p>
-                        <h3 class="text-2xl font-bold mb-2">Doçura Simples</h3>
+                        <p class="text-sm text-gray-600 font-semibold mb-2">{% trans "Pacote Básico" %}</p>
+                        <h3 class="text-2xl font-bold mb-2">{% trans "Doçura Simples" %}</h3>
                         <div class="mb-1"><span class="text-4xl font-bold" style="color: #dbc693;">€45</span></div>
-                        <p class="text-sm text-gray-500">A partir de</p>
+                        <p class="text-sm text-gray-500">{% trans "A partir de" %}</p>
                     </div>
                     <ul class="space-y-3 mb-8 text-sm">
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Bolo redondo 15cm (6-8 pessoas)</span></li>
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>1 sabor à escolha</span></li>
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Cobertura buttercream</span></li>
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Decoração simples</span></li>
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Topper personalizado básico</span></li>
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Entrega na área local</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "Bolo redondo 15cm (6-8 pessoas)" %}</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "1 sabor à escolha" %}</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "Cobertura buttercream" %}</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "Decoração simples" %}</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "Topper personalizado básico" %}</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "Entrega na área local" %}</span></li>
                     </ul>
-                    <a href="#contacto" class="block text-center bg-gray-200 text-gray-700 px-6 py-3 rounded-full font-semibold hover:bg-gray-300 transition">Escolher Pacote</a>
+                    <a href="#contacto" class="block text-center bg-gray-200 text-gray-700 px-6 py-3 rounded-full font-semibold hover:bg-gray-300 transition">{% trans "Escolher Pacote" %}</a>
                 </div>
                 <div class="bg-white p-8 rounded-2xl shadow-2xl border-4 border-purple-600 relative transform scale-105">
-                    <div class="absolute -top-4 left-1/2 -translate-x-1/2"><span class="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-6 py-1.5 rounded-full text-xs font-bold uppercase">Mais Popular</span></div>
+                    <div class="absolute -top-4 left-1/2 -translate-x-1/2"><span class="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-6 py-1.5 rounded-full text-xs font-bold uppercase">{% trans "Mais Popular" %}</span></div>
                     <div class="text-center mb-6 mt-2">
-                        <p class="text-sm text-gray-600 font-semibold mb-2">Pacote Standard</p>
-                        <h3 class="text-2xl font-bold mb-2">Momento Especial</h3>
+                        <p class="text-sm text-gray-600 font-semibold mb-2">{% trans "Pacote Standard" %}</p>
+                        <h3 class="text-2xl font-bold mb-2">{% trans "Momento Especial" %}</h3>
                         <div class="mb-1"><span class="text-4xl font-bold" style="color: #dbc693;">€85</span></div>
-                        <p class="text-sm text-gray-500">A partir de</p>
+                        <p class="text-sm text-gray-500">{% trans "A partir de" %}</p>
                     </div>
                     <ul class="space-y-3 mb-8 text-sm">
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Bolo redondo 20cm (12-15 pessoas)</span></li>
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>2 sabores à escolha</span></li>
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Cobertura premium (fondant/buttercream)</span></li>
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Decoração personalizada média</span></li>
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Topper personalizado + flores açúcar</span></li>
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Cores customizadas</span></li>
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Entrega premium</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "Bolo redondo 20cm (12-15 pessoas)" %}</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "2 sabores à escolha" %}</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "Cobertura premium (fondant/buttercream)" %}</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "Decoração personalizada média" %}</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "Topper personalizado + flores açúcar" %}</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "Cores customizadas" %}</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "Entrega premium" %}</span></li>
                     </ul>
-                    <a href="#contacto" class="block text-center bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 transition">Escolher Pacote</a>
+                    <a href="#contacto" class="block text-center bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 transition">{% trans "Escolher Pacote" %}</a>
                 </div>
                 <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
                     <div class="text-center mb-6">
-                        <p class="text-sm text-gray-600 font-semibold mb-2">Pacote Premium</p>
-                        <h3 class="text-2xl font-bold mb-2">Sonho Realizado</h3>
+                        <p class="text-sm text-gray-600 font-semibold mb-2">{% trans "Pacote Premium" %}</p>
+                        <h3 class="text-2xl font-bold mb-2">{% trans "Sonho Realizado" %}</h3>
                         <div class="mb-1"><span class="text-4xl font-bold" style="color: #dbc693;">€150</span></div>
-                        <p class="text-sm text-gray-500">A partir de</p>
+                        <p class="text-sm text-gray-500">{% trans "A partir de" %}</p>
                     </div>
                     <ul class="space-y-3 mb-8 text-sm">
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Multi-tier ou tamanho XL (25+ pessoas)</span></li>
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>3+ sabores à escolha</span></li>
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Decoração complexa e artística</span></li>
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Flores naturais/pasta açúcar premium</span></li>
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Toppers sculpted personalizados</span></li>
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Texturas douradas/prateadas</span></li>
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Sessão de design detalhada</span></li>
-                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Entrega e setup incluídos</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "Multi-tier ou tamanho XL (25+ pessoas)" %}</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "3+ sabores à escolha" %}</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "Decoração complexa e artística" %}</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "Flores naturais/pasta açúcar premium" %}</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "Toppers sculpted personalizados" %}</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "Texturas douradas/prateadas" %}</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "Sessão de design detalhada" %}</span></li>
+                        <li class="flex items-start gap-2"><svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>{% trans "Entrega e setup incluídos" %}</span></li>
                     </ul>
-                    <a href="#contacto" class="block text-center bg-gray-200 text-gray-700 px-6 py-3 rounded-full font-semibold hover:bg-gray-300 transition">Escolher Pacote</a>
+                    <a href="#contacto" class="block text-center bg-gray-200 text-gray-700 px-6 py-3 rounded-full font-semibold hover:bg-gray-300 transition">{% trans "Escolher Pacote" %}</a>
                 </div>
             </div>
             <div class="text-center mt-12">
-                <p class="text-sm text-gray-600 mb-4">*Os preços são indicativos e variam conforme complexidade, tamanho e decoração.<br>Contacte-nos para orçamento personalizado.</p>
-                <a href="#contacto" class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-3 font-medium text-white hover:opacity-90">Pedir Orçamento Gratuito</a>
+                <p class="text-sm text-gray-600 mb-4">{% trans "*Os preços são indicativos e variam conforme complexidade, tamanho e decoração." %}<br>{% trans "Contacte-nos para orçamento personalizado." %}</p>
+                <a href="#contacto" class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-3 font-medium text-white hover:opacity-90">{% trans "Pedir Orçamento Gratuito" %}</a>
             </div>
         </div>
     </section>
@@ -307,7 +322,7 @@
     <section id="testemunhos" class="py-20" style="background-color: #f4f0e7;">
         <div class="container mx-auto px-4">
             <div class="text-center mb-12">
-                <h2 class="text-4xl md:text-5xl font-bold">O Que Dizem os Nossos Clientes</h2>
+                <h2 class="text-4xl md:text-5xl font-bold">{% trans "O Que Dizem os Nossos Clientes" %}</h2>
             </div>
             <div class="relative max-w-7xl mx-auto">
                 <!-- Carousel wrapper -->
@@ -319,8 +334,8 @@
                                 <div class="flex gap-1 mb-4 text-yellow-400 text-xl">★★★★★</div>
                                 <p class="text-gray-700 mb-6 italic">"O bolo da Vampirina para os 6 anos da minha filha foi absolutamente perfeito! A Daisy captou exatamente o que queríamos. A Emília não parou de falar no bolo durante semanas!"</p>
                                 <div class="flex items-center gap-3">
-                                    <img src="https://v0-fuet-magico.vercel.app/smiling-woman-avatar.png" alt="Maria Santos" class="w-12 h-12 rounded-full">
-                                    <div><div class="font-bold">Maria Santos</div><div class="text-sm text-gray-600">Cliente</div></div>
+                                    <img src="{% static 'images/avatars/woman-avatar.png' %}" alt="Maria Santos" class="w-12 h-12 rounded-full">
+                                    <div><div class="font-bold">Maria Santos</div><div class="text-sm text-gray-600">{% trans "Cliente" %}</div></div>
                                 </div>
                             </div>
                         </div>
@@ -330,8 +345,8 @@
                                 <div class="flex gap-1 mb-4 text-yellow-400 text-xl">★★★★★</div>
                                 <p class="text-gray-700 mb-6 italic">"Encomendei um bolo de 60 anos para a minha mãe e foi uma obra de arte! Elegante, delicioso e com atenção a cada detalhe. Recomendo vivamente!"</p>
                                 <div class="flex items-center gap-3">
-                                    <img src="https://v0-fuet-magico.vercel.app/smiling-man-avatar.png" alt="João Pereira" class="w-12 h-12 rounded-full">
-                                    <div><div class="font-bold">João Pereira</div><div class="text-sm text-gray-600">Cliente</div></div>
+                                    <img src="{% static 'images/avatars/man-avatar.png' %}" alt="João Pereira" class="w-12 h-12 rounded-full">
+                                    <div><div class="font-bold">João Pereira</div><div class="text-sm text-gray-600">{% trans "Cliente" %}</div></div>
                                 </div>
                             </div>
                         </div>
@@ -341,8 +356,8 @@
                                 <div class="flex gap-1 mb-4 text-yellow-400 text-xl">★★★★★</div>
                                 <p class="text-gray-700 mb-6 italic">"Profissionalismo incrível! A Daisy ajudou-nos a escolher o design perfeito para o nosso casamento. O bolo foi o destaque da festa. Obrigada!"</p>
                                 <div class="flex items-center gap-3">
-                                    <img src="https://v0-fuet-magico.vercel.app/professional-woman-avatar.png" alt="Ana Costa" class="w-12 h-12 rounded-full">
-                                    <div><div class="font-bold">Ana Costa</div><div class="text-sm text-gray-600">Cliente</div></div>
+                                    <img src="{% static 'images/avatars/professional-woman-avatar.png' %}" alt="Ana Costa" class="w-12 h-12 rounded-full">
+                                    <div><div class="font-bold">Ana Costa</div><div class="text-sm text-gray-600">{% trans "Cliente" %}</div></div>
                                 </div>
                             </div>
                         </div>
@@ -352,8 +367,8 @@
                                 <div class="flex gap-1 mb-4 text-yellow-400 text-xl">★★★★★</div>
                                 <p class="text-gray-700 mb-6 italic">"Bolo lindo e delicioso! Superou todas as expectativas. A qualidade dos ingredientes nota-se em cada fatia. Voltarei a encomendar com certeza!"</p>
                                 <div class="flex items-center gap-3">
-                                    <img src="https://v0-fuet-magico.vercel.app/smiling-woman-avatar.png" alt="Sofia Rodrigues" class="w-12 h-12 rounded-full">
-                                    <div><div class="font-bold">Sofia Rodrigues</div><div class="text-sm text-gray-600">Cliente</div></div>
+                                    <img src="{% static 'images/avatars/woman-avatar.png' %}" alt="Sofia Rodrigues" class="w-12 h-12 rounded-full">
+                                    <div><div class="font-bold">Sofia Rodrigues</div><div class="text-sm text-gray-600">{% trans "Cliente" %}</div></div>
                                 </div>
                             </div>
                         </div>
@@ -363,8 +378,8 @@
                                 <div class="flex gap-1 mb-4 text-yellow-400 text-xl">★★★★★</div>
                                 <p class="text-gray-700 mb-6 italic">"O bolo temático do Batman foi espetacular! O meu filho ficou encantado. Atenção aos detalhes e sabor incrível. Recomendo 100%!"</p>
                                 <div class="flex items-center gap-3">
-                                    <img src="https://v0-fuet-magico.vercel.app/smiling-man-avatar.png" alt="Carlos Silva" class="w-12 h-12 rounded-full">
-                                    <div><div class="font-bold">Carlos Silva</div><div class="text-sm text-gray-600">Cliente</div></div>
+                                    <img src="{% static 'images/avatars/man-avatar.png' %}" alt="Carlos Silva" class="w-12 h-12 rounded-full">
+                                    <div><div class="font-bold">Carlos Silva</div><div class="text-sm text-gray-600">{% trans "Cliente" %}</div></div>
                                 </div>
                             </div>
                         </div>
@@ -374,8 +389,8 @@
                                 <div class="flex gap-1 mb-4 text-yellow-400 text-xl">★★★★★</div>
                                 <p class="text-gray-700 mb-6 italic">"Excelente serviço! O bolo minimalista ficou perfeito para o nosso evento corporativo. Elegante e saboroso. Obrigada pela dedicação!"</p>
                                 <div class="flex items-center gap-3">
-                                    <img src="https://v0-fuet-magico.vercel.app/professional-woman-avatar.png" alt="Beatriz Martins" class="w-12 h-12 rounded-full">
-                                    <div><div class="font-bold">Beatriz Martins</div><div class="text-sm text-gray-600">Cliente</div></div>
+                                    <img src="{% static 'images/avatars/professional-woman-avatar.png' %}" alt="Beatriz Martins" class="w-12 h-12 rounded-full">
+                                    <div><div class="font-bold">Beatriz Martins</div><div class="text-sm text-gray-600">{% trans "Cliente" %}</div></div>
                                 </div>
                             </div>
                         </div>
@@ -385,8 +400,8 @@
                                 <div class="flex gap-1 mb-4 text-yellow-400 text-xl">★★★★★</div>
                                 <p class="text-gray-700 mb-6 italic">"A qualidade é incomparável! O bolo do batizado ficou lindo. Todos os convidados pediram o contacto. Serviço de excelência!"</p>
                                 <div class="flex items-center gap-3">
-                                    <img src="https://v0-fuet-magico.vercel.app/smiling-woman-avatar.png" alt="Rita Ferreira" class="w-12 h-12 rounded-full">
-                                    <div><div class="font-bold">Rita Ferreira</div><div class="text-sm text-gray-600">Cliente</div></div>
+                                    <img src="{% static 'images/avatars/woman-avatar.png' %}" alt="Rita Ferreira" class="w-12 h-12 rounded-full">
+                                    <div><div class="font-bold">Rita Ferreira</div><div class="text-sm text-gray-600">{% trans "Cliente" %}</div></div>
                                 </div>
                             </div>
                         </div>
@@ -396,8 +411,8 @@
                                 <div class="flex gap-1 mb-4 text-yellow-400 text-xl">★★★★★</div>
                                 <p class="text-gray-700 mb-6 italic">"Bolo maravilhoso! Design criativo e sabor divinal. A Daisy é uma verdadeira artista. Não poderia estar mais satisfeita!"</p>
                                 <div class="flex items-center gap-3">
-                                    <img src="https://v0-fuet-magico.vercel.app/smiling-man-avatar.png" alt="Miguel Sousa" class="w-12 h-12 rounded-full">
-                                    <div><div class="font-bold">Miguel Sousa</div><div class="text-sm text-gray-600">Cliente</div></div>
+                                    <img src="{% static 'images/avatars/man-avatar.png' %}" alt="Miguel Sousa" class="w-12 h-12 rounded-full">
+                                    <div><div class="font-bold">Miguel Sousa</div><div class="text-sm text-gray-600">{% trans "Cliente" %}</div></div>
                                 </div>
                             </div>
                         </div>
@@ -407,8 +422,8 @@
                                 <div class="flex gap-1 mb-4 text-yellow-400 text-xl">★★★★★</div>
                                 <p class="text-gray-700 mb-6 italic">"Encomenda perfeita do início ao fim! Comunicação clara, entrega pontual e um bolo absolutamente deslumbrante. Obrigada pela magia!"</p>
                                 <div class="flex items-center gap-3">
-                                    <img src="https://v0-fuet-magico.vercel.app/professional-woman-avatar.png" alt="Catarina Lopes" class="w-12 h-12 rounded-full">
-                                    <div><div class="font-bold">Catarina Lopes</div><div class="text-sm text-gray-600">Cliente</div></div>
+                                    <img src="{% static 'images/avatars/professional-woman-avatar.png' %}" alt="Catarina Lopes" class="w-12 h-12 rounded-full">
+                                    <div><div class="font-bold">Catarina Lopes</div><div class="text-sm text-gray-600">{% trans "Cliente" %}</div></div>
                                 </div>
                             </div>
                         </div>
@@ -443,29 +458,29 @@
     <section class="py-20">
         <div class="container mx-auto px-4">
             <div class="text-center mb-12">
-                <h2 class="text-4xl md:text-5xl font-bold mb-4">Como Fazemos a Sua Encomenda</h2>
-                <p class="text-xl text-gray-600">Simples, rápido e personalizado</p>
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">{% trans "Como Fazemos a Sua Encomenda" %}</h2>
+                <p class="text-xl text-gray-600">{% trans "Simples, rápido e personalizado" %}</p>
             </div>
             <div class="grid md:grid-cols-4 gap-8 max-w-6xl mx-auto">
                 <div class="text-center">
                     <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style="background-color: #fce4e5;"><span class="text-3xl font-bold" style="color: #dbc693;">1</span></div>
-                    <h3 class="text-xl font-bold mb-3">Contacte-nos</h3>
-                    <p class="text-gray-600">Envie-nos a sua ideia por Instagram, WhatsApp ou formulário</p>
+                    <h3 class="text-xl font-bold mb-3">{% trans "Contacte-nos" %}</h3>
+                    <p class="text-gray-600">{% trans "Envie-nos a sua ideia por Instagram, WhatsApp ou formulário" %}</p>
                 </div>
                 <div class="text-center">
                     <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style="background-color: #fce4e5;"><span class="text-3xl font-bold" style="color: #dbc693;">2</span></div>
-                    <h3 class="text-xl font-bold mb-3">Design & Orçamento</h3>
-                    <p class="text-gray-600">Criamos um design personalizado e enviamos orçamento detalhado</p>
+                    <h3 class="text-xl font-bold mb-3">{% trans "Design & Orçamento" %}</h3>
+                    <p class="text-gray-600">{% trans "Criamos um design personalizado e enviamos orçamento detalhado" %}</p>
                 </div>
                 <div class="text-center">
                     <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style="background-color: #fce4e5;"><span class="text-3xl font-bold" style="color: #dbc693;">3</span></div>
-                    <h3 class="text-xl font-bold mb-3">Produção Artesanal</h3>
-                    <p class="text-gray-600">O seu bolo é feito à mão com ingredientes premium</p>
+                    <h3 class="text-xl font-bold mb-3">{% trans "Produção Artesanal" %}</h3>
+                    <p class="text-gray-600">{% trans "O seu bolo é feito à mão com ingredientes premium" %}</p>
                 </div>
                 <div class="text-center">
                     <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style="background-color: #fce4e5;"><span class="text-3xl font-bold" style="color: #dbc693;">4</span></div>
-                    <h3 class="text-xl font-bold mb-3">Entrega ou Recolha</h3>
-                    <p class="text-gray-600">Entregamos ou pode levantar no dia acordado</p>
+                    <h3 class="text-xl font-bold mb-3">{% trans "Entrega ou Recolha" %}</h3>
+                    <p class="text-gray-600">{% trans "Entregamos ou pode levantar no dia acordado" %}</p>
                 </div>
             </div>
         </div>
@@ -474,79 +489,79 @@
     <section class="py-20" style="background-color: #f4f0e7;">
         <div class="container mx-auto px-4">
             <div class="text-center mb-12">
-                <h2 class="text-4xl md:text-5xl font-bold">Sabores Irresistíveis</h2>
+                <h2 class="text-4xl md:text-5xl font-bold">{% trans "Sabores Irresistíveis" %}</h2>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 max-w-6xl mx-auto">
-                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍫</div><div class="text-sm font-semibold">Chocolate Belga</div></div>
-                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🌼</div><div class="text-sm font-semibold">Baunilha Madagascar</div></div>
-                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">❤️</div><div class="text-sm font-semibold">Red Velvet</div></div>
-                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍋</div><div class="text-sm font-semibold">Limão Siciliano</div></div>
-                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍓</div><div class="text-sm font-semibold">Morango Fresco</div></div>
-                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🥜</div><div class="text-sm font-semibold">Noz & Caramelo</div></div>
-                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🌰</div><div class="text-sm font-semibold">Nutella</div></div>
-                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🥥</div><div class="text-sm font-semibold">Coco</div></div>
-                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">☕</div><div class="text-sm font-semibold">Café</div></div>
-                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍬</div><div class="text-sm font-semibold">Brigadeiro Gourmet</div></div>
-                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🥛</div><div class="text-sm font-semibold">Doce de Leite</div></div>
-                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🫐</div><div class="text-sm font-semibold">Frutas Vermelhas</div></div>
-                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🧀</div><div class="text-sm font-semibold">Cheesecake</div></div>
-                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍫</div><div class="text-sm font-semibold">Ferrero Rocher</div></div>
-                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍫</div><div class="text-sm font-semibold">Kinder Bueno</div></div>
-                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍪</div><div class="text-sm font-semibold">Oreo</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍫</div><div class="text-sm font-semibold">{% trans "Chocolate Belga" %}</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🌼</div><div class="text-sm font-semibold">{% trans "Baunilha Madagascar" %}</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">❤️</div><div class="text-sm font-semibold">{% trans "Red Velvet" %}</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍋</div><div class="text-sm font-semibold">{% trans "Limão Siciliano" %}</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍓</div><div class="text-sm font-semibold">{% trans "Morango Fresco" %}</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🥜</div><div class="text-sm font-semibold">{% trans "Noz & Caramelo" %}</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🌰</div><div class="text-sm font-semibold">{% trans "Nutella" %}</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🥥</div><div class="text-sm font-semibold">{% trans "Coco" %}</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">☕</div><div class="text-sm font-semibold">{% trans "Café" %}</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍬</div><div class="text-sm font-semibold">{% trans "Brigadeiro Gourmet" %}</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🥛</div><div class="text-sm font-semibold">{% trans "Doce de Leite" %}</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🫐</div><div class="text-sm font-semibold">{% trans "Frutas Vermelhas" %}</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🧀</div><div class="text-sm font-semibold">{% trans "Cheesecake" %}</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍫</div><div class="text-sm font-semibold">{% trans "Ferrero Rocher" %}</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍫</div><div class="text-sm font-semibold">{% trans "Kinder Bueno" %}</div></div>
+                <div class="text-center p-4 bg-white rounded-lg shadow"><div class="text-3xl mb-2">🍪</div><div class="text-sm font-semibold">{% trans "Oreo" %}</div></div>
             </div>
-            <div class="text-center mt-8"><p class="text-lg font-semibold">Sugestão especial? Fale connosco!</p></div>
+            <div class="text-center mt-8"><p class="text-lg font-semibold">{% trans "Sugestão especial? Fale connosco!" %}</p></div>
         </div>
     </section>
 
     <section id="contacto" class="py-20 bg-gray-50">
         <div class="container mx-auto px-4">
             <div class="text-center mb-12">
-                <h2 class="text-4xl md:text-5xl font-bold">Vamos Criar Algo Mágico Juntos</h2>
+                <h2 class="text-4xl md:text-5xl font-bold">{% trans "Vamos Criar Algo Mágico Juntos" %}</h2>
             </div>
             <div class="grid md:grid-cols-2 gap-12 max-w-5xl mx-auto">
                 <div class="bg-white p-8 rounded-2xl shadow-lg">
                     <form class="space-y-4">
-                        <div><label class="block text-sm font-medium mb-2">Nome Completo *</label><input type="text" required class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2" style="focus:ring-color: #dbc693;"></div>
-                        <div><label class="block text-sm font-medium mb-2">Email *</label><input type="email" required class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2" style="focus:ring-color: #dbc693;"></div>
-                        <div><label class="block text-sm font-medium mb-2">Telefone/WhatsApp *</label><input type="tel" required class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2" style="focus:ring-color: #dbc693;"></div>
-                        <div><label class="block text-sm font-medium mb-2">Tipo de Evento *</label><select required class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2" style="focus:ring-color: #dbc693;"><option value="">Selecione o tipo de evento</option><option>Aniversário Infantil</option><option>Aniversário Adulto</option><option>Casamento</option><option>Batizado</option><option>Evento Corporativo</option><option>Outro</option></select></div>
-                        <div><label class="block text-sm font-medium mb-2">Data do Evento *</label><input type="date" required class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2" style="focus:ring-color: #dbc693;"></div>
-                        <div><label class="block text-sm font-medium mb-2">Número de Pessoas</label><input type="number" class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2" style="focus:ring-color: #dbc693;"></div>
-                        <div><label class="block text-sm font-medium mb-2">Descrição do Bolo Desejado *</label><textarea required rows="4" class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2" style="focus:ring-color: #dbc693;"></textarea></div>
+                        <div><label class="block text-sm font-medium mb-2">{% trans "Nome Completo" %} *</label><input type="text" required class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2" style="focus:ring-color: #dbc693;"></div>
+                        <div><label class="block text-sm font-medium mb-2">{% trans "Email" %} *</label><input type="email" required class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2" style="focus:ring-color: #dbc693;"></div>
+                        <div><label class="block text-sm font-medium mb-2">{% trans "Telefone/WhatsApp" %} *</label><input type="tel" required class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2" style="focus:ring-color: #dbc693;"></div>
+                        <div><label class="block text-sm font-medium mb-2">{% trans "Tipo de Evento" %} *</label><select required class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2" style="focus:ring-color: #dbc693;"><option value="">{% trans "Selecione o tipo de evento" %}</option><option>{% trans "Aniversário Infantil" %}</option><option>{% trans "Aniversário Adulto" %}</option><option>{% trans "Casamento" %}</option><option>{% trans "Batizado" %}</option><option>{% trans "Evento Corporativo" %}</option><option>{% trans "Outro" %}</option></select></div>
+                        <div><label class="block text-sm font-medium mb-2">{% trans "Data do Evento" %} *</label><input type="date" required class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2" style="focus:ring-color: #dbc693;"></div>
+                        <div><label class="block text-sm font-medium mb-2">{% trans "Número de Pessoas" %}</label><input type="number" class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2" style="focus:ring-color: #dbc693;"></div>
+                        <div><label class="block text-sm font-medium mb-2">{% trans "Descrição do Bolo Desejado" %} *</label><textarea required rows="4" class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2" style="focus:ring-color: #dbc693;"></textarea></div>
                         <div class="flex items-start gap-3">
                             <input type="checkbox" required id="privacy-policy" class="mt-1 w-4 h-4 rounded border-gray-300" style="accent-color: #dbc693;">
-                            <label for="privacy-policy" class="text-sm text-gray-700">Aceito a Política de Privacidade *</label>
+                            <label for="privacy-policy" class="text-sm text-gray-700">{% trans "Aceito a Política de Privacidade" %} *</label>
                         </div>
-                        <button type="submit" id="submit-btn" disabled class="w-full text-white px-8 py-3 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed" style="background-color: #dbc693;">Enviar Pedido de Orçamento</button>
+                        <button type="submit" id="submit-btn" disabled class="w-full text-white px-8 py-3 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed" style="background-color: #dbc693;">{% trans "Enviar Pedido de Orçamento" %}</button>
                     </form>
                 </div>
                 <div>
                     <div class="p-8 rounded-2xl mb-6" style="background-color: #f4f0e7;">
-                        <h3 class="text-2xl font-bold mb-6">Informações de Contacto</h3>
+                        <h3 class="text-2xl font-bold mb-6">{% trans "Informações de Contacto" %}</h3>
                         <div class="space-y-6">
                             <div class="flex items-start gap-4">
                                 <svg class="w-6 h-6 flex-shrink-0 mt-1" style="color: #dbc693;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                                <div><div class="font-bold mb-1">Morada</div><div class="text-gray-600">Portugal</div></div>
+                                <div><div class="font-bold mb-1">{% trans "Morada" %}</div><div class="text-gray-600">Portugal</div></div>
                             </div>
                             <div class="flex items-start gap-4">
                                 <svg class="w-6 h-6 flex-shrink-0 mt-1" style="color: #dbc693;" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                                <div><div class="font-bold mb-1">WhatsApp</div><div class="text-gray-600">+351 XXX XXX XXX</div></div>
+                                <div><div class="font-bold mb-1">{% trans "WhatsApp" %}</div><div class="text-gray-600">+351 XXX XXX XXX</div></div>
                             </div>
                             <div class="flex items-start gap-4">
                                 <svg class="w-6 h-6 flex-shrink-0 mt-1" style="color: #dbc693;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                                <div><div class="font-bold mb-1">Email</div><div class="text-gray-600">fuetmagico@example.com</div></div>
+                                <div><div class="font-bold mb-1">{% trans "Email" %}</div><div class="text-gray-600">fuetmagico@example.com</div></div>
                             </div>
                             <div class="flex items-start gap-4">
                                 <svg class="w-6 h-6 flex-shrink-0 mt-1" style="color: #dbc693;" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-                                <div><div class="font-bold mb-1">Instagram</div><a href="https://instagram.com/fuet_magico_by_daisy_" style="color: #dbc693;" class="hover:underline">@fuet_magico_by_daisy_</a></div>
+                                <div><div class="font-bold mb-1">{% trans "Instagram" %}</div><a href="https://instagram.com/fuet_magico_by_daisy_" style="color: #dbc693;" class="hover:underline">@fuet_magico_by_daisy_</a></div>
                             </div>
                             <div class="flex items-start gap-4">
                                 <svg class="w-6 h-6 flex-shrink-0 mt-1" style="color: #dbc693;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                <div><div class="font-bold mb-1">Horário de Encomendas</div><div class="text-gray-600">48h de antecedência mínima</div></div>
+                                <div><div class="font-bold mb-1">{% trans "Horário de Encomendas" %}</div><div class="text-gray-600">{% trans "48h de antecedência mínima" %}</div></div>
                             </div>
                         </div>
                     </div>
-                    <img src="https://v0-fuet-magico.vercel.app/portugal-map-location-pin.jpg" alt="Mapa Portugal" class="rounded-lg shadow-lg w-full">
+                    <img src="{% static 'images/portugal-map.jpg' %}" alt="Mapa Portugal" class="rounded-lg shadow-lg w-full">
                 </div>
             </div>
         </div>
@@ -555,10 +570,10 @@
     <!-- CTA Section -->
     <section class="w-full py-24" style="background: linear-gradient(to bottom right, #dbc693 0%, #c89e46 100%);">
         <div class="container mx-auto px-4 text-center">
-            <h2 class="text-4xl md:text-5xl font-bold mb-6 text-white">Pronto Para o Bolo dos Seus Sonhos?</h2>
-            <p class="text-xl md:text-2xl mb-8 text-white">Vamos tornar o seu evento ainda mais especial</p>
-            <a href="#contacto" class="inline-flex items-center justify-center bg-white px-10 py-4 rounded-md text-lg font-semibold hover:bg-gray-100 transition-all" style="color: #dbc693;">Fazer Encomenda Agora</a>
-            <p class="mt-6 text-base text-white">✨ Resposta garantida em 24h</p>
+            <h2 class="text-4xl md:text-5xl font-bold mb-6 text-white">{% trans "Pronto Para o Bolo dos Seus Sonhos?" %}</h2>
+            <p class="text-xl md:text-2xl mb-8 text-white">{% trans "Vamos tornar o seu evento ainda mais especial" %}</p>
+            <a href="#contacto" class="inline-flex items-center justify-center bg-white px-10 py-4 rounded-md text-lg font-semibold hover:bg-gray-100 transition-all" style="color: #dbc693;">{% trans "Fazer Encomenda Agora" %}</a>
+            <p class="mt-6 text-base text-white">✨ {% trans "Resposta garantida em 24h" %}</p>
         </div>
     </section>
 
@@ -567,8 +582,8 @@
             <div class="grid md:grid-cols-4 gap-8 mb-8">
                 <div>
                     <h3 class="text-xl font-bold mb-4" style="color: #dbc693;">Fuet Mágico</h3>
-                    <p class="text-sm text-gray-400 mb-2">by Daisy</p>
-                    <p class="text-gray-400 mb-4 text-sm">Criando momentos mágicos através de bolos artesanais personalizados desde 2018</p>
+                    <p class="text-sm text-gray-400 mb-2">{% trans "by Daisy" %}</p>
+                    <p class="text-gray-400 mb-4 text-sm">{% trans "Criando momentos mágicos através de bolos artesanais personalizados desde 2018" %}</p>
                     <div class="flex gap-3 mb-3">
                         <a href="https://instagram.com/fuet_magico_by_daisy_" class="text-2xl text-gray-400 hover:text-white"><svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></a>
                         <a href="https://wa.me/351XXXXXXXXX" class="text-2xl text-gray-400 hover:text-white"><svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></a>
@@ -578,37 +593,37 @@
                     </div>
                 </div>
                 <div>
-                    <h4 class="font-bold mb-4">Links Rápidos</h4>
+                    <h4 class="font-bold mb-4">{% trans "Links Rápidos" %}</h4>
                     <ul class="space-y-2 text-sm">
-                        <li><a href="#inicio" class="text-gray-400 hover:text-white">Início</a></li>
-                        <li><a href="#sobre" class="text-gray-400 hover:text-white">Sobre Nós</a></li>
-                        <li><a href="#portfolio" class="text-gray-400 hover:text-white">Portfólio</a></li>
-                        <li><a href="#precos" class="text-gray-400 hover:text-white">Preços</a></li>
-                        <li><a href="#contacto" class="text-gray-400 hover:text-white">Contacto</a></li>
+                        <li><a href="#inicio" class="text-gray-400 hover:text-white">{% trans "Início" %}</a></li>
+                        <li><a href="#sobre" class="text-gray-400 hover:text-white">{% trans "Sobre Nós" %}</a></li>
+                        <li><a href="#portfolio" class="text-gray-400 hover:text-white">{% trans "Portfólio" %}</a></li>
+                        <li><a href="#precos" class="text-gray-400 hover:text-white">{% trans "Preços" %}</a></li>
+                        <li><a href="#contacto" class="text-gray-400 hover:text-white">{% trans "Contacto" %}</a></li>
                     </ul>
                 </div>
                 <div>
-                    <h4 class="font-bold mb-4">Informação</h4>
+                    <h4 class="font-bold mb-4">{% trans "Informação" %}</h4>
                     <ul class="space-y-2 text-sm">
-                        <li><a href="#" class="text-gray-400 hover:text-white">FAQ</a></li>
-                        <li><a href="#" class="text-gray-400 hover:text-white">Política de Privacidade</a></li>
-                        <li><a href="#" class="text-gray-400 hover:text-white">Termos e Condições</a></li>
-                        <li><a href="#" class="text-gray-400 hover:text-white">Política de Encomendas</a></li>
-                        <li><a href="#" class="text-gray-400 hover:text-white">Métodos de Pagamento</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">{% trans "FAQ" %}</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">{% trans "Política de Privacidade" %}</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">{% trans "Termos e Condições" %}</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">{% trans "Política de Encomendas" %}</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">{% trans "Métodos de Pagamento" %}</a></li>
                     </ul>
                 </div>
                 <div>
-                    <h4 class="font-bold mb-4">Receba Novidades</h4>
-                    <p class="text-gray-400 mb-4 text-sm">Promoções e inspirações direto no seu email</p>
+                    <h4 class="font-bold mb-4">{% trans "Receba Novidades" %}</h4>
+                    <p class="text-gray-400 mb-4 text-sm">{% trans "Promoções e inspirações direto no seu email" %}</p>
                     <form class="flex">
-                        <input type="email" placeholder="Seu email" class="flex-1 px-4 py-2 rounded-l-lg text-gray-900 text-sm">
+                        <input type="email" placeholder="{% trans 'Seu email' %}" class="flex-1 px-4 py-2 rounded-l-lg text-gray-900 text-sm">
                         <button class="px-4 py-2 rounded-r-lg hover:opacity-90" style="background-color: #dbc693;"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg></button>
                     </form>
                 </div>
             </div>
             <div class="border-t border-gray-800 pt-8 text-center text-sm text-gray-400">
-                <p class="mb-2">© 2026 Fuet Mágico by Daisy. Todos os direitos reservados.</p>
-                <p>Desenvolvido por <a href="https://www.cubix.pt" target="_blank" class="font-semibold bg-gradient-to-r from-[#ed2109] to-[#ff5a19] bg-clip-text text-transparent hover:opacity-80">Cubix</a></p>
+                <p class="mb-2">© 2026 Fuet Mágico by Daisy. {% trans "Todos os direitos reservados." %}</p>
+                <p>{% trans "Desenvolvido por" %} <a href="https://www.cubix.pt" target="_blank" class="font-semibold bg-gradient-to-r from-[#ed2109] to-[#ff5a19] bg-clip-text text-transparent hover:opacity-80">Cubix</a></p>
             </div>
         </div>
     </footer>
@@ -617,145 +632,6 @@
         <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
     </a>
 
-    <script>
-        document.getElementById('menu-btn').addEventListener('click', () => {
-            document.getElementById('mobile-menu').classList.toggle('hidden');
-        });
-
-        // Privacy policy checkbox validation
-        const privacyCheckbox = document.getElementById('privacy-policy');
-        const submitBtn = document.getElementById('submit-btn');
-        
-        if (privacyCheckbox && submitBtn) {
-            privacyCheckbox.addEventListener('change', function() {
-                submitBtn.disabled = !this.checked;
-            });
-        }
-
-        // Testimonials carousel
-        const testimonialsTrack = document.getElementById('testimonials-track');
-        const prevBtn = document.getElementById('testimonials-prev');
-        const nextBtn = document.getElementById('testimonials-next');
-        const dots = document.querySelectorAll('.testimonial-dot');
-        let currentIndex = 0;
-        const totalSlides = 3; // We have 9 testimonials, showing 3 at a time, so 3 slides
-
-        function updateCarousel() {
-            const offset = -currentIndex * 100;
-            testimonialsTrack.style.transform = `translateX(${offset}%)`;
-            
-            // Update dots
-            dots.forEach((dot, index) => {
-                if (index === currentIndex) {
-                    dot.style.backgroundColor = '#dbc693';
-                } else {
-                    dot.style.backgroundColor = '#d1d5db';
-                }
-            });
-        }
-
-        if (prevBtn) {
-            prevBtn.addEventListener('click', () => {
-                currentIndex = (currentIndex - 1 + totalSlides) % totalSlides;
-                updateCarousel();
-            });
-        }
-
-        if (nextBtn) {
-            nextBtn.addEventListener('click', () => {
-                currentIndex = (currentIndex + 1) % totalSlides;
-                updateCarousel();
-            });
-        }
-
-        dots.forEach(dot => {
-            dot.addEventListener('click', () => {
-                currentIndex = parseInt(dot.getAttribute('data-index'));
-                updateCarousel();
-            });
-        });
-
-        const filterBtns = document.querySelectorAll('.filter-btn');
-        const portfolioItems = document.querySelectorAll('.portfolio-item');
-        
-        filterBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                filterBtns.forEach(b => {
-                    b.style.backgroundColor = 'transparent';
-                    b.style.borderColor = 'black';
-                    b.classList.remove('text-white');
-                    b.classList.add('text-black');
-                });
-                btn.style.backgroundColor = '#dbc693';
-                btn.style.borderColor = '#dbc693';
-                btn.classList.remove('text-black');
-                btn.classList.add('text-white');
-                
-                const filter = btn.getAttribute('data-filter');
-                portfolioItems.forEach(item => {
-                    if (filter === 'all' || item.getAttribute('data-category') === filter) {
-                        item.style.display = 'block';
-                    } else {
-                        item.style.display = 'none';
-                    }
-                });
-            });
-        });
-
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            });
-        });
-
-        // Navbar scroll behavior
-        const navbar = document.getElementById('navbar');
-        const logoMain = document.getElementById('logo-main');
-        const logoSub = document.getElementById('logo-sub');
-        const navLinks = document.querySelectorAll('.nav-link');
-        const menuIcon = document.querySelector('.menu-icon');
-        const heroSection = document.getElementById('inicio');
-
-        window.addEventListener('scroll', function() {
-            const heroHeight = heroSection.offsetHeight;
-            
-            if (window.scrollY > heroHeight - 100) {
-                // Scrolled past hero - white background
-                navbar.classList.add('bg-white', 'shadow-md');
-                navbar.classList.remove('bg-transparent');
-                logoMain.style.color = '#dbc693';
-                logoSub.classList.remove('text-gray-300');
-                logoSub.classList.add('text-gray-900');
-                navLinks.forEach(link => {
-                    link.classList.remove('text-white');
-                    link.classList.add('text-gray-900');
-                });
-                if (menuIcon) {
-                    menuIcon.classList.remove('text-white');
-                    menuIcon.classList.add('text-gray-900');
-                }
-            } else {
-                // At hero - transparent background
-                navbar.classList.remove('bg-white', 'shadow-md');
-                navbar.classList.add('bg-transparent');
-                logoMain.style.color = '';
-                logoMain.classList.add('text-white');
-                logoSub.classList.add('text-gray-300');
-                logoSub.classList.remove('text-gray-900');
-                navLinks.forEach(link => {
-                    link.classList.add('text-white');
-                    link.classList.remove('text-gray-900');
-                });
-                if (menuIcon) {
-                    menuIcon.classList.add('text-white');
-                    menuIcon.classList.remove('text-gray-900');
-                }
-            }
-        });
-    </script>
+    <script src="{% static 'js/website.js' %}"></script>
 </body>
 </html>
