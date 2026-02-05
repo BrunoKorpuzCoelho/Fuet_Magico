@@ -10,8 +10,8 @@ class LoginView(DjangoLoginView):
     redirect_authenticated_user = True
     
     def get_success_url(self):
-        return reverse_lazy('dashboard')
+        return reverse_lazy('dashboard:index')
 
 
 class LogoutView(DjangoLogoutView):
-    next_page = reverse_lazy('login')
+    next_page = reverse_lazy('accounts:login')

@@ -1,0 +1,38 @@
+<div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center space-x-6 h-12">
+            <a href="{% url 'contacts:contact_list' %}" 
+               class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+                Contactos
+            </a>
+            
+            <div class="relative" x-data="{ open: false }">
+                <button @click="open = !open" 
+                        class="flex items-center space-x-1 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+                    <span>Configuração</span>
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                
+                <div x-show="open" 
+                     @click.away="open = false"
+                     x-transition:enter="transition ease-out duration-100"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100"
+                     x-transition:leave="transition ease-in duration-75"
+                     x-transition:leave-start="opacity-100 scale-100"
+                     x-transition:leave-end="opacity-0 scale-95"
+                     class="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+                     style="display: none;">
+                    <div class="py-1">
+                        <a href="#" 
+                           class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                            Texto de Contacto
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

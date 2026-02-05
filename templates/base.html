@@ -1,0 +1,380 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard{% endblock %} - Fuet Mágico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#dbc693',
+                        'primary-dark': '#c9b580',
+                    }
+                }
+            }
+        }
+    </script>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <nav class="bg-white dark:bg-gray-800 shadow-lg border-b-4 border-primary transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20 relative">
+                <a href="{% url 'dashboard:index' %}" class="flex items-center hover:opacity-80 transition-opacity">
+                    <div class="flex flex-col items-center">
+                        <span class="text-2xl font-bold bg-gradient-to-r from-primary to-yellow-600 bg-clip-text text-transparent">Fuet Mágico</span>
+                        <span class="text-[10px] text-gray-500 dark:text-gray-400 -mt-1">by Daisy</span>
+                    </div>
+                </a>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- DevTools Dropdown -->
+                    <div id="devtools-container" class="relative" x-data="{ open: false }" style="display: none;">
+                        <button @click="open = !open" class="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200">
+                            <svg class="h-6 w-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                            </svg>
+                        </button>
+                        
+                        <div x-show="open" 
+                             @click.away="open = false"
+                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave-start="opacity-100 scale-100"
+                             x-transition:leave-end="opacity-0 scale-95"
+                             class="fixed md:absolute mt-2 right-0 w-screen max-w-xs md:w-80 md:max-w-80 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[9999]"
+                             style="display: none; transform-origin: top right;">
+                            
+                            <!-- Logs -->
+                            <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                                <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Logs</h3>
+                            </div>
+                            <div class="py-2">
+                                <a href="/devtools/logs/application/" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <span class="mr-3">📄</span>
+                                    Application Logs
+                                </a>
+                                <a href="/devtools/logs/error/" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <span class="mr-3">⚠️</span>
+                                    Error Logs
+                                </a>
+                                <a href="/devtools/logs/audit/" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <span class="mr-3">📋</span>
+                                    Audit Logs
+                                </a>
+                                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <span class="mr-3">🔍</span>
+                                    SQL Queries
+                                </a>
+                            </div>
+                            
+                            <!-- Base de Dados -->
+                            <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 border-t">
+                                <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Base de Dados</h3>
+                            </div>
+                            <div class="py-2">
+                                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <span class="mr-3">🗄️</span>
+                                    Database Stats
+                                </a>
+                                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <span class="mr-3">📊</span>
+                                    Query Performance
+                                </a>
+                                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <span class="mr-3">🔄</span>
+                                    Migrations
+                                </a>
+                            </div>
+                            
+                            <!-- Backups -->
+                            <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 border-t">
+                                <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Backups</h3>
+                            </div>
+                            <div class="py-2">
+                                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <span class="mr-3">💾</span>
+                                    Create Backup
+                                </a>
+                                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <span class="mr-3">📦</span>
+                                    View Backups
+                                </a>
+                                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <span class="mr-3">♻️</span>
+                                    Restore Backup
+                                </a>
+                            </div>
+                            
+                            <!-- Sistema -->
+                            <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 border-t">
+                                <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sistema</h3>
+                            </div>
+                            <div class="py-2">
+                                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <span class="mr-3">🧹</span>
+                                    Clear Cache
+                                </a>
+                                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <span class="mr-3">📈</span>
+                                    Performance Monitor
+                                </a>
+                                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <span class="mr-3">🐛</span>
+                                    Django Debug Toolbar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Notificações -->
+                    <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open" class="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200">
+                            <svg class="h-6 w-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                            </svg>
+                            {% if unread_count > 0 %}
+                            <span class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-gray-900 dark:text-gray-900 transform translate-x-1/2 -translate-y-1/2 bg-primary rounded-full">{{ unread_count }}</span>
+                            {% endif %}
+                        </button>
+                        
+                        <div x-show="open" 
+                             @click.away="open = false"
+                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave-start="opacity-100 scale-100"
+                             x-transition:leave-end="opacity-0 scale-95"
+                             class="fixed md:absolute mt-2 right-0 w-screen max-w-sm md:w-96 md:max-w-96 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[9999]"
+                             style="display: none; transform-origin: top right;">
+                            
+                            <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Notificações</h3>
+                            </div>
+                            
+                            <div class="max-h-96 overflow-y-auto">
+                                <a href="#" class="flex px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700">
+                                    <div class="flex-1">
+                                        <p class="text-sm font-medium text-gray-900 dark:text-white">Nova encomenda recebida</p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Há 5 minutos</p>
+                                    </div>
+                                    <span class="w-2 h-2 bg-blue-600 rounded-full mt-2"></span>
+                                </a>
+                                <a href="#" class="flex px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700">
+                                    <div class="flex-1">
+                                        <p class="text-sm font-medium text-gray-900 dark:text-white">Pagamento confirmado</p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Há 1 hora</p>
+                                    </div>
+                                    <span class="w-2 h-2 bg-blue-600 rounded-full mt-2"></span>
+                                </a>
+                                <a href="#" class="flex px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <div class="flex-1">
+                                        <p class="text-sm font-medium text-gray-900 dark:text-white">Stock baixo: Bolo de Chocolate</p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Há 2 horas</p>
+                                    </div>
+                                    <span class="w-2 h-2 bg-blue-600 rounded-full mt-2"></span>
+                                </a>
+                            </div>
+                            
+                            <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 text-center">
+                                <a href="#" class="text-sm text-primary hover:text-primary-dark font-medium">Ver todas</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User Dropdown -->
+                    <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open" class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200">
+                            <img src="{% if user.avatar %}{{ user.avatar.url }}{% else %}{% static 'images/avatars/default-avatar.png' %}{% endif %}" 
+                                 alt="{{ user.get_full_name }}" 
+                                 class="h-10 w-10 rounded-full border-2 border-primary"
+                                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23dbc693%22%3E%3Cpath d=%22M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z%22/%3E%3C/svg%3E'">
+                            <div class="text-left">
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ user.get_full_name }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ user.role }}</p>
+                            </div>
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        
+                        <div x-show="open" 
+                             @click.away="open = false"
+                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave-start="opacity-100 scale-100"
+                             x-transition:leave-end="opacity-0 scale-95"
+                             class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[9999]"
+                             style="display: none;">
+                            
+                            <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ user.get_full_name }}</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ user.email }}</p>
+                            </div>
+                            
+                            <div class="py-2">
+                                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <span class="mr-3">👤</span>
+                                    Meu Perfil
+                                </a>
+                                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <span class="mr-3">⚙️</span>
+                                    Definições
+                                </a>
+                            </div>
+                            
+                            <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <span class="mr-3">🌙</span>
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">Modo Escuro</span>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="dark-mode-toggle" class="sr-only peer" {{ user_settings.dark_mode|yesno:'checked,' }}>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                                    </label>
+                                </div>
+                                
+                                {% if user.role == 'ADMIN' %}
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <span class="mr-3">💻</span>
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">Modo Developer</span>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="developer-mode-toggle" class="sr-only peer" {{ user_settings.developer_mode|yesno:'checked,' }}>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-500/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-red-600"></div>
+                                    </label>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="border-t border-gray-200 dark:border-gray-700 py-2">
+                                <form method="post" action="{% url 'accounts:logout' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="w-full flex items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-left">
+                                        <span class="mr-3">🚪</span>
+                                        Terminar Sessão
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    {% block sub_navbar %}{% endblock %}
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <script>
+        // Initialize dark mode from localStorage or default to true
+        (function() {
+            const savedDarkMode = localStorage.getItem('darkMode');
+            const isDark = savedDarkMode !== null ? savedDarkMode === 'true' : true;
+            
+            document.documentElement.classList.toggle('dark', isDark);
+            
+            // Update toggle state
+            const darkModeToggle = document.getElementById('dark-mode-toggle');
+            if (darkModeToggle) {
+                darkModeToggle.checked = isDark;
+            }
+        })();
+
+        // Dark Mode Toggle
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        if (darkModeToggle) {
+            darkModeToggle.addEventListener('change', function() {
+                const isDark = this.checked;
+                document.documentElement.classList.toggle('dark', isDark);
+                
+                // Save to localStorage
+                localStorage.setItem('darkMode', isDark);
+                
+                // Update DevTools display if exists
+                const darkStatus = document.getElementById('dark-status');
+                if (darkStatus) {
+                    darkStatus.textContent = isDark;
+                }
+                
+                // Save to backend
+                fetch('/dashboard/toggle-dark-mode/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({ dark_mode: isDark })
+                });
+            });
+        }
+
+        // Developer Mode Toggle
+        const devModeToggle = document.getElementById('developer-mode-toggle');
+        if (devModeToggle) {
+            devModeToggle.addEventListener('change', function() {
+                const isDevMode = this.checked;
+                
+                // Save to localStorage for persistence
+                localStorage.setItem('developerMode', isDevMode);
+                
+                // Show/hide DevTools immediately
+                const devToolsContainer = document.getElementById('devtools-container');
+                if (devToolsContainer) {
+                    devToolsContainer.style.display = isDevMode ? 'block' : 'none';
+                }
+                
+                // Save to backend
+                fetch('/dashboard/toggle-developer-mode/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({ developer_mode: isDevMode })
+                }).catch(err => console.error('Failed to save developer mode:', err));
+            });
+        }
+        
+        // Check Developer Mode persistence and show DevTools
+        (function() {
+            const developerMode = localStorage.getItem('developerMode') === 'true';
+            const devToolsContainer = document.getElementById('devtools-container');
+            
+            if (devToolsContainer && developerMode) {
+                devToolsContainer.style.display = 'block';
+            }
+            
+            // Update debug status in DevTools dropdown
+            const debugStatus = document.getElementById('debug-status');
+            if (debugStatus) {
+                debugStatus.textContent = developerMode ? 'true' : 'false';
+            }
+            
+            // Sync checkbox state with localStorage
+            if (devModeToggle) {
+                devModeToggle.checked = developerMode;
+            }
+        })();
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

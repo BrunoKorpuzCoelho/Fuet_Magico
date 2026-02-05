@@ -2,6 +2,10 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import CustomUser
 
+admin.site.site_header = 'Fuet Mágico Admin'
+admin.site.site_title = 'Fuet Mágico'
+admin.site.index_title = 'Gestão'
+
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):

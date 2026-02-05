@@ -470,28 +470,28 @@ Comparar visualmente o website copiado com o original.
 
 Criar sistema de autenticação customizado.
 
-- [ ] **Criar app 'accounts'**
-  - [ ] Executar `python manage.py startapp accounts apps/accounts`
-  - [ ] Adicionar 'apps.accounts' ao INSTALLED_APPS
+- [x] **Criar app 'accounts'**
+  - [x] Executar `python manage.py startapp accounts apps/accounts`
+  - [x] Adicionar 'apps.accounts' ao INSTALLED_APPS
 
-- [ ] **Criar modelo CustomUser**
-  - [ ] Estender AbstractUser em `apps/accounts/models.py`
-  - [ ] Adicionar campos: phone, avatar, role (ADMIN, MANAGER, EMPLOYEE)
-  - [ ] Adicionar AUTH_USER_MODEL = 'accounts.CustomUser' no settings
+- [x] **Criar modelo CustomUser**
+  - [x] Estender AbstractUser em `apps/accounts/models.py`
+  - [x] Adicionar campos: phone, avatar, role (ADMIN, MANAGER, EMPLOYEE)
+  - [x] Adicionar AUTH_USER_MODEL = 'accounts.CustomUser' no settings
 
-- [ ] **Criar forms e views**
-  - [ ] Criar LoginView, LogoutView
-  - [ ] Criar template de login standalone
+- [x] **Criar forms e views**
+  - [x] Criar LoginView, LogoutView
+  - [x] Criar template de login standalone
 
-- [ ] **Configurar URLs**
-  - [ ] Criar `apps/accounts/urls.py`
-  - [ ] Adicionar rotas: /login/, /logout/
-  - [ ] Incluir no config/urls.py
+- [x] **Configurar URLs**
+  - [x] Criar `apps/accounts/urls.py`
+  - [x] Adicionar rotas: /login/, /logout/
+  - [x] Incluir no config/urls.py
 
-- [ ] **Testing - Autenticação**
-  - [ ] Test: makemigrations e migrate sem erros
-  - [ ] Test: criar superuser funciona
-  - [ ] Test: login e logout funcionam
+- [x] **Testing - Autenticação**
+  - [x] Test: makemigrations e migrate sem erros
+  - [x] Test: criar superuser funciona
+  - [x] Test: login e logout funcionam
 
 ---
 
@@ -499,19 +499,19 @@ Criar sistema de autenticação customizado.
 
 Configurar Django Admin para gestão.
 
-- [ ] **Customizar Admin**
-  - [ ] Configurar admin.site.site_header = 'Fuet Mágico Admin'
-  - [ ] Configurar admin.site.site_title = 'Fuet Mágico'
-  - [ ] Configurar admin.site.index_title = 'Gestão'
+- [x] **Customizar Admin**
+  - [x] Configurar admin.site.site_header = 'Fuet Mágico Admin'
+  - [x] Configurar admin.site.site_title = 'Fuet Mágico'
+  - [x] Configurar admin.site.index_title = 'Gestão'
 
-- [ ] **Registrar CustomUser no admin**
-  - [ ] Criar UserAdmin em `apps/accounts/admin.py`
-  - [ ] Configurar list_display, search_fields, list_filter
+- [x] **Registrar CustomUser no admin**
+  - [x] Criar UserAdmin em `apps/accounts/admin.py`
+  - [x] Configurar list_display, search_fields, list_filter
 
-- [ ] **Testing - Admin**
-  - [ ] Test: acessar /admin/ funciona
-  - [ ] Test: login com superuser funciona
-  - [ ] Test: visualizar usuários no admin
+- [x] **Testing - Admin**
+  - [x] Test: acessar /admin/ funciona
+  - [x] Test: login com superuser funciona
+  - [x] Test: visualizar usuários no admin
 
 ---
 
@@ -519,18 +519,18 @@ Configurar Django Admin para gestão.
 
 Criar middleware para controlo de acesso.
 
-- [ ] **Criar middleware de autenticação**
-  - [ ] Criar `apps/accounts/middleware.py`
-  - [ ] Verificar se usuário está autenticado em rotas protegidas
-  - [ ] Adicionar ao MIDDLEWARE no settings
+- [x] **Criar middleware de autenticação**
+  - [x] Criar `apps/accounts/middleware.py`
+  - [x] Verificar se usuário está autenticado em rotas protegidas
+  - [x] Adicionar ao MIDDLEWARE no settings
 
-- [ ] **Criar decorators**
-  - [ ] Criar `@login_required_custom`
-  - [ ] Criar `@role_required(role='ADMIN')`
+- [x] **Criar decorators**
+  - [x] Criar `@login_required_custom`
+  - [x] Criar `@role_required(role='ADMIN')`
 
-- [ ] **Testing - Middleware**
-  - [ ] Test: rotas protegidas redirecionam para login
-  - [ ] Test: decorators funcionam corretamente
+- [x] **Testing - Middleware**
+  - [x] Test: rotas protegidas redirecionam para login
+  - [x] Test: decorators funcionam corretamente
 
 ---
 
@@ -538,16 +538,16 @@ Criar middleware para controlo de acesso.
 
 Criar modelos abstratos para reutilização.
 
-- [ ] **Criar BaseModel**
-  - [ ] Criar `apps/core/` (app helper)
-  - [ ] Criar `apps/core/models.py`
-  - [ ] Criar AbstractBaseModel com: id (UUID), created_at, updated_at, is_active
+- [x] **Criar BaseModel**
+  - [x] Criar `apps/core/` (app helper)
+  - [x] Criar `apps/core/models.py`
+  - [x] Criar AbstractBaseModel com: id (UUID), created_at, updated_at, is_active
 
-- [ ] **Adicionar ao INSTALLED_APPS**
-  - [ ] Adicionar 'apps.core'
+- [x] **Adicionar ao INSTALLED_APPS**
+  - [x] Adicionar 'apps.core'
 
-- [ ] **Testing - Base Models**
-  - [ ] Test: outros models podem herdar de BaseModel
+- [x] **Testing - Base Models**
+  - [x] Test: outros models podem herdar de BaseModel
 
 ---
 
@@ -555,17 +555,17 @@ Criar modelos abstratos para reutilização.
 
 Configurar upload e servir arquivos de media.
 
-- [ ] **Configurar settings**
-  - [ ] Verificar MEDIA_URL = '/media/'
-  - [ ] Verificar MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+- [x] **Configurar settings**
+  - [x] Verificar MEDIA_URL = '/media/'
+  - [x] Verificar MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-- [ ] **Configurar URLs para desenvolvimento**
-  - [ ] Adicionar static serve de media em `config/urls.py`
-  - [ ] Adicionar `+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)`
+- [x] **Configurar URLs para desenvolvimento**
+  - [x] Adicionar static serve de media em `config/urls.py`
+  - [x] Adicionar `+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)`
 
-- [ ] **Testing - Media**
-  - [ ] Test: upload de arquivo via admin funciona
-  - [ ] Test: acessar arquivo em /media/ funciona
+- [x] **Testing - Media**
+  - [x] Test: upload de arquivo via admin funciona
+  - [x] Test: acessar arquivo em /media/ funciona
 
 ---
 
@@ -573,20 +573,20 @@ Configurar upload e servir arquivos de media.
 
 Criar templates base para o sistema interno (não website).
 
-- [ ] **Criar base template**
-  - [ ] Criar `templates/base.html` (sistema interno)
-  - [ ] Incluir Tailwind CSS via CDN
-  - [ ] Criar navbar com menu
-  - [ ] Criar sidebar (se necessário)
-  - [ ] Criar footer
+- [x] **Criar base template**
+  - [x] Criar `templates/base.html` (sistema interno)
+  - [x] Incluir Tailwind CSS via CDN
+  - [x] Criar navbar com menu
+  - [x] Criar sidebar (se necessário)
+  - [x] Criar footer
 
-- [ ] **Criar templates de componentes**
-  - [ ] Criar `templates/components/navbar.html`
-  - [ ] Criar `templates/components/messages.html` (Django messages)
+- [x] **Criar templates de componentes**
+  - [x] Criar `templates/components/navbar.html`
+  - [x] Criar `templates/components/messages.html` (Django messages)
 
-- [ ] **Testing - Templates Base**
-  - [ ] Test: base.html renderiza corretamente
-  - [ ] Test: herança de templates funciona
+- [x] **Testing - Templates Base**
+  - [x] Test: base.html renderiza corretamente
+  - [x] Test: herança de templates funciona
 
 ---
 
@@ -594,22 +594,22 @@ Criar templates base para o sistema interno (não website).
 
 Criar dashboard principal do sistema.
 
-- [ ] **Criar app 'dashboard'**
-  - [ ] Executar `python manage.py startapp dashboard apps/dashboard`
-  - [ ] Adicionar ao INSTALLED_APPS
+- [x] **Criar app 'dashboard'**
+  - [x] Executar `python manage.py startapp dashboard apps/dashboard`
+  - [x] Adicionar ao INSTALLED_APPS
 
-- [ ] **Criar view e template**
-  - [ ] Criar `dashboard_view` em views.py
-  - [ ] Criar template `dashboard/index.html` (standalone)
-  - [ ] Mostrar resumo: vendas, compras, stock, clientes
+- [x] **Criar view e template**
+  - [x] Criar `dashboard_view` em views.py
+  - [x] Criar template `dashboard/index.html` (standalone)
+  - [x] Mostrar resumo: vendas, compras, stock, clientes
 
-- [ ] **Configurar rota**
-  - [ ] Criar urls.py: `path('dashboard/', dashboard_view, name='dashboard')`
-  - [ ] Incluir no config/urls.py
+- [x] **Configurar rota**
+  - [x] Criar urls.py: `path('dashboard/', dashboard_view, name='dashboard')`
+  - [x] Incluir no config/urls.py
 
-- [ ] **Testing - Dashboard**
-  - [ ] Test: acessar /dashboard/ funciona
-  - [ ] Test: usuário não autenticado é redirecionado
+- [x] **Testing - Dashboard**
+  - [x] Test: acessar /dashboard/ funciona
+  - [x] Test: usuário não autenticado é redirecionado
 
 ---
 
@@ -617,21 +617,21 @@ Criar dashboard principal do sistema.
 
 Criar sistema para logging de ações.
 
-- [ ] **Criar modelo AuditLog**
-  - [ ] Criar em `apps/core/models.py`
-  - [ ] Campos: user, action, model_name, object_id, timestamp, details (JSON)
+- [x] **Criar modelo AuditLog**
+  - [x] Criar em `apps/core/models.py`
+  - [x] Campos: user, action, model_name, object_id, timestamp, details (JSON)
 
-- [ ] **Criar signals**
-  - [ ] Criar signals para log automático em save/delete
-  - [ ] Registrar signals
+- [x] **Criar signals**
+  - [x] Criar signals para log automático em save/delete
+  - [x] Registrar signals
 
-- [ ] **Registrar no Admin**
-  - [ ] Criar AuditLogAdmin
-  - [ ] Configurar list_display, search, filters
+- [x] **Registrar no Admin**
+  - [x] Criar AuditLogAdmin
+  - [x] Configurar list_display, search, filters
 
-- [ ] **Testing - Audit Log**
-  - [ ] Test: criar objeto gera log
-  - [ ] Test: visualizar logs no admin
+- [x] **Testing - Audit Log**
+  - [x] Test: criar objeto gera log
+  - [x] Test: visualizar logs no admin
 
 ---
 
@@ -659,24 +659,54 @@ Configurar envio de emails.
 
 ---
 
-## 3.10 Gestão de Configurações Globais
+## 3.10 DevTools - Sistema de Logs Avançado
 
-Criar sistema para configurações do sistema.
+Criar visualizador de logs no DevTools com 3 tipos de logs.
 
-- [ ] **Criar modelo Settings**
-  - [ ] Criar em `apps/core/models.py`
-  - [ ] Campos: key (unique), value (JSON), description
+- [x] **Criar modelo ErrorLog**
+  - [x] Criar em `apps/core/models.py`
+  - [x] Campos: level (ERROR, WARNING, CRITICAL), message, traceback, request_path, user, timestamp
+  - [x] Criar handler customizado do Python logging
+  - [x] Registrar no Admin
 
-- [ ] **Criar view de configurações**
-  - [ ] Criar view para listar/editar settings
-  - [ ] Restringir acesso (apenas ADMIN)
+- [x] **Criar APIs de logs**
+  - [x] Criar `apps/core/views.py` com APIs REST
+  - [x] API endpoint: `/api/audit-logs/` (paginado, 300 por página)
+  - [x] API endpoint: `/api/error-logs/` (paginado, 300 por página)
+  - [x] API endpoint: `/api/application-logs/` (logs reais do sistema)
+  - [x] Implementar filtros: user, date_range, action, level
 
-- [ ] **Registrar no Admin**
-  - [ ] Criar SettingsAdmin com inline editing
+- [x] **Criar páginas de visualização**
+  - [x] Criar `templates/devtools/application_logs.html` (tempo real)
+  - [x] Criar `templates/devtools/audit_logs.html` (histórico com scroll infinito)
+  - [x] Criar `templates/devtools/error_logs.html` (histórico com scroll infinito)
+  - [x] Estilo VS Code: monospace, cores por tipo, timestamps
 
-- [ ] **Testing - Settings**
-  - [ ] Test: criar configuração funciona
-  - [ ] Test: ler configuração via API interna
+- [x] **Atualizar DevTools dropdown**
+  - [x] Atualizar links em `templates/base.html`
+  - [x] Application Logs → `/devtools/logs/application/`
+  - [x] Audit Logs → `/devtools/logs/audit/`
+  - [x] Error Logs → `/devtools/logs/error/`
+  - [x] Persistência com localStorage (mantém ativo entre páginas)
+
+- [x] **Implementar scroll infinito**
+  - [x] JavaScript para detectar scroll no fim da página
+  - [x] Carregar mais 300 logs quando atingir o fim
+  - [x] Loading indicator durante carregamento
+  - [x] Performance: paginação eficiente
+
+- [x] **Implementar streaming (Application Logs)**
+  - [x] Polling a cada 3s com dados reais do sistema
+  - [x] Auto-scroll quando novos logs chegam
+  - [x] Botão para pausar auto-scroll
+  - [x] Limitar a 1000 logs em memória (remover antigos)
+
+- [x] **Testing - DevTools Logs**
+  - [x] Test: visualizar Audit Logs funciona
+  - [x] Test: visualizar Error Logs funciona
+  - [x] Test: Application Logs em tempo real funciona
+  - [x] Test: scroll infinito carrega mais logs
+  - [x] Test: performance com 10k+ logs
 
 ---
 
@@ -692,40 +722,59 @@ Criar sistema para configurações do sistema.
 
 Criar app Django para gestão de contactos.
 
-- [ ] **Criar app**
-  - [ ] Executar `python manage.py startapp contacts apps/contacts`
-  - [ ] Adicionar 'apps.contacts' ao INSTALLED_APPS
+- [x] **Criar app**
+  - [x] Executar `python manage.py startapp contacts apps/contacts`
+  - [x] Adicionar 'apps.contacts' ao INSTALLED_APPS
 
-- [ ] **Criar estrutura de arquivos**
-  - [ ] Criar `apps/contacts/models.py`
-  - [ ] Criar `apps/contacts/views.py`
-  - [ ] Criar `apps/contacts/forms.py`
-  - [ ] Criar `apps/contacts/urls.py`
+- [x] **Criar estrutura de arquivos**
+  - [x] Criar `apps/contacts/models.py`
+  - [x] Criar `apps/contacts/views.py`
+  - [x] Criar `apps/contacts/forms.py`
+  - [x] Criar `apps/contacts/urls.py`
 
 ---
 
 ## 4.2 Modelo Contact
 
-Criar modelo para clientes/contactos.
+Criar modelo para clientes/contactos com hierarquia (empresas e pessoas).
 
-- [ ] **Criar modelo Contact**
-  - [ ] Herdar de BaseModel
-  - [ ] Campos: name, email, phone, whatsapp, address, city, postal_code, nif, notes
-  - [ ] Campos: contact_type (CLIENT, SUPPLIER, BOTH)
-  - [ ] Campos: tags (JSONField para categorização)
-  - [ ] Método __str__
+- [x] **Criar modelo Contact**
+  - [x] Herdar de BaseModel
+  - [x] Campos básicos: name, email, phone, whatsapp, address, city, postal_code, nif, notes
+  - [x] Campo: contact_type (CLIENT, SUPPLIER, BOTH)
+  - [x] Campo: contact_category (PERSON, COMPANY) - distinguir pessoa vs empresa
+  - [x] Campo: company (ForeignKey para Contact, null=True) - associar pessoa a empresa
+  - [x] Campo: position (cargo da pessoa na empresa, opcional)
+  - [x] Campos: tags (JSONField para categorização)
+  - [x] Método __str__
+  - [x] Método get_price_list() - retorna price list própria ou herdada da empresa
+  - [x] Property is_company e is_person para facilitar queries
 
-- [ ] **Criar migrations**
-  - [ ] Executar makemigrations
-  - [ ] Executar migrate
+- [x] **Validações e constraints**
+  - [x] Validar: se contact_category=PERSON, pode ter company
+  - [x] Validar: se contact_category=COMPANY, company deve ser None
+  - [x] Validar: company deve ser do tipo COMPANY (não pode associar pessoa a pessoa)
+  - [x] Constraint: email único (mas pode ser null)
 
-- [ ] **Registrar no Admin**
-  - [ ] Criar ContactAdmin
-  - [ ] Configurar list_display, search_fields, list_filter
+- [x] **Criar migrations**
+  - [x] Executar makemigrations
+  - [x] Executar migrate
 
-- [ ] **Testing - Contact Model**
-  - [ ] Test: criar contact via admin funciona
-  - [ ] Test: todos os campos salvam corretamente
+- [x] **Registrar no Admin**
+  - [x] Criar ContactAdmin
+  - [x] Configurar list_display: name, contact_category, company, contact_type, email, phone
+  - [x] Configurar search_fields: name, email, phone, nif
+  - [x] Configurar list_filter: contact_category, contact_type, company
+  - [x] Adicionar inline para mostrar pessoas associadas (quando é empresa)
+  - [x] Fieldsets separados para organizar campos
+
+- [x] **Testing - Contact Model**
+  - [x] Test: criar empresa (COMPANY) funciona
+  - [x] Test: criar pessoa (PERSON) sem empresa funciona
+  - [x] Test: criar pessoa (PERSON) associada a empresa funciona
+  - [x] Test: não permite associar pessoa a outra pessoa
+  - [x] Test: não permite empresa ter company preenchido
+  - [x] Test: herança de price list funciona (quando implementado)
 
 ---
 
@@ -1647,6 +1696,61 @@ Criar views de relatórios de vendas.
 - [ ] **Testing - Sale Reports**
   - [ ] Test: relatório mostra dados corretos
   - [ ] Test: filtros funcionam
+
+---
+
+## 7.13 Sistema de Price Lists
+
+Criar sistema de listas de preços e regras de desconto por cliente/empresa.
+
+- [ ] **Criar modelo PriceList**
+  - [ ] Criar em `apps/sales/models.py`
+  - [ ] Campos: name, description, is_active, priority
+  - [ ] Campos: discount_type (PERCENTAGE, FIXED, QUANTITY_BASED, VALUE_BASED)
+  - [ ] Campos: discount_value, min_quantity, min_amount
+  - [ ] Método calculate_discount(quantity, unit_price)
+
+- [ ] **Associar PriceList a Contact**
+  - [ ] Adicionar campo price_list (FK) em Contact model
+  - [ ] Migration para adicionar campo
+  - [ ] Contact herda price_list da empresa pai se for colaborador
+
+- [ ] **Criar modelo PriceListRule**
+  - [ ] Campos: price_list (FK), product (FK, opcional)
+  - [ ] Campos: category (FK, opcional) - desconto por categoria
+  - [ ] Campos: discount_percentage, discount_fixed
+  - [ ] Campos: min_quantity, max_quantity
+  - [ ] Prioridade: regra específica de produto > categoria > geral
+
+- [ ] **Integrar com SaleOrder**
+  - [ ] Ao selecionar cliente, carregar price_list automaticamente
+  - [ ] Ao adicionar produto, aplicar desconto do price_list
+  - [ ] Calcular desconto progressivo se quantity_based
+  - [ ] Mostrar desconto aplicado na linha
+
+- [ ] **Criar views de gestão**
+  - [ ] PriceListListView - listar price lists
+  - [ ] PriceListCreateView - criar price list com regras
+  - [ ] PriceListUpdateView - editar price list e regras inline
+  - [ ] Template: `templates/sales/pricelist_list.html` (standalone)
+  - [ ] Template: `templates/sales/pricelist_form.html` (standalone)
+
+- [ ] **Criar página de associação**
+  - [ ] View para associar price list a múltiplos contactos
+  - [ ] Bulk update de contactos
+  - [ ] Filtros: empresa, tipo de contacto
+
+- [ ] **Registrar no Admin**
+  - [ ] PriceListAdmin com PriceListRuleInline
+  - [ ] Configurar list_display, search, filters
+
+- [ ] **Testing - Price Lists**
+  - [ ] Test: criar price list funciona
+  - [ ] Test: associar price list a contacto
+  - [ ] Test: desconto é aplicado automaticamente em venda
+  - [ ] Test: desconto progressivo por quantidade funciona
+  - [ ] Test: colaborador herda price list da empresa
+  - [ ] Test: prioridade de regras (produto > categoria > geral)
 
 ---
 

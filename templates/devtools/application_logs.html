@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}Application Logs - DevTools{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Application Logs</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Real-time server logs</p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button id="pauseBtn" class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition">
+                    Pause
+                </button>
+                <button id="clearBtn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                    Clear
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-gray-900 rounded-lg shadow-xl border border-gray-700 overflow-hidden">
+            <div class="p-4">
+                <div id="logsContainer" class="font-mono text-sm h-[600px] overflow-y-auto space-y-1">
+                    <div class="text-gray-400">Connecting to log stream...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+            <span>Total logs: <span id="logCount">0</span></span>
+            <span id="status" class="text-green-500">● Connected</span>
+        </div>
+    </div>
+</div>
+
+<script>
+let logs = [];
+let isPaused = false;
+let logCount = 0;
+const MAX_LOGS = 1000;
+
+const logsContainer = document.getElementById('logsContainer');
+const pauseBtn = document.getElementById('pauseBtn');
+const clearBtn = document.getElementById('clearBtn');
+const logCountEl = document.getElementById('logCount');
+const statusEl = document.getElementById('status');
+
+function getLogColor(level) {
+    const colors = {
+        'ERROR': 'text-red-500',
+        'WARNING': 'text-yellow-500',
+        'CRITICAL': 'text-red-700',
+        'INFO': 'text-blue-400',
+        'DEBUG': 'text-gray-400'
+    };
+    return colors[level] || 'text-gray-300';
+}
+
+function addLog(log) {
+    if (isPaused) return;
+    
+    logs.push(log);
+    if (logs.length > MAX_LOGS) {
+        logs.shift();
+    }
+    
+    const logDiv = document.createElement('div');
+    logDiv.className = `${getLogColor(log.level)} hover:bg-gray-800 px-2 py-1 rounded`;
+    logDiv.innerHTML = `<span class="text-gray-500">[${log.timestamp}]</span> <span class="font-bold">${log.level}</span>: ${log.message}`;
+    
+    logsContainer.appendChild(logDiv);
+    logCount++;
+    logCountEl.textContent = logCount;
+    
+    logsContainer.scrollTop = logsContainer.scrollHeight;
+}
+
+function fetchLogs() {
+    fetch('/api/application-logs/?limit=1000')
+        .then(response => response.json())
+        .then(data => {
+            if (!isPaused && data.logs && data.logs.length > 0) {
+                const hasNewLogs = logs.length === 0 || 
+                                   (data.logs[data.logs.length - 1].message !== logs[logs.length - 1]?.message);
+                
+                if (hasNewLogs) {
+                    logsContainer.innerHTML = '';
+                    logCount = 0;
+                    logs = [];
+                    
+                    data.logs.forEach(log => {
+                        if (log.message) {
+                            let level = log.level || 'INFO';
+                            let message = log.message;
+                            let timestamp = log.timestamp || new Date().toISOString().split('T')[1].slice(0, 12);
+                            
+                            addLog({ timestamp, level, message });
+                        }
+                    });
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching logs:', error);
+        });
+}
+
+function startPolling() {
+    fetchLogs();
+    setInterval(() => {
+        if (!isPaused) {
+            fetchLogs();
+        }
+    }, 3000);
+}
+
+pauseBtn.addEventListener('click', () => {
+    isPaused = !isPaused;
+    pauseBtn.textContent = isPaused ? 'Resume' : 'Pause';
+    pauseBtn.className = isPaused 
+        ? 'px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition'
+        : 'px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition';
+    statusEl.textContent = isPaused ? '⏸ Paused' : '● Connected';
+    statusEl.className = isPaused ? 'text-yellow-500' : 'text-green-500';
+});
+
+clearBtn.addEventListener('click', () => {
+    logsContainer.innerHTML = '';
+    logs = [];
+    logCount = 0;
+    logCountEl.textContent = '0';
+});
+
+logsContainer.innerHTML = '';
+startPolling();
+</script>
+{% endblock %}

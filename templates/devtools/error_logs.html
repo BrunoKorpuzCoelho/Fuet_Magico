@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}Error Logs - DevTools{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Error Logs</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">System errors and warnings</p>
+        </div>
+
+        <div class="mb-6">
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="Search errors (e.g., user, database, timeout)..." 
+                class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent"
+            >
+        </div>
+
+        <div class="bg-gray-900 rounded-lg shadow-xl border border-gray-700 overflow-hidden">
+            <div class="p-4">
+                <div id="logsContainer" class="font-mono text-sm space-y-2 max-h-[600px] overflow-y-auto">
+                    <div class="text-gray-400 text-center py-8">Loading error logs...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+            <span>Showing: <span id="visibleCount">0</span> / <span id="totalCount">0</span> logs</span>
+            <button id="loadMoreBtn" class="px-4 py-2 bg-primary text-gray-900 rounded-lg hover:bg-primary-dark transition">
+                Load More
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let allLogs = [];
+let filteredLogs = [];
+let currentPage = 1;
+const logsPerPage = 300;
+
+const logsContainer = document.getElementById('logsContainer');
+const searchInput = document.getElementById('searchInput');
+const visibleCountEl = document.getElementById('visibleCount');
+const totalCountEl = document.getElementById('totalCount');
+const loadMoreBtn = document.getElementById('loadMoreBtn');
+
+function getLevelColor(level) {
+    const colors = {
+        'ERROR': 'text-red-500',
+        'WARNING': 'text-yellow-500',
+        'CRITICAL': 'text-red-700'
+    };
+    return colors[level] || 'text-gray-300';
+}
+
+function renderLog(log) {
+    const timestamp = new Date(log.timestamp).toLocaleString('pt-PT');
+    const userText = log.user ? ` | User: ${log.user}` : '';
+    const pathText = log.request_path ? ` | Path: ${log.request_path}` : '';
+    
+    return `
+        <div class="bg-gray-800 hover:bg-gray-750 p-4 rounded-lg border border-gray-700 transition log-entry">
+            <div class="flex items-start justify-between mb-2">
+                <span class="${getLevelColor(log.level)} font-bold">${log.level}</span>
+                <span class="text-gray-500 text-xs">${timestamp}</span>
+            </div>
+            <div class="text-gray-300 mb-2">${log.message}</div>
+            ${log.traceback ? `<details class="mt-2"><summary class="text-gray-400 text-xs cursor-pointer hover:text-gray-300">Traceback</summary><pre class="text-xs text-gray-500 mt-2 p-2 bg-gray-900 rounded overflow-x-auto">${log.traceback}</pre></details>` : ''}
+            <div class="text-xs text-gray-500 mt-2">${userText}${pathText}</div>
+        </div>
+    `;
+}
+
+function renderLogs() {
+    const searchTerm = searchInput.value.toLowerCase();
+    filteredLogs = allLogs.filter(log => {
+        const searchableText = `${log.level} ${log.message} ${log.user || ''} ${log.request_path || ''} ${log.traceback || ''}`.toLowerCase();
+        return searchableText.includes(searchTerm);
+    });
+    
+    logsContainer.innerHTML = filteredLogs.map(renderLog).join('');
+    visibleCountEl.textContent = filteredLogs.length;
+    totalCountEl.textContent = allLogs.length;
+    
+    loadMoreBtn.style.display = allLogs.length >= logsPerPage * currentPage ? 'block' : 'none';
+}
+
+async function loadLogs(page = 1) {
+    try {
+        const response = await fetch(`/api/error-logs/?page=${page}&limit=${logsPerPage}`);
+        const data = await response.json();
+        
+        if (page === 1) {
+            allLogs = data.logs;
+        } else {
+            allLogs = [...allLogs, ...data.logs];
+        }
+        
+        renderLogs();
+    } catch (error) {
+        logsContainer.innerHTML = '<div class="text-red-500 text-center py-8">Error loading logs</div>';
+    }
+}
+
+searchInput.addEventListener('input', renderLogs);
+
+loadMoreBtn.addEventListener('click', () => {
+    currentPage++;
+    loadLogs(currentPage);
+});
+
+loadLogs(1);
+</script>
+{% endblock %}
