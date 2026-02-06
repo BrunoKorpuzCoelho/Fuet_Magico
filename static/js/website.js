@@ -135,24 +135,17 @@ window.addEventListener('scroll', function() {
 // LANGUAGE SELECTOR
 // ========================================
 
-// Function to get current language from localStorage or URL
+// Function to get current language from URL path prefix
 function getCurrentLanguage() {
     // Check URL path prefix first
     const path = window.location.pathname;
     if (path.startsWith('/en/')) return 'en';
     if (path.startsWith('/fr/')) return 'fr';
     
-    // Check localStorage
+    // Check localStorage as fallback
     const savedLang = localStorage.getItem('preferredLanguage');
-    if (savedLang) {
+    if (savedLang && ['pt', 'en', 'fr'].includes(savedLang)) {
         return savedLang;
-    }
-    
-    // Check URL parameter (for backwards compatibility)
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlLang = urlParams.get('lang');
-    if (urlLang) {
-        return urlLang;
     }
     
     // Default to Portuguese
@@ -176,6 +169,11 @@ function changeLanguage(lang) {
         }
     }
     
+    // Ensure path starts with /
+    if (!path.startsWith('/')) {
+        path = '/' + path;
+    }
+    
     // Build new URL with correct language prefix
     let newPath;
     if (lang === 'pt') {
@@ -186,8 +184,8 @@ function changeLanguage(lang) {
         newPath = `/${lang}${path}`;
     }
     
-    // Redirect to new URL
-    window.location.href = newPath + window.location.search.replace(/[?&]lang=[^&]*/g, '');
+    // Redirect to new URL (preserve query string and hash)
+    window.location.href = newPath + window.location.search + window.location.hash;
 }
 
 // Set initial language on page load
