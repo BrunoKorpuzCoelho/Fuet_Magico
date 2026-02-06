@@ -144,9 +144,9 @@ CELERY_TASK_TIME_LIMIT = 5 * 60
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/dashboard'
-LOGOUT_REDIRECT_URL = '/login/'
+LOGIN_URL = 'accounts:login'
+LOGIN_REDIRECT_URL = 'dashboard:index'
+LOGOUT_REDIRECT_URL = 'accounts:login'
 
 LANGUAGE_CODE = 'pt'
 TIME_ZONE = 'Europe/Lisbon'

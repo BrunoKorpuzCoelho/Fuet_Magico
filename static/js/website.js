@@ -137,13 +137,18 @@ window.addEventListener('scroll', function() {
 
 // Function to get current language from localStorage or URL
 function getCurrentLanguage() {
-    // Check localStorage first
+    // Check URL path prefix first
+    const path = window.location.pathname;
+    if (path.startsWith('/en/')) return 'en';
+    if (path.startsWith('/fr/')) return 'fr';
+    
+    // Check localStorage
     const savedLang = localStorage.getItem('preferredLanguage');
     if (savedLang) {
         return savedLang;
     }
     
-    // Check URL parameter
+    // Check URL parameter (for backwards compatibility)
     const urlParams = new URLSearchParams(window.location.search);
     const urlLang = urlParams.get('lang');
     if (urlLang) {
@@ -159,10 +164,30 @@ function changeLanguage(lang) {
     // Save to localStorage
     localStorage.setItem('preferredLanguage', lang);
     
-    // Reload page with language parameter
-    const url = new URL(window.location.href);
-    url.searchParams.set('lang', lang);
-    window.location.href = url.toString();
+    // Get current path without language prefix
+    let path = window.location.pathname;
+    const supportedLanguages = ['pt', 'en', 'fr'];
+    
+    // Remove any existing language prefix
+    for (const l of supportedLanguages) {
+        if (path.startsWith(`/${l}/`)) {
+            path = path.substring(3); // Remove /xx/
+            break;
+        }
+    }
+    
+    // Build new URL with correct language prefix
+    let newPath;
+    if (lang === 'pt') {
+        // Portuguese is default, no prefix
+        newPath = path;
+    } else {
+        // Other languages need prefix
+        newPath = `/${lang}${path}`;
+    }
+    
+    // Redirect to new URL
+    window.location.href = newPath + window.location.search.replace(/[?&]lang=[^&]*/g, '');
 }
 
 // Set initial language on page load
@@ -187,12 +212,5 @@ document.addEventListener('DOMContentLoaded', function() {
         mobileSelector.addEventListener('change', function() {
             changeLanguage(this.value);
         });
-    }
-    
-    // If language is set in localStorage but not in URL, update URL
-    if (localStorage.getItem('preferredLanguage') && !new URLSearchParams(window.location.search).get('lang')) {
-        const url = new URL(window.location.href);
-        url.searchParams.set('lang', currentLang);
-        window.history.replaceState({}, '', url.toString());
     }
 });
