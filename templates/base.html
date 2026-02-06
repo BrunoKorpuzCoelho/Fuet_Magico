@@ -33,7 +33,8 @@
                 </a>
                 
                 <div class="flex items-center space-x-4">
-                    <!-- DevTools Dropdown -->
+                    <!-- DevTools Dropdown (ADMIN only) -->
+                    {% if user.role == 'ADMIN' %}
                     <div id="devtools-container" class="relative" x-data="{ open: false }" style="display: none;">
                         <button @click="open = !open" class="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200">
                             <svg class="h-6 w-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,6 +134,7 @@
                             </div>
                         </div>
                     </div>
+                    {% endif %}
                     
                     <!-- Notificações -->
                     <div class="relative" x-data="{ open: false }">
@@ -341,6 +343,21 @@
                     devToolsContainer.style.display = isDevMode ? 'block' : 'none';
                 }
                 
+                // Update URL with or without ?debug=true
+                const url = new URL(window.location.href);
+                if (isDevMode) {
+                    url.searchParams.set('debug', 'true');
+                } else {
+                    url.searchParams.delete('debug');
+                }
+                window.history.replaceState({}, '', url.toString());
+                
+                // Update debug status in DevTools if exists
+                const debugStatus = document.getElementById('debug-status');
+                if (debugStatus) {
+                    debugStatus.textContent = isDevMode ? 'true' : 'false';
+                }
+                
                 // Save to backend
                 fetch('/dashboard/toggle-developer-mode/', {
                     method: 'POST',
@@ -355,7 +372,27 @@
         
         // Check Developer Mode persistence and show DevTools
         (function() {
-            const developerMode = localStorage.getItem('developerMode') === 'true';
+            // IMPORTANT: Only ADMIN users can use developer mode
+            const isAdmin = '{{ user.role }}' === 'ADMIN';
+            
+            if (!isAdmin) {
+                // Remove developer mode from localStorage if user is not ADMIN
+                localStorage.removeItem('developerMode');
+                return; // Exit early - no developer mode for non-admins
+            }
+            
+            // Check if ?debug=true is in the URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const debugInUrl = urlParams.get('debug') === 'true';
+            
+            // Use URL parameter as source of truth, fallback to localStorage
+            const developerMode = debugInUrl || localStorage.getItem('developerMode') === 'true';
+            
+            // Sync localStorage with URL if URL has debug parameter
+            if (debugInUrl) {
+                localStorage.setItem('developerMode', 'true');
+            }
+            
             const devToolsContainer = document.getElementById('devtools-container');
             
             if (devToolsContainer && developerMode) {
@@ -368,7 +405,7 @@
                 debugStatus.textContent = developerMode ? 'true' : 'false';
             }
             
-            // Sync checkbox state with localStorage
+            // Sync checkbox state with current debug mode
             if (devModeToggle) {
                 devModeToggle.checked = developerMode;
             }

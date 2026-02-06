@@ -14,8 +14,8 @@ class AdminDebugMiddleware:
     def __call__(self, request):
         # Check if debug parameter is in the URL
         if 'debug' in request.GET and request.GET.get('debug') == 'true':
-            # Check if user is authenticated and is not ADMIN
-            if request.user.is_authenticated and request.user.role != 'ADMIN':
+            # Check if user is not authenticated OR is not ADMIN
+            if not request.user.is_authenticated or request.user.role != 'ADMIN':
                 # Redirect to the same URL without debug parameter
                 path = request.path
                 query_params = request.GET.copy()
