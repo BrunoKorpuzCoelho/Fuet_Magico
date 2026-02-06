@@ -32,6 +32,7 @@ urlpatterns += i18n_patterns(
     path('contacts/', include('apps.contacts.urls')),
     path('', include('apps.accounts.urls')),
     path('', include('apps.website.urls')),
+    prefix_default_language=False,
 )
 
 if settings.DEBUG:
