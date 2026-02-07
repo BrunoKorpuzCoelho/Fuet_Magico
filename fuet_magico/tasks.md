@@ -780,28 +780,104 @@ Criar modelo para clientes/contactos com hierarquia (empresas e pessoas).
 
 ## 4.3 Views de Listagem de Contactos
 
-Criar view para listar todos os contactos.
+Criar view para listar todos os contactos com sistema de bulk actions, filtros avançados e paginação customizável.
 
-- [ ] **Criar ContactListView**
-  - [ ] Criar view em `apps/contacts/views.py`
-  - [ ] Implementar paginação (25 por página)
-  - [ ] Implementar busca por nome/email/phone
-  - [ ] Implementar filtro por contact_type
+- [x] **Criar ContactListView**
+  - [x] Criar view em `apps/contacts/views.py`
+  - [x] Implementar paginação customizável (50 por página padrão, editável sem persistência)
+  - [x] Implementar busca por múltiplos campos (name/email/phone/whatsapp/nif/city/company/position)
+  - [x] Implementar filtro por status (active/archived) com padrão em 'active'
+  - [x] URL RESTful com parâmetros: ?status=active&page_size=50&page=1&search=query&field=name
 
-- [ ] **Criar template**
-  - [ ] Criar `templates/contacts/list.html` (standalone)
-  - [ ] Tabela com: name, email, phone, contact_type, actions
-  - [ ] Barra de busca
-  - [ ] Botão "Novo Contacto"
+- [x] **Criar template**
+  - [x] Criar `templates/contacts/list.html` (standalone)
+  - [x] Tabela responsiva com: checkbox, avatar, name, email, phone, whatsapp, contact_type, actions
+  - [x] Barra de busca com dropdown integrado (estilo Odoo) - chevron no input
+  - [x] Filtro de status integrado no dropdown de busca (Ativos/Arquivados)
+  - [x] Filtro de campos de busca no mesmo dropdown (Name, Email, Phone, WhatsApp, NIF, City, Company, Position)
+  - [x] Dropdown abre automaticamente ao digitar OU ao clicar no chevron
+  - [x] Botão "Novo Contacto" (desktop e mobile)
+  - [x] Sistema de seleção múltipla com checkboxes (Alpine.js)
+  - [x] Bulk actions toolbar inline com botão "Novo" (desktop)
+  - [x] Bulk actions mobile com gear icon e badge de contagem
+  - [x] Controle de page_size editável (input de texto, valida 1-total, reseta em F5)
+  - [x] View toggle buttons (List/Kanban) - visual apenas, funcionalidade futura
+  - [x] Dark mode completo em toda interface
 
-- [ ] **Configurar rota**
-  - [ ] Adicionar `path('contacts/', ContactListView, name='contact_list')`
-  - [ ] Incluir urls no config/urls.py
+- [x] **Configurar rota**
+  - [x] Adicionar `path('contacts/', ContactListView, name='contact_list')`
+  - [x] Incluir urls no config/urls.py
+
+- [x] **Implementar Bulk Actions - Arquivar**
+  - [x] Criar endpoint POST `/contacts/bulk-archive/`
+  - [x] Receber lista de IDs via JSON
+  - [x] Validar que todos os IDs pertencem ao user/company (permission check)
+  - [x] Atualizar `is_active=False` para todos os IDs
+  - [x] Retornar JSON com sucesso e contagem de contactos arquivados
+  - [x] Adicionar mensagem de feedback no frontend
+  - [x] Handler JavaScript para chamar endpoint e atualizar UI
+  - [x] Validação de contactos já arquivados com mensagem de erro apropriada
+  - [x] Sistema de notificações toast para feedback visual
+
+- [ ] **Implementar Bulk Actions - Desarquivar**
+  - [ ] Criar endpoint POST `/contacts/bulk-unarchive/`
+  - [ ] Receber lista de IDs via JSON
+  - [ ] Validar permissions
+  - [ ] Atualizar `is_active=True` para todos os IDs
+  - [ ] Retornar JSON com sucesso e contagem
+  - [ ] Adicionar mensagem de feedback no frontend
+  - [ ] Handler JavaScript para chamar endpoint e atualizar UI
+
+- [ ] **Implementar Bulk Actions - Merge (Fundir Contactos)**
+  - [ ] Criar endpoint POST `/contacts/bulk-merge/`
+  - [ ] Validar que pelo menos 2 contactos estão selecionados
+  - [ ] Criar modal/página para escolher contacto principal
+  - [ ] Mostrar preview dos dados de cada contacto
+  - [ ] Permitir selecionar qual informação manter (email, phone, etc.)
+  - [ ] Migrar relacionamentos (vendas, compras, etc.) para contacto principal
+  - [ ] Arquivar contactos duplicados após merge
+  - [ ] Retornar JSON com sucesso
+  - [ ] Handler JavaScript e UI modal
+
+- [ ] **Implementar Bulk Actions - Database Quality**
+  - [ ] Criar endpoint POST `/contacts/check-quality/`
+  - [ ] Implementar verificações:
+    - [ ] Emails duplicados
+    - [ ] Phones duplicados
+    - [ ] Contactos sem email E sem phone
+    - [ ] NIFs duplicados
+    - [ ] Campos obrigatórios vazios
+    - [ ] Formato de email inválido
+    - [ ] Formato de phone inválido
+  - [ ] Retornar relatório JSON com issues encontrados
+  - [ ] Criar modal para mostrar relatório de qualidade
+  - [ ] Permitir correção rápida de issues comuns
+  - [ ] Handler JavaScript e UI modal
+
+- [ ] **Implementar Bulk Actions - Eliminar (ADMIN ONLY)**
+  - [ ] Criar endpoint POST `/contacts/bulk-delete/`
+  - [ ] Decorator `@admin_required` ou verificar `request.user.is_staff`
+  - [ ] Validar permissions (apenas admins podem eliminar)
+  - [ ] Verificar se contactos têm relacionamentos (vendas, compras)
+  - [ ] Modal de confirmação com warning sobre dados relacionados
+  - [ ] Soft delete preferível (manter is_active=False) OU hard delete se confirmado
+  - [ ] Retornar JSON com sucesso e contagem
+  - [ ] Mostrar botão "Eliminar" apenas para admins no frontend
+  - [ ] Handler JavaScript com double confirmation
 
 - [ ] **Testing - Contact List**
-  - [ ] Test: acessar /contacts/ mostra lista
-  - [ ] Test: busca funciona
-  - [ ] Test: paginação funciona
+  - [ ] Test: acessar /contacts/ mostra apenas contactos ativos por padrão
+  - [ ] Test: busca por cada campo funciona (name, email, phone, whatsapp, nif, city, company, position)
+  - [ ] Test: filtro status=archived mostra apenas arquivados
+  - [ ] Test: paginação funciona com page_size customizável
+  - [ ] Test: page_size reseta para 50 em F5
+  - [ ] Test: bulk archive funciona com múltiplos IDs
+  - [ ] Test: bulk unarchive funciona
+  - [ ] Test: bulk merge valida mínimo 2 contactos
+  - [ ] Test: database quality identifica duplicados
+  - [ ] Test: bulk delete apenas para admins
+  - [ ] Test: non-admin não vê botão eliminar
+  - [ ] Test: dropdown abre ao digitar e ao clicar no chevron
 
 ---
 

@@ -7,7 +7,7 @@ class AuthenticationMiddleware:
     
     def __init__(self, get_response):
         self.get_response = get_response
-        self.protected_paths = ['/dashboard/']
+        self.protected_paths = ['/dashboard/', '/contacts/']
         self.public_paths = ['/login/', '/logout/', '/admin/', '/i18n/']
     
     def __call__(self, request):
