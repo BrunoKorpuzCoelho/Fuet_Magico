@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="60" fill="#1f2937"/>
+  
+  <!-- Invoice/document icon for billing contact -->
+  <g transform="translate(60, 60)">
+    <!-- Document -->
+    <rect x="-18" y="-22" width="36" height="48" fill="#dbc693" rx="2"/>
+    
+    <!-- Document lines -->
+    <line x1="-12" y1="-14" x2="12" y2="-14" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
+    <line x1="-12" y1="-6" x2="12" y2="-6" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
+    <line x1="-12" y1="2" x2="12" y2="2" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
+    <line x1="-12" y1="10" x2="6" y2="10" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
+    
+    <!-- Euro symbol -->
+    <text x="0" y="24" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#1f2937" text-anchor="middle">€</text>
+  </g>
+</svg>

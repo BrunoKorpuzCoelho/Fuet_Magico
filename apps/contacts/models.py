@@ -89,6 +89,26 @@ class Contact(AbstractBaseModel):
     def is_person(self):
         return self.contact_category == 'PERSON'
     
+    def get_avatar_url(self):
+        """Retorna URL do avatar (upload ou default baseado em categoria/tipo)"""
+        if self.avatar:
+            return self.avatar.url
+        
+        # Default baseado na categoria (prioridade)
+        if self.contact_category == 'PERSON':
+            return '/static/images/avatars/defaults/default-person.svg'
+        elif self.contact_category == 'COMPANY':
+            return '/static/images/avatars/defaults/default-company.svg'
+        
+        # Default baseado no tipo (fallback)
+        if self.contact_type == 'CLIENT':
+            return '/static/images/avatars/defaults/default-client.svg'
+        elif self.contact_type == 'SUPPLIER':
+            return '/static/images/avatars/defaults/default-supplier.svg'
+        
+        # Fallback genérico
+        return '/static/images/avatars/defaults/default-other.svg'
+    
     def get_price_list(self):
         if hasattr(self, 'price_list') and self.price_list:
             return self.price_list

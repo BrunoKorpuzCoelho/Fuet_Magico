@@ -819,70 +819,183 @@ Criar view para listar todos os contactos com sistema de bulk actions, filtros a
   - [x] Validação de contactos já arquivados com mensagem de erro apropriada
   - [x] Sistema de notificações toast para feedback visual
 
-- [ ] **Implementar Bulk Actions - Desarquivar**
-  - [ ] Criar endpoint POST `/contacts/bulk-unarchive/`
-  - [ ] Receber lista de IDs via JSON
-  - [ ] Validar permissions
-  - [ ] Atualizar `is_active=True` para todos os IDs
-  - [ ] Retornar JSON com sucesso e contagem
-  - [ ] Adicionar mensagem de feedback no frontend
-  - [ ] Handler JavaScript para chamar endpoint e atualizar UI
+- [x] **Implementar Bulk Actions - Desarquivar**
+  - [x] Criar endpoint POST `/contacts/bulk-unarchive/`
+  - [x] Receber lista de IDs via JSON
+  - [x] Validar permissions
+  - [x] Atualizar `is_active=True` para todos os IDs
+  - [x] Retornar JSON com sucesso e contagem
+  - [x] Adicionar mensagem de feedback no frontend
+  - [x] Handler JavaScript para chamar endpoint e atualizar UI
 
 - [ ] **Implementar Bulk Actions - Merge (Fundir Contactos)**
-  - [ ] Criar endpoint POST `/contacts/bulk-merge/`
-  - [ ] Validar que pelo menos 2 contactos estão selecionados
-  - [ ] Criar modal/página para escolher contacto principal
-  - [ ] Mostrar preview dos dados de cada contacto
-  - [ ] Permitir selecionar qual informação manter (email, phone, etc.)
-  - [ ] Migrar relacionamentos (vendas, compras, etc.) para contacto principal
-  - [ ] Arquivar contactos duplicados após merge
-  - [ ] Retornar JSON com sucesso
-  - [ ] Handler JavaScript e UI modal
+  - **NOTA:** Aguarda criação das tabelas de vendas/compras para implementar atualização de FKs
+  - [ ] **Backend - Endpoints**
+    - [ ] Criar endpoint GET `/contacts/merge-preview/?id1=X&id2=Y`
+    - [ ] Criar endpoint POST `/contacts/bulk-merge/`
+  - [ ] **Backend - Service Layer**
+    - [ ] Criar `ContactService.get_merge_preview(id1, id2)`
+      - [ ] Retornar dados dos 2 contactos formatados lado-a-lado
+      - [ ] Retornar todos os campos (name, email, phone, address, etc.)
+    - [ ] Criar `ContactService.execute_merge(id1, id2, selected_fields)`
+      - [ ] Criar novo contacto com campos selecionados pelo user
+      - [ ] Buscar todas as tabelas com FK para Contact (usar Django ORM)
+      - [ ] Atualizar todas as FKs de id1 e id2 para novo contacto ID
+      - [ ] Apagar contactos id1 e id2
+      - [ ] Usar `transaction.atomic()` para rollback se falhar
+  - [ ] **Backend - Validações**
+    - [ ] Validar exatamente 2 contactos selecionados
+    - [ ] Validar contactos existem
+    - [ ] Validar não pode merge consigo próprio
+    - [ ] Validar user tem permissão (@login_required)
+    - [ ] Retornar erros em português
+  - [ ] **Frontend - Modal Wizard (3 colunas)**
+    - [ ] Criar modal em `templates/contacts/list.html` ou componente separado
+    - [ ] Coluna esquerda: Contacto A (todos os campos)
+    - [ ] Coluna central: Contacto B (todos os campos)
+    - [ ] Coluna direita: Contacto Final (resultado)
+  - [ ] **Frontend - Lógica de Seleção**
+    - [ ] Gerar SELECT dropdown para cada campo do Contacto Final
+    - [ ] Opções do SELECT: valor de A ou valor de B
+    - [ ] Implementar auto-preenchimento inteligente:
+      - [ ] Se A tem valor e B está vazio → selecionar A automaticamente
+      - [ ] Se B tem valor e A está vazio → selecionar B automaticamente
+      - [ ] Se ambos têm valor → deixar em branco para user escolher
+    - [ ] Permitir user alterar qualquer seleção manualmente
+  - [ ] **Frontend - Confirmação e Execução**
+    - [ ] Botão "Executar Merge" que valida se todos campos foram selecionados
+    - [ ] Modal de confirmação secundário: "Esta ação é irreversível. Aceitar?"
+    - [ ] Enviar POST para `/contacts/bulk-merge/` com `{id1, id2, selected_fields}`
+    - [ ] Notificação toast com sucesso/erro em português
+    - [ ] Reload automático após merge bem-sucedido
+  - [ ] **Frontend - Handler JavaScript**
+    - [ ] Atualizar `mergeSelected()` para abrir modal wizard
+    - [ ] Carregar dados via fetch para `/contacts/merge-preview/`
+    - [ ] Gerenciar estado dos SELECTs (Alpine.js ou vanilla JS)
 
-- [ ] **Implementar Bulk Actions - Database Quality**
-  - [ ] Criar endpoint POST `/contacts/check-quality/`
-  - [ ] Implementar verificações:
-    - [ ] Emails duplicados
-    - [ ] Phones duplicados
-    - [ ] Contactos sem email E sem phone
-    - [ ] NIFs duplicados
-    - [ ] Campos obrigatórios vazios
-    - [ ] Formato de email inválido
-    - [ ] Formato de phone inválido
-  - [ ] Retornar relatório JSON com issues encontrados
-  - [ ] Criar modal para mostrar relatório de qualidade
-  - [ ] Permitir correção rápida de issues comuns
-  - [ ] Handler JavaScript e UI modal
+- [x] **Implementar Sistema de Detecção de Duplicados com Scoring**
+  - **OBJETIVO:** Detectar contactos duplicados usando sistema de pontuação inteligente
+  - **CONTEXTO:** User seleciona 1 contacto e sistema compara com todos outros para encontrar possíveis duplicados
+  - **SCORING MÁXIMO:** 71 pontos (campos não-UNIQUE apenas)
+  - **THRESHOLD:** Só mostrar se score ≥ 8 pontos
+  - **LIMITE:** Top 20 resultados ordenados por score DESC
+  
+  - [x] **Backend - Endpoint**
+    - [x] Criar `POST /contacts/find-duplicates/`
+    - [x] Receber `{"contact_id": 123}`
+    - [x] Validar contacto existe e user tem permissão
+    - [x] Retornar JSON com original + lista de duplicates
+    - [x] Cada duplicate tem: contact data, score, matched_fields, details
+    
+  - [x] **Backend - Service Layer**
+    - [x] Criar `ContactService.find_potential_duplicates(contact_id)`
+      - [x] Fetch contacto original
+      - [x] Fetch todos outros contactos ativos (excluir próprio)
+      - [x] Para cada contacto calcular score com `_calculate_similarity_score()`
+      - [x] Filtrar apenas score ≥ 8
+      - [x] Ordenar por score DESC
+      - [x] Limitar top 20 resultados
+    - [x] Criar `ContactService._calculate_similarity_score(original, candidate)`
+      - [x] **NIF:** 15 pontos se igual (não-UNIQUE)
+      - [x] **Phone:** 12 pontos se igual após normalização
+      - [x] **WhatsApp:** 10 pontos se igual após normalização
+      - [x] **Nome:** 10 pts (exato), 7 pts (invertido), 5 pts (parcial 2+ palavras), 1 pt (1 palavra comum)
+      - [x] **Company ID:** 10 pontos se igual
+      - [x] **Address:** 5 pontos se igual
+      - [x] **Postal Code:** 4 pontos se igual
+      - [x] **City:** 3 pontos se igual
+      - [x] **Position:** 2 pontos se igual, 1 pt se similar
+      - [x] **EXCLUIR Email** (campo é UNIQUE na BD, nunca duplica)
+      - [x] Retornar: score total, matched_fields[], details{}
+    - [x] Criar `ContactService._compare_names(name1, name2)`
+      - [x] Exatamente igual (case-insensitive) → 10 pontos
+      - [x] Palavras invertidas (set igual) → 7 pontos
+      - [x] 2+ palavras comuns → 5 pontos
+      - [x] 1 palavra comum → 1 ponto
+      - [x] Usar `difflib.SequenceMatcher` se ratio > 0.8 → 4 pontos
+    - [x] Criar `ContactService._normalize_phone(phone)`
+      - [x] Remover espaços, traços, parênteses: `r'[\s\-\(\)]'`
+      - [x] Comparar strings normalizadas
+      
+  - [x] **Frontend - UI Button**
+    - [x] Adicionar botão "Qualidade da Base de Dados"
+    - [x] Validar exatamente 1 contacto selecionado
+    - [x] Ícone check circle
+    
+  - [x] **Frontend - Handler JavaScript**
+    - [x] Criar `checkDataQuality()` function
+    - [x] Validar 1 contacto selecionado
+    - [x] Fetch POST `/contacts/find-duplicates/` com contact_id
+    - [x] Se 0 duplicados → toast "Nenhum duplicado encontrado"
+    - [x] Se > 0 duplicados → abrir modal
+    - [x] Loading spinner enquanto processa
+    
+  - [x] **Frontend - Modal de Duplicados**
+    - [x] Modal header com nome do contacto original
+    - [x] Lista de duplicados (top 20 máximo)
+    - [x] Formato tabela com checkboxes para multi-select
+    - [x] Para cada duplicate mostrar:
+      - [x] **Checkbox** para seleção individual
+      - [x] **Score badge** com cor gradiente (ver sistema de cores abaixo)
+      - [x] Nome do contacto com avatar
+      - [x] Ícone info com dropdown de campos matched (hover desktop / click mobile)
+      - [x] Detalhes expandíveis com valores e pontos
+    - [x] Footer com contador de selecionados
+    - [x] Botão dourado "Fazer Merge" (#d4a855) habilitado quando ≥1 selecionado
+    - [ ] **Lógica do Merge Button** (implementar quando função merge estiver pronta)
+      - [ ] Abrir wizard de merge com 3 colunas (Contato A, Contato B, Final)
+      - [ ] Permitir escolher valores de cada campo
+      - [ ] Confirmação antes de executar merge irreversível
+      - [ ] Atualizar foreign keys em tabelas relacionadas (vendas/compras)
+      - [ ] Eliminar contatos originais após merge bem-sucedido
+    
+  - [x] **Frontend - Sistema de Cores Gradiente**
+    - [x] **Fórmula:** `percentage = (score / 71) * 100`
+    - [x] **Gradiente HSL:** `hsl(hue, 80%, 50%)` onde `hue = (percentage / 100) * 120`
+    - [x] 0-20%: 🔴 Vermelho escuro (hue 0-24°)
+    - [x] 20-40%: 🟠 Laranja (hue 24-48°)
+    - [x] 40-60%: 🟡 Amarelo (hue 48-72°)
+    - [x] 60-80%: 🟢 Verde claro (hue 72-96°)
+    - [x] 80-100%: 💚 Verde forte (hue 96-120°)
+    - [x] Implementar função `getScoreColor(score)` em JavaScript
+    - [x] Badge de cada resultado tem background dinâmico
+    
+  - [ ] **Extras (Opcional)**
+    - [ ] Usar biblioteca `fuzzywuzzy` para comparação avançada de nomes
+    - [ ] Cache de resultados para evitar recalcular
+    - [ ] Exportar relatório de duplicados (CSV/PDF)
+    - [ ] Bulk action: "Verificar duplicados de todos selecionados"
 
-- [ ] **Implementar Bulk Actions - Eliminar (ADMIN ONLY)**
-  - [ ] Criar endpoint POST `/contacts/bulk-delete/`
-  - [ ] Decorator `@admin_required` ou verificar `request.user.is_staff`
-  - [ ] Validar permissions (apenas admins podem eliminar)
-  - [ ] Verificar se contactos têm relacionamentos (vendas, compras)
-  - [ ] Modal de confirmação com warning sobre dados relacionados
-  - [ ] Soft delete preferível (manter is_active=False) OU hard delete se confirmado
-  - [ ] Retornar JSON com sucesso e contagem
-  - [ ] Mostrar botão "Eliminar" apenas para admins no frontend
-  - [ ] Handler JavaScript com double confirmation
+- [x] **Implementar Bulk Actions - Eliminar (ADMIN ONLY)**
+  - [x] Criar endpoint POST `/contacts/bulk-delete/`
+  - [x] Decorator `@admin_required` ou verificar `request.user.is_staff`
+  - [x] Validar permissions (apenas admins podem eliminar)
+  - [x] Verificar se contactos têm relacionamentos (vendas, compras)
+  - [x] Modal de confirmação com warning sobre dados relacionados
+  - [x] Soft delete preferível (manter is_active=False) OU hard delete se confirmado
+  - [x] Retornar JSON com sucesso e contagem
+  - [x] Mostrar botão "Eliminar" apenas para admins no frontend
+  - [x] Handler JavaScript com double confirmation
 
-- [ ] **Testing - Contact List**
-  - [ ] Test: acessar /contacts/ mostra apenas contactos ativos por padrão
-  - [ ] Test: busca por cada campo funciona (name, email, phone, whatsapp, nif, city, company, position)
-  - [ ] Test: filtro status=archived mostra apenas arquivados
-  - [ ] Test: paginação funciona com page_size customizável
-  - [ ] Test: page_size reseta para 50 em F5
-  - [ ] Test: bulk archive funciona com múltiplos IDs
-  - [ ] Test: bulk unarchive funciona
-  - [ ] Test: bulk merge valida mínimo 2 contactos
-  - [ ] Test: database quality identifica duplicados
-  - [ ] Test: bulk delete apenas para admins
-  - [ ] Test: non-admin não vê botão eliminar
-  - [ ] Test: dropdown abre ao digitar e ao clicar no chevron
+- [x] **Testing - Contact List**
+  - [x] Test: acessar /contacts/ mostra apenas contactos ativos por padrão
+  - [x] Test: busca por cada campo funciona (name, email, phone, whatsapp, nif, city, company, position)
+  - [x] Test: filtro status=archived mostra apenas arquivados
+  - [x] Test: paginação funciona com page_size customizável
+  - [x] Test: page_size reseta para 50 em F5
+  - [x] Test: bulk archive funciona com múltiplos IDs
+  - [x] Test: bulk unarchive funciona
+  - [ ] Test: bulk merge valida mínimo 2 contactos (merge wizard pendente)
+  - [x] Test: database quality identifica duplicados
+  - [x] Test: bulk delete apenas para admins
+  - [x] Test: non-admin não vê botão eliminar
+  - [x] Test: dropdown abre ao digitar e ao clicar no chevron
 
 ---
 
 ## 4.4 Views de Criação de Contacto
 
+Template : https://v0-contact-form-creation-seven.vercel.app/
 Criar view para adicionar novo contacto.
 
 - [ ] **Criar ContactCreateView**

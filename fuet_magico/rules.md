@@ -36,7 +36,7 @@
 7. **1 tabela por ficheiro** - igual Odoo, depois importar no `__init__.py` do models e depois no `__init__.py` do modules
 8. **Campos do BaseModel** - sempre verificar campos herdados antes de criar novos
 9. **Nunca atualizar tarefas sem autorização** - aguardar aprovação do utilizador
-10. **Todos os logs de erro/raise user error/ ou outros que criamos** - Sempre em ingles 
+10. **Todos os logs de erro/raise user error/ ou outros que criamos** - Sempre em ingles  
 
 ### **Nomenclatura**
 

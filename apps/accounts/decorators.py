@@ -27,3 +27,8 @@ def role_required(*roles):
             return function(request, *args, **kwargs)
         return wrap
     return decorator
+
+
+def admin_required(function):
+    """Decorator to restrict access to ADMIN role only"""
+    return role_required('ADMIN')(function)

@@ -8,6 +8,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 import json
 from .models import Contact
 from .services import ContactService
+from apps.accounts.decorators import admin_required
 
 
 @ensure_csrf_cookie
@@ -90,6 +91,160 @@ def bulk_archive_contacts(request):
             if result['error']['code'] == 'ALREADY_ARCHIVED':
                 status_code = 409
             return JsonResponse(result, status=status_code)
+            
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': {
+                'code': 'INVALID_JSON',
+                'message': 'Formato JSON inválido'
+            }
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': {
+                'code': 'INTERNAL_ERROR',
+                'message': 'Ocorreu um erro inesperado'
+            }
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_unarchive_contacts(request):
+    try:
+        data = json.loads(request.body)
+        contact_ids = data.get('contact_ids', [])
+        
+        result = ContactService.bulk_unarchive(contact_ids)
+        
+        if result['success']:
+            return JsonResponse(result, status=200)
+        else:
+            status_code = 400
+            if result['error']['code'] == 'ALREADY_ACTIVE':
+                status_code = 409
+            return JsonResponse(result, status=status_code)
+            
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': {
+                'code': 'INVALID_JSON',
+                'message': 'Formato JSON inválido'
+            }
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': {
+                'code': 'INTERNAL_ERROR',
+                'message': 'Ocorreu um erro inesperado'
+            }
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+@admin_required
+def bulk_delete_contacts(request):
+    """
+    Permanently delete contacts (ADMIN ONLY)
+    Checks for related data (future: sales, purchases)
+    """
+    try:
+        data = json.loads(request.body)
+        contact_ids = data.get('contact_ids', [])
+        
+        if not contact_ids:
+            return JsonResponse({
+                'success': False,
+                'error': {
+                    'code': 'NO_CONTACTS',
+                    'message': 'Nenhum contacto selecionado'
+                }
+            }, status=400)
+        
+        # Get contacts to delete
+        contacts = Contact.objects.filter(id__in=contact_ids)
+        count = contacts.count()
+        
+        if count == 0:
+            return JsonResponse({
+                'success': False,
+                'error': {
+                    'code': 'NOT_FOUND',
+                    'message': 'Contactos não encontrados'
+                }
+            }, status=404)
+        
+        # TODO: Check for related data when sales/purchases are implemented
+        # For now, we'll check for company relationships
+        related_warnings = []
+        for contact in contacts:
+            if contact.contact_category == 'COMPANY':
+                employees_count = contact.employees.count()
+                if employees_count > 0:
+                    related_warnings.append({
+                        'contact': contact.name,
+                        'warning': f'{employees_count} colaborador(es) associado(s) ficarão sem empresa'
+                    })
+        
+        # Delete contacts (hard delete)
+        deleted_names = [contact.name for contact in contacts]
+        contacts.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{count} contacto(s) eliminado(s) permanentemente',
+            'data': {
+                'count': count,
+                'deleted_names': deleted_names,
+                'warnings': related_warnings
+            }
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': {
+                'code': 'INVALID_JSON',
+                'message': 'Formato JSON inválido'
+            }
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': {
+                'code': 'INTERNAL_ERROR',
+                'message': 'Ocorreu um erro inesperado'
+            }
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def find_duplicates(request):
+    try:
+        data = json.loads(request.body)
+        contact_id = data.get('contact_id')
+        
+        if not contact_id:
+            return JsonResponse({
+                'success': False,
+                'error': {
+                    'code': 'MISSING_CONTACT_ID',
+                    'message': 'ID do contacto é obrigatório'
+                }
+            }, status=400)
+        
+        result = ContactService.find_potential_duplicates(contact_id)
+        
+        if result['success']:
+            return JsonResponse(result, status=200)
+        else:
+            return JsonResponse(result, status=404)
             
     except json.JSONDecodeError:
         return JsonResponse({

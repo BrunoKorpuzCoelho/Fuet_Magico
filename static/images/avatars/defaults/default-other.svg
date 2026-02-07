@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="60" fill="#1f2937"/>
+  
+  <!-- Generic contact icon -->
+  <g transform="translate(60, 60)">
+    <!-- Address book / contacts icon -->
+    <rect x="-20" y="-25" width="40" height="50" fill="#dbc693" rx="3"/>
+    
+    <!-- Tabs on the side -->
+    <rect x="-25" y="-15" width="5" height="8" fill="#c9b580" rx="1"/>
+    <rect x="-25" y="-3" width="5" height="8" fill="#c9b580" rx="1"/>
+    <rect x="-25" y="9" width="5" height="8" fill="#c9b580" rx="1"/>
+    
+    <!-- Person icon inside -->
+    <circle cx="0" cy="-8" r="7" fill="#1f2937"/>
+    <path d="M -10 15 Q -10 0, 0 0 Q 10 0, 10 15 L 8 15 Q 8 3, 0 3 Q -8 3, -8 15 Z" 
+          fill="#1f2937"/>
+  </g>
+</svg>

@@ -105,8 +105,9 @@
                                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                     </svg>
-                                    <span>Database Quality</span>
+                                    <span>Qualidade da Base de Dados</span>
                                 </button>
+                                {% if user.role == 'ADMIN' %}
                                 <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                                 <button @click="deleteSelected()" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2">
                                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,6 +115,7 @@
                                     </svg>
                                     <span>Eliminar</span>
                                 </button>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -338,8 +340,9 @@
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
-                                <span>Database Quality</span>
+                                <span>Qualidade da Base de Dados</span>
                             </button>
+                            {% if user.role == 'ADMIN' %}
                             <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                             <button @click="deleteSelected()" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2">
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -347,6 +350,7 @@
                                 </svg>
                                 <span>Eliminar</span>
                             </button>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -763,8 +767,31 @@ function unarchiveSelected() {
         showNotification('error', 'Nenhum contacto selecionado');
         return;
     }
-    console.log('Desarquivar:', selected);
-    alert('Funcionalidade de desarquivar em desenvolvimento');
+    
+    fetch('/contacts/bulk-unarchive/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ contact_ids: selected })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('success', data.message);
+            if (data.warning) {
+                setTimeout(() => showNotification('warning', data.warning), 3100);
+            }
+            setTimeout(() => window.location.reload(), 3000);
+        } else {
+            showNotification('error', data.error.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('error', 'Erro ao desarquivar contactos');
+    });
 }
 
 function mergeSelected() {
@@ -779,12 +806,44 @@ function mergeSelected() {
 
 function checkDataQuality() {
     const selected = window.getSelectedContacts ? window.getSelectedContacts() : [];
-    if (selected.length === 0) {
-        showNotification('error', 'Nenhum contacto selecionado');
+    if (selected.length !== 1) {
+        showNotification('error', 'Selecione exatamente 1 contacto para verificar duplicados');
         return;
     }
-    console.log('Verificar qualidade dos dados:', selected);
-    alert('Funcionalidade de verificação de qualidade em desenvolvimento');
+    
+    const loadingEl = document.createElement('div');
+    loadingEl.id = 'loading-duplicates';
+    loadingEl.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center';
+    loadingEl.innerHTML = '<div class="bg-white dark:bg-gray-800 rounded-lg p-6"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div><p class="mt-4 text-gray-700 dark:text-gray-300">A procurar duplicados...</p></div>';
+    document.body.appendChild(loadingEl);
+    
+    fetch('/contacts/find-duplicates/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ contact_id: selected[0] })
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.body.removeChild(loadingEl);
+        
+        if (data.success) {
+            if (data.duplicates.length === 0) {
+                showNotification('success', 'Nenhum duplicado encontrado');
+            } else {
+                openDuplicatesModal(data);
+            }
+        } else {
+            showNotification('error', data.error.message);
+        }
+    })
+    .catch(error => {
+        document.body.removeChild(loadingEl);
+        console.error('Error:', error);
+        showNotification('error', 'Erro ao procurar duplicados');
+    });
 }
 
 function deleteSelected() {
@@ -793,9 +852,149 @@ function deleteSelected() {
         showNotification('error', 'Nenhum contacto selecionado');
         return;
     }
-    if (confirm(`ATENÇÃO: Tem certeza que deseja ELIMINAR PERMANENTEMENTE ${selected.length} contacto(s)? Esta ação não pode ser desfeita!`)) {
-        console.log('Eliminar:', selected);
-        alert('Funcionalidade de eliminar em desenvolvimento');
+    
+    // Open confirmation modal
+    openDeleteConfirmationModal(selected);
+}
+
+function openDeleteConfirmationModal(contactIds) {
+    const count = contactIds.length;
+    
+    const modal = document.createElement('div');
+    modal.id = 'delete-confirmation-modal';
+    modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn';
+    modal.style.animation = 'fadeIn 0.2s ease-out';
+    
+    modal.innerHTML = `
+        <div class="bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full border-2 border-red-600/50 animate-scaleIn" style="animation: scaleIn 0.2s ease-out;">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-red-900 to-red-800 px-6 py-4 rounded-t-2xl border-b border-red-700/50">
+                <div class="flex items-center space-x-3">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-full bg-red-600/30 border-2 border-red-500 flex-shrink-0">
+                        <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">ATENÇÃO!</h3>
+                        <p class="text-red-300 text-xs mt-0.5">Esta ação é <span class="font-bold text-red-200">IRREVERSÍVEL</span></p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Body -->
+            <div class="px-6 py-5">
+                <div class="bg-red-950/40 border border-red-800/50 rounded-lg p-3 mb-4">
+                    <p class="text-gray-200 text-sm leading-relaxed">
+                        Está prestes a <span class="font-bold text-red-400">ELIMINAR PERMANENTEMENTE</span> 
+                        <span class="font-bold text-white text-base">${count}</span> contacto(s).
+                    </p>
+                    <p class="text-gray-400 text-xs mt-2">
+                        Esta modificação é <span class="font-semibold text-red-400">IRREVERSÍVEL</span> 
+                        e todos os dados serão perdidos para sempre.
+                    </p>
+                </div>
+                
+                <!-- Confirmation Checkbox -->
+                <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-3 mb-4">
+                    <label class="flex items-start space-x-2 cursor-pointer">
+                        <input type="checkbox" id="deleteConfirmCheckbox" 
+                               class="mt-0.5 w-4 h-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500 focus:ring-2">
+                        <span class="text-gray-300 text-xs leading-relaxed">
+                            Confirmo que compreendo que esta ação vai 
+                            <span class="font-semibold text-red-400">eliminar permanentemente</span> 
+                            os contactos selecionados e que 
+                            <span class="font-semibold text-red-400">não existe forma de recuperar</span> 
+                            os dados.
+                        </span>
+                    </label>
+                </div>
+                
+                <!-- Actions -->
+                <div class="flex space-x-3">
+                    <button onclick="closeDeleteConfirmationModal()" 
+                            class="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors">
+                        <span>Cancelar</span>
+                    </button>
+                    <button id="confirmDeleteButton" disabled 
+                            class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600 shadow-lg shadow-red-900/30">
+                        <div class="flex items-center justify-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            <span>ELIMINAR PERMANENTEMENTE</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Enable/disable confirm button based on checkbox
+    const checkbox = modal.querySelector('#deleteConfirmCheckbox');
+    const confirmButton = modal.querySelector('#confirmDeleteButton');
+    
+    checkbox.addEventListener('change', function() {
+        confirmButton.disabled = !this.checked;
+    });
+    
+    // Confirm button action
+    confirmButton.addEventListener('click', async function() {
+        if (!checkbox.checked) return;
+        
+        // Disable button and show loading
+        confirmButton.disabled = true;
+        confirmButton.innerHTML = `
+            <div class="flex items-center justify-center space-x-2">
+                <svg class="animate-spin h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span>A eliminar...</span>
+            </div>
+        `;
+        
+        try {
+            const response = await fetch('/contacts/bulk-delete/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ contact_ids: contactIds })
+            });
+            
+            const data = await response.json();
+            
+            closeDeleteConfirmationModal();
+            
+            if (data.success) {
+                showNotification('success', data.message);
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showNotification('error', data.error.message);
+            }
+        } catch (error) {
+            closeDeleteConfirmationModal();
+            console.error('Error:', error);
+            showNotification('error', 'Erro ao eliminar contactos');
+        }
+    });
+    
+    // Close on outside click
+    modal.onclick = (e) => {
+        if (e.target === modal) closeDeleteConfirmationModal();
+    };
+    
+    document.body.appendChild(modal);
+}
+
+function closeDeleteConfirmationModal() {
+    const modal = document.getElementById('delete-confirmation-modal');
+    if (modal) {
+        modal.style.animation = 'fadeOut 0.2s ease-out';
+        setTimeout(() => {
+            modal.remove();
+        }, 200);
     }
 }
 
@@ -862,6 +1061,252 @@ function getCookie(name) {
         }
     }
     return cookieValue;
+}
+
+function getScoreColor(score, maxScore = 71) {
+    const percentage = (score / maxScore) * 100;
+    const hue = (percentage / 100) * 120;
+    return `hsl(${hue}, 80%, 50%)`;
+}
+
+function openDuplicatesModal(data) {
+    const modal = document.createElement('div');
+    modal.id = 'duplicates-modal';
+    modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn';
+    modal.style.animation = 'fadeIn 0.2s ease-out';
+    
+    let rowsHTML = '';
+    data.duplicates.forEach((dup, index) => {
+        const scoreColor = getScoreColor(dup.score, data.max_score);
+        const scorePercentage = ((dup.score / data.max_score) * 100).toFixed(1);
+        
+        let detailsHTML = '';
+        Object.entries(dup.details).forEach(([key, value]) => {
+            const fieldNames = {
+                'nif': 'NIF',
+                'phone': 'Telefone',
+                'whatsapp': 'WhatsApp',
+                'name': 'Nome',
+                'company': 'Empresa',
+                'address': 'Morada',
+                'postal_code': 'Código Postal',
+                'city': 'Cidade',
+                'position': 'Cargo'
+            };
+            detailsHTML += `
+                <div class="flex justify-between items-center py-1.5 border-b border-gray-700/30 last:border-0">
+                    <span class="text-xs font-medium text-gray-400">${fieldNames[key]}:</span>
+                    <div class="text-right">
+                        <span class="text-sm text-gray-200">${value.value}</span>
+                        <span class="text-xs text-gray-500 ml-2">(${value.points}pts)</span>
+                    </div>
+                </div>
+            `;
+        });
+        
+        rowsHTML += `
+            <tr class="border-b border-gray-800 hover:bg-gray-800/30 transition-colors" x-data="{ open: false }">
+                <td class="px-6 py-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0" style="background: linear-gradient(135deg, ${scoreColor}22, ${scoreColor}11);">
+                            <svg class="w-5 h-5" style="color: ${scoreColor}" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-white">${dup.contact.name}</p>
+                            <p class="text-xs text-gray-500">${dup.contact.company || ''}</p>
+                        </div>
+                    </div>
+                </td>
+                
+                <td class="px-6 py-4 text-center">
+                    <div class="flex flex-col items-center">
+                        <span class="inline-flex items-center px-3 py-1 text-sm font-bold rounded-lg" style="background: ${scoreColor}22; color: ${scoreColor}">
+                            ${dup.score} pts
+                        </span>
+                        <span class="text-xs text-gray-500 mt-1">${scorePercentage}%</span>
+                    </div>
+                </td>
+                
+                <td class="px-6 py-4 text-center relative">
+                    <div class="flex justify-center">
+                        <button @click.stop="open = !open" 
+                                class="group relative flex items-center justify-center w-8 h-8 rounded-full bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 transition-colors">
+                            <svg class="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                            </svg>
+                            
+                            <div class="hidden md:block absolute bottom-full mb-2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+                                <div class="bg-gray-800 rounded-lg shadow-xl border border-gray-700 p-3 min-w-[280px]">
+                                    <div class="text-xs font-semibold text-gray-300 mb-2">Campos Correspondentes:</div>
+                                    <div class="space-y-1">
+                                        ${detailsHTML}
+                                    </div>
+                                    <div class="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                                        <div class="border-8 border-transparent border-t-gray-800"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                    
+                    <div x-show="open" 
+                         @click.away="open = false"
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 transform scale-95"
+                         x-transition:enter-end="opacity-100 transform scale-100"
+                         x-transition:leave="transition ease-in duration-150"
+                         x-transition:leave-start="opacity-100 transform scale-100"
+                         x-transition:leave-end="opacity-0 transform scale-95"
+                         class="md:hidden absolute right-6 mt-2 bg-gray-800 rounded-lg shadow-xl border border-gray-700 p-3 min-w-[280px] z-20"
+                         style="display: none;">
+                        <div class="text-xs font-semibold text-gray-300 mb-2">Campos Correspondentes:</div>
+                        <div class="space-y-1">
+                            ${detailsHTML}
+                        </div>
+                    </div>
+                </td>
+                
+                <td class="px-6 py-4 text-center">
+                    <button onclick="mergeWithContact(${data.original.id}, ${dup.contact.id})" 
+                            class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-lg shadow-yellow-900/20">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                        </svg>
+                        Fazer Merge
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    modal.innerHTML = `
+        <div class="bg-gray-900 rounded-2xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-gray-800 animate-scaleIn" style="animation: scaleIn 0.2s ease-out;">
+            <div class="bg-gradient-to-r from-gray-800 to-gray-850 px-6 py-5 border-b border-gray-700/50">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-3 mb-2">
+                            <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-600/20 border border-blue-500/30">
+                                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-white">Possíveis Duplicados Encontrados</h3>
+                                <p class="text-sm text-gray-400 mt-0.5">
+                                    Contacto Original: <span class="font-semibold text-blue-400">${data.original.name}</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-4 text-xs text-gray-500 ml-13">
+                            <span class="flex items-center">
+                                <svg class="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                                    <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+                                </svg>
+                                ${data.duplicates.length} resultado(s)
+                            </span>
+                            <span class="flex items-center">
+                                <svg class="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/>
+                                </svg>
+                                Score máximo: ${data.max_score} pontos
+                            </span>
+                        </div>
+                    </div>
+                    <button onclick="closeDuplicatesModal()" 
+                            class="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="overflow-auto flex-1">
+                <table class="w-full">
+                    <thead class="bg-gray-800/50 sticky top-0 z-10">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                Contacto
+                            </th>
+                            <th class="px-6 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                Pontuação
+                            </th>
+                            <th class="px-6 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                Detalhes
+                            </th>
+                            <th class="px-6 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                Ação
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-gray-900/50 divide-y divide-gray-800">
+                        ${rowsHTML}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <style>
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes fadeOut {
+                from { opacity: 1; }
+                to { opacity: 0; }
+            }
+            @keyframes scaleIn {
+                from { 
+                    opacity: 0;
+                    transform: scale(0.95);
+                }
+                to { 
+                    opacity: 1;
+                    transform: scale(1);
+                }
+            }
+            @keyframes scaleOut {
+                from { 
+                    opacity: 1;
+                    transform: scale(1);
+                }
+                to { 
+                    opacity: 0;
+                    transform: scale(0.95);
+                }
+            }
+        </style>
+    `;
+    
+    modal.onclick = (e) => {
+        if (e.target === modal) closeDuplicatesModal();
+    };
+    
+    document.body.appendChild(modal);
+}
+
+function closeDuplicatesModal() {
+    const modal = document.getElementById('duplicates-modal');
+    if (modal) {
+        modal.style.animation = 'fadeOut 0.2s ease-out';
+        const modalContent = modal.querySelector('div');
+        if (modalContent) {
+            modalContent.style.animation = 'scaleOut 0.2s ease-out';
+        }
+        setTimeout(() => {
+            if (modal.parentNode) {
+                document.body.removeChild(modal);
+            }
+        }, 200);
+    }
+}
+
+function mergeWithContact(originalId, duplicateId) {
+    closeDuplicatesModal();
+    showNotification('error', 'Funcionalidade de merge em desenvolvimento');
 }
 
 function showNotification(type, message) {

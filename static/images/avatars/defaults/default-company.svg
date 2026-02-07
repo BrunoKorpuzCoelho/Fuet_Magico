@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="60" fill="#1f2937"/>
+  
+  <!-- Building icon -->
+  <g transform="translate(60, 60)">
+    <!-- Main building -->
+    <rect x="-20" y="-25" width="40" height="50" fill="#dbc693" rx="2"/>
+    
+    <!-- Windows -->
+    <rect x="-14" y="-18" width="8" height="8" fill="#1f2937" rx="1"/>
+    <rect x="6" y="-18" width="8" height="8" fill="#1f2937" rx="1"/>
+    <rect x="-14" y="-6" width="8" height="8" fill="#1f2937" rx="1"/>
+    <rect x="6" y="-6" width="8" height="8" fill="#1f2937" rx="1"/>
+    <rect x="-14" y="6" width="8" height="8" fill="#1f2937" rx="1"/>
+    <rect x="6" y="6" width="8" height="8" fill="#1f2937" rx="1"/>
+    
+    <!-- Door -->
+    <rect x="-6" y="14" width="12" height="11" fill="#1f2937" rx="1"/>
+  </g>
+</svg>

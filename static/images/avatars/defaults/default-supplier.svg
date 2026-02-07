@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="60" fill="#1f2937"/>
+  
+  <!-- Delivery box icon for supplier -->
+  <g transform="translate(60, 60)">
+    <!-- Box -->
+    <rect x="-22" y="-15" width="44" height="38" fill="#dbc693" rx="2"/>
+    
+    <!-- Box lid -->
+    <rect x="-22" y="-18" width="44" height="6" fill="#c9b580" rx="1"/>
+    
+    <!-- Horizontal tape -->
+    <rect x="-22" y="-2" width="44" height="4" fill="#9ca3af"/>
+    
+    <!-- Vertical tape -->
+    <rect x="-2" y="-15" width="4" height="38" fill="#9ca3af"/>
+  </g>
+</svg>

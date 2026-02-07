@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="60" fill="#1f2937"/>
+  
+  <!-- Truck icon for shipping/delivery contact -->
+  <g transform="translate(60, 60)">
+    <!-- Truck cabin -->
+    <rect x="-25" y="-8" width="16" height="18" fill="#dbc693" rx="2"/>
+    
+    <!-- Truck cargo -->
+    <rect x="-8" y="-12" width="28" height="22" fill="#c9b580" rx="2"/>
+    
+    <!-- Wheels -->
+    <circle cx="-17" cy="12" r="5" fill="#4b5563"/>
+    <circle cx="-17" cy="12" r="2.5" fill="#9ca3af"/>
+    <circle cx="12" cy="12" r="5" fill="#4b5563"/>
+    <circle cx="12" cy="12" r="2.5" fill="#9ca3af"/>
+    
+    <!-- Cabin window -->
+    <rect x="-22" y="-5" width="10" height="8" fill="#1f2937" rx="1"/>
+  </g>
+</svg>
