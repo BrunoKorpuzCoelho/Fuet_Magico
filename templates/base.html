@@ -5,6 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Dashboard{% endblock %} - Fuet Mágico</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'website/favicon/favicon.ico' %}">
+    <link rel="icon" type="image/svg+xml" href="{% static 'website/favicon/favicon.svg' %}">
+    <link rel="icon" type="image/png" sizes="96x96" href="{% static 'website/favicon/favicon-96x96.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'website/favicon/apple-touch-icon.png' %}">
+    <link rel="manifest" href="{% static 'website/favicon/site.webmanifest' %}">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -224,6 +232,30 @@
                                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ user.email }}</p>
                             </div>
                             
+                            <!-- Company Selector -->
+                            {% if user_companies|length > 1 %}
+                            <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                                    🏢 Empresa Ativa
+                                </label>
+                                <select id="company-selector" 
+                                        class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+                                    {% for company in user_companies %}
+                                    <option value="{{ company.id }}" {% if active_company.id == company.id %}selected{% endif %}>
+                                        {{ company.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% elif user_companies|length == 1 %}
+                            <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                                <div class="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                                    <span class="mr-2">🏢</span>
+                                    <span class="font-medium">{{ active_company.name }}</span>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
                             <div class="py-2">
                                 <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span class="mr-3">👤</span>
@@ -410,6 +442,46 @@
                 devModeToggle.checked = developerMode;
             }
         })();
+
+        // Company Selector
+        const companySelector = document.getElementById('company-selector');
+        if (companySelector) {
+            companySelector.addEventListener('change', function() {
+                const companyId = this.value;
+                const selectedOption = this.options[this.selectedIndex];
+                const companyName = selectedOption.text;
+                
+                // Show loading state
+                this.disabled = true;
+                const originalHtml = this.innerHTML;
+                
+                // Switch company via AJAX
+                fetch(`/accounts/switch-company/${companyId}/`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reload page to update all content with new company
+                        window.location.reload();
+                    } else {
+                        // Re-enable selector and restore original value
+                        this.disabled = false;
+                        alert('Erro ao trocar empresa: ' + (data.error || 'Erro desconhecido'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error switching company:', error);
+                    this.disabled = false;
+                    this.innerHTML = originalHtml;
+                    alert('Erro ao trocar empresa. Tente novamente.');
+                });
+            });
+        }
     </script>
     
     {% block extra_js %}{% endblock %}

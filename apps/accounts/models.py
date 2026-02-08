@@ -38,6 +38,23 @@ class CustomUser(AbstractUser):
         default=EMPLOYEE
     )
     
+    # Multi-company support
+    companies = models.ManyToManyField(
+        'core.Company',
+        related_name='users',
+        blank=True,
+        verbose_name='Companies'
+    )
+    
+    default_company = models.ForeignKey(
+        'core.Company',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='default_users',
+        verbose_name='Default Company'
+    )
+    
     def get_full_name(self):
         full_name = super().get_full_name()
         return full_name if full_name else self.username

@@ -1,5 +1,28 @@
 from django.contrib import admin
-from .models import Contact
+from .models import Contact, ContactTag
+
+
+@admin.register(ContactTag)
+class ContactTagAdmin(admin.ModelAdmin):
+    list_display = ['name', 'color', 'contact_count', 'is_active', 'created_at']
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['name']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+    
+    fieldsets = [
+        ('Tag Information', {
+            'fields': ['name', 'color', 'is_active']
+        }),
+        ('System', {
+            'fields': ['id', 'created_at', 'updated_at'],
+            'classes': ['collapse']
+        }),
+    ]
+    
+    def contact_count(self, obj):
+        """Display number of contacts using this tag"""
+        return obj.contacts.count()
+    contact_count.short_description = 'Contacts'
 
 
 class EmployeeInline(admin.TabularInline):
@@ -26,11 +49,11 @@ class ContactAdmin(admin.ModelAdmin):
             'fields': ['email', 'phone', 'whatsapp']
         }),
         ('Address', {
-            'fields': ['address', 'city', 'postal_code'],
+            'fields': ['address', 'city', 'district', 'postal_code', 'country'],
             'classes': ['collapse']
         }),
         ('Company Information', {
-            'fields': ['nif', 'company', 'position'],
+            'fields': ['nif', 'company', 'position', 'website', 'language'],
         }),
         ('Additional', {
             'fields': ['tags', 'notes'],

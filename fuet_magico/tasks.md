@@ -10,20 +10,24 @@
 
 - **Fase 1:** 8/8 features (100%) - Setup Ambiente e Infraestrutura ✅ COMPLETA!
 - **Fase 2:** 0/6 features (0%) - Frontend - Website Institucional (HTML Copy)
-- **Fase 3:** 0/10 features (0%) - Backend - Estrutura Base Django
-- **Fase 4:** 0/8 features (0%) - App: Contactos (CRM)
-- **Fase 5:** 0/12 features (0%) - App: Inventário (Produtos e Stock)
-- **Fase 6:** 0/10 features (0%) - App: Compras
-- **Fase 7:** 0/12 features (0%) - App: Vendas
-- **Fase 8:** 0/8 features (0%) - App: Financeiro
-- **Fase 9:** 0/18 features (0%) - BOM (Bill of Materials) - Sistema de Receitas
-- **Fase 10:** 0/8 features (0%) - Sistema de PDFs (Documentos)
-- **Fase 11:** 0/6 features (0%) - App: Marketing e WhatsApp
-- **Fase 12:** 0/6 features (0%) - Stock Management Avançado
-- **Fase 13:** 0/6 features (0%) - PDF Scanning (Entrada de Compras)
-- **Fase 14:** 0/6 features (0%) - Integração Final e Deployment
+- **Fase 3:** 1/11 features (9%) - Backend - Estrutura Base Django
+- **Fase 4:** 1/23 features (4%) - App: Contactos
+- **Fase 5:** 0/7 features (0%) - App: CRM (Customer Relationship Management)
+- **Fase 6:** 0/12 features (0%) - App: Inventário (Produtos e Stock)
+- **Fase 7:** 0/10 features (0%) - App: Compras
+- **Fase 8:** 0/12 features (0%) - App: Vendas
+- **Fase 9:** 0/8 features (0%) - App: Financeiro
+- **Fase 10:** 0/18 features (0%) - BOM (Bill of Materials) - Sistema de Receitas
+- **Fase 11:** 0/8 features (0%) - Sistema de PDFs (Documentos)
+- **Fase 12:** 0/6 features (0%) - App: Marketing e WhatsApp
+- **Fase 13:** 0/6 features (0%) - Stock Management Avançado
+- **Fase 14:** 0/6 features (0%) - PDF Scanning (Entrada de Compras)
+- **Fase 15:** 0/6 features (0%) - App: Relatórios e Dashboard
+- **Fase 16:** 0/8 features (0%) - App: Configurações e Parâmetros
+- **Fase 17:** 0/6 features (0%) - Integração Final e Deployment
+- **Fase 18:** 0/13 features (0%) - Testes Automatizados UI (Playwright)
 
-**TOTAL:** 8/122 features (6.6%)
+**TOTAL:** 10/162 features (6.2%)
 
 ---
 
@@ -710,11 +714,75 @@ Criar visualizador de logs no DevTools com 3 tipos de logs.
 
 ---
 
-# 🚀 FASE 4: APP - CONTACTOS (CRM)
+## 3.11 Sistema Multi-Company
 
-**⏱ Tempo estimado:** 3-4 dias
-**🎯 Objetivo:** Criar sistema de gestão de clientes e contactos
+Criar modelo Company e suporte multi-company no sistema.
+
+- [x] **Criar modelo Company**
+  - [x] Criar em `apps/core/models.py`
+  - [x] Herdar de AbstractBaseModel
+  - [x] Campos básicos: name (unique), legal_name, vat, company_registry
+  - [x] Campos contacto: email, phone, website
+  - [x] Campos morada: address, city, postal_code, country (default: 'Portugal')
+  - [x] Campos regionais: currency (default: 'EUR'), language (default: 'pt_PT')
+  - [x] Campo branding: logo (ImageField)
+  - [x] Campo hierarquia: parent_company (FK self, para grupos empresariais)
+  - [x] Property is_subsidiary
+
+- [x] **Adicionar suporte multi-company ao User**
+  - [x] Adicionar campo companies (ManyToManyField para Company)
+  - [x] Adicionar campo default_company (ForeignKey para Company)
+  - [x] User pode pertencer a múltiplas companies
+  - [x] User tem uma company default
+
+- [x] **Criar migrations**
+  - [x] Executar makemigrations core
+  - [x] Executar makemigrations accounts
+  - [x] Executar migrate
+
+- [x] **Criar empresa default**
+  - [x] Criar management command `create_default_company`
+  - [x] Criar empresa "Fuet Mágico" com:
+    - [x] name: "Fuet Mágico"
+    - [x] legal_name: "Fuet Mágico, Lda."
+    - [x] currency: "EUR"
+    - [x] language: "pt_PT"
+    - [x] country: "Portugal"
+  - [x] Executar comando: `python manage.py create_default_company`
+
+- [x] **Registrar no Admin**
+  - [x] Criar CompanyAdmin em `apps/core/admin.py`
+  - [x] Configurar list_display: name, vat, city, country, currency, language, is_active
+  - [x] Configurar search_fields: name, legal_name, vat, email, city
+  - [x] Configurar list_filter: is_active, country, currency
+  - [x] Fieldsets: Basic Info, Contact, Address, Regional Settings, Branding, Hierarchy, System
+
+- [x] **Adicionar seletor de company no sistema**
+  - [x] Adicionar dropdown de company no navbar (quando user tem múltiplas)
+  - [x] Salvar company_id selecionada na session
+  - [x] Filtrar dados por company_id em todas as queries
+
+- [x] **Implementar company_id em modelos EXISTENTES**
+  - [x] Adicionar owner_company (FK) aos modelos: Contact, ContactTag
+  - [x] Criar migrations (0004_contact_owner_company_contacttag_owner_company)
+  - [x] Auto-preencher owner_company com active_company em contact_create_view
+  - [x] Filtrar por owner_company em contact_list_view
+  - **Nota:** Para modelos futuros (Lead, Sale, Purchase, Product), adicionar owner_company na task de criação
+
+- [x] **Testing - Multi-Company**
+  - [x] Test: criar company funciona
+  - [x] Test: empresa default criada
+  - [x] Test: user pode ter múltiplas companies
+  - [x] Test: filtros por company funcionam (Contact e ContactTag)
+
+---
+
+# 🚀 FASE 4: APP - CONTACTOS
+
+**⏱ Tempo estimado:** 6-7 dias
+**🎯 Objetivo:** Criar sistema completo de gestão de contactos com integração a Vendas, Compras, Contabilidade e Marketing
 **📦 Dependências:** Fase 3 (base models e autenticação)
+**📝 Nota:** Secções 4.10-4.13 dependem de outras fases estarem implementadas (Vendas, Compras, Financeiro, Marketing)
 
 ---
 
@@ -1000,12 +1068,9 @@ Criar view para adicionar novo contacto.
 
 - [ ] **Criar ContactCreateView**
   - [ ] Criar view para criar contacto
-  - [ ] Validar email único
-  - [ ] Validar phone/whatsapp formato
 
 - [ ] **Criar form**
   - [ ] Criar ContactForm em forms.py
-  - [ ] Validações customizadas
 
 - [ ] **Criar template**
   - [ ] Criar `templates/contacts/create.html` (standalone)
@@ -1117,7 +1182,682 @@ Permitir exportar contactos.
 
 ---
 
-# 🚀 FASE 5: APP - INVENTÁRIO (PRODUTOS E STOCK)
+## 4.9 Gestão de Contact Tags
+
+Criar sistema completo de gestão de tags de contactos com CRUD completo.
+
+- [x] **Criar modelo ContactTag**
+  - [x] Criar em `apps/contacts/models.py`
+  - [x] Herdar de AbstractBaseModel
+  - [x] Campo: name (max 50 chars, unique, obrigatório)
+  - [x] Campo: color (max 7 chars, default '#dbc693', opcional)
+  - [x] Relação: Contact.tags (ManyToManyField para ContactTag)
+  - [x] Método __str__ retorna name
+
+- [x] **Criar migrations**
+  - [x] Executar makemigrations contacts
+  - [x] Converter tags de JSONField para ManyToManyField
+  - [x] Executar migrate
+
+- [x] **Registrar no Admin**
+  - [x] Criar ContactTagAdmin em admin.py
+  - [x] list_display: name, color, contact_count, is_active, created_at
+  - [x] search_fields: name
+  - [x] list_filter: is_active, created_at
+  - [x] Método contact_count() para mostrar quantos contactos usam a tag
+
+- [ ] **Criar ContactTagListView**
+  - [ ] View para listar todas as tags
+  - [ ] Implementar paginação (50 por página)
+  - [ ] Implementar busca por nome
+  - [ ] Mostrar contador de contactos por tag
+  - [ ] Filtro: active/archived
+
+- [ ] **Criar template list**
+  - [ ] Criar `templates/contacts/tag_list.html`
+  - [ ] Tabela: checkbox, color badge, nome, contact count, actions
+  - [ ] Barra de busca
+  - [ ] Botão "Nova Tag"
+  - [ ] Bulk actions: Arquivar, Desarquivar, Eliminar (admin only)
+
+- [ ] **Configurar rota list**
+  - [ ] `path('contacts/tags/', ContactTagListView, name='contacttag_list')`
+
+- [ ] **Criar ContactTagCreateView**
+  - [ ] Form com campos: name (obrigatório), color (seletor de cor)
+  - [ ] Validação: nome único
+  - [ ] Redirect para tag_list após criar
+
+- [ ] **Criar ContactTagForm**
+  - [ ] Campo name: TextInput com placeholder
+  - [ ] Campo color: ColorInput (type="color") com default '#dbc693'
+  - [ ] Validação customizada para formato hex color
+
+- [ ] **Criar template create/edit**
+  - [ ] Criar `templates/contacts/tag_form.html`
+  - [ ] Layout estilo Odoo (standalone)
+  - [ ] Preview da tag com cor selecionada (live)
+  - [ ] Botões: Guardar, Cancelar
+
+- [ ] **Configurar rota create**
+  - [ ] `path('contacts/tags/new/', ContactTagCreateView, name='contacttag_create')`
+
+- [ ] **Criar ContactTagUpdateView**
+  - [ ] Formulário pré-preenchido
+  - [ ] Validações (nome único exceto próprio)
+  - [ ] Redirect para tag_list após editar
+
+- [ ] **Configurar rota update**
+  - [ ] `path('contacts/tags/<uuid:pk>/edit/', ContactTagUpdateView, name='contacttag_update')`
+
+- [ ] **Criar ContactTagDeleteView**
+  - [ ] Soft delete (is_active=False)
+  - [ ] Mostrar aviso se tag tem contactos associados
+  - [ ] Confirmação antes de deletar
+  - [ ] Admin only
+
+- [ ] **Criar template confirm_delete**
+  - [ ] `templates/contacts/tag_confirm_delete.html`
+  - [ ] Mostrar número de contactos afetados
+  - [ ] Botões: Confirmar, Cancelar
+
+- [ ] **Configurar rota delete**
+  - [ ] `path('contacts/tags/<uuid:pk>/delete/', ContactTagDeleteView, name='contacttag_delete')`
+
+- [ ] **Adicionar tags ao ContactForm**
+  - [ ] Campo tags (CheckboxSelectMultiple ou Select2)
+  - [ ] Permitir criar tag inline (opcional)
+  - [ ] Mostrar tags selecionadas com cor
+
+- [ ] **Atualizar Contact List para mostrar tags**
+  - [ ] Coluna tags na tabela (badges coloridos)
+  - [ ] Filtro por tag (dropdown multi-select)
+  - [ ] Click na tag filtra lista por essa tag
+
+- [ ] **Atualizar Contact Detail para mostrar tags**
+  - [ ] Mostrar tags com cor
+  - [ ] Permitir adicionar/remover tags inline
+
+- [ ] **Testing - Contact Tags**
+  - [x] Test: criar tag funciona
+  - [x] Test: nome único é validado
+  - [ ] Test: adicionar tag a contacto funciona
+  - [ ] Test: tag com contactos mostra aviso ao deletar
+  - [ ] Test: filtrar contactos por tag funciona
+  - [ ] Test: soft delete funciona
+  - [ ] Test: color picker funciona
+
+---
+
+## 4.10 Tab "Vendas" no Detalhe de Contacto
+
+Implementar conteúdo da tab "Vendas" (Sales) no formulário de contacto após a aplicação de Vendas (Fase 8) estar criada.
+
+> **⚠️ BLOQUEADO:** Depende da Fase 8 (App: Vendas) estar implementada.
+> **📍 Localização:** `templates/contacts/create.html` (linha ~355 - tab "vendas")
+
+- [ ] **Após Fase 8 estar completa - Adicionar listagem de encomendas**
+  - [ ] Query: `SaleOrder.objects.filter(contact=contact)` (ordenado por data desc)
+  - [ ] Mostrar tabela com: número encomenda, data, estado, valor total, ações
+  - [ ] Link para cada encomenda (redirect para detalhe de venda)
+  - [ ] Mostrar estatísticas resumidas:
+    - [ ] Total de encomendas
+    - [ ] Valor total faturado
+    - [ ] Última encomenda (data)
+    - [ ] Produto mais comprado
+
+- [ ] **Botão "Nova Encomenda"**
+  - [ ] Criar botão "Nova Encomenda" (estilo golden)
+  - [ ] Ao clicar: redirect para `/sales/orders/new/?contact=<uuid>` (pre-fill contacto)
+  - [ ] Apenas visível se contacto já estiver guardado (contact.pk exists)
+
+- [ ] **Empty State**
+  - [ ] Se não houver encomendas: mostrar SVG + mensagem "Sem encomendas registadas"
+  - [ ] Call-to-action: "Criar primeira encomenda"
+
+- [ ] **Design**
+  - [ ] Manter padrão dark mode (#1f2937)
+  - [ ] Badges coloridos para estados: DRAFT (gray), CONFIRMED (blue), INVOICED (green), CANCELLED (red)
+  - [ ] Tabela responsiva com scroll horizontal em mobile
+
+---
+
+## 4.11 Tab "Compras" no Detalhe de Contacto
+
+Implementar conteúdo da tab "Compras" (Purchases) no formulário de contacto após a aplicação de Compras (Fase 7) estar criada.
+
+> **⚠️ BLOQUEADO:** Depende da Fase 7 (App: Compras) estar implementada.
+> **📍 Localização:** `templates/contacts/create.html` (linha ~365 - tab "compras")
+
+- [ ] **Após Fase 7 estar completa - Adicionar listagem de encomendas de compra**
+  - [ ] Query: `PurchaseOrder.objects.filter(supplier=contact)` (apenas se contact.contact_type = 'SUPPLIER' ou 'BOTH')
+  - [ ] Mostrar tabela com: número, data, estado, valor total, ações
+  - [ ] Link para cada encomenda de compra
+  - [ ] Mostrar estatísticas resumidas:
+    - [ ] Total de encomendas de compra
+    - [ ] Valor total pago
+    - [ ] Última compra (data)
+    - [ ] Produto mais fornecido
+
+- [ ] **Botão "Nova Encomenda de Compra"**
+  - [ ] Criar botão "Nova Compra" (estilo golden)
+  - [ ] Ao clicar: redirect para `/purchases/orders/new/?supplier=<uuid>` (pre-fill fornecedor)
+  - [ ] Apenas visível se contacto for SUPPLIER ou BOTH
+  - [ ] Desabilitado se contacto não estiver guardado
+
+- [ ] **Empty State**
+  - [ ] Se contact_type != SUPPLIER/BOTH: mensagem "Este contacto não é um fornecedor"
+  - [ ] Se não houver compras: SVG + mensagem "Sem compras registadas"
+
+- [ ] **Design**
+  - [ ] Badges: DRAFT (gray), ORDERED (blue), RECEIVED (green), CANCELLED (red)
+  - [ ] Highlight para compras em atraso (expected_date < hoje e estado != RECEIVED)
+
+---
+
+## 4.12 Tab "Contabilidade" no Detalhe de Contacto
+
+Implementar conteúdo da tab "Contabilidade" (Accounting/Invoices) no formulário de contacto após a aplicação Financeiro (Fase 9) estar criada.
+
+> **⚠️ BLOQUEADO:** Depende da Fase 9 (App: Financeiro) estar implementada.
+> **📍 Localização:** `templates/contacts/create.html` (linha ~375 - tab "contabilidade")
+
+- [ ] **Após Fase 9 estar completa - Adicionar listagem de faturas**
+  - [ ] Query: `Invoice.objects.filter(contact=contact)` (ordenado por data desc)
+  - [ ] Mostrar tabela com: número fatura, data, tipo (cliente/fornecedor), estado, valor, ações
+  - [ ] Link para visualizar PDF da fatura
+  - [ ] Mostrar estatísticas financeiras:
+    - [ ] Total faturado (soma de faturas de cliente)
+    - [ ] Total faturado por fornecedor (se aplicável)
+    - [ ] Saldo devedor (faturas UNPAID)
+    - [ ] Média de dias para pagamento
+
+- [ ] **Botão "Nova Fatura"**
+  - [ ] Criar botão "Nova Fatura" (estilo golden)
+  - [ ] Ao clicar: abrir modal para escolher tipo (Cliente/Fornecedor)
+  - [ ] Redirect para `/invoices/new/?contact=<uuid>&type=<cliente|fornecedor>`
+
+- [ ] **Alertas de Pagamento**
+  - [ ] Highlight (vermelho) para faturas vencidas (due_date < hoje e estado = UNPAID)
+  - [ ] Badge amarelo para faturas a vencer nos próximos 7 dias
+  - [ ] Badge verde para faturas PAID
+
+- [ ] **Gráfico de Fluxo de Caixa** (opcional)
+  - [ ] Chart.js ou similar
+  - [ ] Linha temporal com faturação vs pagamentos
+  - [ ] Período: últimos 12 meses
+
+- [ ] **Empty State**
+  - [ ] SVG + "Sem faturas registadas para este contacto"
+
+---
+
+## 4.13 Tab "Marketing" no Detalhe de Contacto
+
+Implementar conteúdo da tab "Marketing" (Campaigns) no formulário de contacto após a aplicação de Marketing (Fase 12) estar criada.
+
+> **⚠️ BLOQUEADO:** Depende da Fase 12 (App: Marketing e WhatsApp) estar implementada.
+> **📍 Localização:** `templates/contacts/create.html` (linha ~405 - tab "marketing")
+
+- [ ] **Após Fase 12 estar completa - Adicionar histórico de campanhas**
+  - [ ] Query: `CampaignContact.objects.filter(contact=contact)` (relação many-to-many com Campaign)
+  - [ ] Mostrar tabela com: nome campanha, tipo (EMAIL/WHATSAPP/SMS), data envio, estado (SENT/OPENED/CLICKED), ações
+  - [ ] Link para detalhe da campanha
+  - [ ] Estatísticas de engagement:
+    - [ ] Total de mensagens recebidas
+    - [ ] Taxa de abertura (emails)
+    - [ ] Taxa de clique (emails/WhatsApp)
+    - [ ] Última interação (data)
+
+- [ ] **Botão "Adicionar a Campanha"**
+  - [ ] Criar botão "Adicionar a Campanha" (estilo golden)
+  - [ ] Abrir modal com lista de campanhas ativas
+  - [ ] Checkbox para selecionar múltiplas campanhas
+  - [ ] Adicionar contacto às campanhas selecionadas
+
+- [ ] **Preferências de Comunicação**
+  - [ ] Checkboxes: "Aceita emails", "Aceita WhatsApp", "Aceita SMS"
+  - [ ] Guardar em Contact model: `email_consent`, `whatsapp_consent`, `sms_consent` (BooleanFields)
+  - [ ] Respeitar RGPD: mostrar data de consentimento
+
+- [ ] **Timeline de Interações**
+  - [ ] Lista cronológica (mais recentes primeiro):
+    - [ ] Email enviado (ícone envelope)
+    - [ ] Email aberto (ícone olho)
+    - [ ] Link clicado (ícone cursor)
+    - [ ] WhatsApp enviado (ícone WhatsApp)
+    - [ ] WhatsApp lido (checkmarks azuis)
+
+- [ ] **Empty State**
+  - [ ] SVG + "Sem campanhas enviadas para este contacto"
+  - [ ] Call-to-action: "Adicionar à primeira campanha"
+
+---
+
+## 4.14 Tab "Notas" - Melhorias no Editor Quill
+
+Adicionar funcionalidades extras ao editor de notas já existente (Quill.js está implementado).
+
+> **✅ STATUS:** Editor Quill já funcional, esta secção adiciona features extras opcionais.
+> **📍 Localização:** `templates/contacts/create.html` (linha ~386 - tab "notas")
+
+- [ ] **Upload de Imagens no Editor**
+  - [ ] Activar módulo de imagens do Quill: `imageResize`, `imageUpload`
+  - [ ] Criar endpoint `/contacts/upload-note-image/` para receber imagens
+  - [ ] Guardar em `media/contacts/notes/`
+  - [ ] Validar: max 5MB, formatos JPEG/PNG/GIF
+
+- [ ] **Auto-save de Notas**
+  - [ ] Implementar debounce (2 segundos após última edição)
+  - [ ] AJAX POST para `/contacts/<uuid>/save-notes/` (salvar sem reload)
+  - [ ] Mostrar indicador: "Guardando..." → "Guardado ✓" (estilo Google Docs)
+  - [ ] Fallback: se AJAX falhar, salvar no form submit normal
+
+- [ ] **Histórico de Alterações (opcional - Fase 2)**
+  - [ ] Criar modelo `ContactNoteVersion` com snapshot de conteúdo por versão
+  - [ ] FK para Contact, campo: `content` (TextField), `edited_by` (User), `edited_at` (DateTime)
+  - [ ] Botão "Ver Histórico" abre modal com lista de versões
+  - [ ] Permitir restaurar versão anterior
+
+- [ ] **Mencionar Utilizadores (@mention)**
+  - [ ] Integrar Quill Mention module
+  - [ ] Autocompletar: digitar "@" lista utilizadores da empresa
+  - [ ] Enviar notificação ao utilizador mencionado (email/dashboard)
+
+- [ ] **Tags de Notas** (categorização)
+  - [ ] Adicionar campo `note_tags` (ArrayField ou JSONField) ao Contact
+  - [ ] Input de tags abaixo do editor (estilo Notion: #vendas, #urgente, #seguimento)
+  - [ ] Filtrar contactos por note_tag na lista
+
+- [ ] **Anexar Ficheiros às Notas**
+  - [ ] Criar modelo `ContactNoteAttachment`:
+    - [ ] FK para Contact
+    - [ ] Campo: `file` (FileField, upload_to='contacts/attachments/')
+    - [ ] Campo: `filename`, `filesize`, `uploaded_by`, `uploaded_at`
+  - [ ] Área de drag-and-drop para anexos abaixo do editor
+  - [ ] Listar anexos com ícones por tipo (PDF, Excel, Word, etc.)
+  - [ ] Botão download + delete para cada anexo
+
+---
+
+# 🚀 FASE 5: APP - CRM (CUSTOMER RELATIONSHIP MANAGEMENT)
+
+**⏱ Tempo estimado:** 5-6 dias
+**🎯 Objetivo:** Criar sistema de gestão de leads, oportunidades de venda e pipeline comercial
+**📦 Dependências:** Fase 4 (Contactos)
+
+---
+
+## 5.1 Criação da App 'crm'
+
+Criar app Django para gestão de CRM.
+
+- [ ] **Criar app**
+  - [ ] Executar `python manage.py startapp crm apps/crm`
+  - [ ] Adicionar 'apps.crm' ao INSTALLED_APPS
+
+- [ ] **Criar estrutura de arquivos**
+  - [ ] Criar `apps/crm/models.py`
+  - [ ] Criar `apps/crm/views.py`
+  - [ ] Criar `apps/crm/forms.py`
+  - [ ] Criar `apps/crm/urls.py`
+
+---
+
+## 5.2 Modelo Lead
+
+Criar modelo para leads/oportunidades de venda.
+
+- [ ] **Criar modelo Lead**
+  - [ ] Herdar de BaseModel
+  - [ ] Campo: contact (FK para Contact, on_delete=CASCADE)
+  - [ ] Campo: title (título da oportunidade)
+  - [ ] Campo: description (descrição detalhada)
+  - [ ] Campo: estimated_value (valor estimado, Decimal)
+  - [ ] Campo: probability (probabilidade de fecho, 0-100%)
+  - [ ] Campo: stage (estágio: NEW, QUALIFIED, PROPOSAL, NEGOTIATION, WON, LOST)
+  - [ ] Campo: source (origem: WEBSITE, REFERRAL, COLD_CALL, SOCIAL_MEDIA, OTHER)
+  - [ ] Campo: expected_close_date (data prevista de fecho)
+  - [ ] Campo: assigned_to (FK para User, responsável pela lead)
+  - [ ] Campo: lost_reason (motivo se LOST, TextField nullable)
+  - [ ] Campo: tags (JSONField para categorização)
+  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True) - NULL=global, com valor=privado
+  - [ ] Método __str__ retorna title + contact name
+  - [ ] Filtrar por owner_company na LeadListView usando filter_by_company()
+  - [ ] Auto-preencher owner_company na create view com get_active_company()
+
+- [ ] **Validações e constraints**
+  - [ ] Validar: estimated_value >= 0
+  - [ ] Validar: probability entre 0-100
+  - [ ] Validar: lost_reason obrigatório se stage=LOST
+  - [ ] Auto-definir probability baseado no stage (NEW=10%, QUALIFIED=25%, PROPOSAL=50%, NEGOTIATION=75%)
+
+- [ ] **Criar migrations**
+  - [ ] Executar makemigrations
+  - [ ] Executar migrate
+
+- [ ] **Registrar no Admin**
+  - [ ] Criar LeadAdmin
+  - [ ] Configurar list_display: title, contact, stage, estimated_value, probability, assigned_to
+  - [ ] Configurar search_fields: title, description, contact__name
+  - [ ] Configurar list_filter: stage, source, assigned_to, created_at
+  - [ ] Fieldsets separados: Info Básica, Valores, Tracking
+
+- [ ] **Testing - Lead Model**
+  - [ ] Test: criar lead com contact funciona
+  - [ ] Test: validação de probability funciona
+  - [ ] Test: stage WON/LOST requer justificação
+
+---
+
+## 5.3 Views de Listagem de Leads
+
+Criar view para listar leads com filtros por estágio, responsável e período.
+
+- [ ] **Criar LeadListView**
+  - [ ] Implementar paginação (50 por página)
+  - [ ] Implementar busca por title/contact/description
+  - [ ] Implementar filtro por stage (NEW, QUALIFIED, PROPOSAL, etc.)
+  - [ ] Implementar filtro por assigned_to (ver só as minhas vs todas)
+  - [ ] Implementar filtro por período (created_at range)
+  - [ ] Ordenação por estimated_value, probability, expected_close_date
+
+- [ ] **Criar template**
+  - [ ] Criar `templates/crm/lead_list.html`
+  - [ ] Tabela com: checkbox, title, contact, stage badge, value, probability bar, assigned_to, actions
+  - [ ] Filtros sidebar: Stage, Responsável, Período
+  - [ ] Botão "Nova Lead"
+  - [ ] Sistema de seleção múltipla com checkboxes
+  - [ ] Bulk actions: Mudar Stage, Atribuir Responsável, Arquivar
+  - [ ] Cards com KPIs: Total Leads, Valor Total Pipeline, Taxa de Conversão, Leads Este Mês
+
+- [ ] **Configurar rota**
+  - [ ] `path('crm/leads/', LeadListView, name='lead_list')`
+  - [ ] Incluir urls no config/urls.py
+
+- [ ] **Testing - Lead List**
+  - [ ] Test: lista mostra leads do user
+  - [ ] Test: filtros funcionam
+  - [ ] Test: busca funciona
+  - [ ] Test: KPIs calculam corretamente
+
+---
+
+## 5.4 Views de Criação de Lead
+
+Criar formulário para criar nova lead.
+
+- [ ] **Criar LeadForm**
+  - [ ] Campos: contact (select com autocomplete), title, description, estimated_value, stage, source, expected_close_date, assigned_to
+  - [ ] Validação: contact obrigatório
+  - [ ] Validação: estimated_value >= 0
+  - [ ] Option: criar novo contact inline (modal)
+
+- [ ] **Criar LeadCreateView**
+  - [ ] Form com todos os campos
+  - [ ] Auto-preencher assigned_to com user atual
+  - [ ] Auto-preencher stage com NEW
+  - [ ] Redirect para lead_detail após criar
+
+- [ ] **Criar template**
+  - [ ] Criar `templates/crm/lead_create.html`
+  - [ ] Form layout com Tailwind
+  - [ ] Botão "Guardar" e "Guardar e Criar Novo"
+  - [ ] Botão "Cancelar" (volta para lista)
+  - [ ] Select de contact com search (Alpine.js)
+
+- [ ] **Configurar rota**
+  - [ ] `path('crm/leads/create/', LeadCreateView, name='lead_create')`
+
+- [ ] **Testing - Lead Create**
+  - [ ] Test: criar lead funciona
+  - [ ] Test: validações funcionam
+  - [ ] Test: assigned_to default = user atual
+
+---
+
+## 5.5 Views de Edição e Detalhes
+
+Criar views para editar e visualizar detalhes de lead.
+
+- [ ] **Criar LeadDetailView**
+  - [ ] Mostrar todos os campos da lead
+  - [ ] Mostrar histórico de mudanças (via AuditLog)
+  - [ ] Mostrar atividades relacionadas (reuniões, chamadas, emails)
+  - [ ] Smart buttons: Vendas Geradas (se convertida), Documentos, Tarefas
+  - [ ] Timeline de eventos
+
+- [ ] **Criar LeadUpdateView**
+  - [ ] Form igual ao create
+  - [ ] Permitir mudar stage
+  - [ ] Se mudar para LOST, campo lost_reason obrigatório
+  - [ ] Se mudar para WON, sugerir criar venda
+
+- [ ] **Criar templates**
+  - [ ] `templates/crm/lead_detail.html` (view mode)
+  - [ ] `templates/crm/lead_edit.html` (edit mode)
+  - [ ] Layout com tabs: Geral, Histórico, Atividades
+
+- [ ] **Configurar rotas**
+  - [ ] `path('crm/leads/<uuid:pk>/', LeadDetailView, name='lead_detail')`
+  - [ ] `path('crm/leads/<uuid:pk>/edit/', LeadUpdateView, name='lead_edit')`
+
+- [ ] **Testing - Lead Detail/Edit**
+  - [ ] Test: detail mostra dados corretos
+  - [ ] Test: edit salva alterações
+  - [ ] Test: lost_reason obrigatório se LOST
+
+---
+
+## 5.6 Conversão de Lead para Venda
+
+Criar funcionalidade para converter lead em venda (SaleOrder).
+
+- [ ] **Criar LeadConvertView**
+  - [ ] Botão "Converter em Venda" no lead_detail
+  - [ ] Criar SaleOrder com contact da lead
+  - [ ] Copiar estimated_value como total inicial
+  - [ ] Marcar lead como stage=WON
+  - [ ] Criar FK: SaleOrder.lead (origem)
+  - [ ] Redirect para sale_create com dados pré-preenchidos
+
+- [ ] **Validações**
+  - [ ] Lead já não pode estar WON/LOST
+  - [ ] Contact da lead deve ser CLIENT ou BOTH
+  - [ ] Se contact for SUPPLIER, mostrar erro
+
+- [ ] **Criar template/modal**
+  - [ ] Modal de confirmação: "Converter Lead em Venda?"
+  - [ ] Preview dos dados que serão copiados
+  - [ ] Botão "Confirmar Conversão"
+
+- [ ] **Configurar rota**
+  - [ ] `path('crm/leads/<uuid:pk>/convert/', LeadConvertView, name='lead_convert')`
+
+- [ ] **Testing - Lead Conversion**
+  - [ ] Test: conversão cria SaleOrder
+  - [ ] Test: lead fica WON após conversão
+  - [ ] Test: FK lead → sale funciona
+  - [ ] Test: não permite converter LOST/WON
+
+---
+
+## 5.7 Pipeline de Vendas (Kanban)
+
+Criar vista Kanban para visualizar pipeline de vendas por estágio.
+
+- [ ] **Criar LeadKanbanView**
+  - [ ] Colunas: NEW, QUALIFIED, PROPOSAL, NEGOTIATION, WON, LOST
+  - [ ] Cards de leads em cada coluna
+  - [ ] Drag & drop para mudar estágio (JavaScript)
+  - [ ] Filtros: Responsável, Período, Origem
+  - [ ] KPIs por coluna: Qtd Leads, Valor Total
+
+- [ ] **Criar template**
+  - [ ] `templates/crm/lead_kanban.html`
+  - [ ] Layout horizontal com scroll
+  - [ ] Cards com: title, contact, value, probability
+  - [ ] Drag & drop com Alpine.js ou JavaScript nativo
+  - [ ] Mobile: tabs para cada coluna
+
+- [ ] **Configurar endpoint para drag & drop**
+  - [ ] POST `crm/leads/<uuid:pk>/move/` (recebe new_stage)
+  - [ ] Atualizar lead.stage
+  - [ ] Atualizar probability automaticamente
+  - [ ] Retornar JSON success
+
+- [ ] **Configurar rota**
+  - [ ] `path('crm/pipeline/', LeadKanbanView, name='lead_kanban')`
+
+- [ ] **Testing - Kanban**
+  - [ ] Test: vista carrega leads corretamente
+  - [ ] Test: drag & drop atualiza stage
+  - [ ] Test: KPIs calculam por coluna
+  - [ ] Test: filtros funcionam
+
+---
+
+## 4.16 Template Base de Smart Buttons (Relações Modulares)
+
+Criar template base reutilizável para vistas de smart buttons que mostram relações entre módulos (ex: CRM, Vendas, Compras, Faturas associadas a um Contacto).
+
+**CONTEXTO:**
+- Smart buttons são os botões coloridos que mostram contagens (ex: "CRM 3", "Vendas 12")
+- Ao clicar num smart button:
+  - Se houver 1 registo → redireciona direto para o formulário de detalhe
+  - Se houver múltiplos → mostra vista de lista para o user escolher
+
+**OBJETIVO:** Criar template base que pode ser herdado por todas as vistas de smart buttons, evitando duplicação de código HTML/CSS e mantendo UI consistente.
+
+- [ ] **Criar template base**
+  - [ ] Criar `templates/components/smart_button_list_base.html`
+  - [ ] Estrutura com blocks Django para herança:
+    - [ ] `{% block title %}` - Título da página (ex: "Leads CRM - Alexandra Brito")
+    - [ ] `{% block breadcrumbs %}` - Opcional para navegação
+    - [ ] `{% block table_headers %}` - Cabeçalhos das colunas da tabela
+    - [ ] `{% block table_rows %}` - Linhas dos dados (loop dos registos)
+    - [ ] `{% block empty_state %}` - Mensagem quando não há dados
+    - [ ] `{% block actions %}` - Botões de ação (ex: "Criar Novo")
+  - [ ] Estrutura CSS/Tailwind consistente:
+    - [ ] Header com título e botão voltar
+    - [ ] Tabela responsiva com dark mode
+    - [ ] Estados: loading, empty, populated
+    - [ ] Hover effects nas linhas (cursor pointer)
+    - [ ] Links clicáveis para cada registo
+
+- [ ] **Criar documentação de uso**
+  - [ ] Adicionar comentários no template explicando como herdar
+  - [ ] Exemplo de uso no topo do arquivo
+  - [ ] Listar todos os blocks obrigatórios vs opcionais
+
+- [ ] **Criar template de exemplo**
+  - [ ] Criar `templates/contacts/smart_button_example.html` (referência)
+  - [ ] Demonstrar herança do base
+  - [ ] Mostrar como override de cada block
+  - [ ] Exemplo completo funcional com dados mockados
+
+- [ ] **Testing - Smart Button Base Template**
+  - [ ] Test: template compila sem erros
+  - [ ] Test: herança funciona (extends/block)
+  - [ ] Test: todos os blocks podem ser overridden
+  - [ ] Test: CSS responsivo funciona em mobile/desktop
+  - [ ] Test: dark mode funciona
+
+**NOTA:** Este template será usado nas tarefas seguintes para criar vistas de:
+- Contactos ↔ CRM leads
+- Contactos ↔ Vendas
+- Contactos ↔ Compras
+- Contactos ↔ Faturas
+- Vendas ↔ Faturas
+- Vendas ↔ CRM leads
+- Produtos ↔ BOMs
+- E outras relações modulares
+
+---
+
+## 4.17 Relações e Smart Buttons - Módulo Contactos
+
+**OBJETIVO:** Documentar todas as relações FK que módulos futuros terão com Contactos + criar smart buttons bidirecionais + vistas de listagem.
+
+**ARQUITETURA:** Opção 3 (Foreign Keys Diretas) - cada tabela nova (Vendas, CRM, Compras) terá campo `contact_id` apontando para Contact.
+
+- [ ] **Relações FK Recebidas (outros módulos → Contact)**
+  - [ ] **CRM/Leads** (Fase futura):
+    - [ ] Modelo `Lead` terá campo `contact = ForeignKey(Contact, on_delete=CASCADE, related_name='leads')`
+    - [ ] Smart button: "CRM" no formulário de Contact (contador dinâmico)
+    - [ ] Vista: `contact_crm_list(contact_id)` usando template base (herda `smart_button_list_base.html`)
+    - [ ] Rota: `/contacts/<uuid:pk>/crm/`
+    - [ ] Colunas tabela: Referência, Estado, Valor Estimado, Data Criação
+    - [ ] Se 1 lead → redireciona para `lead_detail(pk)`
+    - [ ] Se múltiplas → mostra lista clicável
+  - [ ] **Vendas** (Fase 7):
+    - [ ] Modelo `SaleOrder` terá campo `contact = ForeignKey(Contact, on_delete=PROTECT, related_name='sales')`
+    - [ ] Smart button: "Vendas" no formulário de Contact
+    - [ ] Vista: `contact_sales_list(contact_id)` usando template base
+    - [ ] Rota: `/contacts/<uuid:pk>/sales/`
+    - [ ] Colunas tabela: Nº Venda, Data, Total, Estado, Estado Pagamento
+    - [ ] Se 1 venda → redireciona para `sale_detail(pk)`
+    - [ ] Se múltiplas → mostra lista clicável
+  - [ ] **Compras** (Fase 6):
+    - [ ] Modelo `PurchaseOrder` terá campo `supplier = ForeignKey(Contact, on_delete=PROTECT, related_name='purchases')` (apenas SUPPLIER ou BOTH)
+    - [ ] Smart button: "Compras" no formulário de Contact (só aparece se contact_type = SUPPLIER ou BOTH)
+    - [ ] Vista: `contact_purchases_list(contact_id)` usando template base
+    - [ ] Rota: `/contacts/<uuid:pk>/purchases/`
+    - [ ] Colunas tabela: Nº Compra, Data, Total, Estado
+    - [ ] Se 1 compra → redireciona para `purchase_detail(pk)`
+    - [ ] Se múltiplas → mostra lista clicável
+  - [ ] **Faturas** (Fase 8):
+    - [ ] Modelo `Invoice` terá campo `contact = ForeignKey(Contact, on_delete=PROTECT, related_name='invoices')`
+    - [ ] Smart button: "Faturas" no formulário de Contact (mostra SOMA dos valores, não contagem)
+    - [ ] Vista: `contact_invoices_list(contact_id)` usando template base
+    - [ ] Rota: `/contacts/<uuid:pk>/invoices/`
+    - [ ] Colunas tabela: Nº Fatura, Data, Total, Estado Pagamento
+    - [ ] Se 1 fatura → redireciona para `invoice_detail(pk)`
+    - [ ] Se múltiplas → mostra lista clicável
+  - [ ] **Documentos** (Fase 10):
+    - [ ] Modelo `Document` terá campo `contact = ForeignKey(Contact, on_delete=CASCADE, related_name='documents', null=True, blank=True)`
+    - [ ] Smart button: "Documentos" no formulário de Contact
+    - [ ] Vista: `contact_documents_list(contact_id)` usando template base
+    - [ ] Rota: `/contacts/<uuid:pk>/documents/`
+    - [ ] Colunas tabela: Nome Ficheiro, Tipo, Data Upload, Tamanho
+    - [ ] Se 1 documento → abre diretamente o PDF/ficheiro
+    - [ ] Se múltiplos → mostra lista clicável
+  - [ ] **Campanhas Marketing** (Fase 11):
+    - [ ] Modelo `MarketingCampaign` terá M2M com Contact via `CampaignContact`
+    - [ ] Smart button: "Marketing" no formulário de Contact
+    - [ ] Vista: `contact_campaigns_list(contact_id)` usando template base
+    - [ ] Rota: `/contacts/<uuid:pk>/campaigns/`
+    - [ ] Colunas tabela: Nome Campanha, Data Envio, Canal (Email/WhatsApp), Estado
+    - [ ] Se 1 campanha → redireciona para `campaign_detail(pk)`
+    - [ ] Se múltiplas → mostra lista clicável
+
+- [ ] **Método Helper para Contadores**
+  - [ ] Adicionar método `Contact.get_stats()` no modelo Contact:
+    ```python
+    def get_stats(self):
+        return {
+            'crm': self.leads.filter(is_active=True).count(),
+            'sales': self.sales.count(),
+            'purchases': self.purchases.count() if self.contact_type in ['SUPPLIER', 'BOTH'] else 0,
+            'invoices_total': self.invoices.aggregate(Sum('total'))['total__sum'] or 0,
+            'documents': self.documents.count(),
+            'campaigns': self.marketing_campaigns.count(),
+        }
+    ```
+  - [ ] No template do formulário Contact, chamar `contact.get_stats` para popular os smart buttons
+  - [ ] Usar `.annotate()` para otimizar quando listar múltiplos contactos
+
+- [ ] **Testing - Contact Relations**
+  - [ ] Test: `contact.get_stats()` retorna contadores corretos
+  - [ ] Test: smart button CRM redireciona para lista quando > 1 lead
+  - [ ] Test: smart button Vendas redireciona direto quando = 1 venda
+  - [ ] Test: smart button Compras só aparece se SUPPLIER/BOTH
+  - [ ] Test: smart button Faturas mostra valor total, não contagem
+  - [ ] Test: vistas usam template base corretamente
+
+---
+
+# 🚀 FASE 6: APP - INVENTÁRIO (PRODUTOS E STOCK)
 
 **⏱ Tempo estimado:** 4-5 dias
 **🎯 Objetivo:** Criar sistema de gestão de produtos e stock básico
@@ -1125,7 +1865,7 @@ Permitir exportar contactos.
 
 ---
 
-## 5.1 Criação da App 'inventory'
+## 6.1 Criação da App 'inventory'
 
 Criar app Django para gestão de inventário.
 
@@ -1138,14 +1878,17 @@ Criar app Django para gestão de inventário.
 
 ---
 
-## 5.2 Modelo Category
+## 6.2 Modelo Category
 
 Criar categorias para produtos.
 
 - [ ] **Criar modelo Category**
   - [ ] Herdar de BaseModel
   - [ ] Campos: name, description, parent (self FK para subcategorias)
+  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True) - NULL=global, com valor=privado
   - [ ] Método __str__
+  - [ ] Filtrar por owner_company na CategoryListView usando filter_by_company()
+  - [ ] Auto-preencher owner_company na create view com get_active_company()
 
 - [ ] **Criar migrations**
   - [ ] makemigrations e migrate
@@ -1159,7 +1902,7 @@ Criar categorias para produtos.
 
 ---
 
-## 5.3 Modelo Product
+## 6.3 Modelo Product
 
 Criar modelo de produtos.
 
@@ -1170,7 +1913,10 @@ Criar modelo de produtos.
   - [ ] Campos: cost_price, sale_price, tax_rate
   - [ ] Campos: image (ImageField)
   - [ ] Campos: supplier (FK para Contact)
+  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True) - NULL=global, com valor=privado
   - [ ] Método __str__, método get_profit_margin()
+  - [ ] Filtrar por owner_company na ProductListView usando filter_by_company()
+  - [ ] Auto-preencher owner_company na create view com get_active_company()
 
 - [ ] **Criar migrations**
   - [ ] makemigrations e migrate
@@ -1187,7 +1933,7 @@ Criar modelo de produtos.
 
 ---
 
-## 5.4 Modelo StockMovement
+## 6.4 Modelo StockMovement
 
 Criar modelo para movimentações de stock (entrada/saída).
 
@@ -1196,6 +1942,7 @@ Criar modelo para movimentações de stock (entrada/saída).
   - [ ] Campos: product (FK), quantity, movement_type (IN, OUT, ADJUSTMENT)
   - [ ] Campos: reference_doc (opcional, para compras/vendas)
   - [ ] Campos: reason, user (FK), timestamp
+  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True) - Herdar de product.owner_company
   - [ ] Método __str__
 
 - [ ] **Criar migrations**
@@ -1211,12 +1958,13 @@ Criar modelo para movimentações de stock (entrada/saída).
 
 ---
 
-## 5.5 Modelo Stock (Saldo Atual)
+## 6.5 Modelo Stock (Saldo Atual)
 
 Criar modelo para stock atual de cada produto.
 
 - [ ] **Criar modelo Stock**
   - [ ] Campos: product (OneToOne), quantity, last_updated
+  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True) - Herdar de product.owner_company
   - [ ] Método update_stock(quantity, movement_type)
 
 - [ ] **Criar signal para atualização automática**
@@ -1233,7 +1981,7 @@ Criar modelo para stock atual de cada produto.
 
 ---
 
-## 5.6 Views de Listagem de Produtos
+## 6.6 Views de Listagem de Produtos
 
 Criar views para listar produtos.
 
@@ -1257,7 +2005,7 @@ Criar views para listar produtos.
 
 ---
 
-## 5.7 Views de Criação/Edição de Produtos
+## 6.7 Views de Criação/Edição de Produtos
 
 Criar views para CRUD de produtos.
 
@@ -1290,7 +2038,7 @@ Criar views para CRUD de produtos.
 
 ---
 
-## 5.8 View de Stock Atual
+## 6.8 View de Stock Atual
 
 Criar view para visualizar stock de todos os produtos.
 
@@ -1313,7 +2061,7 @@ Criar view para visualizar stock de todos os produtos.
 
 ---
 
-## 5.9 Ajustes de Stock Manual
+## 6.9 Ajustes de Stock Manual
 
 Criar view para ajustes manuais de stock.
 
@@ -1339,7 +2087,7 @@ Criar view para ajustes manuais de stock.
 
 ---
 
-## 5.10 Relatório de Movimentações de Stock
+## 6.10 Relatório de Movimentações de Stock
 
 Criar view para histórico de movimentações.
 
@@ -1361,7 +2109,7 @@ Criar view para histórico de movimentações.
 
 ---
 
-## 5.11 Alertas de Stock Mínimo
+## 6.11 Alertas de Stock Mínimo
 
 Implementar sistema de alertas de stock baixo.
 
@@ -1381,7 +2129,7 @@ Implementar sistema de alertas de stock baixo.
 
 ---
 
-## 5.12 Importação de Produtos (CSV)
+## 6.12 Importação de Produtos (CSV)
 
 Permitir importar produtos via CSV.
 
@@ -1402,15 +2150,84 @@ Permitir importar produtos via CSV.
 
 ---
 
-# 🚀 FASE 6: APP - COMPRAS
+## 6.13 Relações e Smart Buttons - Módulo Produtos
 
-**⏱ Tempo estimado:** 4-5 dias
-**🎯 Objetivo:** Criar sistema de gestão de compras e documentos de compra
-**📦 Dependências:** Fase 4 (contacts), Fase 5 (inventory/products)
+**OBJETIVO:** Documentar todas as relações FK que Produtos terão com outros módulos + criar smart buttons bidirecionais + vistas de listagem.
+
+- [ ] **Relações FK Recebidas (outros módulos → Product)**
+  - [ ] **Vendas** (Fase 7):
+    - [ ] Modelo `SaleOrderLine` terá campo `product = ForeignKey(Product, on_delete=PROTECT, related_name='sale_lines')`
+    - [ ] Smart button: "Vendas" no formulário de Product (contador de quantas vendas incluíram este produto)
+    - [ ] Vista: `product_sales_list(product_id)` usando template base
+    - [ ] Rota: `/products/<uuid:pk>/sales/`
+    - [ ] Colunas tabela: Nº Venda, Cliente, Data, Quantidade Vendida, Total Linha
+    - [ ] Se 1 venda → redireciona para `sale_detail(pk)`
+    - [ ] Se múltiplas → mostra lista clicável
+  - [ ] **Compras** (Fase 6):
+    - [ ] Modelo `PurchaseOrderLine` terá campo `product = ForeignKey(Product, on_delete=PROTECT, related_name='purchase_lines')`
+    - [ ] Smart button: "Compras" no formulário de Product
+    - [ ] Vista: `product_purchases_list(product_id)` usando template base
+    - [ ] Rota: `/products/<uuid:pk>/purchases/`
+    - [ ] Colunas tabela: Nº Compra, Fornecedor, Data, Quantidade Comprada, Custo Unitário
+    - [ ] Se 1 compra → redireciona para `purchase_detail(pk)`
+    - [ ] Se múltiplas → mostra lista clicável
+  - [ ] **Movimentos Stock** (Fase 5 - mesma fase):
+    - [ ] Modelo `StockMovement` já tem campo `product = ForeignKey(Product, on_delete=CASCADE, related_name='stock_movements')`
+    - [ ] Smart button: "Movimentos" no formulário de Product
+    - [ ] Vista: `product_movements_list(product_id)` usando template base
+    - [ ] Rota: `/products/<uuid:pk>/movements/`
+    - [ ] Colunas tabela: Data, Tipo (IN/OUT/ADJUSTMENT), Quantidade, Referência Doc, User
+    - [ ] Sempre mostra lista (mesmo se 1 movimento)
+  - [ ] **BOMs (Bill of Materials)** (Fase 9):
+    - [ ] **Relação BIDIRECIONAL MAS ASSIMÉTRICA:**
+      - [ ] Modelo `BOM` terá campo `product = ForeignKey(Product, on_delete=CASCADE, related_name='bom')` (produto finalizado que TEM uma BOM)
+      - [ ] Modelo `BOMLine` terá campo `component = ForeignKey(Product, on_delete=PROTECT, related_name='used_in_boms')` (ingrediente usado EM outras BOMs)
+    - [ ] Smart button "BOM" no formulário de Product:
+      - [ ] Se `product.bom.exists()` → mostrar botão "BOM (1)" que vai direto para `bom_detail(bom_id)`
+      - [ ] Se não tem BOM → botão fica disabled com "BOM (0)" ou oculto
+    - [ ] Smart button "Usado em BOMs" NO formulário de Product:
+      - [ ] **EXCEÇÃO:** NÃO criar este botão! (seria "Usado em 50 bolos" - info demasiada)
+      - [ ] Razão: Um ingrediente como "Farinha" pode estar em 50+ BOMs, não faz sentido mostrar
+    - [ ] Vista dentro da BOM:
+      - [ ] Ao abrir `bom_detail(bom_id)`, mostra tabela de ingredientes (BOMLines)
+      - [ ] Cada linha tem link para `product_detail(component_id)` do ingrediente
+      - [ ] Mas ingrediente NÃO tem botão "Ver BOMs onde sou usado"
+
+- [ ] **Método Helper para Contadores**
+  - [ ] Adicionar método `Product.get_stats()` no modelo Product:
+    ```python
+    def get_stats(self):
+        from django.db.models import Sum, Count
+        return {
+            'sales_count': self.sale_lines.values('sale_order').distinct().count(),
+            'purchases_count': self.purchase_lines.values('purchase_order').distinct().count(),
+            'movements_count': self.stock_movements.count(),
+            'has_bom': self.bom.exists(),
+            'total_sold': self.sale_lines.aggregate(Sum('quantity'))['quantity__sum'] or 0,
+            'current_stock': self.current_stock or 0,  # campo direto no Product
+        }
+    ```
+  - [ ] No template do formulário Product, chamar `product.get_stats` para popular os smart buttons
+
+- [ ] **Testing - Product Relations**
+  - [ ] Test: `product.get_stats()` retorna contadores corretos
+  - [ ] Test: smart button Vendas conta distintas vendas (não linhas)
+  - [ ] Test: smart button Compras conta distintas compras
+  - [ ] Test: smart button BOM só aparece se produto TEM bom
+  - [ ] Test: ingrediente NÃO mostra botão "Usado em BOMs"
+  - [ ] Test: vistas usam template base corretamente
 
 ---
 
-## 6.1 Criação da App 'purchases'
+# 🚀 FASE 7: APP - COMPRAS
+
+**⏱ Tempo estimado:** 4-5 dias
+**🎯 Objetivo:** Criar sistema de gestão de compras e documentos de compra
+**📦 Dependências:** Fase 4 (contacts), Fase 6 (inventory/products)
+
+---
+
+## 7.1 Criação da App 'purchases'
 
 Criar app Django para gestão de compras.
 
@@ -1423,7 +2240,7 @@ Criar app Django para gestão de compras.
 
 ---
 
-## 6.2 Modelo PurchaseOrder
+## 7.2 Modelo PurchaseOrder
 
 Criar modelo de encomenda/documento de compra.
 
@@ -1434,7 +2251,10 @@ Criar modelo de encomenda/documento de compra.
   - [ ] Campos: status (DRAFT, CONFIRMED, RECEIVED, CANCELLED)
   - [ ] Campos: subtotal, tax, total (calculados)
   - [ ] Campos: notes
+  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True) - NULL=global, com valor=privado
   - [ ] Método __str__, método generate_order_number()
+  - [ ] Filtrar por owner_company na PurchaseOrderListView usando filter_by_company()
+  - [ ] Auto-preencher owner_company na create view com get_active_company()
 
 - [ ] **Criar migrations**
   - [ ] makemigrations e migrate
@@ -1449,7 +2269,7 @@ Criar modelo de encomenda/documento de compra.
 
 ---
 
-## 6.3 Modelo PurchaseOrderLine
+## 7.3 Modelo PurchaseOrderLine
 
 Criar linhas de produtos da encomenda.
 
@@ -1470,7 +2290,7 @@ Criar linhas de produtos da encomenda.
 
 ---
 
-## 6.4 Views de Listagem de Compras
+## 7.4 Views de Listagem de Compras
 
 Criar views para listar purchase orders.
 
@@ -1492,7 +2312,7 @@ Criar views para listar purchase orders.
 
 ---
 
-## 6.5 Views de Criação de Compra
+## 7.5 Views de Criação de Compra
 
 Criar view para criar nova compra.
 
@@ -1516,7 +2336,7 @@ Criar view para criar nova compra.
 
 ---
 
-## 6.6 Views de Edição e Detalhes
+## 7.6 Views de Edição e Detalhes
 
 Criar views para editar e visualizar compra.
 
@@ -1543,7 +2363,7 @@ Criar views para editar e visualizar compra.
 
 ---
 
-## 6.7 Confirmação de Compra
+## 7.7 Confirmação de Compra
 
 Criar ação para confirmar compra (mudar status para CONFIRMED).
 
@@ -1561,7 +2381,7 @@ Criar ação para confirmar compra (mudar status para CONFIRMED).
 
 ---
 
-## 6.8 Receção de Compra (Entrada de Stock)
+## 7.8 Receção de Compra (Entrada de Stock)
 
 Criar ação para receber compra e dar entrada no stock.
 
@@ -1581,7 +2401,7 @@ Criar ação para receber compra e dar entrada no stock.
 
 ---
 
-## 6.9 Cancelamento de Compra
+## 7.9 Cancelamento de Compra
 
 Criar ação para cancelar compra.
 
@@ -1602,7 +2422,7 @@ Criar ação para cancelar compra.
 
 ---
 
-## 6.10 Relatórios de Compras
+## 7.10 Relatórios de Compras
 
 Criar views de relatórios de compras.
 
@@ -1623,15 +2443,67 @@ Criar views de relatórios de compras.
 
 ---
 
-# 🚀 FASE 7: APP - VENDAS
+## 7.11 Relações e Smart Buttons - Módulo Compras
 
-**⏱ Tempo estimado:** 5-6 dias
-**🎯 Objetivo:** Criar sistema de vendas, orçamentos, encomendas e faturas
-**📦 Dependências:** Fase 4 (contacts/clients), Fase 5 (inventory), Fase 6 (estrutura similar)
+**OBJETIVO:** Documentar todas as relações FK que Compras terão com outros módulos + criar smart buttons bidirecionais + vistas de listagem.
+
+- [ ] **Relações FK Diretas (PurchaseOrder → outros módulos)**
+  - [ ] **FK para Contact (Supplier)**:
+    - [ ] Campo `supplier = ForeignKey(Contact, on_delete=PROTECT, related_name='purchases')`
+    - [ ] Validar: `supplier.contact_type` deve ser 'SUPPLIER' ou 'BOTH'
+    - [ ] Bidirecional: Contact terá smart button "Compras" (ver Fase 4.10)
+  - [ ] **FK para Products (via PurchaseOrderLine)**:
+    - [ ] `PurchaseOrderLine.product = ForeignKey(Product, on_delete=PROTECT, related_name='purchase_lines')`
+    - [ ] Bidirecional: Product terá smart button "Compras" (ver Fase 5.13)
+
+- [ ] **Relações FK Recebidas (outros módulos → PurchaseOrder)**
+  - [ ] **Faturas de Fornecedor** (Fase 8):
+    - [ ] Modelo `SupplierInvoice` terá campo `purchase_order = ForeignKey(PurchaseOrder, on_delete=SET_NULL, null=True, blank=True, related_name='invoices')`
+    - [ ] Smart button: "Faturas" no formulário de PurchaseOrder
+    - [ ] Vista: `purchase_invoices_list(purchase_id)` usando template base
+    - [ ] Rota: `/purchases/<uuid:pk>/invoices/`
+    - [ ] Colunas tabela: Nº Fatura, Data, Total, Estado Pagamento
+    - [ ] Se 1 fatura → redireciona para `invoice_detail(pk)`
+    - [ ] Se múltiplas → mostra lista clicável
+  - [ ] **Movimentos Stock** (criados automaticamente ao receber compra):
+    - [ ] `StockMovement.reference_doc` pode referenciar PurchaseOrder (via string ou GenericFK)
+    - [ ] Smart button: "Movimentos Stock" no formulário de PurchaseOrder
+    - [ ] Vista: `purchase_stock_movements_list(purchase_id)` usando template base
+    - [ ] Rota: `/purchases/<uuid:pk>/stock-movements/`
+    - [ ] Colunas tabela: Data, Produto, Quantidade, Tipo (IN), User
+    - [ ] Sempre mostra lista (mesmo se poucos movimentos)
+
+- [ ] **Método Helper para Contadores**
+  - [ ] Adicionar método `PurchaseOrder.get_stats()` no modelo PurchaseOrder:
+    ```python
+    def get_stats(self):
+        return {
+            'lines_count': self.lines.count(),
+            'invoices_count': self.invoices.count(),
+            'stock_movements_count': StockMovement.objects.filter(reference_doc=str(self.pk)).count(),
+            'total_received': self.status == 'RECEIVED',
+        }
+    ```
+  - [ ] No template do formulário PurchaseOrder, chamar `purchase.get_stats` para popular os smart buttons
+
+- [ ] **Testing - Purchase Relations**
+  - [ ] Test: `purchase.get_stats()` retorna contadores corretos
+  - [ ] Test: smart button Faturas funciona
+  - [ ] Test: smart button Movimentos Stock mostra apenas desta compra
+  - [ ] Test: vistas usam template base corretamente
+  - [ ] Test: bidirecionalidade funciona (Contact ↔ Purchase, Product ↔ Purchase)
 
 ---
 
-## 7.1 Criação da App 'sales'
+# 🚀 FASE 8: APP - VENDAS
+
+**⏱ Tempo estimado:** 5-6 dias
+**🎯 Objetivo:** Criar sistema de vendas, orçamentos, encomendas e faturas
+**📦 Dependências:** Fase 4 (contacts/clients), Fase 6 (inventory), Fase 7 (estrutura similar)
+
+---
+
+## 8.1 Criação da App 'sales'
 
 Criar app Django para gestão de vendas.
 
@@ -1644,7 +2516,7 @@ Criar app Django para gestão de vendas.
 
 ---
 
-## 7.2 Modelo SaleOrder
+## 8.2 Modelo SaleOrder
 
 Criar modelo de encomenda de venda / orçamento / fatura.
 
@@ -1657,7 +2529,10 @@ Criar modelo de encomenda de venda / orçamento / fatura.
   - [ ] Campos: subtotal, tax, total, discount
   - [ ] Campos: payment_method, payment_status (UNPAID, PARTIAL, PAID)
   - [ ] Campos: notes
+  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True) - NULL=global, com valor=privado
   - [ ] Método __str__, método generate_order_number()
+  - [ ] Filtrar por owner_company na SaleOrderListView usando filter_by_company()
+  - [ ] Auto-preencher owner_company na create view com get_active_company()
 
 - [ ] **Criar migrations**
   - [ ] makemigrations e migrate
@@ -1672,7 +2547,7 @@ Criar modelo de encomenda de venda / orçamento / fatura.
 
 ---
 
-## 7.3 Modelo SaleOrderLine
+## 8.3 Modelo SaleOrderLine
 
 Criar linhas de produtos da venda.
 
@@ -1693,7 +2568,7 @@ Criar linhas de produtos da venda.
 
 ---
 
-## 7.4 Views de Listagem de Vendas
+## 8.4 Views de Listagem de Vendas
 
 Criar views para listar sale orders.
 
@@ -1716,7 +2591,7 @@ Criar views para listar sale orders.
 
 ---
 
-## 7.5 Views de Criação de Venda/Orçamento
+## 8.5 Views de Criação de Venda/Orçamento
 
 Criar view para criar nova venda.
 
@@ -1741,7 +2616,7 @@ Criar view para criar nova venda.
 
 ---
 
-## 7.6 Views de Edição e Detalhes
+## 8.6 Views de Edição e Detalhes
 
 Criar views para editar e visualizar venda.
 
@@ -1768,7 +2643,7 @@ Criar views para editar e visualizar venda.
 
 ---
 
-## 7.7 Confirmação de Venda
+## 8.7 Confirmação de Venda
 
 Criar ação para confirmar venda.
 
@@ -1786,7 +2661,7 @@ Criar ação para confirmar venda.
 
 ---
 
-## 7.8 Entrega de Venda (Saída de Stock)
+## 8.8 Entrega de Venda (Saída de Stock)
 
 Criar ação para marcar como entregue e dar saída no stock.
 
@@ -1807,7 +2682,7 @@ Criar ação para marcar como entregue e dar saída no stock.
 
 ---
 
-## 7.9 Faturação de Venda
+## 8.9 Faturação de Venda
 
 Criar ação para gerar fatura.
 
@@ -1826,7 +2701,7 @@ Criar ação para gerar fatura.
 
 ---
 
-## 7.10 Cancelamento de Venda
+## 8.10 Cancelamento de Venda
 
 Criar ação para cancelar venda.
 
@@ -1846,7 +2721,7 @@ Criar ação para cancelar venda.
 
 ---
 
-## 7.11 Envio de Documentos por Email
+## 8.11 Envio de Documentos por Email
 
 Criar funcionalidade para enviar orçamentos/faturas por email.
 
@@ -1867,7 +2742,7 @@ Criar funcionalidade para enviar orçamentos/faturas por email.
 
 ---
 
-## 7.12 Relatórios de Vendas
+## 8.12 Relatórios de Vendas
 
 Criar views de relatórios de vendas.
 
@@ -1888,7 +2763,7 @@ Criar views de relatórios de vendas.
 
 ---
 
-## 7.13 Sistema de Price Lists
+## 8.13 Sistema de Price Lists
 
 Criar sistema de listas de preços e regras de desconto por cliente/empresa.
 
@@ -1943,15 +2818,99 @@ Criar sistema de listas de preços e regras de desconto por cliente/empresa.
 
 ---
 
-# 🚀 FASE 8: APP - FINANCEIRO
+## 8.14 Relações e Smart Buttons - Módulo Vendas
 
-**⏱ Tempo estimado:** 4-5 dias
-**🎯 Objetivo:** Criar sistema de gestão financeira, balanços, perdas e ganhos
-**📦 Dependências:** Fase 6 (compras), Fase 7 (vendas)
+**OBJETIVO:** Documentar todas as relações FK que Vendas terão com outros módulos + criar smart buttons bidirecionais (incluindo triângulos CRM→Venda→Contacto) + vistas de listagem.
+
+- [ ] **Relações FK Diretas (SaleOrder → outros módulos)**
+  - [ ] **FK para Contact (Client)**:
+    - [ ] Campo `contact = ForeignKey(Contact, on_delete=PROTECT, related_name='sales')`
+    - [ ] Validar: `contact.contact_type` deve ser 'CLIENT' ou 'BOTH'
+    - [ ] Bidirecional: Contact terá smart button "Vendas" (ver Fase 4.10)
+  - [ ] **FK para Products (via SaleOrderLine)**:
+    - [ ] `SaleOrderLine.product = ForeignKey(Product, on_delete=PROTECT, related_name='sale_lines')`
+    - [ ] Bidirecional: Product terá smart button "Vendas" (ver Fase 5.13)
+  - [ ] **FK para CRM/Lead** (origem da venda) - RELAÇÃO TRIANGULAR:
+    - [ ] Campo `lead = ForeignKey(Lead, on_delete=SET_NULL, null=True, blank=True, related_name='sales')`
+    - [ ] **Triângulo de relações:** Contact ↔ Lead ↔ SaleOrder
+      - [ ] Contact tem Lead (Contact.leads)
+      - [ ] Lead gerou Venda (Lead.sales)
+      - [ ] Venda pertence a Contact (SaleOrder.contact)
+    - [ ] Smart button no Lead: "Vendas Geradas" (quantas vendas esta lead gerou)
+    - [ ] Smart button no SaleOrder: "Lead Origem" (qual lead gerou esta venda, se houver)
+    - [ ] Vista: `lead_sales_list(lead_id)` usando template base
+    - [ ] Rota: `/crm/leads/<uuid:pk>/sales/`
+    - [ ] Se 1 venda → redireciona para `sale_detail(pk)`
+    - [ ] Se múltiplas → mostra lista clicável
+
+- [ ] **Relações FK Recebidas (outros módulos → SaleOrder)**
+  - [ ] **Faturas de Cliente** (Fase 8):
+    - [ ] Modelo `Invoice` terá campo `sale_order = ForeignKey(SaleOrder, on_delete=PROTECT, related_name='invoices')`
+    - [ ] Smart button: "Faturas" no formulário de SaleOrder
+    - [ ] Vista: `sale_invoices_list(sale_id)` usando template base
+    - [ ] Rota: `/sales/<uuid:pk>/invoices/`
+    - [ ] Colunas tabela: Nº Fatura, Data, Total, Estado Pagamento
+    - [ ] Se 1 fatura → redireciona para `invoice_detail(pk)`
+    - [ ] Se múltiplas → mostra lista clicável
+  - [ ] **Movimentos Stock** (criados automaticamente ao entregar venda):
+    - [ ] `StockMovement.reference_doc` pode referenciar SaleOrder
+    - [ ] Smart button: "Movimentos Stock" no formulário de SaleOrder (saídas de produtos)
+    - [ ] Vista: `sale_stock_movements_list(sale_id)` usando template base
+    - [ ] Rota: `/sales/<uuid:pk>/stock-movements/`
+    - [ ] Colunas tabela: Data, Produto, Quantidade, Tipo (OUT), User
+    - [ ] Sempre mostra lista
+  - [ ] **Documentos/PDFs** (Fase 10):
+    - [ ] Modelo `Document` terá FK opcional para SaleOrder
+    - [ ] Smart button: "Documentos" no formulário de SaleOrder (orçamentos PDF, contratos)
+    - [ ] Vista: `sale_documents_list(sale_id)` usando template base
+    - [ ] Rota: `/sales/<uuid:pk>/documents/`
+    - [ ] Se 1 documento → abre PDF diretamente
+    - [ ] Se múltiplos → mostra lista
+
+- [ ] **EXCEÇÕES - Smart Buttons que NÃO devem existir:**
+  - [ ] ❌ **NÃO criar** smart button "Produtos Vendidos" em SaleOrder
+    - [ ] Razão: Produtos já estão visíveis nas linhas (SaleOrderLines) dentro do próprio formulário
+    - [ ] Redundante ter botão separado para isso
+  - [ ] ❌ **NÃO criar** smart button reverso "Vendas que usaram este produto" em Product
+    - [ ] Já existe smart button "Vendas" em Product (via sale_lines)
+    - [ ] Ver Fase 5.13 para implementação
+
+- [ ] **Método Helper para Contadores**
+  - [ ] Adicionar método `SaleOrder.get_stats()` no modelo SaleOrder:
+    ```python
+    def get_stats(self):
+        return {
+            'lines_count': self.lines.count(),
+            'invoices_count': self.invoices.count(),
+            'stock_movements_count': StockMovement.objects.filter(reference_doc=str(self.pk)).count(),
+            'documents_count': self.documents.count(),
+            'has_lead': bool(self.lead),
+            'total_delivered': self.status in ['DELIVERED', 'INVOICED'],
+        }
+    ```
+  - [ ] No template do formulário SaleOrder, chamar `sale.get_stats` para popular os smart buttons
+
+- [ ] **Testing - Sale Relations**
+  - [ ] Test: `sale.get_stats()` retorna contadores corretos
+  - [ ] Test: triângulo Contact ↔ Lead ↔ Sale funciona bidirecionalmente
+  - [ ] Test: smart button Lead Origem só aparece se `sale.lead` existe
+  - [ ] Test: smart button Faturas funciona
+  - [ ] Test: smart button Movimentos Stock mostra apenas desta venda
+  - [ ] Test: vistas usam template base corretamente
+  - [ ] Test: bidirecionalidade funciona (Contact ↔ Sale, Product ↔ Sale, Lead ↔ Sale)
+  - [ ] Test: botão "Produtos Vendidos" NÃO existe (redundante com linhas)
 
 ---
 
-## 8.1 Criação da App 'finance'
+# 🚀 FASE 9: APP - FINANCEIRO
+
+**⏱ Tempo estimado:** 4-5 dias
+**🎯 Objetivo:** Criar sistema de gestão financeira, balanços, perdas e ganhos
+**📦 Dependências:** Fase 7 (compras), Fase 8 (vendas)
+
+---
+
+## 9.1 Criação da App 'finance'
 
 Criar app Django para gestão financeira.
 
@@ -1964,7 +2923,7 @@ Criar app Django para gestão financeira.
 
 ---
 
-## 8.2 Modelo Transaction
+## 9.2 Modelo Transaction
 
 Criar modelo para transações financeiras.
 
@@ -1987,7 +2946,7 @@ Criar modelo para transações financeiras.
 
 ---
 
-## 8.3 Signal para Criar Transações Automáticas
+## 9.3 Signal para Criar Transações Automáticas
 
 Criar signals para criar transações automaticamente.
 
@@ -2010,7 +2969,7 @@ Criar signals para criar transações automaticamente.
 
 ---
 
-## 8.4 View de Extrato Financeiro
+## 9.4 View de Extrato Financeiro
 
 Criar view para visualizar todas as transações.
 
@@ -2032,7 +2991,7 @@ Criar view para visualizar todas as transações.
 
 ---
 
-## 8.5 Balanço Mensal
+## 9.5 Balanço Mensal
 
 Criar view para mostrar balanço mensal.
 
@@ -2056,7 +3015,7 @@ Criar view para mostrar balanço mensal.
 
 ---
 
-## 8.6 Relatório de Perdas e Ganhos
+## 9.6 Relatório de Perdas e Ganhos
 
 Criar relatório detalhado de P&L.
 
@@ -2080,7 +3039,7 @@ Criar relatório detalhado de P&L.
 
 ---
 
-## 8.7 Dashboard Financeiro
+## 9.7 Dashboard Financeiro
 
 Criar dashboard com resumo financeiro.
 
@@ -2102,7 +3061,7 @@ Criar dashboard com resumo financeiro.
 
 ---
 
-## 8.8 Exportação de Relatórios Financeiros
+## 9.8 Exportação de Relatórios Financeiros
 
 Permitir exportar relatórios para Excel/CSV.
 
@@ -2123,15 +3082,15 @@ Permitir exportar relatórios para Excel/CSV.
 
 ---
 
-# 🚀 FASE 9: BOM (BILL OF MATERIALS) - SISTEMA DE RECEITAS E CONFIGURADOR DE BOLOS
+# 🚀 FASE 10: BOM (BILL OF MATERIALS) - SISTEMA DE RECEITAS E CONFIGURADOR DE BOLOS
 
 **⏱ Tempo estimado:** 6-8 dias
 **🎯 Objetivo:** Criar sistema robusto de BOM multi-nível com cálculo automático de custos em cascata, gestão de componentes, unidades de medida, conversões e custos de mão-de-obra
-**📦 Dependências:** Fase 5 (inventory/products) - Product model DEVE já existir
+**📦 Dependências:** Fase 6 (inventory/products) - Product model DEVE já existir
 
 ---
 
-## 9.1 Criação da App 'bom'
+## 10.1 Criação da App 'bom'
 
 Criar app Django para gestão de Bill of Materials (Receitas).
 
@@ -2144,7 +3103,7 @@ Criar app Django para gestão de Bill of Materials (Receitas).
 
 ---
 
-## 9.2 Atualização do Modelo Product (Fase 5)
+## 10.2 Atualização do Modelo Product (Fase 5)
 
 Adicionar campos necessários no modelo Product existente para suportar BOM.
 
@@ -2167,7 +3126,7 @@ Adicionar campos necessários no modelo Product existente para suportar BOM.
 
 ---
 
-## 9.3 Modelo UnitOfMeasure (Unidades de Medida)
+## 10.3 Modelo UnitOfMeasure (Unidades de Medida)
 
 Criar sistema de unidades de medida para conversões precisas.
 
@@ -2199,7 +3158,7 @@ Criar sistema de unidades de medida para conversões precisas.
 
 ---
 
-## 9.4 Modelo UnitConversion (Conversões entre Unidades)
+## 10.4 Modelo UnitConversion (Conversões entre Unidades)
 
 Criar sistema de conversões automáticas entre unidades.
 
@@ -2238,7 +3197,7 @@ Criar sistema de conversões automáticas entre unidades.
 
 ---
 
-## 9.5 Modelo ProductBOM (Receita/Lista de Materiais)
+## 10.5 Modelo ProductBOM (Receita/Lista de Materiais)
 
 Criar modelo de Bill of Materials (receita) para produtos manufaturados.
 
@@ -2271,7 +3230,7 @@ Criar modelo de Bill of Materials (receita) para produtos manufaturados.
 
 ---
 
-## 9.6 Modelo ProductBOMLine (Componentes da Receita)
+## 10.6 Modelo ProductBOMLine (Componentes da Receita)
 
 Criar linhas de componentes que compõem a receita.
 
@@ -2301,7 +3260,7 @@ Criar linhas de componentes que compõem a receita.
 
 ---
 
-## 9.7 Lógica de Cálculo de Custos em Cascata (RECURSIVA)
+## 10.7 Lógica de Cálculo de Custos em Cascata (RECURSIVA)
 
 Implementar cálculo automático de custos multi-nível (componentes que têm componentes).
 
@@ -2343,7 +3302,7 @@ Implementar cálculo automático de custos multi-nível (componentes que têm co
 
 ---
 
-## 9.8 Sistema de Recálculo Global de Custos
+## 10.8 Sistema de Recálculo Global de Custos
 
 Criar funcionalidade para recalcular todos os custos do sistema.
 
@@ -2382,7 +3341,7 @@ Criar funcionalidade para recalcular todos os custos do sistema.
 
 ---
 
-## 9.9 Views de Gestão de BOM - Listagem
+## 10.9 Views de Gestão de BOM - Listagem
 
 Criar interface para visualizar todas as receitas.
 
@@ -2410,7 +3369,7 @@ Criar interface para visualizar todas as receitas.
 
 ---
 
-## 9.10 Views de Gestão de BOM - Criação
+## 10.10 Views de Gestão de BOM - Criação
 
 Criar interface para criar nova receita.
 
@@ -2445,7 +3404,7 @@ Criar interface para criar nova receita.
 
 ---
 
-## 9.11 Views de Gestão de BOM - Edição e Detalhes
+## 10.11 Views de Gestão de BOM - Edição e Detalhes
 
 Criar interface para visualizar e editar receita.
 
@@ -2478,7 +3437,7 @@ Criar interface para visualizar e editar receita.
 
 ---
 
-## 9.12 Ação de Recálculo Individual
+## 10.12 Ação de Recálculo Individual
 
 Criar ação para recalcular uma receita específica.
 
@@ -2500,7 +3459,7 @@ Criar ação para recalcular uma receita específica.
 
 ---
 
-## 9.13 Integração com Vendas - Venda por Fatias
+## 10.13 Integração com Vendas - Venda por Fatias
 
 Adicionar funcionalidade de venda de bolos por fatias.
 
@@ -2531,7 +3490,7 @@ Adicionar funcionalidade de venda de bolos por fatias.
 
 ---
 
-## 9.14 Relatório de Análise de Custos
+## 10.14 Relatório de Análise de Custos
 
 Criar relatório de análise de custos de produtos.
 
@@ -2558,7 +3517,7 @@ Criar relatório de análise de custos de produtos.
 
 ---
 
-## 9.15 Interface de Configurador de Bolos (UI Específica)
+## 10.15 Interface de Configurador de Bolos (UI Específica)
 
 Criar interface específica para configurar bolos customizados.
 
@@ -2595,7 +3554,7 @@ Criar interface específica para configurar bolos customizados.
 
 ---
 
-## 9.16 Validações e Regras de Negócio
+## 10.16 Validações e Regras de Negócio
 
 Implementar validações específicas do sistema BOM.
 
@@ -2623,7 +3582,7 @@ Implementar validações específicas do sistema BOM.
 
 ---
 
-## 9.17 Documentação e Ajuda
+## 10.17 Documentação e Ajuda
 
 Criar documentação interna do sistema BOM.
 
@@ -2642,7 +3601,7 @@ Criar documentação interna do sistema BOM.
 
 ---
 
-## 9.18 Testes Integrados e Casos de Uso
+## 10.18 Testes Integrados e Casos de Uso
 
 Criar testes completos do sistema BOM.
 
@@ -2677,15 +3636,15 @@ Criar testes completos do sistema BOM.
 
 ---
 
-# 🚀 FASE 10: SISTEMA DE PDFs (DOCUMENTOS)
+# 🚀 FASE 11: SISTEMA DE PDFs (DOCUMENTOS)
 
 **⏱ Tempo estimado:** 4-5 dias
 **🎯 Objetivo:** Criar sistema de geração de PDFs para documentos (orçamentos, faturas, etc.)
-**📦 Dependências:** Fase 6 (compras), Fase 7 (vendas)
+**📦 Dependências:** Fase 7 (compras), Fase 8 (vendas)
 
 ---
 
-## 10.1 Criação da App 'documents'
+## 11.1 Criação da App 'documents'
 
 Criar app Django para geração de PDFs.
 
@@ -2695,7 +3654,7 @@ Criar app Django para geração de PDFs.
 
 ---
 
-## 10.2 Template Base para PDFs
+## 11.2 Template Base para PDFs
 
 Criar template base HTML para PDFs.
 
@@ -2711,7 +3670,7 @@ Criar template base HTML para PDFs.
 
 ---
 
-## 10.3 Template para Orçamento PDF
+## 11.3 Template para Orçamento PDF
 
 Criar template específico para orçamentos.
 
@@ -2724,7 +3683,7 @@ Criar template específico para orçamentos.
 
 ---
 
-## 10.4 Template para Fatura PDF
+## 11.4 Template para Fatura PDF
 
 Criar template específico para faturas.
 
@@ -2736,7 +3695,7 @@ Criar template específico para faturas.
 
 ---
 
-## 10.5 Função de Geração de PDF
+## 11.5 Função de Geração de PDF
 
 Criar função utilitária para gerar PDFs.
 
@@ -2752,7 +3711,7 @@ Criar função utilitária para gerar PDFs.
 
 ---
 
-## 10.6 Views de Geração de PDF para Vendas
+## 11.6 Views de Geração de PDF para Vendas
 
 Integrar geração de PDF nas vendas.
 
@@ -2774,7 +3733,7 @@ Integrar geração de PDF nas vendas.
 
 ---
 
-## 10.7 Views de Geração de PDF para Compras
+## 11.7 Views de Geração de PDF para Compras
 
 Integrar geração de PDF nas compras.
 
@@ -2792,7 +3751,7 @@ Integrar geração de PDF nas compras.
 
 ---
 
-## 10.8 Personalização de Templates de PDF
+## 11.8 Personalização de Templates de PDF
 
 Permitir customizar templates via admin.
 
@@ -2813,15 +3772,15 @@ Permitir customizar templates via admin.
 
 ---
 
-# 🚀 FASE 11: APP - MARKETING E WHATSAPP
+# 🚀 FASE 12: APP - MARKETING E WHATSAPP
 
 **⏱ Tempo estimado:** 4-5 dias
 **🎯 Objetivo:** Criar sistema de marketing e integração WhatsApp
-**📦 Dependências:** Fase 4 (contacts), Fase 10 (PDFs)
+**📦 Dependências:** Fase 4 (contacts), Fase 11 (PDFs)
 
 ---
 
-## 11.1 Criação da App 'marketing'
+## 13.1 Criação da App 'marketing'
 
 Criar app Django para marketing.
 
@@ -2831,7 +3790,7 @@ Criar app Django para marketing.
 
 ---
 
-## 11.2 Configuração de API WhatsApp
+## 13.2 Configuração de API WhatsApp
 
 Configurar integração com WhatsApp Business API.
 
@@ -2853,7 +3812,7 @@ Configurar integração com WhatsApp Business API.
 
 ---
 
-## 11.3 Modelo Campaign
+## 13.3 Modelo Campaign
 
 Criar modelo para campanhas de marketing.
 
@@ -2871,7 +3830,7 @@ Criar modelo para campanhas de marketing.
 
 ---
 
-## 11.4 Seleção de Destinatários
+## 13.4 Seleção de Destinatários
 
 Criar sistema para selecionar destinatários da campanha.
 
@@ -2889,7 +3848,7 @@ Criar sistema para selecionar destinatários da campanha.
 
 ---
 
-## 11.5 Criação e Envio de Campanha WhatsApp
+## 13.5 Criação e Envio de Campanha WhatsApp
 
 Criar views para criar e enviar campanhas.
 
@@ -2924,7 +3883,7 @@ Criar views para criar e enviar campanhas.
 
 ---
 
-## 11.6 Relatórios de Campanhas
+## 13.6 Relatórios de Campanhas
 
 Criar views de relatórios de campanhas.
 
@@ -2944,15 +3903,15 @@ Criar views de relatórios de campanhas.
 
 ---
 
-# 🚀 FASE 12: STOCK MANAGEMENT AVANÇADO
+# 🚀 FASE 13: STOCK MANAGEMENT AVANÇADO
 
 **⏱ Tempo estimado:** 3-4 dias
 **🎯 Objetivo:** Implementar funcionalidades avançadas de stock (ajustes com motivos, perdas fiscais)
-**📦 Dependências:** Fase 5 (inventory), Fase 8 (finance)
+**📦 Dependências:** Fase 6 (inventory), Fase 9 (finance)
 
 ---
 
-## 12.1 Modelo StockAdjustmentReason
+## 13.1 Modelo StockAdjustmentReason
 
 Criar modelo para motivos de ajuste.
 
@@ -2965,7 +3924,7 @@ Criar modelo para motivos de ajuste.
 
 ---
 
-## 12.2 Atualizar StockMovement com Reason
+## 13.2 Atualizar StockMovement com Reason
 
 Adicionar campo reason ao StockMovement.
 
@@ -2978,7 +3937,7 @@ Adicionar campo reason ao StockMovement.
 
 ---
 
-## 12.3 Integração com Financeiro para Perdas
+## 13.3 Integração com Financeiro para Perdas
 
 Quando ajuste é perda, deduzir no lucro.
 
@@ -2992,7 +3951,7 @@ Quando ajuste é perda, deduzir no lucro.
 
 ---
 
-## 12.4 Relatório de Perdas
+## 13.4 Relatório de Perdas
 
 Criar relatório específico de perdas.
 
@@ -3012,7 +3971,7 @@ Criar relatório específico de perdas.
 
 ---
 
-## 12.5 Histórico de Stock por Produto
+## 13.5 Histórico de Stock por Produto
 
 Criar view de histórico completo de stock.
 
@@ -3031,7 +3990,7 @@ Criar view de histórico completo de stock.
 
 ---
 
-## 12.6 Alertas e Notificações de Stock
+## 13.6 Alertas e Notificações de Stock
 
 Criar sistema de alertas de stock baixo.
 
@@ -3049,15 +4008,15 @@ Criar sistema de alertas de stock baixo.
 
 ---
 
-# 🚀 FASE 13: PDF SCANNING (ENTRADA DE COMPRAS)
+# 🚀 FASE 14: PDF SCANNING (ENTRADA DE COMPRAS)
 
 **⏱ Tempo estimado:** 5-6 dias
 **🎯 Objetivo:** Implementar scanning de PDFs para criar documentos de compra automaticamente
-**📦 Dependências:** Fase 5 (inventory), Fase 6 (purchases)
+**📦 Dependências:** Fase 6 (inventory), Fase 7 (purchases)
 
 ---
 
-## 13.1 Análise de PDFs de Fornecedores
+## 14.1 Análise de PDFs de Fornecedores
 
 Analisar estrutura dos PDFs recebidos.
 
@@ -3070,7 +4029,7 @@ Analisar estrutura dos PDFs recebidos.
 
 ---
 
-## 13.2 Configuração de Parser de PDF
+## 14.2 Configuração de Parser de PDF
 
 Instalar e configurar biblioteca de parsing.
 
@@ -3084,7 +4043,7 @@ Instalar e configurar biblioteca de parsing.
 
 ---
 
-## 13.3 Lógica de Extração de Dados
+## 14.3 Lógica de Extração de Dados
 
 Criar lógica para extrair referências, quantidades e preços.
 
@@ -3099,7 +4058,7 @@ Criar lógica para extrair referências, quantidades e preços.
 
 ---
 
-## 13.4 View de Upload de PDF
+## 14.4 View de Upload de PDF
 
 Criar view para upload de PDF.
 
@@ -3122,7 +4081,7 @@ Criar view para upload de PDF.
 
 ---
 
-## 13.5 Criação Automática de PurchaseOrder
+## 14.5 Criação Automática de PurchaseOrder
 
 Criar PurchaseOrder automaticamente a partir dos dados.
 
@@ -3143,7 +4102,7 @@ Criar PurchaseOrder automaticamente a partir dos dados.
 
 ---
 
-## 13.6 Tratamento de Erros e Edge Cases
+## 14.6 Tratamento de Erros e Edge Cases
 
 Tratar casos onde produtos não existem ou dados estão incorretos.
 
@@ -3161,7 +4120,347 @@ Tratar casos onde produtos não existem ou dados estão incorretos.
 
 ---
 
-# 🚀 FASE 14: INTEGRAÇÃO FINAL E DEPLOYMENT
+# 🚀 FASE 15: APP - RELATÓRIOS E DASHBOARD
+
+**⏱ Tempo estimado:** 4-5 dias
+**🎯 Objetivo:** Criar sistema de relatórios e dashboard com KPIs principais
+**📦 Dependências:** Fase 8 (Vendas), Fase 7 (Compras), Fase 9 (Financeiro), Fase 6 (Inventário)
+
+---
+
+## 15.1 Criação da App 'reports'
+
+Criar app Django para relatórios.
+
+- [ ] **Criar app**
+  - [ ] Executar `python manage.py startapp reports apps/reports`
+  - [ ] Adicionar 'apps.reports' ao INSTALLED_APPS
+
+- [ ] **Criar estrutura de arquivos**
+  - [ ] Criar `apps/reports/models.py` (se necessário para cache)
+  - [ ] Criar `apps/reports/views.py`
+  - [ ] Criar `apps/reports/urls.py`
+  - [ ] Criar `apps/reports/services.py` (lógica de cálculos)
+
+---
+
+## 15.2 Dashboard Principal
+
+Criar dashboard com KPIs principais do sistema.
+
+- [ ] **Criar DashboardView**
+  - [ ] KPIs: Vendas do Mês, Compras do Mês, Margem de Lucro, Stock Total
+  - [ ] Gráfico: Vendas vs Compras (últimos 12 meses)
+  - [ ] Gráfico: Top 10 Produtos Vendidos
+  - [ ] Gráfico: Top 10 Clientes
+  - [ ] Lista: Leads Pendentes, Vendas em Aberto, Compras a Receber
+  - [ ] Alertas: Produtos com Stock Baixo, Faturas Vencidas
+
+- [ ] **Criar template**
+  - [ ] `templates/reports/dashboard.html`
+  - [ ] Layout grid com cards de KPIs
+  - [ ] Gráficos usando Chart.js ou similar
+  - [ ] Filtro por período (último mês, últimos 3 meses, último ano)
+  - [ ] Responsive para mobile
+
+- [ ] **Configurar rota**
+  - [ ] `path('reports/dashboard/', DashboardView, name='reports_dashboard')`
+
+- [ ] **Testing - Dashboard**
+  - [ ] Test: KPIs calculam corretamente
+  - [ ] Test: gráficos renderizam
+  - [ ] Test: filtros funcionam
+
+---
+
+## 15.3 Relatório de Vendas
+
+Criar relatório detalhado de vendas.
+
+- [ ] **Criar SalesReportView**
+  - [ ] Filtros: Período, Cliente, Produto, Estado
+  - [ ] Totais: Vendas, Custo, Margem, Quantidade
+  - [ ] Tabela: Lista de vendas com detalhes
+  - [ ] Exportar CSV/Excel
+  - [ ] Gráfico: Vendas por mês
+
+- [ ] **Criar template**
+  - [ ] `templates/reports/sales_report.html`
+  - [ ] Filtros sidebar
+  - [ ] Tabela com paginação
+  - [ ] Cards com totais
+
+- [ ] **Configurar rota**
+  - [ ] `path('reports/sales/', SalesReportView, name='sales_report')`
+
+- [ ] **Testing - Sales Report**
+  - [ ] Test: filtros funcionam
+  - [ ] Test: totais calculam corretamente
+  - [ ] Test: exportação funciona
+
+---
+
+## 15.4 Relatório de Compras
+
+Criar relatório detalhado de compras.
+
+- [ ] **Criar PurchasesReportView**
+  - [ ] Filtros: Período, Fornecedor, Produto, Estado
+  - [ ] Totais: Compras, Custo Médio por Produto
+  - [ ] Tabela: Lista de compras com detalhes
+  - [ ] Exportar CSV/Excel
+
+- [ ] **Criar template**
+  - [ ] `templates/reports/purchases_report.html`
+
+- [ ] **Configurar rota**
+  - [ ] `path('reports/purchases/', PurchasesReportView, name='purchases_report')`
+
+- [ ] **Testing - Purchases Report**
+  - [ ] Test: relatório gera corretamente
+  - [ ] Test: exportação funciona
+
+---
+
+## 15.5 Relatório Financeiro
+
+Criar relatório de perdas e ganhos.
+
+- [ ] **Criar FinancialReportView**
+  - [ ] Totais: Receitas, Despesas, Lucro Líquido
+  - [ ] Filtro por período
+  - [ ] Breakdown por categoria
+  - [ ] Gráfico: Evolução mensal
+
+- [ ] **Criar template**
+  - [ ] `templates/reports/financial_report.html`
+
+- [ ] **Configurar rota**
+  - [ ] `path('reports/financial/', FinancialReportView, name='financial_report')`
+
+- [ ] **Testing - Financial Report**
+  - [ ] Test: cálculos de lucro corretos
+  - [ ] Test: breakdown por categoria funciona
+
+---
+
+## 15.6 Relatório de Stock
+
+Criar relatório de inventário.
+
+- [ ] **Criar StockReportView**
+  - [ ] Lista: Produtos com stock atual
+  - [ ] Alertas: Produtos abaixo do mínimo
+  - [ ] Valor total do stock
+  - [ ] Filtro por categoria
+
+- [ ] **Criar template**
+  - [ ] `templates/reports/stock_report.html`
+
+- [ ] **Configurar rota**
+  - [ ] `path('reports/stock/', StockReportView, name='stock_report')`
+
+- [ ] **Testing - Stock Report**
+  - [ ] Test: stock atual correto
+  - [ ] Test: alertas funcionam
+
+---
+
+# 🚀 FASE 16: APP - CONFIGURAÇÕES E PARÂMETROS
+
+**⏱ Tempo estimado:** 3-4 dias
+**🎯 Objetivo:** Criar sistema de configurações globais e parâmetros do sistema
+**📦 Dependências:** Fase 3 (base models)
+
+---
+
+## 16.1 Criação da App 'settings'
+
+Criar app Django para configurações.
+
+- [ ] **Criar app**
+  - [ ] Executar `python manage.py startapp settings apps/settings`
+  - [ ] Adicionar 'apps.settings' ao INSTALLED_APPS
+
+- [ ] **Criar estrutura de arquivos**
+  - [ ] Criar `apps/settings/models.py`
+  - [ ] Criar `apps/settings/views.py`
+  - [ ] Criar `apps/settings/forms.py`
+  - [ ] Criar `apps/settings/urls.py`
+
+---
+
+## 16.2 Modelo SystemSetting
+
+Criar modelo para parâmetros globais do sistema.
+
+- [ ] **Criar modelo SystemSetting**
+  - [ ] Campo: key (CharField, unique)
+  - [ ] Campo: value (TextField, JSON)
+  - [ ] Campo: description (TextField)
+  - [ ] Campo: setting_type (STRING, NUMBER, BOOLEAN, JSON)
+  - [ ] Método get_value() - parse value baseado em setting_type
+  - [ ] Método set_value() - valida e guarda
+
+- [ ] **Criar migrations**
+  - [ ] Executar makemigrations
+  - [ ] Executar migrate
+
+- [ ] **Registrar no Admin**
+  - [ ] Criar SystemSettingAdmin
+  - [ ] list_display: key, value, description
+
+- [ ] **Testing - SystemSetting**
+  - [ ] Test: criar setting funciona
+  - [ ] Test: get_value parse corretamente
+  - [ ] Test: set_value valida
+
+---
+
+## 16.3 Modelo CompanyInfo
+
+Criar modelo para informações da empresa.
+
+- [ ] **Criar modelo CompanyInfo (Singleton)**
+  - [ ] Campos: company_name, nif, address, city, postal_code, phone, email, website
+  - [ ] Campo: logo (ImageField)
+  - [ ] Campo: primary_color, secondary_color (para branding)
+  - [ ] Campo: email_footer_text
+  - [ ] Singleton pattern (apenas 1 registo)
+
+- [ ] **Criar migrations**
+  - [ ] Executar makemigrations
+  - [ ] Executar migrate
+
+- [ ] **Registrar no Admin**
+  - [ ] Criar CompanyInfoAdmin
+
+- [ ] **Testing - CompanyInfo**
+  - [ ] Test: singleton funciona (não permite criar 2º registo)
+  - [ ] Test: logo upload funciona
+
+---
+
+## 16.4 Configurações de Empresa (View)
+
+Criar interface para editar informações da empresa.
+
+- [ ] **Criar CompanyInfoUpdateView**
+  - [ ] Form com todos os campos
+  - [ ] Upload de logo
+  - [ ] Color pickers para branding
+
+- [ ] **Criar template**
+  - [ ] `templates/settings/company_info.html`
+  - [ ] Form com tabs: Info Básica, Branding, Email
+
+- [ ] **Configurar rota**
+  - [ ] `path('settings/company/', CompanyInfoUpdateView, name='company_settings')`
+
+- [ ] **Testing - Company Settings**
+  - [ ] Test: editar info funciona
+  - [ ] Test: logo upload funciona
+  - [ ] Test: cores são validadas
+
+---
+
+## 16.5 Configurações de Sistema (View)
+
+Criar interface para editar parâmetros globais.
+
+- [ ] **Criar SystemSettingsView**
+  - [ ] Lista de todos os settings
+  - [ ] Form inline para editar
+  - [ ] Categorias: Geral, Vendas, Compras, Stock, Financeiro
+
+- [ ] **Parâmetros padrão a criar**
+  - [ ] `stock_alert_threshold` (nível mínimo de stock)
+  - [ ] `default_tax_rate` (IVA padrão)
+  - [ ] `currency` (moeda padrão)
+  - [ ] `date_format` (formato de data)
+  - [ ] `pagination_size` (items por página)
+  - [ ] `allow_negative_stock` (permitir stock negativo)
+
+- [ ] **Criar template**
+  - [ ] `templates/settings/system_settings.html`
+  - [ ] Tabs por categoria
+  - [ ] Form para cada setting
+
+- [ ] **Configurar rota**
+  - [ ] `path('settings/system/', SystemSettingsView, name='system_settings')`
+
+- [ ] **Testing - System Settings**
+  - [ ] Test: editar settings funciona
+  - [ ] Test: validações funcionam
+
+---
+
+## 16.6 Configurações de Email
+
+Criar interface para configurar envio de emails.
+
+- [ ] **Criar EmailSettingsView**
+  - [ ] Form: SMTP host, port, username, password, use_tls
+  - [ ] Botão "Testar Conexão"
+  - [ ] Email de teste
+
+- [ ] **Criar template**
+  - [ ] `templates/settings/email_settings.html`
+
+- [ ] **Configurar rota**
+  - [ ] `path('settings/email/', EmailSettingsView, name='email_settings')`
+
+- [ ] **Testing - Email Settings**
+  - [ ] Test: guardar settings funciona
+  - [ ] Test: teste de conexão funciona
+
+---
+
+## 16.7 Menu de Configurações
+
+Criar menu principal de configurações.
+
+- [ ] **Criar SettingsIndexView**
+  - [ ] Cards: Empresa, Sistema, Email, Utilizadores, Backups
+  - [ ] Links para cada secção
+
+- [ ] **Criar template**
+  - [ ] `templates/settings/index.html`
+  - [ ] Grid de cards com ícones
+
+- [ ] **Configurar rota**
+  - [ ] `path('settings/', SettingsIndexView, name='settings_index')`
+
+- [ ] **Testing - Settings Menu**
+  - [ ] Test: menu renderiza
+  - [ ] Test: links funcionam
+
+---
+
+## 16.8 Backup e Restore
+
+Criar funcionalidade de backup da base de dados.
+
+- [ ] **Criar BackupView**
+  - [ ] Botão "Criar Backup"
+  - [ ] Lista de backups existentes com data
+  - [ ] Botão "Download" para cada backup
+  - [ ] Botão "Restore" (com confirmação)
+
+- [ ] **Criar template**
+  - [ ] `templates/settings/backup.html`
+
+- [ ] **Configurar rota**
+  - [ ] `path('settings/backup/', BackupView, name='backup_settings')`
+
+- [ ] **Testing - Backup**
+  - [ ] Test: criar backup funciona
+  - [ ] Test: download backup funciona
+  - [ ] Test: restore funciona (em ambiente de test)
+
+---
+
+# 🚀 FASE 17: INTEGRAÇÃO FINAL E DEPLOYMENT
 
 **⏱ Tempo estimado:** 3-4 dias
 **🎯 Objetivo:** Integrar todos os módulos, testes finais e preparar para produção
@@ -3169,7 +4468,7 @@ Tratar casos onde produtos não existem ou dados estão incorretos.
 
 ---
 
-## 14.1 Testes de Integração
+## 17.1 Testes de Integração
 
 Testar integração entre todos os módulos.
 
@@ -3188,7 +4487,7 @@ Testar integração entre todos os módulos.
 
 ---
 
-## 14.2 Dashboard Principal Completo
+## 17.2 Dashboard Principal Completo
 
 Finalizar dashboard principal com todos os widgets.
 
@@ -3206,7 +4505,7 @@ Finalizar dashboard principal com todos os widgets.
 
 ---
 
-## 14.3 Menu de Navegação Final
+## 17.3 Menu de Navegação Final
 
 Criar menu de navegação completo.
 
@@ -3222,7 +4521,7 @@ Criar menu de navegação completo.
 
 ---
 
-## 14.4 Otimizações de Performance
+## 17.4 Otimizações de Performance
 
 Otimizar consultas e performance.
 
@@ -3238,7 +4537,7 @@ Otimizar consultas e performance.
 
 ---
 
-## 14.5 Documentação
+## 17.5 Documentação
 
 Criar documentação básica.
 
@@ -3252,7 +4551,7 @@ Criar documentação básica.
 
 ---
 
-## 14.6 Preparação para Produção
+## 17.6 Preparação para Produção
 
 Configurar para ambiente de produção.
 
@@ -3273,6 +4572,491 @@ Configurar para ambiente de produção.
 
 ---
 
+# 🚀 FASE 18: TESTES AUTOMATIZADOS UI (PLAYWRIGHT)
+
+**⏱ Tempo estimado:** 8-10 dias
+**🎯 Objetivo:** Criar sistema de testes automatizados da interface do utilizador com Playwright, simulando ações humanas reais e gerando relatórios detalhados em PDF
+**📦 Dependências:** Todas as fases anteriores (testa cada módulo implementado)
+
+---
+
+**📋 DESCRIÇÃO DA FASE:**
+
+Esta fase implementa um sistema completo de testes automatizados que simula um utilizador real interagindo com a interface do sistema. O Playwright será usado para:
+
+- **Simular ações humanas**: O rato move-se visualmente na tela, clica em botões, preenche formulários, navega entre páginas
+- **Testes em qualquer ambiente**: Funciona tanto em produção quanto em staging
+- **Interface DevTools**: Painel exclusivo para desenvolvedores executarem testes
+- **Validação completa**: Cada ação é validada através de logs e verificações visuais
+- **Relatórios dinâmicos**: Templates HTML que geram PDFs com resultados detalhados
+- **Persistência de dados**: Todos os resultados guardados na base de dados
+- **Testes granulares**: Testes individuais (criar, editar, apagar, pesquisar) e testes completos por módulo
+- **Limpeza automática**: Dados de teste são criados e removidos automaticamente
+
+**EXEMPLO DE FLUXO (Teste Criar Contacto):**
+1. Playwright abre o browser e navega para /contacts/
+2. Clica no botão "Novo Contacto" (movimento de rato visível)
+3. Preenche formulário com dados únicos de teste (nome: "Test_Contact_20260208_143022")
+4. Clica em "Guardar"
+5. Verifica logs para confirmar sucesso (HTTP 200, redirect correto)
+6. Volta à lista de contactos
+7. Procura pelo nome único criado
+8. Confirma que contacto aparece na lista
+9. Clica no botão "Apagar"
+10. Confirma eliminação
+11. Verifica que contacto foi removido
+12. Regista todos os passos e gera relatório PDF
+
+---
+
+## 18.1 Configuração Base e Infraestrutura de Testes
+
+Criar estrutura base para testes automatizados com Playwright.
+
+- [ ] **Instalar Playwright**
+  - [ ] Adicionar playwright ao requirements.txt
+  - [ ] Instalar browsers do Playwright
+  - [ ] Configurar para modo headed (visível)
+
+- [ ] **Criar app 'testing'**
+  - [ ] Executar `python manage.py startapp testing apps/testing`
+  - [ ] Adicionar 'apps.testing' ao INSTALLED_APPS
+  - [ ] Criar estrutura de pastas: `apps/testing/playwright_tests/`
+
+- [ ] **Modelo TestRun**
+  - [ ] Campo: test_type (CREATE, UPDATE, DELETE, SEARCH, FULL)
+  - [ ] Campo: module (CONTACTS, CRM, INVENTORY, etc.)
+  - [ ] Campo: status (RUNNING, SUCCESS, FAILED, PARTIAL)
+  - [ ] Campo: started_at, finished_at, duration
+  - [ ] Campo: test_data (JSONField com dados usados)
+  - [ ] Campo: steps_log (JSONField com log de cada passo)
+  - [ ] Campo: screenshot_path (caminho para screenshots)
+  - [ ] Campo: error_message (se falhar)
+  - [ ] Campo: executed_by (FK User)
+
+- [ ] **Modelo TestStep**
+  - [ ] FK para TestRun
+  - [ ] Campo: step_number (ordem)
+  - [ ] Campo: action (NAVIGATE, CLICK, TYPE, VERIFY, etc.)
+  - [ ] Campo: target (elemento ou URL)
+  - [ ] Campo: expected_result
+  - [ ] Campo: actual_result
+  - [ ] Campo: status (SUCCESS, FAILED, SKIPPED)
+  - [ ] Campo: screenshot (ImageField)
+  - [ ] Campo: execution_time (duração do passo)
+
+- [ ] **Modelo TestReportTemplate**
+  - [ ] Campo: module (CONTACTS, CRM, etc.)
+  - [ ] Campo: test_type (CREATE, FULL, etc.)
+  - [ ] Campo: html_template (TextField com HTML do PDF)
+  - [ ] Campo: css_styles (TextField com CSS)
+  - [ ] Método render(test_run) - gera HTML final com dados
+
+- [ ] **Configurações**
+  - [ ] Criar settings para Playwright (headless=False, slowMo=500)
+  - [ ] Configurar timeouts padrão
+  - [ ] Configurar URLs base (staging vs production)
+
+- [ ] **Migrations**
+  - [ ] Executar makemigrations
+  - [ ] Executar migrate
+
+- [ ] **Testing - Models**
+  - [ ] Test: criar TestRun funciona
+  - [ ] Test: TestStep associa corretamente
+  - [ ] Test: template renderiza HTML
+
+---
+
+## 18.2 Testes Automatizados - Módulo Contactos
+
+Criar testes automatizados para todas as funcionalidades do módulo de contactos.
+
+- [ ] **Script: test_contact_create.py**
+  - [ ] Navegar para /contacts/
+  - [ ] Clicar botão "Novo Contacto"
+  - [ ] Preencher nome único (Test_Contact_[timestamp])
+  - [ ] Preencher email, telefone, morada
+  - [ ] Clicar "Guardar"
+  - [ ] Verificar redirect para lista
+  - [ ] Verificar mensagem de sucesso
+  - [ ] Registar cada passo em TestStep
+
+- [ ] **Script: test_contact_search.py**
+  - [ ] Criar contacto de teste via API
+  - [ ] Navegar para /contacts/
+  - [ ] Preencher search box com nome do contacto
+  - [ ] Verificar que contacto aparece
+  - [ ] Verificar que outros não aparecem
+  - [ ] Limpar search
+  - [ ] Apagar contacto de teste
+
+- [ ] **Script: test_contact_update.py**
+  - [ ] Criar contacto de teste
+  - [ ] Navegar para detalhe do contacto
+  - [ ] Clicar "Editar"
+  - [ ] Alterar nome, email, telefone
+  - [ ] Guardar alterações
+  - [ ] Verificar campos atualizados
+  - [ ] Apagar contacto de teste
+
+- [ ] **Script: test_contact_delete.py**
+  - [ ] Criar contacto de teste
+  - [ ] Navegar para lista
+  - [ ] Procurar contacto
+  - [ ] Clicar botão "Apagar"
+  - [ ] Confirmar eliminação
+  - [ ] Verificar que não aparece mais na lista
+
+- [ ] **Script: test_contact_bulk_actions.py**
+  - [ ] Criar 3 contactos de teste
+  - [ ] Selecionar todos via checkboxes
+  - [ ] Testar bulk archive
+  - [ ] Verificar status archived
+  - [ ] Testar bulk unarchive
+  - [ ] Apagar contactos de teste
+
+- [ ] **Script: test_contact_full.py**
+  - [ ] Executar todos os testes acima em sequência
+  - [ ] Gerar relatório consolidado
+
+- [ ] **Template de Relatório**
+  - [ ] Criar template HTML para relatórios de contactos
+  - [ ] Incluir: título, data, duração, passos, screenshots, resultado
+
+- [ ] **Interface DevTools**
+  - [ ] Criar view TestContactView
+  - [ ] Botões: "Teste Criar", "Teste Pesquisar", "Teste Editar", "Teste Apagar", "Teste Completo"
+  - [ ] Mostrar status em tempo real (WebSocket ou polling)
+  - [ ] Botão "Download PDF" após conclusão
+
+- [ ] **Testing - Contact Tests**
+  - [ ] Test: todos os scripts executam sem erros
+  - [ ] Test: PDF é gerado corretamente
+
+---
+
+## 18.3 Testes Automatizados - Módulo CRM
+
+Criar testes automatizados para gestão de leads e pipeline.
+
+- [ ] **Script: test_lead_create.py**
+  - [ ] Criar contacto de teste
+  - [ ] Navegar para /crm/leads/
+  - [ ] Clicar "Nova Lead"
+  - [ ] Preencher campos (contact, title, value, stage)
+  - [ ] Guardar lead
+  - [ ] Verificar aparece na listagem
+
+- [ ] **Script: test_lead_kanban.py**
+  - [ ] Criar lead de teste
+  - [ ] Navegar para /crm/pipeline/
+  - [ ] Verificar lead aparece na coluna correta
+  - [ ] Simular drag & drop para nova coluna
+  - [ ] Verificar stage foi atualizado
+
+- [ ] **Script: test_lead_convert.py**
+  - [ ] Criar lead de teste
+  - [ ] Navegar para detalhe da lead
+  - [ ] Clicar "Converter em Venda"
+  - [ ] Verificar SaleOrder criada
+  - [ ] Verificar lead marcada como WON
+
+- [ ] **Script: test_lead_full.py**
+  - [ ] Executar todos os testes CRM
+  - [ ] Gerar relatório consolidado
+
+- [ ] **Template de Relatório CRM**
+  - [ ] Template HTML específico para testes CRM
+
+- [ ] **Interface DevTools para CRM**
+  - [ ] View com botões de teste CRM
+  - [ ] Download de relatórios
+
+---
+
+## 18.4 Testes Automatizados - Módulo Inventário
+
+Criar testes automatizados para produtos e stock.
+
+- [ ] **Script: test_product_create.py**
+  - [ ] Navegar para /inventory/products/
+  - [ ] Criar produto com código único
+  - [ ] Preencher nome, preço, categoria
+  - [ ] Guardar e verificar
+
+- [ ] **Script: test_stock_movement.py**
+  - [ ] Criar produto de teste
+  - [ ] Criar movimento de entrada
+  - [ ] Verificar stock atualizado
+  - [ ] Criar movimento de saída
+  - [ ] Verificar stock decrementado
+
+- [ ] **Script: test_product_search.py**
+  - [ ] Criar produto de teste
+  - [ ] Pesquisar por código
+  - [ ] Pesquisar por nome
+  - [ ] Verificar filtros funcionam
+
+- [ ] **Script: test_inventory_full.py**
+  - [ ] Teste completo inventário
+
+- [ ] **Template de Relatório Inventário**
+
+- [ ] **Interface DevTools Inventário**
+
+---
+
+## 18.5 Testes Automatizados - Módulo Compras
+
+Criar testes automatizados para ordens de compra.
+
+- [ ] **Script: test_purchase_create.py**
+  - [ ] Criar fornecedor de teste
+  - [ ] Criar produto de teste
+  - [ ] Navegar para /purchases/
+  - [ ] Criar ordem de compra
+  - [ ] Adicionar linhas
+  - [ ] Guardar e verificar
+
+- [ ] **Script: test_purchase_receive.py**
+  - [ ] Criar compra de teste
+  - [ ] Marcar como recebida
+  - [ ] Verificar stock atualizado
+
+- [ ] **Script: test_purchase_full.py**
+  - [ ] Teste completo compras
+
+- [ ] **Template de Relatório Compras**
+
+- [ ] **Interface DevTools Compras**
+
+---
+
+## 18.6 Testes Automatizados - Módulo Vendas
+
+Criar testes automatizados para ordens de venda e orçamentos.
+
+- [ ] **Script: test_sale_create.py**
+  - [ ] Criar cliente de teste
+  - [ ] Criar produtos de teste
+  - [ ] Navegar para /sales/
+  - [ ] Criar venda/orçamento
+  - [ ] Adicionar linhas
+  - [ ] Calcular totais
+  - [ ] Guardar e verificar
+
+- [ ] **Script: test_sale_workflow.py**
+  - [ ] Criar orçamento
+  - [ ] Converter para encomenda
+  - [ ] Marcar como entregue
+  - [ ] Verificar stock
+  - [ ] Gerar fatura
+
+- [ ] **Script: test_sale_full.py**
+  - [ ] Teste completo vendas
+
+- [ ] **Template de Relatório Vendas**
+
+- [ ] **Interface DevTools Vendas**
+
+---
+
+## 18.7 Testes Automatizados - Módulo Financeiro
+
+Criar testes automatizados para gestão financeira.
+
+- [ ] **Script: test_invoice_create.py**
+  - [ ] Criar fatura de teste
+  - [ ] Verificar valores calculados
+  - [ ] Marcar como paga
+  - [ ] Verificar transação criada
+
+- [ ] **Script: test_financial_report.py**
+  - [ ] Criar dados de teste (vendas, compras)
+  - [ ] Gerar relatório financeiro
+  - [ ] Verificar cálculos de lucro
+
+- [ ] **Script: test_financial_full.py**
+  - [ ] Teste completo financeiro
+
+- [ ] **Template de Relatório Financeiro**
+
+- [ ] **Interface DevTools Financeiro**
+
+---
+
+## 18.8 Testes Automatizados - Módulo BOM
+
+Criar testes automatizados para receitas e configurador.
+
+- [ ] **Script: test_bom_create.py**
+  - [ ] Criar produto finalizado
+  - [ ] Criar ingredientes
+  - [ ] Criar BOM com linhas
+  - [ ] Verificar cálculo de custos
+
+- [ ] **Script: test_bom_configurator.py**
+  - [ ] Navegar para configurador
+  - [ ] Selecionar produto
+  - [ ] Customizar (massa, recheio, cobertura)
+  - [ ] Verificar preço atualizado
+  - [ ] Adicionar ao orçamento
+
+- [ ] **Script: test_bom_full.py**
+  - [ ] Teste completo BOM
+
+- [ ] **Template de Relatório BOM**
+
+- [ ] **Interface DevTools BOM**
+
+---
+
+## 18.9 Testes Automatizados - Módulo Documentos
+
+Criar testes automatizados para geração de PDFs.
+
+- [ ] **Script: test_pdf_quotation.py**
+  - [ ] Criar venda de teste
+  - [ ] Gerar PDF de orçamento
+  - [ ] Verificar PDF criado
+  - [ ] Verificar conteúdo correto
+
+- [ ] **Script: test_pdf_invoice.py**
+  - [ ] Criar fatura de teste
+  - [ ] Gerar PDF de fatura
+  - [ ] Verificar dados corretos
+
+- [ ] **Script: test_documents_full.py**
+  - [ ] Teste completo documentos
+
+- [ ] **Template de Relatório Documentos**
+
+- [ ] **Interface DevTools Documentos**
+
+---
+
+## 18.10 Testes Automatizados - Módulo Marketing
+
+Criar testes automatizados para campanhas.
+
+- [ ] **Script: test_campaign_create.py**
+  - [ ] Criar campanha de teste
+  - [ ] Selecionar destinatários
+  - [ ] Configurar mensagem
+  - [ ] Verificar criação
+
+- [ ] **Script: test_campaign_send.py**
+  - [ ] Criar campanha
+  - [ ] Simular envio (modo teste)
+  - [ ] Verificar logs
+
+- [ ] **Script: test_marketing_full.py**
+  - [ ] Teste completo marketing
+
+- [ ] **Template de Relatório Marketing**
+
+- [ ] **Interface DevTools Marketing**
+
+---
+
+## 18.11 Testes Automatizados - Módulo Relatórios
+
+Criar testes automatizados para dashboard e relatórios.
+
+- [ ] **Script: test_dashboard.py**
+  - [ ] Navegar para dashboard
+  - [ ] Verificar KPIs carregam
+  - [ ] Verificar gráficos renderizam
+  - [ ] Testar filtros de período
+
+- [ ] **Script: test_reports_generation.py**
+  - [ ] Gerar relatório de vendas
+  - [ ] Gerar relatório de compras
+  - [ ] Verificar exportação CSV
+
+- [ ] **Script: test_reports_full.py**
+  - [ ] Teste completo relatórios
+
+- [ ] **Template de Relatório**
+
+- [ ] **Interface DevTools Relatórios**
+
+---
+
+## 18.12 Testes Automatizados - Módulo Configurações
+
+Criar testes automatizados para configurações do sistema.
+
+- [ ] **Script: test_company_settings.py**
+  - [ ] Navegar para configurações
+  - [ ] Alterar info da empresa
+  - [ ] Upload de logo
+  - [ ] Verificar alterações guardadas
+
+- [ ] **Script: test_system_settings.py**
+  - [ ] Alterar parâmetros do sistema
+  - [ ] Verificar aplicação imediata
+
+- [ ] **Script: test_settings_full.py**
+  - [ ] Teste completo configurações
+
+- [ ] **Template de Relatório Configurações**
+
+- [ ] **Interface DevTools Configurações**
+
+---
+
+## 18.13 Interface Principal DevTools e Relatórios Globais
+
+Criar interface centralizada para executar todos os testes.
+
+- [ ] **View DevToolsTestingView**
+  - [ ] Página principal em /devtools/testing/
+  - [ ] Cards para cada módulo
+  - [ ] Botão "Executar Teste Completo" (todos os módulos)
+  - [ ] Histórico de testes executados
+  - [ ] Status em tempo real
+
+- [ ] **Sistema de Filas**
+  - [ ] Usar Celery para executar testes em background
+  - [ ] Task para cada tipo de teste
+  - [ ] Progress tracking
+
+- [ ] **Relatório Global**
+  - [ ] Template para relatório de todos os módulos
+  - [ ] Sumário executivo (X de Y testes passaram)
+  - [ ] Breakdown por módulo
+  - [ ] Screenshots de falhas
+  - [ ] Gráfico de sucesso/falha
+
+- [ ] **Download de Relatórios**
+  - [ ] Endpoint para download de PDF individual
+  - [ ] Endpoint para download de ZIP com todos os PDFs
+  - [ ] Histórico de relatórios (últimos 30 dias)
+
+- [ ] **Permissões**
+  - [ ] Apenas superusers/admins acedem DevTools
+  - [ ] Decorator @admin_required
+
+- [ ] **Limpeza Automática**
+  - [ ] Celery task para limpar dados de teste antigos
+  - [ ] Limpar screenshots com mais de 30 dias
+  - [ ] Manter apenas últimos 100 TestRuns por módulo
+
+- [ ] **Configuração de Ambientes**
+  - [ ] Selector: Staging vs Production
+  - [ ] URLs base diferentes
+  - [ ] Credenciais diferentes
+
+- [ ] **Testing - DevTools**
+  - [ ] Test: interface carrega
+  - [ ] Test: executar teste completo funciona
+  - [ ] Test: PDF global gera corretamente
+  - [ ] Test: limpeza automática funciona
+
+---
+
 **FIM DO CHECKLIST**
 
 ---
@@ -3287,10 +5071,11 @@ Configurar para ambiente de produção.
 6. **PostgreSQL:** Versão 17+
 7. **Stock:** Apenas entrada/saída, sem rotas complexas
 8. **Perdas:** Sempre deduzir do lucro mensal quando marcado como perda
-9. **BOM (Fase 9):** Sistema completo de receitas multi-nível com cálculo automático de custos em cascata
+9. **BOM (Fase 10):** Sistema completo de receitas multi-nível com cálculo automático de custos em cascata
 10. **Custos:** Incluem componentes + mão-de-obra (tempo * custo/hora)
 11. **Conversões:** Sistema robusto de unidades (KG, G, L, ML, UN, SLICE, etc.)
 12. **Recálculo:** Botão global para recalcular todos os custos quando preços mudam
+13. **Testes Automatizados (Fase 18):** Playwright com modo headed (visível), simula utilizador real, gera relatórios PDF dinâmicos, todos os dados guardados na BD
 
 ---
 
@@ -3301,12 +5086,13 @@ Configurar para ambiente de produção.
 3. Marcar progresso no `fuet_magico/progress.md` a partir da linha 110
 4. Não avançar para próxima fase sem completar a anterior
 5. Testar cada tarefa antes de marcar como concluída
-6. **ATENÇÃO:** Fase 9 (BOM) é complexa - seguir ordem exata das tarefas para garantir dependências
+6. **ATENÇÃO:** Fase 10 (BOM) é complexa - seguir ordem exata das tarefas para garantir dependências
+7. **ATENÇÃO:** Fase 18 (Testes Automatizados) deve ser executada APÓS implementar cada módulo - usa Playwright para validar toda a UI
 
 ---
 
-**Última atualização:** 01/02/2026
-**Total de Tarefas:** 122
+**Última atualização:** 08/02/2026
+**Total de Tarefas:** 155
 **Status:** Pronto para desenvolvimento ✅
 
 

@@ -3,6 +3,38 @@ from django.core.exceptions import ValidationError
 from apps.core.models import AbstractBaseModel
 
 
+class ContactTag(AbstractBaseModel):
+    """
+    Model for contact tags that can be reused across multiple contacts.
+    Only name is required. Color is optional with golden default.
+    
+    Multi-Company Support:
+    - If owner_company is NULL: Tag is GLOBAL (all companies can use)
+    - If owner_company has value: Tag is PRIVATE (only that company can use)
+    """
+    name = models.CharField(max_length=50, unique=True, verbose_name='Tag Name')
+    color = models.CharField(max_length=7, default='#dbc693', verbose_name='Tag Color')
+    
+    # Multi-company support: NULL = global, with value = private to that company
+    owner_company = models.ForeignKey(
+        'core.Company',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='contact_tags',
+        verbose_name='Owner Company',
+        help_text='Leave empty for global tags (all companies). Set to make tag private to specific company.'
+    )
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Contact Tag'
+        verbose_name_plural = 'Contact Tags'
+    
+    def __str__(self):
+        return self.name
+
+
 class Contact(AbstractBaseModel):
     CONTACT_TYPE_CHOICES = [
         ('CLIENT', 'Client'),
@@ -13,6 +45,9 @@ class Contact(AbstractBaseModel):
     CONTACT_CATEGORY_CHOICES = [
         ('PERSON', 'Person'),
         ('COMPANY', 'Company'),
+        ('BILLING', 'Billing'),
+        ('SHIPPING', 'Shipping'),
+        ('OTHER', 'Other'),
     ]
     
     name = models.CharField(max_length=255)
@@ -21,7 +56,11 @@ class Contact(AbstractBaseModel):
     whatsapp = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
     city = models.CharField(max_length=100, blank=True)
+    district = models.CharField(max_length=100, blank=True, verbose_name='District')
     postal_code = models.CharField(max_length=20, blank=True)
+    country = models.CharField(max_length=100, blank=True, default='Portugal')
+    website = models.URLField(max_length=255, blank=True, verbose_name='Website')
+    language = models.CharField(max_length=10, blank=True, default='pt_PT', verbose_name='Language')
     nif = models.CharField(max_length=20, blank=True, verbose_name='NIF/Tax ID')
     notes = models.TextField(blank=True)
     
@@ -47,7 +86,18 @@ class Contact(AbstractBaseModel):
     )
     
     position = models.CharField(max_length=100, blank=True)
-    tags = models.JSONField(default=list, blank=True)
+    tags = models.ManyToManyField(ContactTag, blank=True, related_name='contacts')
+    
+    # Multi-company support: NULL = global, with value = private to that company
+    owner_company = models.ForeignKey(
+        'core.Company',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='contacts',
+        verbose_name='Owner Company',
+        help_text='Leave empty for global contacts (all companies). Set to make contact private to specific company.'
+    )
     
     class Meta:
         ordering = ['name']
@@ -91,20 +141,21 @@ class Contact(AbstractBaseModel):
     
     def get_avatar_url(self):
         """Retorna URL do avatar (upload ou default baseado em categoria/tipo)"""
-        if self.avatar:
-            return self.avatar.url
+        # TODO: Adicionar campo avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+        # if hasattr(self, 'avatar') and self.avatar:
+        #     return self.avatar.url
         
         # Default baseado na categoria (prioridade)
         if self.contact_category == 'PERSON':
             return '/static/images/avatars/defaults/default-person.svg'
         elif self.contact_category == 'COMPANY':
             return '/static/images/avatars/defaults/default-company.svg'
-        
-        # Default baseado no tipo (fallback)
-        if self.contact_type == 'CLIENT':
-            return '/static/images/avatars/defaults/default-client.svg'
-        elif self.contact_type == 'SUPPLIER':
-            return '/static/images/avatars/defaults/default-supplier.svg'
+        elif self.contact_category == 'BILLING':
+            return '/static/images/avatars/defaults/default-billing.svg'
+        elif self.contact_category == 'SHIPPING':
+            return '/static/images/avatars/defaults/default-shipping.svg'
+        elif self.contact_category == 'OTHER':
+            return '/static/images/avatars/defaults/default-other.svg'
         
         # Fallback genérico
         return '/static/images/avatars/defaults/default-other.svg'
