@@ -36,12 +36,6 @@ class ContactTag(AbstractBaseModel):
 
 
 class Contact(AbstractBaseModel):
-    CONTACT_TYPE_CHOICES = [
-        ('CLIENT', 'Client'),
-        ('SUPPLIER', 'Supplier'),
-        ('BOTH', 'Both'),
-    ]
-    
     CONTACT_CATEGORY_CHOICES = [
         ('PERSON', 'Person'),
         ('COMPANY', 'Company'),
@@ -64,12 +58,6 @@ class Contact(AbstractBaseModel):
     nif = models.CharField(max_length=20, blank=True, verbose_name='NIF/Tax ID')
     notes = models.TextField(blank=True)
     
-    contact_type = models.CharField(
-        max_length=10,
-        choices=CONTACT_TYPE_CHOICES,
-        default='CLIENT'
-    )
-    
     contact_category = models.CharField(
         max_length=10,
         choices=CONTACT_CATEGORY_CHOICES,
@@ -87,6 +75,15 @@ class Contact(AbstractBaseModel):
     
     position = models.CharField(max_length=100, blank=True)
     tags = models.ManyToManyField(ContactTag, blank=True, related_name='contacts')
+    
+    # Contactos associados (ManyToMany simétrico - qualquer contacto pode associar-se a qualquer outro)
+    associated_contacts = models.ManyToManyField(
+        'self',
+        blank=True,
+        symmetrical=True,
+        verbose_name='Associated Contacts',
+        help_text='Contacts associated with this contact (bidirectional).'
+    )
     
     # Multi-company support: NULL = global, with value = private to that company
     owner_company = models.ForeignKey(
@@ -112,19 +109,9 @@ class Contact(AbstractBaseModel):
     def clean(self):
         super().clean()
         
-        if self.contact_category == 'COMPANY' and self.company:
+        if self.company and self.company == self:
             raise ValidationError({
-                'company': 'A company cannot be associated with another company.'
-            })
-        
-        if self.company and self.company.contact_category != 'COMPANY':
-            raise ValidationError({
-                'company': 'A person can only be associated with a company, not another person.'
-            })
-        
-        if self.contact_category == 'COMPANY' and self.position:
-            raise ValidationError({
-                'position': 'Position field is only for persons, not companies.'
+                'company': 'A contact cannot be associated with itself.'
             })
     
     def save(self, *args, **kwargs):

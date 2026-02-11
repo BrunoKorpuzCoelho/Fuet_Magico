@@ -18,7 +18,14 @@ urlpatterns = [
     
     # Tags URLs
     path('tags/', views.tag_list_view, name='tag_list'),
+    path('tags/new/', views.tag_create_view, name='tag_create'),
+    path('tags/<uuid:tag_id>/edit/', views.tag_edit_view, name='tag_edit'),
     path('tags/bulk-archive/', views.bulk_archive_tags, name='bulk_archive_tags'),
     path('tags/bulk-unarchive/', views.bulk_unarchive_tags, name='bulk_unarchive_tags'),
     path('tags/bulk-delete/', views.bulk_delete_tags, name='bulk_delete_tags'),
+    
+    # Tags API
+    path('api/tags/check-contacts/', views.check_tags_contacts, name='check_tags_contacts'),
+    path('api/tags/search/', views.search_tags_api, name='search_tags_api'),
+    path('api/tags/quick-create/', views.quick_create_tag_api, name='quick_create_tag_api'),
 ]

@@ -808,20 +808,21 @@ Criar modelo para clientes/contactos com hierarquia (empresas e pessoas).
 
 - [x] **Criar modelo Contact**
   - [x] Herdar de BaseModel
-  - [x] Campos básicos: name, email, phone, whatsapp, address, city, postal_code, nif, notes
-  - [x] Campo: contact_type (CLIENT, SUPPLIER, BOTH)
-  - [x] Campo: contact_category (PERSON, COMPANY) - distinguir pessoa vs empresa
+  - [x] Campos básicos: name, email, phone, whatsapp, address, city, district, postal_code, country, website, language, nif, notes
+  - [x] ~~Campo: contact_type (CLIENT, SUPPLIER, BOTH)~~ — **REMOVIDO** (redundante com contact_category)
+  - [x] Campo: contact_category (PERSON, COMPANY, BILLING, SHIPPING, OTHER)
   - [x] Campo: company (ForeignKey para Contact, null=True) - associar pessoa a empresa
   - [x] Campo: position (cargo da pessoa na empresa, opcional)
-  - [x] Campos: tags (JSONField para categorização)
+  - [x] Campo: tags (ManyToManyField para ContactTag)
+  - [x] Campo: associated_contacts (ManyToManyField para self, symmetrical=True)
+  - [x] Campo: owner_company (ForeignKey para Company, multi-company support)
   - [x] Método __str__
+  - [x] Método get_avatar_url() - retorna SVG default baseado em contact_category
   - [x] Método get_price_list() - retorna price list própria ou herdada da empresa
   - [x] Property is_company e is_person para facilitar queries
 
 - [x] **Validações e constraints**
-  - [x] Validar: se contact_category=PERSON, pode ter company
-  - [x] Validar: se contact_category=COMPANY, company deve ser None
-  - [x] Validar: company deve ser do tipo COMPANY (não pode associar pessoa a pessoa)
+  - [x] Validar: contacto não pode associar-se a si próprio
   - [x] Constraint: email único (mas pode ser null)
 
 - [x] **Criar migrations**
@@ -830,10 +831,10 @@ Criar modelo para clientes/contactos com hierarquia (empresas e pessoas).
 
 - [x] **Registrar no Admin**
   - [x] Criar ContactAdmin
-  - [x] Configurar list_display: name, contact_category, company, contact_type, email, phone
+  - [x] Configurar list_display: name, contact_category, company, email, phone, is_active
   - [x] Configurar search_fields: name, email, phone, nif
-  - [x] Configurar list_filter: contact_category, contact_type, company
-  - [x] Adicionar inline para mostrar pessoas associadas (quando é empresa)
+  - [x] Configurar list_filter: contact_category, is_active
+  - [x] Adicionar EmployeeInline para mostrar pessoas associadas (quando é empresa)
   - [x] Fieldsets separados para organizar campos
 
 - [x] **Testing - Contact Model**
@@ -1066,24 +1067,28 @@ Criar view para listar todos os contactos com sistema de bulk actions, filtros a
 Template : https://v0-contact-form-creation-seven.vercel.app/
 Criar view para adicionar novo contacto.
 
-- [ ] **Criar ContactCreateView**
-  - [ ] Criar view para criar contacto
+- [x] **Criar ContactCreateView**
+  - [x] Criar view para criar contacto (`contact_create_view`)
 
-- [ ] **Criar form**
-  - [ ] Criar ContactForm em forms.py
+- [x] **Criar form**
+  - [x] Criar ContactForm em forms.py (campos: contact_category, name, email, phone, whatsapp, nif, address, city, district, postal_code, country, website, language, company, position, notes)
 
-- [ ] **Criar template**
-  - [ ] Criar `templates/contacts/create.html` (standalone)
-  - [ ] Formulário com todos os campos
-  - [ ] Validação JavaScript básica
+- [x] **Criar template**
+  - [x] Criar `templates/contacts/create.html` (standalone, reutilizado para create e edit)
+  - [x] Formulário com todos os campos
+  - [x] Avatar dinâmico baseado em contact_category
+  - [x] Seletor de tags interativo (Alpine.js) com pesquisa, criação rápida, modal de todas as tags
+  - [x] Tabs: Contactos, Vendas, Compras, Contabilidade, Notas (Quill editor), Marketing
+  - [x] Tab Contactos: gestão de contactos associados (M2M) com modal criar/associar existente
+  - [x] Tab Notas: editor Quill rich text com dark theme
 
-- [ ] **Configurar rota**
-  - [ ] Adicionar `path('contacts/new/', ContactCreateView, name='contact_create')`
+- [x] **Configurar rota**
+  - [x] Adicionar `path('contacts/new/', contact_create_view, name='contact_create')`
 
-- [ ] **Testing - Contact Create**
-  - [ ] Test: criar contacto funciona
-  - [ ] Test: validações funcionam
-  - [ ] Test: redirecionamento após criação
+- [x] **Testing - Contact Create**
+  - [x] Test: criar contacto funciona
+  - [x] Test: validações funcionam
+  - [x] Test: redirecionamento após criação
 
 ---
 
@@ -1091,25 +1096,25 @@ Criar view para adicionar novo contacto.
 
 Criar views para editar e visualizar contacto.
 
-- [ ] **Criar ContactDetailView**
-  - [ ] Mostrar todas as informações do contacto
-  - [ ] Mostrar histórico de vendas/compras relacionadas
+> **📝 Nota:** Não existe view de detalhe separada — o formulário de edição (`create.html`) serve como detalhe e edição ao mesmo tempo, com deteção de alterações via JavaScript (botões Guardar/Descartar aparecem apenas quando há mudanças).
 
-- [ ] **Criar ContactUpdateView**
-  - [ ] Formulário pré-preenchido
-  - [ ] Validações
+- [x] **Criar ContactEditView (Detail + Edit combinados)**
+  - [x] Mostrar todas as informações do contacto no formulário pré-preenchido
+  - [x] Deteção de alterações via MutationObserver + input/change events
+  - [x] Botões Guardar/Descartar escondidos por defeito, aparecem apenas quando há alterações
+  - [x] Tags pré-carregadas do contacto
+  - [x] Avatar dinâmico baseado em contact_category
 
-- [ ] **Criar templates**
-  - [ ] `templates/contacts/detail.html` (standalone)
-  - [ ] `templates/contacts/update.html` (standalone)
+- [x] **Template reutilizado**
+  - [x] `templates/contacts/create.html` — variável `contact` no contexto distingue create vs edit
 
-- [ ] **Configurar rotas**
-  - [ ] `path('contacts/<uuid:pk>/', ContactDetailView, name='contact_detail')`
-  - [ ] `path('contacts/<uuid:pk>/edit/', ContactUpdateView, name='contact_update')`
+- [x] **Configurar rota**
+  - [x] `path('contacts/<uuid:contact_id>/edit/', contact_edit_view, name='contact_edit')`
 
-- [ ] **Testing - Contact Edit/Detail**
-  - [ ] Test: visualizar detalhes funciona
-  - [ ] Test: editar contacto funciona
+- [x] **Testing - Contact Edit**
+  - [x] Test: editar contacto funciona
+  - [x] Test: deteção de alterações funciona
+  - [x] Test: tags são pré-carregadas no edit
 
 ---
 
@@ -1117,23 +1122,27 @@ Criar views para editar e visualizar contacto.
 
 Implementar soft delete (is_active=False) em vez de deletar.
 
-- [ ] **Criar ContactDeleteView**
-  - [ ] Marcar is_active=False
-  - [ ] Confirmação antes de deletar
+> **📝 Nota:** Implementado via bulk actions na lista de contactos (não como view individual). Arquivar = soft delete (is_active=False), Eliminar = hard delete (admin only).
 
-- [ ] **Atualizar queryset**
-  - [ ] Filtrar is_active=True por padrão nas views
+- [x] **Soft delete via Bulk Archive**
+  - [x] Endpoint `POST /contacts/bulk-archive/` — marca is_active=False
+  - [x] Endpoint `POST /contacts/bulk-unarchive/` — restaura is_active=True
+  - [x] Confirmação via JavaScript antes de executar
 
-- [ ] **Criar template de confirmação**
-  - [ ] `templates/contacts/confirm_delete.html` (standalone)
+- [x] **Hard delete (Admin Only)**
+  - [x] Endpoint `POST /contacts/bulk-delete/` — elimina permanentemente
+  - [x] Apenas acessível a administradores
+  - [x] Modal de confirmação com double check
 
-- [ ] **Configurar rota**
-  - [ ] `path('contacts/<uuid:pk>/delete/', ContactDeleteView, name='contact_delete')`
+- [x] **Queryset filtrado**
+  - [x] Filtrar is_active=True por padrão nas views
+  - [x] Toggle Ativos/Arquivados na lista
 
-- [ ] **Testing - Contact Delete**
-  - [ ] Test: soft delete funciona
-  - [ ] Test: contacto não aparece mais na lista
-  - [ ] Test: ainda existe no banco (is_active=False)
+- [x] **Testing - Contact Delete**
+  - [x] Test: soft delete (archive) funciona
+  - [x] Test: contacto não aparece mais na lista de ativos
+  - [x] Test: contacto aparece na lista de arquivados
+  - [x] Test: hard delete apenas para admins
 
 ---
 
@@ -1206,86 +1215,79 @@ Criar sistema completo de gestão de tags de contactos com CRUD completo.
   - [x] list_filter: is_active, created_at
   - [x] Método contact_count() para mostrar quantos contactos usam a tag
 
-- [ ] **Criar ContactTagListView**
-  - [ ] View para listar todas as tags
-  - [ ] Implementar paginação (50 por página)
-  - [ ] Implementar busca por nome
-  - [ ] Mostrar contador de contactos por tag
-  - [ ] Filtro: active/archived
+- [x] **Criar ContactTagListView**
+  - [x] View para listar todas as tags (`tag_list_view`)
+  - [x] Implementar paginação (50 por página)
+  - [x] Implementar busca por nome
+  - [x] Mostrar contador de contactos por tag
+  - [x] Filtro: active/archived
 
-- [ ] **Criar template list**
-  - [ ] Criar `templates/contacts/tag_list.html`
-  - [ ] Tabela: checkbox, color badge, nome, contact count, actions
-  - [ ] Barra de busca
-  - [ ] Botão "Nova Tag"
-  - [ ] Bulk actions: Arquivar, Desarquivar, Eliminar (admin only)
+- [x] **Criar template list**
+  - [x] Criar `templates/contacts/tag_list.html`
+  - [x] Tabela: checkbox, color badge, nome, contact count, actions
+  - [x] Barra de busca
+  - [x] Botão "Nova Tag"
+  - [x] Bulk actions: Arquivar, Desarquivar, Eliminar (admin only)
 
-- [ ] **Configurar rota list**
-  - [ ] `path('contacts/tags/', ContactTagListView, name='contacttag_list')`
+- [x] **Configurar rota list**
+  - [x] `path('contacts/tags/', tag_list_view, name='tag_list')`
 
-- [ ] **Criar ContactTagCreateView**
-  - [ ] Form com campos: name (obrigatório), color (seletor de cor)
-  - [ ] Validação: nome único
-  - [ ] Redirect para tag_list após criar
+- [x] **Criar ContactTagCreateView**
+  - [x] Form com campos: name (obrigatório), color (seletor de cor)
+  - [x] Validação: nome único
+  - [x] Redirect para tag_list após criar
 
-- [ ] **Criar ContactTagForm**
-  - [ ] Campo name: TextInput com placeholder
-  - [ ] Campo color: ColorInput (type="color") com default '#dbc693'
-  - [ ] Validação customizada para formato hex color
+- [x] **Criar ContactTagForm**
+  - [x] Campo name: TextInput com placeholder
+  - [x] Campo color: ColorInput (type="color") com default '#dbc693'
+  - [x] Validação customizada para formato hex color
 
-- [ ] **Criar template create/edit**
-  - [ ] Criar `templates/contacts/tag_form.html`
-  - [ ] Layout estilo Odoo (standalone)
-  - [ ] Preview da tag com cor selecionada (live)
-  - [ ] Botões: Guardar, Cancelar
+- [x] **Criar template create/edit**
+  - [x] Criar `templates/contacts/tag_form.html` (reutilizado para create e edit via `is_edit`)
+  - [x] Layout standalone
+  - [x] Preview da tag com cor selecionada
+  - [x] Botões: Guardar, Cancelar
 
-- [ ] **Configurar rota create**
-  - [ ] `path('contacts/tags/new/', ContactTagCreateView, name='contacttag_create')`
+- [x] **Configurar rota create**
+  - [x] `path('contacts/tags/new/', tag_create_view, name='tag_create')`
 
-- [ ] **Criar ContactTagUpdateView**
-  - [ ] Formulário pré-preenchido
-  - [ ] Validações (nome único exceto próprio)
-  - [ ] Redirect para tag_list após editar
+- [x] **Criar ContactTagUpdateView**
+  - [x] Formulário pré-preenchido (`tag_edit_view`)
+  - [x] Validações (nome único exceto próprio)
+  - [x] Redirect para tag_list após editar
 
-- [ ] **Configurar rota update**
-  - [ ] `path('contacts/tags/<uuid:pk>/edit/', ContactTagUpdateView, name='contacttag_update')`
+- [x] **Configurar rota update**
+  - [x] `path('contacts/tags/<uuid:pk>/edit/', tag_edit_view, name='tag_edit')`
 
-- [ ] **Criar ContactTagDeleteView**
-  - [ ] Soft delete (is_active=False)
-  - [ ] Mostrar aviso se tag tem contactos associados
-  - [ ] Confirmação antes de deletar
-  - [ ] Admin only
+- [x] **Bulk actions para tags (substitui delete individual)**
+  - [x] Bulk archive (soft delete is_active=False)
+  - [x] Bulk unarchive
+  - [x] Bulk delete (admin only, hard delete)
+  - [x] Aviso no modal de delete quando tags têm contactos associados (check_tags_contacts API)
 
-- [ ] **Criar template confirm_delete**
-  - [ ] `templates/contacts/tag_confirm_delete.html`
-  - [ ] Mostrar número de contactos afetados
-  - [ ] Botões: Confirmar, Cancelar
+- [x] **Adicionar tags ao ContactForm**
+  - [x] Seletor interativo Alpine.js: pesquisa, criação rápida, modal de todas as tags
+  - [x] Tags pré-carregadas no modo de edição
+  - [x] Hidden inputs enviados no form submit
+  - [x] API endpoints: `search_tags_api`, `quick_create_tag_api`
 
-- [ ] **Configurar rota delete**
-  - [ ] `path('contacts/tags/<uuid:pk>/delete/', ContactTagDeleteView, name='contacttag_delete')`
+- [x] **Atualizar Contact List para mostrar tags**
+  - [x] Coluna tags na tabela (badges coloridos, max 4 por contacto)
+  - [x] Tags também visíveis nos cards Kanban
+  - [~] ~~Filtro por tag (dropdown multi-select)~~ — Decidido não implementar
+  - [~] ~~Click na tag filtra lista por essa tag~~ — Decidido não implementar
 
-- [ ] **Adicionar tags ao ContactForm**
-  - [ ] Campo tags (CheckboxSelectMultiple ou Select2)
-  - [ ] Permitir criar tag inline (opcional)
-  - [ ] Mostrar tags selecionadas com cor
+- [x] **Tags visíveis no Contact Edit/Detail**
+  - [x] Mostrar tags com cor no seletor interativo
+  - [x] Permitir adicionar/remover tags inline
 
-- [ ] **Atualizar Contact List para mostrar tags**
-  - [ ] Coluna tags na tabela (badges coloridos)
-  - [ ] Filtro por tag (dropdown multi-select)
-  - [ ] Click na tag filtra lista por essa tag
-
-- [ ] **Atualizar Contact Detail para mostrar tags**
-  - [ ] Mostrar tags com cor
-  - [ ] Permitir adicionar/remover tags inline
-
-- [ ] **Testing - Contact Tags**
+- [x] **Testing - Contact Tags**
   - [x] Test: criar tag funciona
   - [x] Test: nome único é validado
-  - [ ] Test: adicionar tag a contacto funciona
-  - [ ] Test: tag com contactos mostra aviso ao deletar
-  - [ ] Test: filtrar contactos por tag funciona
-  - [ ] Test: soft delete funciona
-  - [ ] Test: color picker funciona
+  - [x] Test: adicionar tag a contacto funciona
+  - [x] Test: soft delete (archive) funciona
+  - [x] Test: color picker funciona
+  - [x] Test: tag com contactos mostra aviso ao deletar (via check_tags_contacts API + modal warning)
 
 ---
 

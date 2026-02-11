@@ -1,5 +1,5 @@
 from django import forms
-from .models import Contact
+from .models import Contact, ContactTag
 
 
 class ContactForm(forms.ModelForm):
@@ -7,7 +7,6 @@ class ContactForm(forms.ModelForm):
         model = Contact
         fields = [
             'contact_category',
-            'contact_type',
             'name',
             'email',
             'phone',
@@ -26,7 +25,6 @@ class ContactForm(forms.ModelForm):
         ]
         widgets = {
             'contact_category': forms.RadioSelect(attrs={'class': 'contact-category-radio'}),
-            'contact_type': forms.RadioSelect(attrs={'class': 'contact-type-radio'}),
             'name': forms.TextInput(attrs={
                 'class': 'form-input',
                 'placeholder': 'Ex: João Silva',
@@ -112,3 +110,66 @@ class ContactForm(forms.ModelForm):
             'notes': 'Notas',
         }
 
+
+class ContactTagForm(forms.ModelForm):
+    """Formulário para criação e edição de Tags de Contacto"""
+    
+    class Meta:
+        model = ContactTag
+        fields = ['name', 'color']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 placeholder-gray-500 focus:border-primary focus:ring-primary',
+                'placeholder': 'Ex: Cliente VIP, Fornecedor Preferencial, Leads...',
+                'maxlength': '50',
+                'required': True,
+            }),
+            'color': forms.TextInput(attrs={
+                'type': 'color',
+                'class': 'h-12 w-full rounded-lg border-gray-700 bg-gray-800 cursor-pointer',
+                'required': True,
+            }),
+        }
+        labels = {
+            'name': 'Nome da Tag',
+            'color': 'Cor',
+        }
+        help_texts = {
+            'name': 'Escolha um nome único e descritivo para identificar esta tag.',
+            'color': 'Selecione uma cor para destacar esta tag visualmente.',
+        }
+    
+    def clean_name(self):
+        """Validar nome único (case-insensitive)"""
+        name = self.cleaned_data.get('name')
+        
+        # Check if updating existing tag
+        if self.instance and self.instance.pk:
+            # Exclude current instance from uniqueness check
+            if ContactTag.objects.filter(name__iexact=name).exclude(pk=self.instance.pk).exists():
+                raise forms.ValidationError('Já existe uma tag com este nome.')
+        else:
+            # Creating new tag
+            if ContactTag.objects.filter(name__iexact=name).exists():
+                raise forms.ValidationError('Já existe uma tag com este nome.')
+        
+        return name
+    
+    def clean_color(self):
+        """Validar formato de cor hexadecimal"""
+        color = self.cleaned_data.get('color')
+        
+        # Ensure it starts with #
+        if not color.startswith('#'):
+            color = '#' + color
+        
+        # Validate hex format
+        if len(color) != 7:
+            raise forms.ValidationError('Cor deve estar no formato #RRGGBB')
+        
+        try:
+            int(color[1:], 16)
+        except ValueError:
+            raise forms.ValidationError('Cor inválida. Use formato hexadecimal (#RRGGBB)')
+        
+        return color
