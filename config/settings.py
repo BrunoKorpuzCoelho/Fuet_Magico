@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     'apps.website',
     'apps.dashboard',
     'apps.contacts',
+    'apps.crm',
 ]
 
 MIDDLEWARE = [

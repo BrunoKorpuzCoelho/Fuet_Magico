@@ -1,0 +1,730 @@
+{% extends 'base.html' %}
+
+{% block title %}Etapas CRM - Fuet Mágico{% endblock %}
+
+{% block extra_head %}
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/crm_navbar.html' %}
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900" x-data="{
+    selectedStages: [],
+    selectAll: false,
+    isDragging: false,
+    
+    init() {
+        window.getSelectedStages = () => this.selectedStages;
+        this.initSortable();
+    },
+    
+    initSortable() {
+        const tbody = document.getElementById('stagesTableBody');
+        if (tbody && typeof Sortable !== 'undefined') {
+            Sortable.create(tbody, {
+                animation: 150,
+                handle: '.drag-handle',
+                onStart: (evt) => {
+                    this.isDragging = true;
+                },
+                onEnd: (evt) => {
+                    // After drag & drop, collect all stage IDs in the new visual order
+                    const rows = Array.from(tbody.querySelectorAll('tr'));
+                    const orderedIds = rows.map(row => row.dataset.stageId);
+                    
+                    console.log('New order:', orderedIds);
+                    
+                    // Send the new order to backend to recalculate sequences
+                    this.reorderAll(orderedIds);
+                    
+                    // Reset drag flag after a short delay to prevent click event
+                    setTimeout(() => {
+                        this.isDragging = false;
+                    }, 300);
+                }
+            });
+        }
+    },
+    
+    async reorderAll(orderedIds) {
+        try {
+            const response = await fetch('/crm/stages/reorder-all/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ ordered_ids: orderedIds })
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                console.log('Stages reordered successfully');
+                // Reload to show updated sequences
+                location.reload();
+            } else {
+                alert('Erro ao reordenar: ' + data.error);
+                location.reload();
+            }
+        } catch (error) {
+            alert('Erro ao reordenar estágios');
+            console.error(error);
+            location.reload();
+        }
+    },
+    
+    async updateSequence(stageId, newSequence) {
+        try {
+            const response = await fetch(`/crm/stages/${stageId}/reorder/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ new_sequence: newSequence })
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                // Show success toast
+                console.log('Stage reordered successfully');
+            } else {
+                alert('Erro ao reordenar: ' + data.error);
+                location.reload();
+            }
+        } catch (error) {
+            alert('Erro ao reordenar estágio');
+            location.reload();
+        }
+    },
+    
+    toggleAll() {
+        if (this.selectAll) {
+            this.selectedStages = Array.from(document.querySelectorAll('.stage-checkbox')).map(el => el.value);
+        } else {
+            this.selectedStages = [];
+        }
+    },
+    
+    isSelected(id) {
+        return this.selectedStages.includes(id);
+    },
+    
+    toggleStage(id) {
+        const index = this.selectedStages.indexOf(id);
+        if (index > -1) {
+            this.selectedStages.splice(index, 1);
+        } else {
+            this.selectedStages.push(id);
+        }
+        const totalCheckboxes = document.querySelectorAll('.stage-checkbox').length;
+        this.selectAll = this.selectedStages.length === totalCheckboxes;
+    }
+}">
+    <!-- Search & Actions Bar - Desktop -->
+    <div class="hidden md:block bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-3">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between gap-4">
+                <!-- Left: New Button + Bulk Actions -->
+                <div class="flex items-center space-x-3">
+                    <a href="{% url 'crm:stage_create' %}" 
+                       class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center space-x-2">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        <span>Novo</span>
+                    </a>
+                    
+                    <!-- Bulk Actions Button (shows when items selected) -->
+                    <div x-show="selectedStages.length > 0" 
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 scale-95"
+                         x-transition:enter-end="opacity-100 scale-100"
+                         class="relative" 
+                         x-data="{ actionsOpen: false }"
+                         x-cloak>
+                        <button @click="actionsOpen = !actionsOpen" class="flex items-center space-x-2 px-4 py-2 bg-primary/10 dark:bg-primary/20 border-2 border-primary hover:bg-primary/20 text-gray-900 dark:text-white rounded-lg font-medium transition-colors">
+                            <svg class="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            <span class="text-sm font-medium">
+                                <span x-text="selectedStages.length"></span> selecionado(s)
+                            </span>
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        
+                        <!-- Dropdown Menu -->
+                        <div x-show="actionsOpen" 
+                             @click.away="actionsOpen = false"
+                             x-transition:enter="transition ease-out duration-100"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             class="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+                             x-cloak>
+                            <div class="py-1">
+                                <button @click="duplicateSelected()" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                    </svg>
+                                    <span>Duplicar</span>
+                                </button>
+                                <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                                <button @click="deleteSelected()" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                    <span>Eliminar</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Center: Search -->
+                <div class="flex-1 max-w-lg">
+                    <form method="get" action="{% url 'crm:stage_list' %}" class="relative">
+                        <input type="text" 
+                               name="search" 
+                               value="{{ search_query }}"
+                               placeholder="Pesquisar estágios..."
+                               class="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <svg class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </form>
+                </div>
+                
+                <!-- Right: Pagination -->
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                        <span>{{ stages.start_index }}-{{ stages.end_index }} / {{ total_count }}</span>
+                        <span class="text-gray-400">|</span>
+                        <div class="flex items-center space-x-1">
+                            <input 
+                                type="text" 
+                                id="pageSizeInput"
+                                value="{{ page_size }}"
+                                class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                            >
+                            <span>/página</span>
+                        </div>
+                        {% if stages.has_previous %}
+                        <a href="?page={{ stages.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}&page_size={{ page_size }}" 
+                           class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                        </a>
+                        {% else %}
+                        <button disabled class="p-1 opacity-50 cursor-not-allowed">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                        </button>
+                        {% endif %}
+                        
+                        {% if stages.has_next %}
+                        <a href="?page={{ stages.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}&page_size={{ page_size }}" 
+                           class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                        {% else %}
+                        <button disabled class="p-1 opacity-50 cursor-not-allowed">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Actions Bar - Mobile -->
+    <div class="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-3" x-data="{ menuOpen: false, actionsOpen: false }">
+        <div class="px-4">
+            <div class="flex items-center gap-2 mb-3">
+                <!-- Menu Button -->
+                <button @click="menuOpen = !menuOpen" class="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+                
+                <!-- Bulk Actions Button (Mobile - Gear Icon Only) -->
+                <div x-show="selectedStages.length > 0" 
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100"
+                     class="relative"
+                     x-cloak>
+                    <button @click="actionsOpen = !actionsOpen" class="relative p-2 bg-primary/10 dark:bg-primary/20 border-2 border-primary hover:bg-primary/20 rounded-lg transition-colors">
+                        <svg class="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <!-- Badge with count -->
+                        <span class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white text-xs font-bold" x-text="selectedStages.length"></span>
+                    </button>
+                    
+                    <!-- Dropdown Menu -->
+                    <div x-show="actionsOpen" 
+                         @click.away="actionsOpen = false"
+                         x-transition:enter="transition ease-out duration-100"
+                         x-transition:enter-start="opacity-0 scale-95"
+                         x-transition:enter-end="opacity-100 scale-100"
+                         class="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+                         x-cloak>
+                        <div class="py-1">
+                            <button @click="duplicateSelected()" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                </svg>
+                                <span>Duplicar</span>
+                            </button>
+                            <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                            <button @click="deleteSelected()" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                                <span>Eliminar</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Search Bar -->
+                <div class="flex-1 relative">
+                    <form method="get" action="{% url 'crm:stage_list' %}" id="searchFormMobile">
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                name="search"
+                                value="{{ search_query }}"
+                                placeholder="Pesquisar..."
+                                class="w-full px-3 py-2 pl-9 pr-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                            
+                            <!-- Search Icon -->
+                            <svg class="absolute left-2.5 top-2.5 h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Mobile Menu Dropdown -->
+            <div x-show="menuOpen" @click.away="menuOpen = false" class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 space-y-2" x-cloak>
+                <a href="{% url 'crm:stage_create' %}" class="w-full px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center justify-center space-x-2">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    <span>Novo Estágio</span>
+                </a>
+                
+                <div class="pt-2 border-t border-gray-200 dark:border-gray-600">
+                    <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 px-4 py-2">
+                        <div class="flex flex-col space-y-1">
+                            <span>{{ stages.start_index }}-{{ stages.end_index }} / {{ total_count }}</span>
+                            <div class="flex items-center space-x-1">
+                                <input 
+                                    type="text" 
+                                    id="pageSizeInputMobile"
+                                    value="{{ page_size }}"
+                                    class="w-14 px-1 py-0.5 text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs focus:ring-2 focus:ring-primary focus:border-transparent"
+                                >
+                                <span class="text-xs">/pág</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            {% if stages.has_previous %}
+                            <a href="?page={{ stages.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}&page_size={{ page_size }}" 
+                               class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                </svg>
+                            </a>
+                            {% else %}
+                            <button disabled class="p-1 opacity-50 cursor-not-allowed">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                </svg>
+                            </button>
+                            {% endif %}
+                            
+                            {% if stages.has_next %}
+                            <a href="?page={{ stages.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}&page_size={{ page_size }}" 
+                               class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </a>
+                            {% else %}
+                            <button disabled class="p-1 opacity-50 cursor-not-allowed">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- List View -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-900">
+                        <tr>
+                            <th class="px-6 py-3 text-left w-12">
+                                <input type="checkbox" 
+                                       x-model="selectAll" 
+                                       @change="toggleAll()"
+                                       class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
+                            </th>
+                            <th class="px-6 py-3 text-left w-12">
+                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                                </svg>
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sequência</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nome</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cor</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Routing (dias)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stagesTableBody" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {% for stage in stages %}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer" 
+                            data-stage-id="{{ stage.pk }}"
+                            @click="if (!isDragging && !$event.target.closest('.checkbox-cell, .drag-handle')) { window.location.href = '{% url 'crm:stage_edit' stage.pk %}'; }">
+                            <td class="px-6 py-4 whitespace-nowrap checkbox-cell" @click.stop>
+                                <input type="checkbox" 
+                                       value="{{ stage.pk }}"
+                                       :checked="isSelected('{{ stage.pk }}')"
+                                       @change="toggleStage('{{ stage.pk }}')"
+                                       class="stage-checkbox h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap drag-handle cursor-move" @click.stop>
+                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path>
+                                </svg>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                {{ stage.sequence }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white">{{ stage.name }}</span>
+                                    {% if stage.is_won_stage %}
+                                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                        Vitória
+                                    </span>
+                                    {% endif %}
+                                    {% if stage.fold_by_default %}
+                                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                                        Colapsado
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-8 h-8 rounded border border-gray-300 dark:border-gray-600" style="background-color: {{ stage.color }};"></div>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ stage.color }}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                {% if stage.routing_in_days > 0 %}
+                                    {{ stage.routing_in_days }} dias
+                                {% else %}
+                                    <span class="text-gray-400">Desativado</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                                </svg>
+                                <p class="mt-4 text-sm">Nenhum estágio encontrado.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script>
+// Notification System
+function showNotification(type, message) {
+    const bgColor = type === 'success' ? 'bg-green-500' : type === 'warning' ? 'bg-yellow-500' : 'bg-red-500';
+    
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-4 rounded-lg shadow-lg z-50 transition-opacity duration-300`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
+}
+
+// Bulk Actions Functions
+async function duplicateSelected() {
+    const selectedIds = window.getSelectedStages();
+    if (selectedIds.length === 0) {
+        showNotification('warning', 'Selecione pelo menos um estágio para duplicar');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/crm/stages/duplicate/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({ stage_ids: selectedIds })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            showNotification('success', `${data.count} estágio(s) duplicado(s) com sucesso`);
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showNotification('error', data.error);
+        }
+    } catch (error) {
+        showNotification('error', 'Erro ao duplicar estágios');
+        console.error(error);
+    }
+}
+
+function deleteSelected() {
+    const selectedIds = window.getSelectedStages();
+    if (selectedIds.length === 0) {
+        showNotification('warning', 'Selecione pelo menos um estágio para eliminar');
+        return;
+    }
+    
+    openDeleteConfirmationModal(selectedIds);
+}
+
+function openDeleteConfirmationModal(stageIds) {
+    const count = stageIds.length;
+    
+    const modal = document.createElement('div');
+    modal.id = 'delete-confirmation-modal';
+    modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn';
+    modal.style.animation = 'fadeIn 0.2s ease-out';
+    
+    modal.innerHTML = `
+        <div class="bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full border-2 border-red-600/50 animate-scaleIn" style="animation: scaleIn 0.2s ease-out;">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-red-900 to-red-800 px-6 py-4 rounded-t-2xl border-b border-red-700/50">
+                <div class="flex items-center space-x-3">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-full bg-red-600/30 border-2 border-red-500 flex-shrink-0">
+                        <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">ATENÇÃO!</h3>
+                        <p class="text-red-300 text-xs mt-0.5">Esta ação é <span class="font-bold text-red-200">IRREVERSÍVEL</span></p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Body -->
+            <div class="px-6 py-5">
+                <div class="bg-red-950/40 border border-red-800/50 rounded-lg p-3 mb-4">
+                    <p class="text-gray-200 text-sm leading-relaxed">
+                        Está prestes a <span class="font-bold text-red-400">ELIMINAR PERMANENTEMENTE</span> 
+                        <span class="font-bold text-white text-base">${count}</span> estágio(s).
+                    </p>
+                    <p class="text-gray-400 text-xs mt-2">
+                        Esta modificação é <span class="font-semibold text-red-400">IRREVERSÍVEL</span> 
+                        e todos os dados serão perdidos para sempre.
+                    </p>
+                </div>
+                
+                <!-- Confirmation Checkbox -->
+                <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-3 mb-4">
+                    <label class="flex items-start space-x-2 cursor-pointer">
+                        <input type="checkbox" id="deleteConfirmCheckbox" 
+                               class="mt-0.5 w-4 h-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500 focus:ring-2">
+                        <span class="text-gray-300 text-xs leading-relaxed">
+                            Confirmo que compreendo que esta ação vai 
+                            <span class="font-semibold text-red-400">eliminar permanentemente</span> 
+                            os estágios selecionados e que 
+                            <span class="font-semibold text-red-400">não existe forma de recuperar</span> 
+                            os dados.
+                        </span>
+                    </label>
+                </div>
+                
+                <!-- Actions -->
+                <div class="flex space-x-3">
+                    <button onclick="closeDeleteConfirmationModal()" 
+                            class="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors">
+                        <span>Cancelar</span>
+                    </button>
+                    <button id="confirmDeleteButton" disabled 
+                            class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600 shadow-lg shadow-red-900/30">
+                        <div class="flex items-center justify-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            <span>ELIMINAR PERMANENTEMENTE</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Enable/disable confirm button based on checkbox
+    const checkbox = modal.querySelector('#deleteConfirmCheckbox');
+    const confirmButton = modal.querySelector('#confirmDeleteButton');
+    
+    checkbox.addEventListener('change', function() {
+        confirmButton.disabled = !this.checked;
+    });
+    
+    // Confirm button action
+    confirmButton.addEventListener('click', async function() {
+        if (!checkbox.checked) return;
+        
+        // Disable button and show loading
+        confirmButton.disabled = true;
+        confirmButton.innerHTML = `
+            <div class="flex items-center justify-center space-x-2">
+                <svg class="animate-spin h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span>A eliminar...</span>
+            </div>
+        `;
+        
+        try {
+            const response = await fetch('/crm/stages/bulk-delete/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ stage_ids: stageIds })
+            });
+            
+            const data = await response.json();
+            
+            closeDeleteConfirmationModal();
+            
+            if (data.success) {
+                showNotification('success', data.message);
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showNotification('error', data.error.message);
+            }
+        } catch (error) {
+            closeDeleteConfirmationModal();
+            console.error('Error:', error);
+            showNotification('error', 'Erro ao eliminar estágios');
+        }
+    });
+    
+    // Close on outside click
+    modal.onclick = (e) => {
+        if (e.target === modal) closeDeleteConfirmationModal();
+    };
+    
+    document.body.appendChild(modal);
+}
+
+function closeDeleteConfirmationModal() {
+    const modal = document.getElementById('delete-confirmation-modal');
+    if (modal) {
+        modal.style.animation = 'fadeOut 0.2s ease-out';
+        setTimeout(() => {
+            modal.remove();
+        }, 200);
+    }
+}
+
+// Page Size Control
+document.addEventListener('DOMContentLoaded', function() {
+    const pageSizeInput = document.getElementById('pageSizeInput');
+    const pageSizeInputMobile = document.getElementById('pageSizeInputMobile');
+    const totalCount = {{ total_count }};
+    const currentPageSize = {{ page_size }};
+    
+    function setupPageSizeInput(input) {
+        if (!input) return;
+        
+        input.addEventListener('blur', function() {
+            let newPageSize = parseInt(this.value);
+            
+            if (isNaN(newPageSize) || newPageSize < 1) {
+                newPageSize = 50;
+                this.value = 50;
+            }
+            
+            if (newPageSize > totalCount) {
+                newPageSize = totalCount;
+                this.value = totalCount;
+            }
+            
+            if (newPageSize !== currentPageSize) {
+                updatePageSize(newPageSize);
+            }
+        });
+        
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                this.blur();
+            }
+        });
+        
+        input.addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    }
+    
+    setupPageSizeInput(pageSizeInput);
+    setupPageSizeInput(pageSizeInputMobile);
+    
+    function updatePageSize(pageSize) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('page_size', pageSize);
+        url.searchParams.set('page', 1);
+        window.location.href = url.toString();
+    }
+});
+</script>
+{% endblock %}

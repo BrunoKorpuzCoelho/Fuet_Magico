@@ -1494,19 +1494,73 @@ Adicionar funcionalidades extras ao editor de notas já existente (Quill.js est�
 
 Criar app Django para gestão de CRM.
 
-- [ ] **Criar app**
-  - [ ] Executar `python manage.py startapp crm apps/crm`
-  - [ ] Adicionar 'apps.crm' ao INSTALLED_APPS
+- [x] **Criar app**
+  - [x] Executar `python manage.py startapp crm apps/crm`
+  - [x] Adicionar 'apps.crm' ao INSTALLED_APPS
 
-- [ ] **Criar estrutura de arquivos**
-  - [ ] Criar `apps/crm/models.py`
-  - [ ] Criar `apps/crm/views.py`
-  - [ ] Criar `apps/crm/forms.py`
-  - [ ] Criar `apps/crm/urls.py`
+- [x] **Criar estrutura de arquivos**
+  - [x] Criar `apps/crm/models.py`
+  - [x] Criar `apps/crm/views.py`
+  - [x] Criar `apps/crm/forms.py`
+  - [x] Criar `apps/crm/urls.py`
 
 ---
 
-## 5.2 Modelo Lead
+## 5.2 Modelo CRMStage (Estágios do Pipeline)
+
+Criar modelo para estágios personalizáveis do pipeline CRM (equivalente ao Odoo CRM stages).
+
+- [x] **Criar modelo CRMStage**
+  - [x] Herdar de BaseModel
+  - [x] Campo: name (nome do estágio, ex: "New", "Qualified", "Proposition", "Won")
+  - [x] Campo: sequence (ordem de exibição, IntegerField)
+  - [x] Campo: is_won_stage (BooleanField, default=False) - marca se é estágio de vitória
+  - [x] Campo: fold_by_default (BooleanField, default=False) - se deve aparecer colapsado no kanban
+  - [x] Campo: routing_in_days (IntegerField, default=0) - dias sem update para highlight (0=desativado)
+  - [x] Campo: color (CharField, hex color, ex: "#28a745")
+  - [x] Campo: **owner_company** (FK para Company, null=True, blank=True)
+  - [x] Meta: ordering = ['sequence']
+  - [x] Método __str__ retorna name
+  - [x] Filtrar por owner_company usando filter_by_company()
+
+- [x] **Criar estágios default no signal post_migrate**
+  - [x] Criar signal para popular estágios iniciais:
+    - [x] New (sequence=1, color="#6c757d", routing_in_days=7)
+    - [x] Qualified (sequence=2, color="#17a2b8")
+    - [x] Proposition (sequence=3, color="#ffc107")
+    - [x] Won (sequence=4, color="#28a745", is_won_stage=True, fold_by_default=True)
+    - [x] Lost (sequence=5, color="#dc3545", fold_by_default=True)
+
+- [x] **Criar migrations**
+  - [x] Executar makemigrations
+  - [x] Executar migrate
+
+- [x] **Registrar no Admin**
+  - [x] Criar CRMStageAdmin
+  - [x] list_display: name, sequence, is_won_stage, routing_in_days, color
+  - [x] list_editable: sequence, fold_by_default
+  - [x] Ordenar por sequence
+
+- [x] **CRUD Views para CRMStage**
+  - [x] CRMStageListView (lista com drag to reorder)
+  - [ ] CRMStageCreateView
+  - [ ] CRMStageUpdateView
+  - [x] CRMStageDeleteView (soft delete)
+  - [x] Templates: `templates/crm/stage_list.html`, `stage_form.html`
+  - [x] Rotas: `/crm/stages/`, `/crm/stages/create/`, etc.
+  - [x] Sub-navbar CRM (CRM, Sales, Reporting, Configuração/Etapas)
+  - [x] Endpoint drag & drop reorder com atualização de sequences
+  - [x] Integração com Sortable.js para UI drag & drop
+
+- [ ] **Testing - CRMStage**
+  - [ ] Test: criar estágio funciona
+  - [ ] Test: reordenação por sequence funciona
+  - [ ] Test: validação de is_won_stage funciona
+  - [ ] Test: signal cria estágios default
+
+---
+
+## 5.3 Modelo Lead
 
 Criar modelo para leads/oportunidades de venda.
 
@@ -1517,7 +1571,7 @@ Criar modelo para leads/oportunidades de venda.
   - [ ] Campo: description (descrição detalhada)
   - [ ] Campo: estimated_value (valor estimado, Decimal)
   - [ ] Campo: probability (probabilidade de fecho, 0-100%)
-  - [ ] Campo: stage (estágio: NEW, QUALIFIED, PROPOSAL, NEGOTIATION, WON, LOST)
+  - [ ] Campo: **stage** (FK para CRMStage, on_delete=PROTECT) - NÃO é choices, é FK!
   - [ ] Campo: source (origem: WEBSITE, REFERRAL, COLD_CALL, SOCIAL_MEDIA, OTHER)
   - [ ] Campo: expected_close_date (data prevista de fecho)
   - [ ] Campo: assigned_to (FK para User, responsável pela lead)
@@ -1552,7 +1606,65 @@ Criar modelo para leads/oportunidades de venda.
 
 ---
 
-## 5.3 Views de Listagem de Leads
+## 5.4 Modelo Activity (Atividades/Tarefas)
+
+Criar modelo para atividades relacionadas com leads (To-Do, Email, Call, Meeting, etc.).
+
+- [ ] **Criar modelo Activity**
+  - [ ] Herdar de BaseModel
+  - [ ] Campo: lead (FK para Lead, on_delete=CASCADE, related_name='activities')
+  - [ ] Campo: activity_type (choices: TODO, EMAIL, CALL, WHATSAPP, DOCUMENT, SIGNATURE)
+  - [ ] Campo: summary (CharField, título da atividade)
+  - [ ] Campo: due_date (DateField, data limite)
+  - [ ] Campo: assigned_to (FK para User, responsável)
+  - [ ] Campo: is_done (BooleanField, default=False)
+  - [ ] Campo: done_date (DateTimeField, null=True) - quando foi marcada como feita
+  - [ ] Campo: feedback (TextField, null=True, blank=True) - nota ao marcar como concluída
+  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True)
+  - [ ] Método __str__ retorna activity_type + summary
+  - [ ] Property `is_overdue`: retorna True se due_date < today e not is_done
+  - [ ] Property `status_color`: retorna 'red' se overdue, 'yellow' se due_date=today, 'green' se ok
+
+- [ ] **Validações**
+  - [ ] Validar: due_date não pode ser no passado (ao criar)
+  - [ ] Validar: feedback é obrigatório ao marcar is_done=True
+  - [ ] Auto-preencher done_date quando is_done muda para True
+
+- [ ] **Criar migrations**
+  - [ ] Executar makemigrations
+  - [ ] Executar migrate
+
+- [ ] **Registrar no Admin**
+  - [ ] Criar ActivityAdmin
+  - [ ] list_display: summary, lead, activity_type, due_date, assigned_to, is_done
+  - [ ] list_filter: activity_type, is_done, due_date, assigned_to
+  - [ ] search_fields: summary, feedback, lead__title
+
+- [ ] **CRUD Views para Activity**
+  - [ ] ActivityCreateView (modal dentro de lead_detail)
+  - [ ] ActivityUpdateView (modal)
+  - [ ] ActivityMarkDoneView (abre modal para pedir feedback)
+  - [ ] Templates: `templates/crm/activity_form_modal.html`, `activity_done_modal.html`
+  - [ ] Rotas: `/crm/activities/create/`, `/crm/activities/<pk>/done/`, etc.
+
+- [ ] **Timeline de Activities dentro de Lead**
+  - [ ] Adicionar seção "Activities" no lead_detail.html
+  - [ ] Mostrar activities ordenadas por due_date
+  - [ ] Ícones diferentes por activity_type (📧 email, 📞 call, ✅ todo, 💬 whatsapp)
+  - [ ] Cores baseadas em status (verde/amarelo/vermelho)
+  - [ ] Botão "Schedule Activity" abre modal
+  - [ ] Checkbox para marcar como done (abre modal de feedback)
+
+- [ ] **Testing - Activity Model**
+  - [ ] Test: criar activity funciona
+  - [ ] Test: is_overdue funciona corretamente
+  - [ ] Test: status_color retorna cor correta
+  - [ ] Test: feedback obrigatório ao marcar done
+  - [ ] Test: done_date auto-preenchido
+
+---
+
+## 5.5 Views de Listagem de Leads
 
 Criar view para listar leads com filtros por estágio, responsável e período.
 
@@ -1585,7 +1697,7 @@ Criar view para listar leads com filtros por estágio, responsável e período.
 
 ---
 
-## 5.4 Views de Criação de Lead
+## 5.6 Views de Criação de Lead
 
 Criar formulário para criar nova lead.
 
@@ -1618,27 +1730,40 @@ Criar formulário para criar nova lead.
 
 ---
 
-## 5.5 Views de Edição e Detalhes
+## 5.7 Views de Edição e Detalhes
 
 Criar views para editar e visualizar detalhes de lead.
 
 - [ ] **Criar LeadDetailView**
   - [ ] Mostrar todos os campos da lead
   - [ ] Mostrar histórico de mudanças (via AuditLog)
-  - [ ] Mostrar atividades relacionadas (reuniões, chamadas, emails)
-  - [ ] Smart buttons: Vendas Geradas (se convertida), Documentos, Tarefas
-  - [ ] Timeline de eventos
+  - [ ] **Seção Activities/Chatter** (estilo Odoo):
+    - [ ] Botão "Schedule Activity" (abre modal ActivityCreateView)
+    - [ ] Timeline vertical com todas as activities ordenadas por due_date
+    - [ ] Cada activity mostra:
+      - [ ] Ícone por tipo (📧 EMAIL, 📞 CALL, ✅ TODO, 💬 WHATSAPP, 📄 DOCUMENT, ✍️ SIGNATURE)
+      - [ ] Summary (título da activity)
+      - [ ] Due date formatada (ex: "Feb 16" ou "Today" ou "Yesterday")
+      - [ ] Cor do border baseada em status (verde/amarelo/vermelho)
+      - [ ] Avatar do assigned_to
+      - [ ] Botões: "Mark Done" (abre modal feedback) | "Edit"
+    - [ ] Se activity is_done=True, mostrar com opacidade reduzida e ícone ✅
+    - [ ] Feedback da activity (se done) em texto cinza abaixo do summary
+  - [ ] Smart buttons: Vendas Geradas (se convertida), Documentos, Atividades Pendentes
+  - [ ] Timeline de eventos (AuditLog)
 
 - [ ] **Criar LeadUpdateView**
   - [ ] Form igual ao create
-  - [ ] Permitir mudar stage
-  - [ ] Se mudar para LOST, campo lost_reason obrigatório
-  - [ ] Se mudar para WON, sugerir criar venda
+  - [ ] Permitir mudar stage (dropdown com stages do CRMStage)
+  - [ ] Se mudar para stage com is_won_stage=True, sugerir criar venda
+  - [ ] Se mudar para LOST, campo lost_reason obrigatório (modal)
 
 - [ ] **Criar templates**
   - [ ] `templates/crm/lead_detail.html` (view mode)
+    - [ ] Layout 2 colunas: Info principal (esquerda) + Activities/Chatter (direita)
   - [ ] `templates/crm/lead_edit.html` (edit mode)
-  - [ ] Layout com tabs: Geral, Histórico, Atividades
+  - [ ] `templates/crm/components/activity_timeline.html` (component reutilizável)
+  - [ ] Layout com tabs: Geral, Histórico, Atividades (mobile)
 
 - [ ] **Configurar rotas**
   - [ ] `path('crm/leads/<uuid:pk>/', LeadDetailView, name='lead_detail')`
@@ -1648,10 +1773,12 @@ Criar views para editar e visualizar detalhes de lead.
   - [ ] Test: detail mostra dados corretos
   - [ ] Test: edit salva alterações
   - [ ] Test: lost_reason obrigatório se LOST
+  - [ ] Test: activities timeline renderiza corretamente
+  - [ ] Test: cores de status das activities funcionam
 
 ---
 
-## 5.6 Conversão de Lead para Venda
+## 5.8 Conversão de Lead para Venda
 
 Criar funcionalidade para converter lead em venda (SaleOrder).
 
@@ -1684,38 +1811,144 @@ Criar funcionalidade para converter lead em venda (SaleOrder).
 
 ---
 
-## 5.7 Pipeline de Vendas (Kanban)
+## 5.9 Pipeline de Vendas (Kanban View com Progress Bar)
 
-Criar vista Kanban para visualizar pipeline de vendas por estágio.
+Criar vista Kanban para visualizar pipeline de vendas por estágio com drag & drop e progress bar colorido.
 
 - [ ] **Criar LeadKanbanView**
-  - [ ] Colunas: NEW, QUALIFIED, PROPOSAL, NEGOTIATION, WON, LOST
+  - [ ] Carregar stages dinâmicamente do modelo CRMStage (ordenado por sequence)
+  - [ ] Criar coluna para cada stage (não hardcoded!)
+  - [ ] Aplicar fold_by_default para stages configurados (colunas colapsadas)
   - [ ] Cards de leads em cada coluna
-  - [ ] Drag & drop para mudar estágio (JavaScript)
+  - [ ] Drag & drop para mudar estágio (JavaScript/Alpine.js)
   - [ ] Filtros: Responsável, Período, Origem
   - [ ] KPIs por coluna: Qtd Leads, Valor Total
+  - [ ] Botão "Generate Leads" no topo (abre modal)
+
+- [ ] **Progress Bar por Estágio (3 cores)**
+  - [ ] Calcular para cada stage:
+    - [ ] Leads **dentro do prazo** (verde): last_updated < routing_in_days
+    - [ ] Leads **último dia** (amarelo): last_updated == routing_in_days
+    - [ ] Leads **atrasadas** (vermelho): last_updated > routing_in_days
+  - [ ] Renderizar barra horizontal dividida em 3 seções:
+    - [ ] Seção verde (esquerda): largura proporcional a leads verdes
+    - [ ] Seção amarela (centro): largura proporcional a leads amarelas
+    - [ ] Seção vermelha (direita): largura proporcional a leads vermelhas
+  - [ ] Tooltip ao hover: "X em dia, Y para hoje, Z atrasadas"
+  - [ ] Se stage.routing_in_days == 0, não mostra progress bar (feature desativada)
+
+- [ ] **Cards de Lead no Kanban**
+  - [ ] Layout: title (bold), contact name (subtitle)
+  - [ ] Badge de valor: estimated_value formatado (€ X.XXX,XX)
+  - [ ] Ícone de atividade: se tem activities pendentes, mostrar ícone 📋
+  - [ ] Cor do card baseada em routing:
+    - [ ] Border verde: lead dentro do prazo
+    - [ ] Border amarela: último dia
+    - [ ] Border vermelha: lead atrasada
+  - [ ] Avatar do assigned_to (user responsável)
+  - [ ] Click no card: abre lead_detail
 
 - [ ] **Criar template**
   - [ ] `templates/crm/lead_kanban.html`
   - [ ] Layout horizontal com scroll
-  - [ ] Cards com: title, contact, value, probability
-  - [ ] Drag & drop com Alpine.js ou JavaScript nativo
-  - [ ] Mobile: tabs para cada coluna
+  - [ ] Header de cada coluna com:
+    - [ ] Nome do stage com cor (badge colorido com stage.color)
+    - [ ] Progress bar (3 cores) se routing_in_days > 0
+    - [ ] KPIs: Qtd leads (X) | Valor total (€ Y)
+  - [ ] Cards drag & drop com Alpine.js ou SortableJS
+  - [ ] Mobile: tabs para cada coluna (swipe horizontal)
+  - [ ] Filtros no sidebar: Responsável, Período, Origem, Stage (para ocultar colunas)
 
 - [ ] **Configurar endpoint para drag & drop**
-  - [ ] POST `crm/leads/<uuid:pk>/move/` (recebe new_stage)
-  - [ ] Atualizar lead.stage
-  - [ ] Atualizar probability automaticamente
-  - [ ] Retornar JSON success
+  - [ ] POST `crm/leads/<uuid:pk>/move/` (recebe new_stage_id)
+  - [ ] Atualizar lead.stage com novo CRMStage
+  - [ ] Atualizar lead.updated_at (para recalcular routing)
+  - [ ] Atualizar probability automaticamente (se stage tiver default probability)
+  - [ ] Retornar JSON: {success: true, new_stage_name, new_color, updated_kpis}
 
 - [ ] **Configurar rota**
   - [ ] `path('crm/pipeline/', LeadKanbanView, name='lead_kanban')`
+  - [ ] `path('crm/leads/<uuid:pk>/move/', LeadMoveStageView, name='lead_move')`
 
 - [ ] **Testing - Kanban**
-  - [ ] Test: vista carrega leads corretamente
+  - [ ] Test: vista carrega stages dinâmicos
+  - [ ] Test: progress bar calcula cores corretamente
   - [ ] Test: drag & drop atualiza stage
   - [ ] Test: KPIs calculam por coluna
+  - [ ] Test: routing_in_days=0 não mostra progress bar
+  - [ ] Test: fold_by_default colapsa colunas
   - [ ] Test: filtros funcionam
+
+---
+
+## 5.10 Generate Leads (Geração Automática Baseada em Histórico)
+
+Criar funcionalidade para gerar leads automaticamente baseado em dados históricos (ex: aniversários do ano passado).
+
+**CONTEXTO:** 
+- No Odoo, há uma feature "Generate Leads" no pipeline
+- Exemplo: se em Fevereiro 2025 houve 30 bolos de aniversário, o sistema pode sugerir leads para Fevereiro 2026 para os mesmos clientes
+- Ideia: automatizar follow-up de vendas recorrentes (aniversários, eventos sazonais, etc.)
+
+- [ ] **Criar LeadGenerateView**
+  - [ ] Botão "Generate Leads" no topo do pipeline (lead_kanban.html)
+  - [ ] Modal com opções:
+    - [ ] Período histórico: "Mesmo mês do ano passado" (default), "Últimos X meses", "Custom range"
+    - [ ] Filtro de produtos: apenas produtos com categoria "Aniversário" ou tag específica
+    - [ ] Filtro de clientes: apenas clientes com vendas no período histórico
+    - [ ] Preview: "Encontrados X clientes com Y vendas no período selecionado"
+  - [ ] Botão "Gerar Leads" executa a lógica
+
+- [ ] **Lógica de Geração**
+  - [ ] Buscar vendas (SaleOrder) no período histórico selecionado
+  - [ ] Agrupar por contact (cliente)
+  - [ ] Para cada contact:
+    - [ ] Criar Lead com:
+      - [ ] title = "Follow-up: Aniversário {ano_atual}" (ou template customizável)
+      - [ ] contact = contact da venda histórica
+      - [ ] estimated_value = média/soma das vendas anteriores
+      - [ ] stage = primeiro CRMStage (NEW)
+      - [ ] source = "GENERATED"
+      - [ ] assigned_to = mesmo responsável da última venda (ou user atual)
+      - [ ] tags = ['generated', 'birthday'] (ou baseado em filtros)
+    - [ ] Criar Activity automática:
+      - [ ] activity_type = EMAIL ou WHATSAPP (configurável)
+      - [ ] summary = "Contactar cliente para promoção aniversário"
+      - [ ] due_date = hoje + X dias (configurável, ex: 7 dias)
+      - [ ] assigned_to = responsável da lead
+  - [ ] Evitar duplicados: não criar lead se já existe lead ativa para o mesmo contact no mesmo período
+
+- [ ] **Template Modal**
+  - [ ] `templates/crm/generate_leads_modal.html`
+  - [ ] Form com:
+    - [ ] Select período histórico (dropdown)
+    - [ ] Date pickers para custom range
+    - [ ] Checkboxes para filtros (produtos, categorias)
+    - [ ] Preview dinâmico (AJAX) mostrando quantos leads serão geradas
+  - [ ] Botão "Gerar X Leads" (X = contagem do preview)
+  - [ ] Botão "Cancelar"
+
+- [ ] **Endpoint AJAX**
+  - [ ] GET `crm/leads/generate/preview/` (recebe filtros, retorna contagem)
+  - [ ] POST `crm/leads/generate/` (executa geração, retorna leads criadas)
+  - [ ] Response JSON: {success: true, leads_created: 15, message: "15 leads geradas com sucesso"}
+
+- [ ] **Configurar rotas**
+  - [ ] `path('crm/leads/generate/preview/', LeadGeneratePreviewView, name='lead_generate_preview')`
+  - [ ] `path('crm/leads/generate/', LeadGenerateView, name='lead_generate')`
+
+- [ ] **Notificação e Feedback**
+  - [ ] Após geração, mostrar toast: "✅ X leads geradas com sucesso"
+  - [ ] Redirecionar para pipeline com filtro "source=GENERATED"
+  - [ ] Enviar notificação para users atribuídos (opcional)
+
+- [ ] **Testing - Generate Leads**
+  - [ ] Test: preview conta vendas históricas corretamente
+  - [ ] Test: geração cria leads com dados corretos
+  - [ ] Test: não cria duplicados para mesmo contact
+  - [ ] Test: cria activities automáticas
+  - [ ] Test: filtros de período funcionam
+  - [ ] Test: assigned_to herda da última venda
 
 ---
 
