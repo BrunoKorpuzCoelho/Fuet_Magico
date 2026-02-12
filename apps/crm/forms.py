@@ -1,5 +1,6 @@
 from django import forms
-from .models import CRMStage
+from datetime import date
+from .models import CRMStage, Lead, Activity
 
 
 class CRMStageForm(forms.ModelForm):
@@ -104,3 +105,192 @@ class CRMStageForm(forms.ModelForm):
                 raise forms.ValidationError('Já existe um estágio de vitória. Só pode existir um estágio com "Vitória" ativo por empresa.')
         
         return is_won
+
+
+class LeadForm(forms.ModelForm):
+    class Meta:
+        model = Lead
+        fields = [
+            'contact', 'title', 'description', 'estimated_value', 
+            'probability', 'priority', 'stage', 'source', 
+            'expected_close_date', 'assigned_to', 'lost_reason', 'tags'
+        ]
+        widgets = {
+            'contact': forms.Select(attrs={
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-primary focus:ring-primary',
+                'required': True,
+            }),
+            'title': forms.TextInput(attrs={
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 placeholder-gray-500 focus:border-primary focus:ring-primary',
+                'placeholder': 'Ex: Bolo de Aniversário Premium',
+                'maxlength': '255',
+                'required': True,
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 placeholder-gray-500 focus:border-primary focus:ring-primary',
+                'placeholder': 'Descrição detalhada da oportunidade...',
+                'rows': '4',
+            }),
+            'estimated_value': forms.NumberInput(attrs={
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 placeholder-gray-500 focus:border-primary focus:ring-primary',
+                'min': '0',
+                'step': '0.01',
+                'placeholder': '0.00',
+            }),
+            'probability': forms.NumberInput(attrs={
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 placeholder-gray-500 focus:border-primary focus:ring-primary',
+                'min': '0',
+                'max': '100',
+                'placeholder': '10',
+            }),
+            'priority': forms.Select(attrs={
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-primary focus:ring-primary',
+            }),
+            'stage': forms.Select(attrs={
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-primary focus:ring-primary',
+                'required': True,
+            }),
+            'source': forms.Select(attrs={
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-primary focus:ring-primary',
+            }),
+            'expected_close_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-primary focus:ring-primary',
+            }),
+            'assigned_to': forms.Select(attrs={
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-primary focus:ring-primary',
+            }),
+            'lost_reason': forms.Textarea(attrs={
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 placeholder-gray-500 focus:border-primary focus:ring-primary',
+                'placeholder': 'Motivo da perda (obrigatório se Lost)...',
+                'rows': '3',
+            }),
+            'tags': forms.HiddenInput(),
+        }
+        labels = {
+            'contact': 'Contacto',
+            'title': 'Título da Oportunidade',
+            'description': 'Descrição',
+            'estimated_value': 'Valor Estimado (Expected Revenue)',
+            'probability': 'Probabilidade (%)',
+            'priority': 'Prioridade',
+            'stage': 'Estágio',
+            'source': 'Origem',
+            'expected_close_date': 'Data Prevista de Fecho',
+            'assigned_to': 'Responsável',
+            'lost_reason': 'Motivo da Perda',
+            'tags': 'Etiquetas',
+        }
+        help_texts = {
+            'contact': 'Selecione o contacto associado a esta oportunidade.',
+            'title': 'Título descritivo da oportunidade de venda.',
+            'estimated_value': 'Valor estimado da receita esperada.',
+            'probability': 'Probabilidade de fecho entre 0 e 100%.',
+            'priority': 'Nível de prioridade (LOW=★, MEDIUM=★★, HIGH=★★★).',
+            'stage': 'Estágio atual no pipeline.',
+            'lost_reason': 'Obrigatório se o estágio for marcado como perdido.',
+        }
+    
+    def clean_estimated_value(self):
+        value = self.cleaned_data.get('estimated_value')
+        if value and value < 0:
+            raise forms.ValidationError('Valor estimado deve ser maior ou igual a zero.')
+        return value
+    
+    def clean_probability(self):
+        probability = self.cleaned_data.get('probability')
+        if probability is not None and (probability < 0 or probability > 100):
+            raise forms.ValidationError('Probabilidade deve estar entre 0 e 100%.')
+        return probability
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        stage = cleaned_data.get('stage')
+        lost_reason = cleaned_data.get('lost_reason')
+        
+        if stage and stage.name and 'lost' in stage.name.lower():
+            if not lost_reason or len(lost_reason.strip()) < 10:
+                raise forms.ValidationError({
+                    'lost_reason': 'Motivo da perda é obrigatório e deve ter pelo menos 10 caracteres quando o estágio é "Lost".'
+                })
+        
+        return cleaned_data
+
+
+class ActivityForm(forms.ModelForm):
+    class Meta:
+        model = Activity
+        fields = ['lead', 'activity_type', 'summary', 'due_date', 'assigned_to', 'is_done', 'feedback']
+        widgets = {
+            'lead': forms.Select(attrs={
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-primary focus:ring-primary',
+                'required': True,
+            }),
+            'activity_type': forms.Select(attrs={
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-primary focus:ring-primary',
+                'required': True,
+            }),
+            'summary': forms.TextInput(attrs={
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 placeholder-gray-500 focus:border-primary focus:ring-primary',
+                'placeholder': 'Ex: Follow-up call to discuss pricing',
+                'maxlength': '255',
+                'required': True,
+            }),
+            'due_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-primary focus:ring-primary',
+                'required': True,
+            }),
+            'assigned_to': forms.Select(attrs={
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-primary focus:ring-primary',
+            }),
+            'is_done': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-700 border-gray-600 rounded focus:ring-green-500 focus:ring-2',
+            }),
+            'feedback': forms.Textarea(attrs={
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 placeholder-gray-500 focus:border-primary focus:ring-primary',
+                'placeholder': 'Feedback ao marcar como concluída (obrigatório)...',
+                'rows': '3',
+            }),
+        }
+        labels = {
+            'lead': 'Lead/Oportunidade',
+            'activity_type': 'Tipo de Atividade',
+            'summary': 'Resumo',
+            'due_date': 'Data Limite',
+            'assigned_to': 'Responsável',
+            'is_done': 'Concluído',
+            'feedback': 'Feedback',
+        }
+        help_texts = {
+            'lead': 'Lead associada a esta atividade.',
+            'activity_type': 'Tipo de atividade (Call, Email, Meeting, etc.).',
+            'summary': 'Título descritivo da atividade.',
+            'due_date': 'Data limite para conclusão da atividade.',
+            'assigned_to': 'Pessoa responsável pela atividade.',
+            'is_done': 'Marque quando a atividade estiver concluída.',
+            'feedback': 'Obrigatório ao marcar como concluída.',
+        }
+    
+    def clean_due_date(self):
+        due_date = self.cleaned_data.get('due_date')
+        
+        if self.instance and self.instance.pk:
+            return due_date
+        
+        if due_date and due_date < date.today():
+            raise forms.ValidationError('Data limite não pode ser no passado.')
+        
+        return due_date
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        is_done = cleaned_data.get('is_done')
+        feedback = cleaned_data.get('feedback')
+        
+        if is_done and (not feedback or len(feedback.strip()) < 10):
+            raise forms.ValidationError({
+                'feedback': 'Feedback é obrigatório e deve ter pelo menos 10 caracteres ao marcar como concluída.'
+            })
+        
+        return cleaned_data

@@ -1552,11 +1552,11 @@ Criar modelo para estágios personalizáveis do pipeline CRM (equivalente ao Odo
   - [x] Endpoint drag & drop reorder com atualização de sequences
   - [x] Integração com Sortable.js para UI drag & drop
 
-- [ ] **Testing - CRMStage**
-  - [ ] Test: criar estágio funciona
-  - [ ] Test: reordenação por sequence funciona
-  - [ ] Test: validação de is_won_stage funciona
-  - [ ] Test: signal cria estágios default
+- [x] **Testing - CRMStage**
+  - [x] Test: criar estágio funciona
+  - [x] Test: reordenação por sequence funciona
+  - [x] Test: validação de is_won_stage funciona
+  - [x] Test: signal cria estágios default
 
 ---
 
@@ -1564,45 +1564,49 @@ Criar modelo para estágios personalizáveis do pipeline CRM (equivalente ao Odo
 
 Criar modelo para leads/oportunidades de venda.
 
-- [ ] **Criar modelo Lead**
-  - [ ] Herdar de BaseModel
-  - [ ] Campo: contact (FK para Contact, on_delete=CASCADE)
-  - [ ] Campo: title (título da oportunidade)
-  - [ ] Campo: description (descrição detalhada)
-  - [ ] Campo: estimated_value (valor estimado, Decimal)
-  - [ ] Campo: probability (probabilidade de fecho, 0-100%)
-  - [ ] Campo: **stage** (FK para CRMStage, on_delete=PROTECT) - NÃO é choices, é FK!
-  - [ ] Campo: source (origem: WEBSITE, REFERRAL, COLD_CALL, SOCIAL_MEDIA, OTHER)
-  - [ ] Campo: expected_close_date (data prevista de fecho)
-  - [ ] Campo: assigned_to (FK para User, responsável pela lead)
-  - [ ] Campo: lost_reason (motivo se LOST, TextField nullable)
-  - [ ] Campo: tags (JSONField para categorização)
-  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True) - NULL=global, com valor=privado
-  - [ ] Método __str__ retorna title + contact name
+- [x] **Criar modelo Lead**
+  - [x] Herdar de BaseModel
+  - [x] Campo: contact (FK para Contact, on_delete=CASCADE)
+  - [x] Campo: title (título da oportunidade)
+  - [x] Campo: description (descrição detalhada)
+  - [x] Campo: estimated_value (valor estimado, Decimal) - "Expected Revenue" no Odoo
+  - [x] Campo: probability (probabilidade de fecho, 0-100%)
+  - [x] Campo: **priority** (choices: LOW, MEDIUM, HIGH) - Default=MEDIUM - Renderiza como estrelas (0-3)
+  - [x] Campo: **stage** (FK para CRMStage, on_delete=PROTECT) - NÃO é choices, é FK!
+  - [x] Campo: source (origem: WEBSITE, REFERRAL, COLD_CALL, SOCIAL_MEDIA, OTHER)
+  - [x] Campo: expected_close_date (data prevista de fecho)
+  - [x] Campo: assigned_to (FK para User, responsável pela lead)
+  - [x] Campo: lost_reason (motivo se LOST, TextField nullable)
+  - [x] Campo: tags (JSONField para categorização) - Igual sistema de tags dos Contactos
+  - [x] Campo: **owner_company** (FK para Company, null=True, blank=True) - NULL=global, com valor=privado
+  - [x] Método __str__ retorna title + contact name
+  - [x] Property `priority_stars`: retorna 1-3 baseado em priority (LOW=1, MEDIUM=2, HIGH=3)
+  - [x] Campo: **stage_updated_at** (DateTimeField) - Para cálculo de routing
   - [ ] Filtrar por owner_company na LeadListView usando filter_by_company()
   - [ ] Auto-preencher owner_company na create view com get_active_company()
 
-- [ ] **Validações e constraints**
-  - [ ] Validar: estimated_value >= 0
-  - [ ] Validar: probability entre 0-100
-  - [ ] Validar: lost_reason obrigatório se stage=LOST
+- [x] **Validações e constraints**
+  - [x] Validar: estimated_value >= 0
+  - [x] Validar: probability entre 0-100
+  - [x] Validar: lost_reason obrigatório se stage=LOST
   - [ ] Auto-definir probability baseado no stage (NEW=10%, QUALIFIED=25%, PROPOSAL=50%, NEGOTIATION=75%)
 
-- [ ] **Criar migrations**
-  - [ ] Executar makemigrations
-  - [ ] Executar migrate
+- [x] **Criar migrations**
+  - [x] Executar makemigrations
+  - [x] Executar migrate
 
-- [ ] **Registrar no Admin**
-  - [ ] Criar LeadAdmin
-  - [ ] Configurar list_display: title, contact, stage, estimated_value, probability, assigned_to
-  - [ ] Configurar search_fields: title, description, contact__name
-  - [ ] Configurar list_filter: stage, source, assigned_to, created_at
-  - [ ] Fieldsets separados: Info Básica, Valores, Tracking
+- [x] **Registrar no Admin**
+  - [x] Criar LeadAdmin
+  - [x] Configurar list_display: title, contact, stage, estimated_value, probability, priority, assigned_to
+  - [x] Configurar search_fields: title, description, contact__name
+  - [x] Configurar list_filter: stage, source, priority, assigned_to, created_at
+  - [x] Fieldsets separados: Info Básica, Valores, Tracking
 
-- [ ] **Testing - Lead Model**
-  - [ ] Test: criar lead com contact funciona
-  - [ ] Test: validação de probability funciona
-  - [ ] Test: stage WON/LOST requer justificação
+- [x] **Testing - Lead Model**
+  - [x] Test: criar lead com contact funciona
+  - [x] Test: validação de probability funciona
+  - [x] Test: stage WON/LOST requer justificação
+  - [x] Test: priority_stars property funciona
 
 ---
 
@@ -1610,35 +1614,35 @@ Criar modelo para leads/oportunidades de venda.
 
 Criar modelo para atividades relacionadas com leads (To-Do, Email, Call, Meeting, etc.).
 
-- [ ] **Criar modelo Activity**
-  - [ ] Herdar de BaseModel
-  - [ ] Campo: lead (FK para Lead, on_delete=CASCADE, related_name='activities')
-  - [ ] Campo: activity_type (choices: TODO, EMAIL, CALL, WHATSAPP, DOCUMENT, SIGNATURE)
-  - [ ] Campo: summary (CharField, título da atividade)
-  - [ ] Campo: due_date (DateField, data limite)
-  - [ ] Campo: assigned_to (FK para User, responsável)
-  - [ ] Campo: is_done (BooleanField, default=False)
-  - [ ] Campo: done_date (DateTimeField, null=True) - quando foi marcada como feita
-  - [ ] Campo: feedback (TextField, null=True, blank=True) - nota ao marcar como concluída
-  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True)
-  - [ ] Método __str__ retorna activity_type + summary
-  - [ ] Property `is_overdue`: retorna True se due_date < today e not is_done
-  - [ ] Property `status_color`: retorna 'red' se overdue, 'yellow' se due_date=today, 'green' se ok
+- [x] **Criar modelo Activity**
+  - [x] Herdar de BaseModel
+  - [x] Campo: lead (FK para Lead, on_delete=CASCADE, related_name='activities')
+  - [x] Campo: activity_type (choices: TODO, EMAIL, CALL, WHATSAPP, DOCUMENT, SIGNATURE)
+  - [x] Campo: summary (CharField, título da atividade)
+  - [x] Campo: due_date (DateField, data limite)
+  - [x] Campo: assigned_to (FK para User, responsável)
+  - [x] Campo: is_done (BooleanField, default=False)
+  - [x] Campo: done_date (DateTimeField, null=True) - quando foi marcada como feita
+  - [x] Campo: feedback (TextField, default='', blank=True) - nota ao marcar como concluída
+  - [x] Campo: **owner_company** (FK para Company, null=True, blank=True)
+  - [x] Método __str__ retorna activity_type + summary
+  - [x] Property `is_overdue`: retorna True se due_date < today e not is_done
+  - [x] Property `status_color`: retorna 'red' se overdue, 'yellow' se due_date=today, 'green' se ok
 
-- [ ] **Validações**
-  - [ ] Validar: due_date não pode ser no passado (ao criar)
-  - [ ] Validar: feedback é obrigatório ao marcar is_done=True
-  - [ ] Auto-preencher done_date quando is_done muda para True
+- [x] **Validações**
+  - [x] Validar: due_date não pode ser no passado (ao criar)
+  - [x] Validar: feedback é obrigatório ao marcar is_done=True
+  - [x] Auto-preencher done_date quando is_done muda para True
 
-- [ ] **Criar migrations**
-  - [ ] Executar makemigrations
-  - [ ] Executar migrate
+- [x] **Criar migrations**
+  - [x] Executar makemigrations
+  - [x] Executar migrate
 
-- [ ] **Registrar no Admin**
-  - [ ] Criar ActivityAdmin
-  - [ ] list_display: summary, lead, activity_type, due_date, assigned_to, is_done
-  - [ ] list_filter: activity_type, is_done, due_date, assigned_to
-  - [ ] search_fields: summary, feedback, lead__title
+- [x] **Registrar no Admin**
+  - [x] Criar ActivityAdmin
+  - [x] list_display: summary, lead, activity_type, due_date, assigned_to, is_done
+  - [x] list_filter: activity_type, is_done, due_date, assigned_to
+  - [x] search_fields: summary, feedback, lead__title
 
 - [ ] **CRUD Views para Activity**
   - [ ] ActivityCreateView (modal dentro de lead_detail)
@@ -1655,12 +1659,12 @@ Criar modelo para atividades relacionadas com leads (To-Do, Email, Call, Meeting
   - [ ] Botão "Schedule Activity" abre modal
   - [ ] Checkbox para marcar como done (abre modal de feedback)
 
-- [ ] **Testing - Activity Model**
-  - [ ] Test: criar activity funciona
-  - [ ] Test: is_overdue funciona corretamente
-  - [ ] Test: status_color retorna cor correta
-  - [ ] Test: feedback obrigatório ao marcar done
-  - [ ] Test: done_date auto-preenchido
+- [x] **Testing - Activity Model**
+  - [x] Test: criar activity funciona
+  - [x] Test: is_overdue funciona corretamente
+  - [x] Test: status_color retorna cor correta
+  - [x] Test: feedback obrigatório ao marcar done
+  - [x] Test: done_date auto-preenchido
 
 ---
 
@@ -1811,73 +1815,397 @@ Criar funcionalidade para converter lead em venda (SaleOrder).
 
 ---
 
-## 5.9 Pipeline de Vendas (Kanban View com Progress Bar)
+## 5.9 🎯 Pipeline de Vendas (Kanban View) - **VISTA DEFAULT DO CRM**
 
-Criar vista Kanban para visualizar pipeline de vendas por estágio com drag & drop e progress bar colorido.
+**IMPORTANTE:** Esta é a vista PRINCIPAL e DEFAULT do módulo CRM (igual ao Odoo). A URL `/crm/` deve abrir automaticamente esta vista, não a lista tabular.
 
-- [ ] **Criar LeadKanbanView**
-  - [ ] Carregar stages dinâmicamente do modelo CRMStage (ordenado por sequence)
-  - [ ] Criar coluna para cada stage (não hardcoded!)
-  - [ ] Aplicar fold_by_default para stages configurados (colunas colapsadas)
-  - [ ] Cards de leads em cada coluna
-  - [ ] Drag & drop para mudar estágio (JavaScript/Alpine.js)
-  - [ ] Filtros: Responsável, Período, Origem
-  - [ ] KPIs por coluna: Qtd Leads, Valor Total
-  - [ ] Botão "Generate Leads" no topo (abre modal)
+Criar vista Kanban "estilo Odoo" para visualizar pipeline de vendas por estágio com drag & drop entre colunas, totais, progress bars e filtros avançados.
 
-- [ ] **Progress Bar por Estágio (3 cores)**
-  - [ ] Calcular para cada stage:
-    - [ ] Leads **dentro do prazo** (verde): last_updated < routing_in_days
-    - [ ] Leads **último dia** (amarelo): last_updated == routing_in_days
-    - [ ] Leads **atrasadas** (vermelho): last_updated > routing_in_days
-  - [ ] Renderizar barra horizontal dividida em 3 seções:
-    - [ ] Seção verde (esquerda): largura proporcional a leads verdes
-    - [ ] Seção amarela (centro): largura proporcional a leads amarelas
-    - [ ] Seção vermelha (direita): largura proporcional a leads vermelhas
-  - [ ] Tooltip ao hover: "X em dia, Y para hoje, Z atrasadas"
-  - [ ] Se stage.routing_in_days == 0, não mostra progress bar (feature desativada)
+---
 
-- [ ] **Cards de Lead no Kanban**
-  - [ ] Layout: title (bold), contact name (subtitle)
-  - [ ] Badge de valor: estimated_value formatado (€ X.XXX,XX)
-  - [ ] Ícone de atividade: se tem activities pendentes, mostrar ícone 📋
-  - [ ] Cor do card baseada em routing:
-    - [ ] Border verde: lead dentro do prazo
-    - [ ] Border amarela: último dia
-    - [ ] Border vermelha: lead atrasada
-  - [ ] Avatar do assigned_to (user responsável)
-  - [ ] Click no card: abre lead_detail
+### ✅ PROGRESSO GERAL: ~80% COMPLETO
 
-- [ ] **Criar template**
-  - [ ] `templates/crm/lead_kanban.html`
-  - [ ] Layout horizontal com scroll
-  - [ ] Header de cada coluna com:
-    - [ ] Nome do stage com cor (badge colorido com stage.color)
-    - [ ] Progress bar (3 cores) se routing_in_days > 0
-    - [ ] KPIs: Qtd leads (X) | Valor total (€ Y)
-  - [ ] Cards drag & drop com Alpine.js ou SortableJS
-  - [ ] Mobile: tabs para cada coluna (swipe horizontal)
-  - [ ] Filtros no sidebar: Responsável, Período, Origem, Stage (para ocultar colunas)
+**✅ IMPLEMENTADO:**
+- ✅ Pipeline como vista default em `/crm/`
+- ✅ Colunas dinâmicas por CRMStage (ordenado por sequence, filter_by_company)
+- ✅ Layout horizontal flex com scroll-x contido ao pipeline
+- ✅ Pipeline ocupa altura total do viewport (JS dinâmico)
+- ✅ Colunas colapsáveis (Alpine.js): 150px colapsada, 300px expandida
+- ✅ Headers com cor do stage, nome, contador, total value
+- ✅ Formatação de valores com K/M/B (custom filter `short_value`)
+- ✅ Cards com título, valor, contact, source badge, priority stars, avatar
+- ✅ Highlights de overdue (vermelho) e warning (amarelo) nos cards
+- ✅ Search bar idêntica ao app contacts (multi-field)
+- ✅ View toggle (Kanban/List) na UI
+- ✅ 110 leads de teste criadas (9 New, 9 Qualified, 8 Proposition, 52 Won, 32 Lost)
+- ✅ Template filter `crm_filters.py` com formatação de valores
+- ✅ Campo `Lead.contact` agora opcional (migração aplicada)
+- ✅ **Drag & drop funcional** com Sortable.js
+- ✅ **API endpoint `/crm/leads/<uuid>/change-stage/`** com validação multi-company
+- ✅ **AJAX updates** ao arrastar cards entre colunas
 
-- [ ] **Configurar endpoint para drag & drop**
-  - [ ] POST `crm/leads/<uuid:pk>/move/` (recebe new_stage_id)
-  - [ ] Atualizar lead.stage com novo CRMStage
-  - [ ] Atualizar lead.updated_at (para recalcular routing)
-  - [ ] Atualizar probability automaticamente (se stage tiver default probability)
-  - [ ] Retornar JSON: {success: true, new_stage_name, new_color, updated_kpis}
+**⏳ PENDENTE:**
+- ⏳ Modal lost_reason para stage "Lost" (drag para Lost pede motivo)
+- ⏳ UI update automático de totais/contadores após drag (sem reload)
+- ⏳ Botão "+" funcional para criar lead no stage
+- ⏳ Lead detail view (click no card)
+- ⏳ Filtros avançados (assigned_to, priority, date range, tags, source)
+- ⏳ Progress bar dividida em 3 cores (verde/amarelo/vermelho) no header
+- ⏳ Activity icons baseados em activities reais do banco
+- ⏳ Sistema de tags customizáveis (JSONField)
+- ⏳ Lead list view alternativa (`/crm/sales/`)
+- ⏳ Mobile responsive otimizado (accordion/tabs)
+- ⏳ Testes automatizados
+- ⏳ Empty state nas colunas vazias
+- ⏳ Prioridade stars corrigida (HIGH=3, MEDIUM=2, LOW=1)
 
-- [ ] **Configurar rota**
-  - [ ] `path('crm/pipeline/', LeadKanbanView, name='lead_kanban')`
-  - [ ] `path('crm/leads/<uuid:pk>/move/', LeadMoveStageView, name='lead_move')`
+---
 
-- [ ] **Testing - Kanban**
-  - [ ] Test: vista carrega stages dinâmicos
-  - [ ] Test: progress bar calcula cores corretamente
-  - [ ] Test: drag & drop atualiza stage
-  - [ ] Test: KPIs calculam por coluna
-  - [ ] Test: routing_in_days=0 não mostra progress bar
-  - [ ] Test: fold_by_default colapsa colunas
-  - [ ] Test: filtros funcionam
+### 5.9.1 Estrutura do Kanban Board
+
+- [x] **Criar LeadPipelineView (Vista Default)**
+  - [x] **URL Principal:** `path('crm/', LeadPipelineView, name='crm_home')` → Redireciona automaticamente para pipeline
+  - [x] **URL Alternativa:** `path('crm/pipeline/', LeadPipelineView, name='lead_pipeline')` → Alias
+  - [x] Carregar stages dinâmicamente do modelo CRMStage (ordenado por sequence, filter_by_company)
+  - [x] Layout: container flex horizontal com scroll-x
+  - [x] Criar coluna para cada stage (NÃO hardcoded!)
+  - [x] Min-width por coluna: 300px expandida, 150px colapsada (adaptado)
+  - [x] Gap entre colunas: 1rem
+  - [x] Aplicar fold_by_default: colunas configuradas aparecem colapsadas (mostrar só header)
+  - [x] Botão "Expand/Collapse" em cada coluna colapsada
+
+- [x] **Header de Cada Coluna**
+  - [x] Background: `background-color: stage.color` (cor do CRMStage) - implementado como barra colorida no topo
+  - [x] Padding: py-3 px-4 (ajustado px-2 pb-3)
+  - [x] Layout:
+    - [x] **Linha 1:** Nome do stage (text-white, font-bold, text-lg) + Badge com contador "(X)"
+    - [x] **Linha 2:** Total estimado com formatação K/M/B (ex: 137K, 204.3M)
+    - [x] **Linha 3:** Progress bar horizontal (barra simples, não dividida em 3 cores)
+  - [x] Botão "+" no canto superior direito (existe, mas ainda não funcional - links to #)
+
+- [x] **Container de Cards**
+  - [x] Área scrollável verticalmente com altura dinâmica via JS
+  - [x] Padding: px-1
+  - [x] Background: bg-gray-800 dark:bg-gray-800
+  - [x] Cards empilhados com gap space-y-2
+  - [ ] Empty state: "Nenhuma oportunidade neste estágio" - TODO
+
+### 5.9.2 Progress Bar por Estágio
+
+**Progress Bar baseada em `routing_in_days`:**
+Se stage.routing_in_days > 0, mostrar barra dividida em 3 cores baseada no tempo que a lead está no stage:
+
+- [x] **Calcular para cada lead no stage:**
+  - [x] `days_in_stage = (hoje - lead.stage_updated_at).days`
+  - [x] Verde (no prazo): `days_in_stage < routing_in_days`
+  - [x] Amarelo (último dia): `days_in_stage == routing_in_days`
+  - [x] Vermelho (atrasado): `days_in_stage > routing_in_days`
+  - [x] IMPLEMENTADO: flags `is_overdue` e `is_warning` anotadas em cada lead no view
+
+- [x] **Renderizar indicadores visuais:** (Abordagem alternativa implementada)
+  - [x] Highlights nos CARDS em vez de barra dividida no header:
+    - [x] Verde (no prazo): sem highlight, border normal
+    - [x] Amarelo (warning): bg-yellow-900/30, border-yellow-700/50
+    - [x] Vermelho (overdue): bg-red-900/30, border-red-700/50
+  - [x] Progress bar simples no header (não dividida em 3 cores)
+  - [ ] **TODO FUTURO:** Implementar barra dividida em 3 cores com tooltips no header (opcional)
+
+**Alternativa opcional (comentar no código):**
+Progress bar baseada em `probability` média do stage (mais simples, menos específico):
+- [ ] Calcular avg_probability do stage
+- [ ] Barra única com fill de avg_probability% (cor do stage)
+
+### 5.9.3 Lead Cards (Design Odoo-like)
+
+- [x] **Layout do Card (Design compacto)**
+  - [x] Container: bg-gray-800 dark:bg-gray-800, rounded-lg, shadow-sm, p-3
+  - [x] Border com cores baseadas em routing (amarelo/vermelho para warning/overdue)
+  - [x] Hover: border-gray-600, cursor-pointer
+  - [ ] Click: abre lead_detail_view (modal ou página) - TODO
+
+- [x] **Linha 1: Título da Lead**
+  - [x] `lead.title` em font-medium, text-sm, text-white
+  - [x] Exibido corretamente
+
+- [x] **Linha 2: Expected Revenue (Destaque)**
+  - [x] `lead.estimated_value` formatado: **"$ 15,000.00"**
+  - [x] Cor: text-gray-300
+  - [x] Font: text-sm
+
+- [x] **Linha 3: Nome do Contacto**
+  - [x] `lead.contact.name` em text-xs, text-gray-400
+  - [x] Exibido se lead.contact existe (campo agora opcional)
+
+- [x] **Linha 4: Estrelas de Prioridade (Priority Stars)**
+  - [x] Renderizar baseado em `lead.priority`:
+    - [x] LOW: ☆☆☆ (3 estrelas vazias)
+    - [x] MEDIUM: ★☆☆ (1 estrela amarela, 2 vazias)
+    - [x] HIGH: ★★☆ (2 estrelas amarelas, 1 vazia)
+  - [x] Estrela preenchida: `★` text-yellow-400
+  - [x] Estrela vazia: `★` text-gray-600
+  - [x] **NOTA:** Lógica invertida em relação ao spec original, ajustar se necessário
+
+- [x] **Linha 5: Tags (Source Badge)**
+  - [x] Badge de source renderizado com cores diferentes:
+    - [x] WEBSITE: blue, REFERRAL: green, SOCIAL_MEDIA: purple, etc.
+  - [x] Formato: px-2, py-0.5, rounded-full, text-xs
+  - [ ] **TODO:** Implementar sistema de tags customizáveis (JSONField)
+
+- [x] **Linha 6: Activity Icons**
+  - [x] Ícone de telefone (phone) exibido estaticamente
+  - [ ] **TODO:** Buscar activities reais do banco e renderizar dinamicamente
+  - [ ] **TODO:** Cores baseadas em status (done/overdue/pending)
+
+- [x] **Linha 7: Assigned To (Responsável)**
+  - [x] Avatar circular com iniciais do username
+  - [x] Background: bg-primary, w-6 h-6
+  - [x] Posição: canto inferior direito do card
+  - [x] Tooltip com username no title
+
+### 5.9.4 Drag & Drop Entre Colunas (Sortable.js)
+
+**STATUS: ✅ IMPLEMENTADO - Drag & drop funcional com backend**
+
+- [x] **Implementar Sortable.js para inter-column drag**
+  - [x] Cada coluna é um container sortable separado
+  - [x] Configuração implementada com group: 'leads', animation: 150, etc.
+  - [x] Data attributes adicionados: `data-stage-id` nas colunas, `data-lead-id` nos cards
+  - [x] Cursor mudado para `cursor-move` nos cards
+  - [x] onEnd handler chama `moveLeadToStage()` via AJAX
+
+- [x] **Backend endpoint: lead_change_stage**
+  - [x] Rota: `POST /crm/leads/<uuid:lead_id>/change-stage/`
+  - [x] Payload: `{"new_stage_id": "abc-123"}`
+  - [x] Validações:
+    - [x] Lead existe e pertence à company do user
+    - [x] New stage existe e pertence à company do user
+    - [x] Multi-company security enforced com `get_active_company()`
+  - [x] Updates:
+    - [x] `lead.stage = new_stage`
+    - [x] `lead.stage_updated_at = timezone.now()` (para routing)
+  - [x] Retorna JSON:
+    ```json
+    {
+      "success": true,
+      "new_stage_name": "Qualified",
+      "new_stage_color": "#17a2b8",
+      "old_column_total": 65000.00,
+      "new_column_total": 80000.00,
+      "old_column_count": 8,
+      "new_column_count": 12
+    }
+    ```
+
+- [ ] **TODO FUTURO:**
+  - [ ] Auto-update `lead.probability` baseado em stage default_probability
+  - [ ] Modal lost_reason para stage "Lost" (quando drag para Lost)
+  - [ ] UI update automático de totais/contadores sem reload
+  - [ ] Animação visual de sucesso/erro no drag
+
+### 5.9.5 Totais e KPIs por Coluna
+
+- [x] **Calcular totais no backend (LeadPipelineView):**
+  - [x] Total value (soma de estimated_value) calculado
+  - [x] Count de leads calculado
+  - [x] Routing calculations (is_overdue, is_warning) implementado nos cards
+  - [x] Dados passados no context como `pipeline_data`
+  - [ ] **TODO:** Calcular avg_probability (não usado atualmente)
+  - [ ] **TODO:** Calcular verde/amarelo/vermelho aggregated para progress bar dividida
+
+- [x] **Renderizar no header:**
+  - [x] Contador: badge com `(count)` mostrado na collapsed view
+  - [x] Total: `{{ total_value|short_value }}` com formatação K/M/B
+  - [x] Progress bar: barra simples colorida (não dividida em 3 seções)
+  - [ ] **TODO:** Progress bar dividida em 3 cores proporcionais (verde/amarelo/vermelho)
+  ```python
+  stages_with_data = []
+  for stage in stages.filter_by_company():
+      leads = stage.lead_set.filter(is_active=True).filter_by_company()
+      total_value = leads.aggregate(Sum('estimated_value'))['estimated_value__sum'] or Decimal('0.00')
+      avg_probability = leads.aggregate(Avg('probability'))['probability__avg'] or 0
+      count = leads.count()
+      
+      # Routing calculations (para progress bar)
+      if stage.routing_in_days > 0:
+          verde = leads.filter(days_in_stage__lt=stage.routing_in_days).count()
+          amarelo = leads.filter(days_in_stage=stage.routing_in_days).count()
+          vermelho = leads.filter(days_in_stage__gt=stage.routing_in_days).count()
+      else:
+          verde = amarelo = vermelho = 0
+      
+      stages_with_data.append({
+          'stage': stage,
+          'leads': leads,
+          'total_value': total_value,
+          'avg_probability': avg_probability,
+          'count': count,
+          'routing_verde': verde,
+          'routing_amarelo': amarelo,
+          'routing_vermelho': vermelho,
+      })
+  ```
+
+- [ ] **Renderizar no header:**
+  - [ ] Contador: badge pequeno `({{ count }})`
+  - [ ] Total: `R$ {{ total_value|floatformat:2 }}`
+  - [ ] Progress bar: 3 seções com widths proporcionais
+
+### 5.9.6 Filtros e Search (Barra Superior)
+
+- [x] **Barra de Filtros no Topo do Pipeline**
+  - [x] Search bar implementada (idêntica ao app contacts)
+  - [x] Layout com botão "Novo" (links to # - TODO)
+  - [x] View toggle (Kanban/List) implementado (List links to # - TODO)
+  - [ ] Logo "Pipeline" + badge total - não implementado
+  - [ ] Linha de filtros inline - não implementada
+
+- [x] **Filtros implementados:**
+  - [x] **Search bar**: busca por `lead.title` (field selector com dropdown)
+  - [ ] Outros campos de busca: contact, source, assigned_to, priority, description - TODO
+  - [ ] **Dropdown "Assigned to"** - não implementado
+  - [ ] **Dropdown "Priority"** - não implementado
+  - [ ] **Date Range Picker** - não implementado
+  - [ ] **Dropdown "Tags"** - não implementado
+  - [ ] **Dropdown "Source"** - não implementado
+
+- [ ] **Implementação de Filtros:** - não implementado (apenas search básica)
+- [ ] **Botão "Clear Filters"** - não implementado
+
+### 5.9.7 Mobile Responsive
+
+**STATUS: NÃO IMPLEMENTADO - Layout atual responsivo básico com Tailwind, mas não otimizado para mobile**
+
+- [x] **Desktop (>1024px):** Colunas lado a lado com scroll horizontal - FUNCIONA
+  - [x] Smooth scroll funciona naturalmente
+  - [ ] TODO: Ajustar para garantir 4 colunas visíveis
+
+- [ ] **Tablet (768-1024px):** 2-3 colunas visíveis - não testado/otimizado
+- [ ] **Mobile (<768px):** Layout vertical ou tabs - não implementado
+  - [ ] **Opção 1 - Accordion:**
+    - [ ] Cada stage é um collapsible panel
+    - [ ] Click no header expande a coluna, mostra cards
+    - [ ] Só 1 coluna expandida por vez
+  - [ ] **Opção 2 - Tabs horizontais:**
+    - [ ] Tabs com nome dos stages no topo
+    - [ ] Swipe entre tabs (mobile-friendly)
+    - [ ] Cada tab mostra cards daquele stage
+  - [ ] **Drag & drop desabilitado no mobile** (difícil de usar)
+    - [ ] Substituir por botão "Mover para..." dentro do card
+    - [ ] Abre dropdown com lista de stages
+    - [ ] Selecionar novo stage → chama mesmo endpoint change-stage
+
+### 5.9.8 Navegação e URLs
+
+- [x] **Atualizar crm_navbar.html:**
+  - [x] Link "CRM" → `/crm/` (pipeline view, DEFAULT) - **Destacado como ativo**
+  - [ ] Link "Sales" → `/crm/sales/` (lista tabular de leads) - **Links to # atualmente**
+  - [ ] Link "Reporting" → `/crm/reporting/` (dashboards) - **Desabilitado**
+  - [x] Dropdown "Configuração" → Etapas, Categorias, etc. - **Implementado**
+
+- [ ] **Criar Lead List View alternativa (task 5.5):**
+  - [ ] URL: `/crm/sales/` (lista tradicional tabular) - **TODO**
+  - [ ] Para users que preferem tabelas
+  - [ ] Botão "Ver Pipeline" switch para `/crm/`
+
+### 5.9.9 Templates Necessários
+
+- [x] **templates/crm/lead_pipeline.html**: Layout principal do Kanban - **CRIADO**
+  - [x] Loop por `pipeline_data`
+  - [x] Renderiza colunas com headers colapsáveis (Alpine.js)
+  - [x] Renderiza cards com todos os campos principais
+  - [x] Search bar idêntica ao app contacts
+  - [x] CSS inline para layout flex, scroll, altura dinâmica
+  - [x] JS para calcular altura do pipeline dinamicamente
+  - [x] SortableJS CDN carregado (não wired ainda)
+
+- [ ] **templates/crm/components/lead_card.html**: Card individual (partial) - **NÃO CRIADO**
+  - [ ] TODO: Extrair card para component reusável
+  - [ ] Renderizar colunas com headers coloridos
+  - [ ] Incluir `lead_card.html` para cada lead
+  - [ ] Script Sortable.js para drag & drop
+
+- [ ] **templates/crm/partials/lead_card.html**: Card individual (include)
+- [ ] **templates/crm/components/lead_card.html**: Card individual (partial) - **NÃO CRIADO**
+  - [ ] TODO: Extrair card para component reusável
+  - [ ] Recebe context: `lead` object
+  - [ ] Renderiza: title, value, contact, priority stars, tags, activity icons, assigned_to
+  - [ ] Data attributes: `data-lead-id="{{ lead.id }}"` (para Sortable.js)
+
+- [ ] **templates/crm/lost_reason_modal.html**: Modal para lost_reason - **NÃO CRIADO**
+  - [ ] Form com textarea
+  - [ ] Botões: Cancelar, Confirmar
+  - [ ] Alpine.js para controlar visibilidade
+
+- [ ] **templates/crm/pipeline_filters.html**: Barra de filtros (include) - **NÃO CRIADO**
+  - [ ] Opcional: modularizar filtros em partial
+
+### 5.9.10 Testing - Pipeline View
+
+**STATUS: TESTES NÃO IMPLEMENTADOS - View funcional criada mas sem cobertura de testes**
+
+- [ ] **Test: pipeline view carrega todas as colunas dinamicamente**
+  - Criar 5 stages, verificar 5 colunas renderizadas
+  - Verificar ordem por sequence
+
+- [ ] **Test: totais calculados corretamente**
+  - Criar 3 leads no stage "New": R$ 1.000, R$ 2.000, R$ 3.000
+  - Verificar header mostra "R$ 6.000,00"
+
+- [ ] **Test: progress bar renderiza cores baseado em routing**
+  - Stage com routing_in_days=7
+  - Lead A: 3 dias no stage (verde)
+  - Lead B: 7 dias no stage (amarelo)
+  - Lead C: 10 dias no stage (vermelho)
+  - Verificar progress bar: 33% verde, 33% amarelo, 33% vermelho
+
+- [ ] **Test: drag-and-drop atualiza stage da lead**
+  - Simular drag de lead do stage "New" para "Qualified"
+  - Verificar lead.stage mudou
+  - Verificar lead.stage_updated_at atualizado
+  - Verificar lead.probability auto-atualizada
+
+- [ ] **Test: modal lost_reason aparece ao drag para Lost**
+  - Drag card para stage "Lost"
+  - Verificar modal aparece
+  - Verificar lost_reason obrigatório
+  - Simular cancelamento: card volta para coluna original
+
+- [ ] **Test: priority stars renderizam corretamente**
+  - Lead LOW: 1 estrela preenchida, 2 vazias
+  - Lead MEDIUM: 2 estrelas preenchidas, 1 vazia
+  - Lead HIGH: 3 estrelas preenchidas
+
+- [ ] **Test: tags renderizam como badges**
+  - Lead com 2 tags: "VIP" (vermelho), "Urgente" (laranja)
+  - Verificar 2 badges coloridos aparecem
+
+- [ ] **Test: activity icons aparecem**
+  - Lead com 1 CALL (pendente), 1 EMAIL (done)
+  - Verificar 📞 (cinza) e ✉️ (verde) aparecem
+
+- [ ] **Test: filtro "Assigned to Me" funciona**
+  - Criar 3 leads: 2 para user A, 1 para user B
+  - User A aplica filtro "As minhas"
+  - Verificar só 2 leads aparecem
+
+- [ ] **Test: filtro por priority funciona**
+  - Criar leads: 2 HIGH, 2 MEDIUM, 1 LOW
+  - Aplicar filtro "High"
+  - Verificar só 2 leads aparecem
+
+- [ ] **Test: mobile responsive mostra accordion ou tabs**
+  - Viewport <768px
+  - Verificar colunas viram accordion/tabs
+  - Verificar drag & drop desabilitado
+
+- [ ] **Test: fold_by_default colapsa colunas**
+  - Stage com fold_by_default=True
+  - Verificar coluna aparece colapsada (só header)
+  - Click no botão "Expand" → mostra cards
+
+- [ ] **Test: botão "+" no header cria lead direto no stage**
+  - Click no "+" do stage "Qualified"
+  - Verificar form abre com stage pré-selecionado
 
 ---
 
@@ -1950,6 +2278,22 @@ Criar funcionalidade para gerar leads automaticamente baseado em dados históric
   - [ ] Test: filtros de período funcionam
   - [ ] Test: assigned_to herda da última venda
 
+
+Task 5.9 PRIMEIRO - Pipeline/Kanban (a view principal que tu queres!)
+
+Colunas por stage (New, Qualified, Proposition, Won)
+Drag & drop para mover leads entre stages
+Cards com info básica (title, valor, contacto)
+Botão "+" em cada coluna para criar lead naquele stage
+Task 5.6 - LeadCreateView (modal simples para criar lead do pipeline)
+
+Task 5.7 - LeadDetailView (modal/sidebar ao clicar no card)
+
+Task 5.5 - LeadListView (view alternativa, não default)
+
+Task 5.8 - LeadUpdateView (editar lead)
+
+no final ver o que falta e im-plementar
 ---
 
 ## 4.16 Template Base de Smart Buttons (Relações Modulares)

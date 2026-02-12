@@ -4,6 +4,13 @@ from . import views
 app_name = 'crm'
 
 urlpatterns = [
+    # Pipeline / Kanban (Default View)
+    path('', views.lead_pipeline_view, name='crm_home'),  # /crm/ → Pipeline (DEFAULT)
+    path('pipeline/', views.lead_pipeline_view, name='lead_pipeline'),  # Alias
+    
+    # Lead Actions (API)
+    path('leads/<uuid:lead_id>/change-stage/', views.lead_change_stage, name='lead_change_stage'),
+    
     # Stages (Configuração)
     path('stages/', views.stage_list_view, name='stage_list'),
     path('stages/new/', views.stage_create_view, name='stage_create'),

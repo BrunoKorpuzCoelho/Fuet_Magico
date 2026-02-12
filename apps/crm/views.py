@@ -1,14 +1,16 @@
-from django.shortcuts import render, redirect, get_object_or_404
+﻿from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q, F
+from django.db.models import Q, F, Sum, Count
+from django.utils import timezone
+from datetime import timedelta
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import ensure_csrf_cookie
 from apps.accounts.decorators import admin_required
 from apps.core.multi_company import filter_by_company, get_active_company
-from .models import CRMStage
+from .models import CRMStage, Lead
 from .forms import CRMStageForm
 import json
 import random
@@ -516,3 +518,182 @@ def stage_edit_view(request, stage_id):
     }
     
     return render(request, 'crm/stage_form.html', context)
+
+
+# =============================================
+# PIPELINE / KANBAN VIEW (Default CRM View)
+# =============================================
+
+@login_required
+def lead_pipeline_view(request):
+    """
+    Vista Kanban do Pipeline CRM (Odoo-style).
+    Esta é a vista DEFAULT ao aceder /crm/
+    
+    Mostra leads organizadas por estágio com drag & drop,
+    totais por coluna, progress bars e filtros.
+    """
+    # Load all active stages (filtered by company)
+    stages = CRMStage.objects.filter(is_active=True)
+    stages = filter_by_company(stages, request)
+    stages = stages.order_by('sequence', 'name')
+    
+    # Handle search
+    search_query = request.GET.get('search', '').strip()
+    search_field = request.GET.get('field', 'title')
+    
+    # For each stage, get leads and calculate totals
+    pipeline_data = []
+    grand_total_value = 0
+    grand_total_count = 0
+    
+    for stage in stages:
+        # Get leads for this stage
+        leads = Lead.objects.filter(stage=stage, is_active=True)
+        leads = filter_by_company(leads, request)
+        
+        # Apply search filter
+        if search_query:
+            search_filters = {
+                'title': Q(title__icontains=search_query),
+                'contact': Q(contact__name__icontains=search_query),
+                'source': Q(source__icontains=search_query),
+                'assigned_to': Q(assigned_to__username__icontains=search_query),
+                'priority': Q(priority__icontains=search_query),
+                'description': Q(description__icontains=search_query),
+            }
+            leads = leads.filter(search_filters.get(search_field, Q(title__icontains=search_query)))
+        
+        leads = leads.select_related('contact', 'assigned_to', 'stage')
+        leads = leads.order_by('-created_at')
+        
+        # Annotate overdue status (routing_in_days > 0 and lead stuck too long)
+        leads_list = list(leads)
+        now = timezone.now()
+        for lead in leads_list:
+            if stage.routing_in_days > 0:
+                days_in_stage = (now - lead.stage_updated_at).days
+                if days_in_stage > stage.routing_in_days:
+                    lead.is_overdue = True
+                    lead.is_warning = False
+                elif days_in_stage == stage.routing_in_days:
+                    lead.is_overdue = False
+                    lead.is_warning = True
+                else:
+                    lead.is_overdue = False
+                    lead.is_warning = False
+            else:
+                lead.is_overdue = False
+                lead.is_warning = False
+        
+        # Calculate totals for this column
+        stage_stats = leads.aggregate(
+            total_value=Sum('estimated_value'),
+            count=Count('id')
+        )
+        
+        stage_total = stage_stats['total_value'] or 0
+        stage_count = stage_stats['count'] or 0
+        
+        pipeline_data.append({
+            'stage': stage,
+            'leads': leads_list,
+            'total_value': stage_total,
+            'count': stage_count,
+            'is_folded': stage.fold_by_default,
+        })
+        
+        grand_total_value += stage_total
+        grand_total_count += stage_count
+    
+    context = {
+        'pipeline_data': pipeline_data,
+        'grand_total_value': grand_total_value,
+        'grand_total_count': grand_total_count,
+        'search_query': search_query,
+        'search_field': search_field,
+    }
+    
+    return render(request, 'crm/lead_pipeline.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def lead_change_stage(request, lead_id):
+    """
+    API endpoint to change a lead's stage via drag & drop.
+    POST /crm/leads/<uuid:lead_id>/change-stage/
+    Payload: {"new_stage_id": "stage-uuid"}
+    """
+    try:
+        # Parse JSON body
+        data = json.loads(request.body)
+        new_stage_id = data.get('new_stage_id')
+        
+        if not new_stage_id:
+            return JsonResponse({'success': False, 'error': 'new_stage_id is required'}, status=400)
+        
+        # Get active company
+        active_company = get_active_company(request)
+        
+        # Debug: Check if stage exists
+        try:
+            new_stage = CRMStage.objects.get(id=new_stage_id)
+        except CRMStage.DoesNotExist:
+            return JsonResponse({
+                'success': False, 
+                'error': f'Stage with id {new_stage_id} does not exist'
+            }, status=404)
+        
+        # Check if stage belongs to user's company OR is global (owner_company=None)
+        if new_stage.owner_company is not None and new_stage.owner_company != active_company:
+            return JsonResponse({
+                'success': False, 
+                'error': f'Stage belongs to different company. Stage company: {new_stage.owner_company}, Active company: {active_company}'
+            }, status=403)
+        
+        # Get lead (must belong to user's company)
+        try:
+            lead = Lead.objects.get(id=lead_id, owner_company=active_company)
+        except Lead.DoesNotExist:
+            return JsonResponse({
+                'success': False, 
+                'error': f'Lead with id {lead_id} not found or belongs to different company'
+            }, status=404)
+        
+        # Store old stage for totals calculation
+        old_stage = lead.stage
+        
+        # Update lead
+        lead.stage = new_stage
+        lead.stage_updated_at = timezone.now()
+        lead.save()
+        
+        # Calculate new totals for both columns
+        old_column_leads = Lead.objects.filter(stage=old_stage, owner_company=active_company)
+        old_column_total = old_column_leads.aggregate(Sum('estimated_value'))['estimated_value__sum'] or 0
+        
+        new_column_leads = Lead.objects.filter(stage=new_stage, owner_company=active_company)
+        new_column_total = new_column_leads.aggregate(Sum('estimated_value'))['estimated_value__sum'] or 0
+        
+        return JsonResponse({
+            'success': True,
+            'new_stage_name': new_stage.name,
+            'new_stage_color': new_stage.color,
+            'old_stage_id': str(old_stage.id),
+            'new_stage_id': str(new_stage.id),
+            'old_column_total': float(old_column_total),
+            'new_column_total': float(new_column_total),
+            'old_column_count': old_column_leads.count(),
+            'new_column_count': new_column_leads.count(),
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            'success': False, 
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }, status=500)
