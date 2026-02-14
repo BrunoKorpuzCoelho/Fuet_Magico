@@ -36,19 +36,19 @@ def setup_companies():
     # Create additional test companies
     companies_data = [
         {
-            'name': 'Cubix Solutions',
-            'legal_name': 'Cubix Solutions Lda',
-            'email': 'info@cubix.pt',
-            'phone': '+351 987 654 321',
+            'name': 'Doce Ingrediente',
+            'legal_name': 'Doce Ingrediente - Distribuição de Matérias-Primas, Lda',
+            'email': 'comercial@doceingrediente.pt',
+            'phone': '+351 234 567 890',
             'country': 'Portugal',
             'currency': 'EUR',
             'language': 'pt_PT'
         },
         {
-            'name': 'Tech Innovations',
-            'legal_name': 'Tech Innovations SA',
-            'email': 'contact@techinnovations.pt',
-            'phone': '+351 111 222 333',
+            'name': 'Embala+ Packaging',
+            'legal_name': 'Embala+ Embalagens para Pastelaria SA',
+            'email': 'vendas@embalaplus.pt',
+            'phone': '+351 245 678 901',
             'country': 'Portugal',
             'currency': 'EUR',
             'language': 'pt_PT'
