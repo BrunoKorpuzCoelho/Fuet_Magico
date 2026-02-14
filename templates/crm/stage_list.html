@@ -437,6 +437,11 @@
                                         Vitória
                                     </span>
                                     {% endif %}
+                                    {% if stage.is_lost_stage %}
+                                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                        Perda
+                                    </span>
+                                    {% endif %}
                                     {% if stage.fold_by_default %}
                                     <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
                                         Colapsado

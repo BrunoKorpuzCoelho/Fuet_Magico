@@ -775,6 +775,1531 @@ Criar modelo Company e suporte multi-company no sistema.
   - [x] Test: user pode ter múltiplas companies
   - [x] Test: filtros por company funcionam (Contact e ContactTag)
 
+
+## 3.12.1 Modelos de Base de Dados do Chatter
+
+Criar modelos para mensagens, notas e atividades com GenericForeignKey.
+
+- [ ] **Criar modelo ChatterMessage**
+  - [ ] Criar em `apps/core/models.py`
+  - [ ] Herdar de AbstractBaseModel
+  - [ ] **GenericForeignKey (funciona com QUALQUER modelo - Lead, Contact, Sale, etc.):**
+    ```python
+    from django.contrib.contenttypes.fields import GenericForeignKey
+    from django.contrib.contenttypes.models import ContentType
+    
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.UUIDField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    ```
+  - [ ] **Campos principais:**
+    - [ ] author (ForeignKey CustomUser, on_delete=SET_NULL, nullable)
+    - [ ] message_type (CharField, max_length=10, choices=[('EMAIL', 'Email'), ('NOTE', 'Nota Interna')])
+    - [ ] subject (CharField, max_length=255, blank=True) - só para emails
+    - [ ] body (TextField) - conteúdo da mensagem/nota
+    - [ ] to_email (EmailField, blank=True, null=True) - destinatário
+    - [ ] cc_emails (TextField, blank=True) - CC separados por vírgula
+  - [ ] **Anexos:**
+    - [ ] attachments (JSONField, default=list, blank=True)
+      ```python
+      # Exemplo:
+      [
+        {"filename": "fatura.pdf", "url": "/media/attachments/fatura.pdf"},
+        {"filename": "foto.jpg", "url": "/media/attachments/foto.jpg"}
+      ]
+      ```
+  - [ ] **Status:**
+    - [ ] is_internal (BooleanField, default=False) - True = nota interna
+    - [ ] sent_at (DateTimeField, null=True, blank=True) - quando enviado
+  - [ ] **Meta:**
+    ```python
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['content_type', 'object_id']),
+            models.Index(fields=['author']),
+            models.Index(fields=['message_type']),
+        ]
+        verbose_name = 'Mensagem do Chatter'
+        verbose_name_plural = 'Mensagens do Chatter'
+    ```
+  - [ ] **Methods:**
+    ```python
+    def __str__(self):
+        return f"{self.get_message_type_display()} - {self.author} - {self.created_at}"
+    
+    @property
+    def is_email(self):
+        return self.message_type == 'EMAIL'
+    
+    @property
+    def is_note(self):
+        return self.message_type == 'NOTE'
+    ```
+
+- [ ] **Criar modelo ChatterActivity**
+  - [ ] Criar em `apps/core/models.py`
+  - [ ] Herdar de AbstractBaseModel
+  - [ ] **GenericForeignKey:**
+    ```python
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.UUIDField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    ```
+  - [ ] **Campos:**
+    - [ ] user (ForeignKey CustomUser, on_delete=SET_NULL, null=True)
+    - [ ] activity_type (CharField, max_length=20, choices=[...])
+      ```python
+      ACTIVITY_TYPES = [
+          ('CREATE', 'Criado'),
+          ('UPDATE', 'Atualizado'),
+          ('DELETE', 'Eliminado'),
+          ('STATUS_CHANGE', 'Mudança de Estado'),
+          ('STAGE_CHANGE', 'Mudança de Estágio'),
+          ('ASSIGNMENT', 'Atribuído'),
+          ('EMAIL_SENT', 'Email Enviado'),
+          ('WHATSAPP_SENT', 'WhatsApp Enviado'),
+          ('CALL', 'Chamada'),
+          ('MEETING', 'Reunião'),
+          ('COMMENT', 'Comentário'),
+      ]
+      ```
+    - [ ] description (TextField) - texto legível: "mudou o estágio de New para Qualified"
+    - [ ] details (JSONField, default=dict, blank=True)
+      ```python
+      # Exemplo:
+      {
+        "field": "stage",
+        "old_value": "New",
+        "new_value": "Qualified"
+      }
+      ```
+  - [ ] **Meta:**
+    ```python
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['content_type', 'object_id']),
+            models.Index(fields=['user']),
+        ]
+        verbose_name = 'Atividade do Chatter'
+        verbose_name_plural = 'Atividades do Chatter'
+    ```
+  - [ ] **Methods:**
+    ```python
+    def __str__(self):
+        return f"{self.user} - {self.get_activity_type_display()} - {self.created_at}"
+    ```
+
+- [ ] **Criar migrations**
+  - [ ] Executar `python manage.py makemigrations core`
+  - [ ] Executar `python manage.py migrate`
+
+- [ ] **Registrar no Admin**
+  - [ ] ChatterMessageAdmin:
+    ```python
+    from django.contrib import admin
+    from apps.core.models import ChatterMessage, ChatterActivity
+    
+    @admin.register(ChatterMessage)
+    class ChatterMessageAdmin(admin.ModelAdmin):
+        list_display = ['id', 'content_object', 'author', 'message_type', 'subject', 'is_internal', 'created_at']
+        list_filter = ['message_type', 'is_internal', 'created_at']
+        search_fields = ['subject', 'body', 'to_email']
+        readonly_fields = ['content_type', 'object_id', 'sent_at', 'created_at', 'updated_at']
+        fieldsets = (
+            ('Objeto Relacionado', {
+                'fields': ('content_type', 'object_id')
+            }),
+            ('Mensagem', {
+                'fields': ('author', 'message_type', 'subject', 'body')
+            }),
+            ('Email', {
+                'fields': ('to_email', 'cc_emails', 'sent_at')
+            }),
+            ('Anexos e Status', {
+                'fields': ('attachments', 'is_internal')
+            }),
+            ('Timestamps', {
+                'fields': ('created_at', 'updated_at')
+            }),
+        )
+    ```
+  - [ ] ChatterActivityAdmin:
+    ```python
+    @admin.register(ChatterActivity)
+    class ChatterActivityAdmin(admin.ModelAdmin):
+        list_display = ['id', 'content_object', 'user', 'activity_type', 'description', 'created_at']
+        list_filter = ['activity_type', 'created_at']
+        search_fields = ['description']
+        readonly_fields = ['content_type', 'object_id', 'created_at']
+        fieldsets = (
+            ('Objeto Relacionado', {
+                'fields': ('content_type', 'object_id')
+            }),
+            ('Atividade', {
+                'fields': ('user', 'activity_type', 'description', 'details')
+            }),
+            ('Timestamp', {
+                'fields': ('created_at',)
+            }),
+        )
+    ```
+
+- [ ] **Testing - Modelos**
+  - [ ] Test: criar ChatterMessage EMAIL funciona
+  - [ ] Test: criar ChatterMessage NOTE funciona
+  - [ ] Test: GenericForeignKey funciona com Lead
+  - [ ] Test: GenericForeignKey funciona com Contact
+  - [ ] Test: criar ChatterActivity funciona
+  - [ ] Test: attachments JSON guarda lista de ficheiros
+  - [ ] Test: details JSON guarda mudanças de campos
+  - [ ] Test: is_email e is_note properties funcionam
+
+---
+
+## 3.12.2 Template Tags Personalizados
+
+Criar template tags para facilitar uso do chatter.
+
+- [ ] **Criar pasta templatetags**
+  - [ ] Criar `apps/core/templatetags/` (se não existir)
+  - [ ] Criar `apps/core/templatetags/__init__.py` (vazio)
+
+- [ ] **Criar chatter_tags.py**
+  - [ ] Criar `apps/core/templatetags/chatter_tags.py`
+  ```python
+  from django import template
+  from django.contrib.contenttypes.models import ContentType
+  
+  register = template.Library()
+  
+  @register.filter
+  def content_type(obj):
+      """
+      Retorna 'app_label.model' para usar no Alpine.js
+      
+      Uso no template:
+      <div x-data="chatterComponent('{{ object|content_type }}', '{{ object.id }}')">
+      
+      Exemplo de retorno: "crm.lead"
+      """
+      ct = ContentType.objects.get_for_model(obj)
+      return f"{ct.app_label}.{ct.model}"
+  ```
+
+- [ ] **Testing - Template Tags**
+  - [ ] Test: content_type retorna string correta
+  - [ ] Test: funciona com Lead → "crm.lead"
+  - [ ] Test: funciona com Contact → "contacts.contact"
+  - [ ] Test: funciona com Sale → "sales.saleorder"
+
+---
+
+## 3.12.3 ChatterMixin para Views (Auto-carregar dados)
+
+Criar mixin Django para adicionar dados do chatter automaticamente nas DetailViews.
+
+- [ ] **Criar ChatterMixin**
+  - [ ] Criar em `apps/core/views.py`
+  ```python
+  from django.views.generic import DetailView
+  from django.contrib.contenttypes.models import ContentType
+  from apps.core.models import ChatterMessage, ChatterActivity
+  
+  class ChatterMixin:
+      """
+      Mixin para adicionar dados do chatter em qualquer DetailView.
+      
+      USO SIMPLES:
+      ------------
+      class LeadDetailView(ChatterMixin, DetailView):
+          model = Lead
+          template_name = 'crm/lead_detail.html'
+      
+      No template, incluir:
+      {% include 'components/chatter.html' with object=lead %}
+      
+      O mixin adiciona automaticamente ao context:
+      - whatsapp_messages: lista de mensagens WhatsApp (quando Fase 12 implementada)
+      - chatter_messages: lista de emails + notas
+      - activities: lista de atividades (audit log)
+      """
+      
+      def get_context_data(self, **kwargs):
+          context = super().get_context_data(**kwargs)
+          obj = self.get_object()
+          content_type = ContentType.objects.get_for_model(obj)
+          
+          # WhatsApp messages (PLACEHOLDER - Fase 12)
+          # Quando Fase 12 implementada:
+          # from apps.marketing.models import WhatsAppMessage
+          # context['whatsapp_messages'] = WhatsAppMessage.objects.filter(
+          #     content_type=content_type,
+          #     object_id=obj.id
+          # ).order_by('sent_at')
+          context['whatsapp_messages'] = []
+          
+          # Chatter messages (emails + notas) - JÁ FUNCIONA!
+          context['chatter_messages'] = ChatterMessage.objects.filter(
+              content_type=content_type,
+              object_id=obj.id
+          ).select_related('author').order_by('-created_at')
+          
+          # Activities (audit log) - JÁ FUNCIONA!
+          context['activities'] = ChatterActivity.objects.filter(
+              content_type=content_type,
+              object_id=obj.id
+          ).select_related('user').order_by('-created_at')[:100]  # Últimas 100
+          
+          return context
+  ```
+
+- [ ] **Documentar uso**
+  - [ ] Criar comentário explicativo no código
+  - [ ] Exemplo de uso em docstring
+
+- [ ] **Testing - ChatterMixin**
+  - [ ] Test: mixin adiciona context['chatter_messages']
+  - [ ] Test: mixin adiciona context['activities']
+  - [ ] Test: mixin adiciona context['whatsapp_messages'] (vazio por agora)
+  - [ ] Test: funciona com Lead
+  - [ ] Test: funciona com Contact
+
+---
+
+## 3.12.4 Componente Chatter HTML (Template BASE - será substituído)
+
+Criar template PLACEHOLDER que será substituído pelo teu design depois.
+
+- [ ] **Criar template base**
+  - [ ] Criar `templates/components/chatter.html`
+  - [ ] **NOTA IMPORTANTE:** Este é um template BASE mínimo!
+    - Será **SUBSTITUÍDO** quando tiveres o teu design pronto
+    - Serve apenas para ter estrutura funcional desde já
+    - Usa Alpine.js conforme tua stack
+
+- [ ] **Estrutura mínima (PLACEHOLDER):**
+  ```html
+  {% load static chatter_tags %}
+  
+  <!-- 
+  COMPONENTE CHATTER - PLACEHOLDER
+  Este template será substituído pelo design final.
+  
+  USO:
+  {% include 'components/chatter.html' with object=lead %}
+  {% include 'components/chatter.html' with object=contact %}
+  -->
+  
+  <div 
+      x-data="chatterComponent('{{ object|content_type }}', '{{ object.id }}')" 
+      class="chatter-container bg-gray-800 rounded-lg p-4"
+  >
+      
+      <!-- TABS -->
+      <div class="tabs flex gap-2 mb-4 border-b border-gray-700">
+          <button 
+              @click="activeTab = 'whatsapp'"
+              :class="activeTab === 'whatsapp' ? 'border-yellow-500 text-yellow-500' : 'border-transparent text-gray-400'"
+              class="px-4 py-2 border-b-2 hover:text-white"
+          >
+              💬 WhatsApp
+          </button>
+          <button 
+              @click="activeTab = 'messages'"
+              :class="activeTab === 'messages' ? 'border-yellow-500 text-yellow-500' : 'border-transparent text-gray-400'"
+              class="px-4 py-2 border-b-2 hover:text-white"
+          >
+              📧 Mensagens & Notas
+          </button>
+          <button 
+              @click="activeTab = 'activity'"
+              :class="activeTab === 'activity' ? 'border-yellow-500 text-yellow-500' : 'border-transparent text-gray-400'"
+              class="px-4 py-2 border-b-2 hover:text-white"
+          >
+              📋 Atividade
+          </button>
+      </div>
+      
+      <!-- TAB: WHATSAPP -->
+      <div x-show="activeTab === 'whatsapp'" class="tab-content">
+          <div class="messages h-64 overflow-y-auto bg-gray-900 rounded p-4 mb-4">
+              {% for msg in whatsapp_messages %}
+              <div class="message mb-2">
+                  <p class="text-white">{{ msg.content }}</p>
+              </div>
+              {% empty %}
+              <p class="text-gray-500 text-center py-8">💬 Sem mensagens WhatsApp</p>
+              {% endfor %}
+          </div>
+          <div class="input flex gap-2">
+              <input 
+                  type="text" 
+                  x-model="whatsappMessage"
+                  @keyup.enter="sendWhatsApp()"
+                  placeholder="Mensagem..." 
+                  class="flex-1 px-4 py-2 bg-gray-700 text-white rounded"
+              >
+              <button @click="sendWhatsApp()" class="px-6 py-2 bg-yellow-500 text-gray-900 rounded font-medium">
+                  Enviar
+              </button>
+          </div>
+      </div>
+      
+      <!-- TAB: MENSAGENS & NOTAS -->
+      <div x-show="activeTab === 'messages'" class="tab-content">
+          <!-- Toggle EMAIL/NOTE -->
+          <div class="toggle-buttons flex gap-2 mb-4">
+              <button 
+                  @click="messageType = 'EMAIL'"
+                  :class="messageType === 'EMAIL' ? 'bg-yellow-500 text-gray-900' : 'bg-gray-700 text-white'"
+                  class="px-4 py-2 rounded"
+              >
+                  📧 Enviar Email
+              </button>
+              <button 
+                  @click="messageType = 'NOTE'"
+                  :class="messageType === 'NOTE' ? 'bg-yellow-500 text-gray-900' : 'bg-gray-700 text-white'"
+                  class="px-4 py-2 rounded"
+              >
+                  📝 Adicionar Nota
+              </button>
+          </div>
+          
+          <!-- Histórico -->
+          <div class="history h-48 overflow-y-auto bg-gray-900 rounded p-4 mb-4">
+              {% for msg in chatter_messages %}
+              <div class="item mb-3 pb-3 border-b border-gray-700">
+                  <div class="flex justify-between items-start">
+                      <div>
+                          <strong class="text-white">{{ msg.author.get_full_name }}</strong>
+                          {% if msg.is_note %}
+                          <span class="text-xs bg-blue-600 px-2 py-0.5 rounded ml-2">Nota</span>
+                          {% else %}
+                          <span class="text-xs bg-green-600 px-2 py-0.5 rounded ml-2">Email</span>
+                          {% endif %}
+                      </div>
+                      <span class="text-xs text-gray-400">{{ msg.created_at|date:"d/m/Y H:i" }}</span>
+                  </div>
+                  {% if msg.subject %}
+                  <p class="text-sm text-gray-300 mt-1">{{ msg.subject }}</p>
+                  {% endif %}
+                  <p class="text-sm text-gray-400 mt-1">{{ msg.body|truncatewords:20 }}</p>
+              </div>
+              {% empty %}
+              <p class="text-gray-500 text-center py-8">📭 Sem mensagens ou notas</p>
+              {% endfor %}
+          </div>
+          
+          <!-- Form -->
+          <form @submit.prevent="sendMessageOrNote()">
+              <input 
+                  x-show="messageType === 'EMAIL'"
+                  type="text" 
+                  x-model="messageSubject"
+                  placeholder="Assunto do email" 
+                  class="w-full px-4 py-2 bg-gray-700 text-white rounded mb-2"
+              >
+              <textarea 
+                  x-model="messageBody"
+                  rows="3" 
+                  placeholder="Escrever mensagem..." 
+                  class="w-full px-4 py-2 bg-gray-700 text-white rounded mb-2"
+              ></textarea>
+              <div class="flex justify-between items-center">
+                  <button type="button" class="text-gray-400 hover:text-white">
+                      📎 Anexar ficheiro
+                  </button>
+                  <button type="submit" class="px-6 py-2 bg-yellow-500 text-gray-900 rounded font-medium">
+                      <span x-text="messageType === 'EMAIL' ? 'Enviar Email' : 'Adicionar Nota'"></span>
+                  </button>
+              </div>
+          </form>
+      </div>
+      
+      <!-- TAB: ATIVIDADE -->
+      <div x-show="activeTab === 'activity'" class="tab-content">
+          <div class="timeline h-96 overflow-y-auto">
+              {% for activity in activities %}
+              <div class="item flex gap-3 mb-4">
+                  <div class="icon w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-gray-900 flex-shrink-0">
+                      {% if activity.activity_type == 'CREATE' %}➕
+                      {% elif activity.activity_type == 'UPDATE' %}✏️
+                      {% elif activity.activity_type == 'EMAIL_SENT' %}📧
+                      {% elif activity.activity_type == 'WHATSAPP_SENT' %}💬
+                      {% else %}📋
+                      {% endif %}
+                  </div>
+                  <div class="flex-1">
+                      <p class="text-sm text-white">
+                          <strong>{{ activity.user.get_full_name }}</strong> {{ activity.description }}
+                      </p>
+                      <span class="text-xs text-gray-400">{{ activity.created_at|date:"d/m/Y H:i" }}</span>
+                  </div>
+              </div>
+              {% empty %}
+              <p class="text-gray-500 text-center py-8">📋 Sem atividades</p>
+              {% endfor %}
+          </div>
+      </div>
+      
+  </div>
+  
+  <script>
+  function chatterComponent(objectType, objectId) {
+      return {
+          objectType: objectType,
+          objectId: objectId,
+          activeTab: 'whatsapp',
+          messageType: 'EMAIL',
+          whatsappMessage: '',
+          messageSubject: '',
+          messageBody: '',
+          
+          sendWhatsApp() {
+              console.log('[CHATTER] sendWhatsApp() called - PLACEHOLDER');
+              console.log('Message:', this.whatsappMessage);
+              console.log('Object:', this.objectType, this.objectId);
+              
+              // TODO: Implementar na Fase 12
+              alert('Função sendWhatsApp() será implementada na Fase 12 (WhatsApp API)');
+              
+              // Limpar input
+              this.whatsappMessage = '';
+          },
+          
+          sendMessageOrNote() {
+              console.log('[CHATTER] sendMessageOrNote() called - PLACEHOLDER');
+              console.log('Type:', this.messageType);
+              console.log('Subject:', this.messageSubject);
+              console.log('Body:', this.messageBody);
+              console.log('Object:', this.objectType, this.objectId);
+              
+              // TODO: Implementar depois (criar ChatterMessage via AJAX)
+              alert(`Função sendMessageOrNote() será implementada depois.
+Type: ${this.messageType}
+Por agora é apenas PLACEHOLDER.`);
+              
+              // Limpar form
+              this.messageSubject = '';
+              this.messageBody = '';
+          }
+      }
+  }
+  </script>
+  ```
+
+- [ ] **Incluir Alpine.js no base.html** (se ainda não tiver)
+  - [ ] Adicionar no `<head>` de `templates/base.html`:
+    ```html
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    ```
+
+- [ ] **Testing - Template**
+  - [ ] Test: template renderiza sem erros
+  - [ ] Test: tabs funcionam ao clicar
+  - [ ] Test: toggle EMAIL/NOTE funciona
+  - [ ] Test: Alpine.js x-data inicializa
+  - [ ] Test: funções placeholder mostram alert
+
+---
+
+## 3.12.5 Views Placeholder (APIs REST)
+
+Criar endpoints REST com lógica PLACEHOLDER (print apenas).
+
+- [ ] **Criar view para mensagens/notas**
+  - [ ] Criar em `apps/core/views.py`
+  ```python
+  from django.http import JsonResponse
+  from django.contrib.auth.decorators import login_required
+  from django.views.decorators.http import require_POST
+  import json
+  
+  @login_required
+  @require_POST
+  def chatter_create_message(request):
+      """
+      API para criar email ou nota interna.
+      
+      POST /api/chatter/message/
+      Body JSON:
+      {
+        "object_type": "crm.lead",
+        "object_id": "uuid-aqui",
+        "message_type": "EMAIL" ou "NOTE",
+        "subject": "Assunto (só para EMAIL)",
+        "body": "Conteúdo da mensagem"
+      }
+      
+      NOTA: Esta é função PLACEHOLDER!
+      A lógica completa será implementada depois:
+      - Criar ChatterMessage na BD
+      - Se EMAIL: enviar via SMTP (Tarefa 3.9)
+      - Criar ChatterActivity para audit log
+      """
+      try:
+          data = json.loads(request.body)
+          
+          # PLACEHOLDER: apenas print por agora
+          print("=" * 50)
+          print("[CHATTER API] chatter_create_message() CALLED")
+          print(f"User: {request.user.get_full_name()}")
+          print(f"Object Type: {data.get('object_type')}")
+          print(f"Object ID: {data.get('object_id')}")
+          print(f"Message Type: {data.get('message_type')}")
+          print(f"Subject: {data.get('subject')}")
+          print(f"Body: {data.get('body')[:100]}...")
+          print("=" * 50)
+          
+          # TODO: Implementar lógica completa
+          # 1. Parse ContentType
+          # 2. Criar ChatterMessage
+          # 3. Se EMAIL: enviar via Celery
+          # 4. Criar ChatterActivity
+          
+          return JsonResponse({
+              'success': True,
+              'message': 'PLACEHOLDER - Função será implementada depois'
+          })
+      
+      except Exception as e:
+          print(f"[CHATTER API] ERROR: {e}")
+          return JsonResponse({
+              'success': False,
+              'error': str(e)
+          }, status=400)
+  ```
+
+- [ ] **Criar view para WhatsApp**
+  - [ ] Criar em `apps/core/views.py`
+  ```python
+  @login_required
+  @require_POST
+  def chatter_send_whatsapp(request):
+      """
+      API para enviar WhatsApp.
+      
+      POST /api/chatter/whatsapp/
+      Body JSON:
+      {
+        "object_type": "crm.lead",
+        "object_id": "uuid-aqui",
+        "message": "Texto da mensagem"
+      }
+      
+      NOTA: Função PLACEHOLDER!
+      Será implementada na Fase 12 (WhatsApp API).
+      """
+      try:
+          data = json.loads(request.body)
+          
+          # PLACEHOLDER: apenas print
+          print("=" * 50)
+          print("[CHATTER API] chatter_send_whatsapp() CALLED")
+          print(f"User: {request.user.get_full_name()}")
+          print(f"Object Type: {data.get('object_type')}")
+          print(f"Object ID: {data.get('object_id')}")
+          print(f"Message: {data.get('message')}")
+          print("=" * 50)
+          
+          # TODO: Implementar na Fase 12
+          # 1. Buscar objeto via GenericForeignKey
+          # 2. Obter phone do contacto
+          # 3. Enviar via WhatsApp API
+          # 4. Criar WhatsAppMessage
+          # 5. Criar ChatterActivity
+          
+          return JsonResponse({
+              'success': True,
+              'message': 'PLACEHOLDER - Função será implementada na Fase 12'
+          })
+      
+      except Exception as e:
+          print(f"[CHATTER API] ERROR: {e}")
+          return JsonResponse({
+              'success': False,
+              'error': str(e)
+          }, status=400)
+  ```
+
+- [ ] **Configurar rotas**
+  - [ ] Adicionar em `config/urls.py`:
+    ```python
+    from apps.core.views import chatter_create_message, chatter_send_whatsapp
+    
+    urlpatterns = [
+        # ... outras rotas
+        
+        # Chatter APIs (PLACEHOLDERS)
+        path('api/chatter/message/', chatter_create_message, name='chatter_create_message'),
+        path('api/chatter/whatsapp/', chatter_send_whatsapp, name='chatter_send_whatsapp'),
+    ]
+    ```
+
+- [ ] **Testing - APIs**
+  - [ ] Test: POST /api/chatter/message/ retorna success
+  - [ ] Test: POST /api/chatter/whatsapp/ retorna success
+  - [ ] Test: print aparece no console
+  - [ ] Test: user não autenticado retorna 403
+
+---
+
+## 3.12.6 Documentação e Notas para o Futuro
+
+Criar documentação para lembrar o que falta implementar.
+
+- [ ] **Criar TODO.md**
+  - [ ] Criar `docs/chatter_todo.md`
+  ```markdown
+  # CHATTER - TODO LIST
+  
+  ## ✅ IMPLEMENTADO (Tarefa 3.12)
+  - [x] Modelos ChatterMessage e ChatterActivity
+  - [x] Template tags (content_type)
+  - [x] ChatterMixin para views
+  - [x] Template base chatter.html (PLACEHOLDER - será substituído)
+  - [x] APIs REST com funções PLACEHOLDER
+  - [x] Alpine.js component
+  
+  ## 🔄 PRÓXIMOS PASSOS
+  
+  ### 1. Substituir Template pelo Design Final
+  - [ ] Criar design visual no CRM
+  - [ ] Usar PROMPT do VS Code para componentizar
+  - [ ] Substituir templates/components/chatter.html
+  
+  ### 2. Implementar Lógica de Emails (Tarefa 3.9)
+  - [ ] Configurar SMTP
+  - [ ] Implementar função real em chatter_create_message()
+  - [ ] Criar ChatterMessage na BD
+  - [ ] Enviar email via Django send_mail()
+  - [ ] Criar ChatterActivity automaticamente
+  
+  ### 3. Implementar WhatsApp (Fase 12)
+  - [ ] Setup Meta WhatsApp API
+  - [ ] Criar modelo WhatsAppMessage
+  - [ ] Implementar função real em chatter_send_whatsapp()
+  - [ ] Webhook para receber mensagens
+  - [ ] Processar mensagens via Celery
+  
+  ### 4. Auto-logging de Atividades (Signals)
+  - [ ] Criar signals para detetar mudanças
+  - [ ] Criar ChatterActivity automaticamente
+  - [ ] Middleware para capturar user atual
+  
+  ### 5. Anexos
+  - [ ] Upload de ficheiros
+  - [ ] Guardar em media/
+  - [ ] Adicionar URL ao attachments JSON
+  ```
+
+- [ ] **Adicionar comentários no código**
+  - [ ] Comentar funções placeholder com TODO
+  - [ ] Explicar que será implementado depois
+
+- [ ] **Testing - Documentação**
+  - [ ] Test: TODO.md existe e está completo
+  - [ ] Test: comentários TODO estão no código
+
+---
+
+## 3.12.7 Testing Completo
+
+Testar tudo o que foi implementado.
+
+- [ ] **Testes de Modelos**
+  - [ ] Test: criar ChatterMessage tipo EMAIL
+  - [ ] Test: criar ChatterMessage tipo NOTE
+  - [ ] Test: GenericForeignKey funciona com Lead
+  - [ ] Test: GenericForeignKey funciona com Contact
+  - [ ] Test: criar ChatterActivity
+  - [ ] Test: attachments JSON funciona
+  - [ ] Test: visualizar no Admin
+
+- [ ] **Testes de Template Tags**
+  - [ ] Test: {{ object|content_type }} retorna string correta
+
+- [ ] **Testes de ChatterMixin**
+  - [ ] Test: incluir mixin em view adiciona context
+  - [ ] Test: context['chatter_messages'] existe
+  - [ ] Test: context['activities'] existe
+
+- [ ] **Testes de Template**
+  - [ ] Test: incluir chatter.html funciona
+  - [ ] Test: tabs renderizam
+  - [ ] Test: Alpine.js inicializa
+  - [ ] Test: clicar em tabs troca conteúdo
+
+- [ ] **Testes de APIs**
+  - [ ] Test: chamar /api/chatter/message/ mostra print
+  - [ ] Test: chamar /api/chatter/whatsapp/ mostra print
+  - [ ] Test: alert aparece ao usar funções
+
+- [ ] **Teste de Integração**
+  - [ ] Test: criar Lead → abrir detalhe → chatter aparece
+  - [ ] Test: incluir ChatterMixin em LeadDetailView
+  - [ ] Test: template funciona sem erros
+
+
+## 3.12.8 Sistema de Menções (@username) em Notas
+
+Permitir mencionar outros utilizadores em notas e criar notificações automáticas.
+
+- [ ] **Atualizar modelo ChatterMessage**
+  - [ ] Adicionar campo `mentioned_users` em `apps/core/models.py`:
+    ```python
+    class ChatterMessage(AbstractBaseModel):
+        # ... campos existentes ...
+        
+        # NOVO: Menções
+        mentioned_users = models.ManyToManyField(
+            CustomUser,
+            related_name='mentioned_in_messages',
+            blank=True,
+            help_text='Utilizadores mencionados com @ nesta mensagem'
+        )
+    ```
+  - [ ] Criar migration:
+    ```bash
+    python manage.py makemigrations core
+    python manage.py migrate
+    ```
+
+- [ ] **Criar helper function para parse de menções**
+  - [ ] Criar `apps/core/utils.py` (se não existir)
+  - [ ] Função `extract_mentions(text)`:
+    ```python
+    import re
+    from apps.accounts.models import CustomUser
+    
+    def extract_mentions(text):
+        """
+        Extrai menções @username do texto.
+        
+        Exemplo:
+        "Olá @joao, preciso que vejas isto @maria"
+        → retorna [user_joao, user_maria]
+        
+        Args:
+            text (str): Texto da mensagem/nota
+            
+        Returns:
+            list: Lista de CustomUser objects mencionados
+        """
+        # Regex para encontrar @username
+        pattern = r'@(\w+)'
+        usernames = re.findall(pattern, text)
+        
+        # Buscar users na BD
+        mentioned = []
+        for username in usernames:
+            try:
+                # Buscar por username (se existir) ou por first_name
+                user = CustomUser.objects.filter(
+                    models.Q(username__iexact=username) |
+                    models.Q(first_name__iexact=username)
+                ).first()
+                
+                if user and user not in mentioned:
+                    mentioned.append(user)
+            except CustomUser.DoesNotExist:
+                continue
+        
+        return mentioned
+    ```
+
+- [ ] **Atualizar view chatter_create_message**
+  - [ ] Modificar `apps/core/views.py`:
+    ```python
+    @login_required
+    @require_POST
+    def chatter_create_message(request):
+        try:
+            data = json.loads(request.body)
+            
+            # Parse ContentType
+            object_type = data.get('object_type')
+            object_id = data.get('object_id')
+            app_label, model_name = object_type.split('.')
+            content_type = ContentType.objects.get(app_label=app_label, model=model_name)
+            
+            # Criar mensagem
+            message = ChatterMessage.objects.create(
+                content_type=content_type,
+                object_id=object_id,
+                author=request.user,
+                message_type=data.get('message_type'),
+                subject=data.get('subject', ''),
+                body=data.get('body'),
+                is_internal=(data.get('message_type') == 'NOTE')
+            )
+            
+            # NOVO: Extrair e adicionar menções
+            from apps.core.utils import extract_mentions
+            mentioned = extract_mentions(message.body)
+            message.mentioned_users.set(mentioned)
+            
+            # NOVO: Criar notificações para mencionados
+            from apps.core.models import Notification
+            for user in mentioned:
+                if user != request.user:  # Não notificar a si próprio
+                    Notification.objects.create(
+                        user=user,
+                        notification_type='MENTION',
+                        title=f'{request.user.get_full_name()} mencionou-te',
+                        message=f'em {content_type.model}: {message.body[:100]}...',
+                        link=f'#',  # TODO: link para o objeto
+                        related_content_type=content_type,
+                        related_object_id=object_id
+                    )
+            
+            # Criar atividade
+            ChatterActivity.objects.create(
+                content_type=content_type,
+                object_id=object_id,
+                user=request.user,
+                activity_type='COMMENT' if message.is_note else 'EMAIL_SENT',
+                description=f"{'adicionou uma nota' if message.is_note else 'enviou um email'}"
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'message_id': str(message.id),
+                'mentioned_count': len(mentioned)
+            })
+        
+        except Exception as e:
+            print(f"[CHATTER API] ERROR: {e}")
+            return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    ```
+
+- [ ] **Testing - Menções**
+  - [ ] Test: criar nota com @joao cria menção
+  - [ ] Test: mentioned_users contém user correto
+  - [ ] Test: notificação é criada para mencionado
+  - [ ] Test: não cria notificação para autor
+
+---
+
+## 3.12.9 Modelo de Notificações
+
+Criar modelo para notificações internas do sistema.
+
+- [ ] **Criar modelo Notification**
+  - [ ] Criar em `apps/core/models.py`:
+    ```python
+    class Notification(AbstractBaseModel):
+        """
+        Notificações internas do sistema.
+        
+        Exemplos:
+        - User X mencionou-te em Lead Y
+        - Lead Z foi atribuído a ti
+        - Nova resposta no WhatsApp do Contact W
+        """
+        
+        NOTIFICATION_TYPES = [
+            ('MENTION', 'Menção'),
+            ('ASSIGNMENT', 'Atribuição'),
+            ('WHATSAPP', 'WhatsApp'),
+            ('EMAIL', 'Email'),
+            ('STAGE_CHANGE', 'Mudança de Estágio'),
+            ('COMMENT', 'Comentário'),
+            ('TASK', 'Tarefa'),
+            ('SYSTEM', 'Sistema'),
+        ]
+        
+        # Destinatário
+        user = models.ForeignKey(
+            CustomUser,
+            on_delete=models.CASCADE,
+            related_name='notifications',
+            help_text='Utilizador que vai receber a notificação'
+        )
+        
+        # Tipo e conteúdo
+        notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
+        title = models.CharField(max_length=255)  # "João mencionou-te"
+        message = models.TextField()  # "em Lead XYZ: preciso da tua ajuda..."
+        
+        # Link (opcional)
+        link = models.CharField(max_length=500, blank=True)  # URL para clicar
+        
+        # Objeto relacionado (opcional - GenericForeignKey)
+        related_content_type = models.ForeignKey(
+            ContentType,
+            on_delete=models.CASCADE,
+            null=True,
+            blank=True
+        )
+        related_object_id = models.UUIDField(null=True, blank=True)
+        related_object = GenericForeignKey('related_content_type', 'related_object_id')
+        
+        # Estado
+        is_read = models.BooleanField(default=False)
+        read_at = models.DateTimeField(null=True, blank=True)
+        
+        class Meta:
+            ordering = ['-created_at']
+            indexes = [
+                models.Index(fields=['user', 'is_read']),
+                models.Index(fields=['user', '-created_at']),
+            ]
+            verbose_name = 'Notificação'
+            verbose_name_plural = 'Notificações'
+        
+        def __str__(self):
+            return f"{self.user.get_full_name()} - {self.title}"
+        
+        def mark_as_read(self):
+            """Marcar notificação como lida"""
+            from django.utils import timezone
+            if not self.is_read:
+                self.is_read = True
+                self.read_at = timezone.now()
+                self.save(update_fields=['is_read', 'read_at'])
+    ```
+
+- [ ] **Criar migrations**
+  - [ ] `python manage.py makemigrations core`
+  - [ ] `python manage.py migrate`
+
+- [ ] **Registrar no Admin**
+  - [ ] Criar NotificationAdmin:
+    ```python
+    @admin.register(Notification)
+    class NotificationAdmin(admin.ModelAdmin):
+        list_display = ['id', 'user', 'notification_type', 'title', 'is_read', 'created_at']
+        list_filter = ['notification_type', 'is_read', 'created_at']
+        search_fields = ['title', 'message', 'user__first_name', 'user__last_name']
+        readonly_fields = ['related_content_type', 'related_object_id', 'read_at', 'created_at']
+        
+        actions = ['mark_as_read']
+        
+        def mark_as_read(self, request, queryset):
+            count = 0
+            for notification in queryset:
+                notification.mark_as_read()
+                count += 1
+            self.message_user(request, f'{count} notificações marcadas como lidas.')
+        mark_as_read.short_description = 'Marcar como lido'
+    ```
+
+- [ ] **Testing - Notification Model**
+  - [ ] Test: criar notificação funciona
+  - [ ] Test: mark_as_read() atualiza is_read e read_at
+  - [ ] Test: GenericForeignKey funciona
+  - [ ] Test: ordenação por -created_at
+
+---
+
+## 3.12.10 API de Notificações
+
+Criar endpoints REST para obter e marcar notificações.
+
+- [ ] **Criar view para listar notificações**
+  - [ ] Criar em `apps/core/views.py`:
+    ```python
+    @login_required
+    def notifications_list_api(request):
+        """
+        API para listar notificações do user atual.
+        
+        GET /api/notifications/
+        Query params:
+        - unread_only: true/false (default: false)
+        - limit: int (default: 50)
+        
+        Response:
+        {
+          "unread_count": 5,
+          "notifications": [
+            {
+              "id": "uuid",
+              "type": "MENTION",
+              "title": "João mencionou-te",
+              "message": "em Lead XYZ...",
+              "link": "/crm/leads/uuid/",
+              "is_read": false,
+              "created_at": "2026-02-13 10:30"
+            },
+            ...
+          ]
+        }
+        """
+        unread_only = request.GET.get('unread_only', 'false').lower() == 'true'
+        limit = int(request.GET.get('limit', 50))
+        
+        # Buscar notificações
+        notifications = Notification.objects.filter(user=request.user)
+        
+        if unread_only:
+            notifications = notifications.filter(is_read=False)
+        
+        notifications = notifications[:limit]
+        
+        # Serializar
+        data = {
+            'unread_count': Notification.objects.filter(user=request.user, is_read=False).count(),
+            'notifications': [
+                {
+                    'id': str(n.id),
+                    'type': n.notification_type,
+                    'title': n.title,
+                    'message': n.message,
+                    'link': n.link,
+                    'is_read': n.is_read,
+                    'created_at': n.created_at.strftime('%d/%m/%Y %H:%M')
+                }
+                for n in notifications
+            ]
+        }
+        
+        return JsonResponse(data)
+    ```
+
+- [ ] **Criar view para marcar como lido**
+  - [ ] Criar em `apps/core/views.py`:
+    ```python
+    @login_required
+    @require_POST
+    def notification_mark_read(request, notification_id):
+        """
+        API para marcar notificação como lida.
+        
+        POST /api/notifications/<uuid>/mark-read/
+        """
+        try:
+            notification = Notification.objects.get(
+                id=notification_id,
+                user=request.user  # Apenas próprias notificações
+            )
+            notification.mark_as_read()
+            
+            return JsonResponse({
+                'success': True,
+                'unread_count': Notification.objects.filter(
+                    user=request.user,
+                    is_read=False
+                ).count()
+            })
+        
+        except Notification.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Notificação não encontrada'
+            }, status=404)
+    ```
+
+- [ ] **Criar view para marcar TODAS como lidas**
+  - [ ] Criar em `apps/core/views.py`:
+    ```python
+    @login_required
+    @require_POST
+    def notifications_mark_all_read(request):
+        """
+        API para marcar todas as notificações como lidas.
+        
+        POST /api/notifications/mark-all-read/
+        """
+        from django.utils import timezone
+        
+        count = Notification.objects.filter(
+            user=request.user,
+            is_read=False
+        ).update(
+            is_read=True,
+            read_at=timezone.now()
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'marked_count': count
+        })
+    ```
+
+- [ ] **Configurar rotas**
+  - [ ] Adicionar em `config/urls.py`:
+    ```python
+    from apps.core.views import (
+        notifications_list_api,
+        notification_mark_read,
+        notifications_mark_all_read
+    )
+    
+    urlpatterns = [
+        # ... rotas existentes ...
+        
+        # Notificações
+        path('api/notifications/', notifications_list_api, name='notifications_list'),
+        path('api/notifications/<uuid:notification_id>/mark-read/', notification_mark_read, name='notification_mark_read'),
+        path('api/notifications/mark-all-read/', notifications_mark_all_read, name='notifications_mark_all_read'),
+    ]
+    ```
+
+- [ ] **Testing - APIs**
+  - [ ] Test: GET /api/notifications/ retorna lista
+  - [ ] Test: unread_count está correto
+  - [ ] Test: POST mark-read funciona
+  - [ ] Test: POST mark-all-read funciona
+
+---
+
+## 3.12.11 Badge de Notificações no Navbar
+
+Atualizar navbar para mostrar contador de notificações não lidas.
+
+- [ ] **Atualizar base.html (navbar)**
+  - [ ] Modificar `templates/base.html`:
+    ```html
+    <!-- Adicionar no navbar (onde já tens o botão placeholder) -->
+    <div class="relative" x-data="notificationsDropdown()">
+        <!-- Botão Bell -->
+        <button 
+            @click="toggle()"
+            class="relative p-2 text-gray-400 hover:text-white"
+        >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            
+            <!-- Badge com contador -->
+            <span 
+                x-show="unreadCount > 0"
+                x-text="unreadCount"
+                class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full"
+            ></span>
+        </button>
+        
+        <!-- Dropdown -->
+        <div 
+            x-show="isOpen"
+            @click.away="isOpen = false"
+            x-transition
+            class="absolute right-0 mt-2 w-80 bg-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden z-50"
+        >
+            <!-- Header -->
+            <div class="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+                <h3 class="text-white font-medium">Notificações</h3>
+                <button 
+                    @click="markAllRead()"
+                    class="text-xs text-yellow-500 hover:text-yellow-400"
+                >
+                    Marcar todas como lidas
+                </button>
+            </div>
+            
+            <!-- Lista -->
+            <div class="max-h-96 overflow-y-auto">
+                <template x-for="notif in notifications" :key="notif.id">
+                    <div 
+                        @click="markRead(notif.id)"
+                        :class="notif.is_read ? 'bg-gray-800' : 'bg-gray-700'"
+                        class="px-4 py-3 border-b border-gray-700 hover:bg-gray-600 cursor-pointer"
+                    >
+                        <p class="text-sm font-medium text-white" x-text="notif.title"></p>
+                        <p class="text-xs text-gray-400 mt-1" x-text="notif.message"></p>
+                        <span class="text-xs text-gray-500" x-text="notif.created_at"></span>
+                    </div>
+                </template>
+                
+                <template x-if="notifications.length === 0">
+                    <div class="px-4 py-8 text-center text-gray-500">
+                        Sem notificações
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    function notificationsDropdown() {
+        return {
+            isOpen: false,
+            unreadCount: 0,
+            notifications: [],
+            
+            init() {
+                this.load();
+                // Polling a cada 30 segundos
+                setInterval(() => this.load(), 30000);
+            },
+            
+            async load() {
+                try {
+                    const response = await fetch('/api/notifications/?limit=10');
+                    const data = await response.json();
+                    this.unreadCount = data.unread_count;
+                    this.notifications = data.notifications;
+                } catch (error) {
+                    console.error('Erro ao carregar notificações:', error);
+                }
+            },
+            
+            toggle() {
+                this.isOpen = !this.isOpen;
+                if (this.isOpen) {
+                    this.load();
+                }
+            },
+            
+            async markRead(notificationId) {
+                try {
+                    const response = await fetch(`/api/notifications/${notificationId}/mark-read/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': this.getCookie('csrftoken')
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                        this.unreadCount = data.unread_count;
+                        this.load();
+                    }
+                } catch (error) {
+                    console.error('Erro ao marcar como lida:', error);
+                }
+            },
+            
+            async markAllRead() {
+                try {
+                    const response = await fetch('/api/notifications/mark-all-read/', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': this.getCookie('csrftoken')
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                        this.unreadCount = 0;
+                        this.load();
+                    }
+                } catch (error) {
+                    console.error('Erro ao marcar todas:', error);
+                }
+            },
+            
+            getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+        }
+    }
+    </script>
+    ```
+
+- [ ] **Testing - Badge**
+  - [ ] Test: badge mostra contador correto
+  - [ ] Test: clicar abre dropdown
+  - [ ] Test: clicar em notificação marca como lida
+  - [ ] Test: "Marcar todas" funciona
+  - [ ] Test: polling atualiza a cada 30s
+
+---
+
+## 3.12.12 Autocomplete de Menções (@) no Chatter
+
+Criar dropdown de autocomplete quando digitar @ no textarea.
+
+- [ ] **Criar API para buscar users**
+  - [ ] Criar em `apps/core/views.py`:
+    ```python
+    @login_required
+    def users_search_api(request):
+        """
+        API para buscar utilizadores (autocomplete).
+        
+        GET /api/users/search/?q=joao
+        
+        Response:
+        [
+          {"id": "uuid", "name": "João Silva", "username": "joao"},
+          {"id": "uuid", "name": "João Pedro", "username": "jpedr"}
+        ]
+        """
+        query = request.GET.get('q', '').strip()
+        
+        if len(query) < 2:
+            return JsonResponse([], safe=False)
+        
+        # Buscar users da mesma company
+        users = CustomUser.objects.filter(
+            models.Q(first_name__icontains=query) |
+            models.Q(last_name__icontains=query) |
+            models.Q(username__icontains=query),
+            is_active=True
+        ).exclude(id=request.user.id)[:10]  # Máximo 10
+        
+        # Serializar
+        data = [
+            {
+                'id': str(u.id),
+                'name': u.get_full_name(),
+                'username': u.username or u.first_name.lower()
+            }
+            for u in users
+        ]
+        
+        return JsonResponse(data, safe=False)
+    ```
+
+- [ ] **Configurar rota**
+  - [ ] Adicionar em `config/urls.py`:
+    ```python
+    path('api/users/search/', users_search_api, name='users_search'),
+    ```
+
+- [ ] **Adicionar JavaScript autocomplete no chatter**
+  - [ ] Atualizar `templates/components/chatter.html`:
+    ```html
+    <!-- Adicionar ao Alpine component -->
+    <script>
+    function chatterComponent(objectType, objectId) {
+        return {
+            // ... state existente ...
+            
+            // NOVO: Autocomplete menções
+            mentionQuery: '',
+            mentionResults: [],
+            showMentions: false,
+            mentionPosition: 0,
+            
+            // Detetar @ no textarea
+            onBodyInput(event) {
+                const textarea = event.target;
+                const text = textarea.value;
+                const cursorPos = textarea.selectionStart;
+                
+                // Buscar última @ antes do cursor
+                const beforeCursor = text.substring(0, cursorPos);
+                const match = beforeCursor.match(/@(\w*)$/);
+                
+                if (match) {
+                    this.mentionQuery = match[1];
+                    this.searchUsers(this.mentionQuery);
+                    this.showMentions = true;
+                } else {
+                    this.showMentions = false;
+                }
+            },
+            
+            async searchUsers(query) {
+                if (query.length < 1) {
+                    this.mentionResults = [];
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/users/search/?q=${query}`);
+                    this.mentionResults = await response.json();
+                } catch (error) {
+                    console.error('Erro ao buscar users:', error);
+                }
+            },
+            
+            insertMention(user) {
+                // Substituir @query por @username
+                const textarea = document.getElementById('message-body');
+                const text = textarea.value;
+                const cursorPos = textarea.selectionStart;
+                
+                const beforeCursor = text.substring(0, cursorPos);
+                const afterCursor = text.substring(cursorPos);
+                
+                // Substituir último @query
+                const newBefore = beforeCursor.replace(/@\w*$/, `@${user.username} `);
+                
+                this.messageBody = newBefore + afterCursor;
+                this.showMentions = false;
+                
+                // Refocar textarea
+                this.$nextTick(() => {
+                    textarea.focus();
+                    textarea.setSelectionRange(newBefore.length, newBefore.length);
+                });
+            }
+        }
+    }
+    </script>
+    
+    <!-- HTML: Dropdown autocomplete -->
+    <div x-show="showMentions" class="relative">
+        <div class="absolute bottom-full left-0 mb-2 w-64 bg-gray-700 rounded shadow-lg max-h-48 overflow-y-auto">
+            <template x-for="user in mentionResults" :key="user.id">
+                <div 
+                    @click="insertMention(user)"
+                    class="px-4 py-2 hover:bg-gray-600 cursor-pointer flex items-center gap-2"
+                >
+                    <div class="w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-gray-900 font-bold">
+                        <span x-text="user.name.charAt(0)"></span>
+                    </div>
+                    <div>
+                        <p class="text-sm text-white" x-text="user.name"></p>
+                        <p class="text-xs text-gray-400" x-text="'@' + user.username"></p>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- Textarea com autocomplete -->
+    <textarea 
+        id="message-body"
+        x-model="messageBody"
+        @input="onBodyInput($event)"
+        rows="3" 
+        placeholder="Escrever mensagem... (usa @ para mencionar alguém)" 
+        class="w-full px-4 py-2 bg-gray-700 text-white rounded mb-2"
+    ></textarea>
+    ```
+
+- [ ] **Testing - Autocomplete**
+  - [ ] Test: digitar @ abre dropdown
+  - [ ] Test: digitar @joa filtra users
+  - [ ] Test: clicar em user insere @username
+  - [ ] Test: API retorna users corretos
+
+---
+
+## 3.12.13 Testing Completo (Menções + Notificações)
+
+Testar todo o sistema de menções e notificações.
+
+- [ ] **Testes de Menções**
+  - [ ] Test: criar nota com @joao
+  - [ ] Test: mentioned_users contém user correto
+  - [ ] Test: parse extrai múltiplos @mentions
+  - [ ] Test: autocomplete funciona
+
+- [ ] **Testes de Notificações**
+  - [ ] Test: notificação criada quando mencionado
+  - [ ] Test: badge mostra contador correto
+  - [ ] Test: clicar marca como lida
+  - [ ] Test: "Marcar todas" funciona
+  - [ ] Test: não cria notificação para autor
+
+- [ ] **Teste de Integração**
+  - [ ] Test: João menciona Maria em nota
+  - [ ] Test: Maria recebe notificação
+  - [ ] Test: Badge de Maria atualiza
+  - [ ] Test: Maria clica e vê notificação
+  - [ ] Test: Maria marca como lida
+  - [ ] Test: Badge decrementa
+
 ---
 
 # 🚀 FASE 4: APP - CONTACTOS
@@ -1823,7 +3348,7 @@ Criar vista Kanban "estilo Odoo" para visualizar pipeline de vendas por estágio
 
 ---
 
-### ✅ PROGRESSO GERAL: ~80% COMPLETO
+### ✅ PROGRESSO GERAL: ~85% COMPLETO
 
 **✅ IMPLEMENTADO:**
 - ✅ Pipeline como vista default em `/crm/`
@@ -1840,13 +3365,16 @@ Criar vista Kanban "estilo Odoo" para visualizar pipeline de vendas por estágio
 - ✅ 110 leads de teste criadas (9 New, 9 Qualified, 8 Proposition, 52 Won, 32 Lost)
 - ✅ Template filter `crm_filters.py` com formatação de valores
 - ✅ Campo `Lead.contact` agora opcional (migração aplicada)
-- ✅ **Drag & drop funcional** com Sortable.js
+- ✅ **Drag & drop funcional** com Sortable.js entre TODAS as colunas
 - ✅ **API endpoint `/crm/leads/<uuid>/change-stage/`** com validação multi-company
-- ✅ **AJAX updates** ao arrastar cards entre colunas
+- ✅ **Validação aceita stages globais** (owner_company=None) e stages da empresa
+- ✅ **UI update automático em tempo real** de totais e contadores após drag
+- ✅ **Formatação K/M/B em JavaScript** sincronizada com Python
+- ✅ **Debug logs removidos** do código de produção
+- ✅ **Botão adicionar stage removido** do pipeline (só via Configurações)
 
 **⏳ PENDENTE:**
 - ⏳ Modal lost_reason para stage "Lost" (drag para Lost pede motivo)
-- ⏳ UI update automático de totais/contadores após drag (sem reload)
 - ⏳ Botão "+" funcional para criar lead no stage
 - ⏳ Lead detail view (click no card)
 - ⏳ Filtros avançados (assigned_to, priority, date range, tags, source)
@@ -1858,6 +3386,7 @@ Criar vista Kanban "estilo Odoo" para visualizar pipeline de vendas por estágio
 - ⏳ Testes automatizados
 - ⏳ Empty state nas colunas vazias
 - ⏳ Prioridade stars corrigida (HIGH=3, MEDIUM=2, LOW=1)
+- ⏳ Animação visual de sucesso ao arrastar
 
 ---
 
@@ -1996,10 +3525,15 @@ Progress bar baseada em `probability` média do stage (mais simples, menos espec
     }
     ```
 
+- [x] **TODO CONCLUÍDO:**
+  - [x] ~~Auto-update `lead.probability` baseado em stage default_probability~~ (não necessário por agora)
+  - [x] **UI update automático de totais/contadores em tempo real** (IMPLEMENTADO)
+  - [x] **Stages globais aceites na validação multi-company** (IMPLEMENTADO)
+  - [x] **Debug logs removidos** (IMPLEMENTADO)
+  - [x] **Botão adicionar stage removido do pipeline** (IMPLEMENTADO)
+
 - [ ] **TODO FUTURO:**
-  - [ ] Auto-update `lead.probability` baseado em stage default_probability
   - [ ] Modal lost_reason para stage "Lost" (quando drag para Lost)
-  - [ ] UI update automático de totais/contadores sem reload
   - [ ] Animação visual de sucesso/erro no drag
 
 ### 5.9.5 Totais e KPIs por Coluna
@@ -4389,6 +5923,676 @@ Configurar integração com WhatsApp Business API.
   - [ ] Test: conexão à API funciona
   - [ ] Test: enviar mensagem de teste
 
+
+## 13.2.1 Setup Completo Meta WhatsApp Business API (Guia Passo-a-Passo)
+
+**ANTES DE COMEÇAR A PROGRAMAR:** Seguir este guia para configurar WhatsApp Business API.
+
+- [ ] **1. Criar Conta Meta Business**
+  - [ ] Aceder a https://business.facebook.com
+  - [ ] Criar conta Meta Business (se não tiver)
+  - [ ] Verificar identidade da empresa (pode demorar 1-3 dias)
+
+- [ ] **2. Configurar WhatsApp Business API**
+  - [ ] Ir para Meta Business Suite → Configurações
+  - [ ] Adicionar "WhatsApp" nos produtos
+  - [ ] Criar App no https://developers.facebook.com
+  - [ ] Adicionar produto "WhatsApp" à app
+  - [ ] Obter PHONE_NUMBER_ID e WHATSAPP_TOKEN
+  - [ ] **IMPORTANTE:** Número de telefone TEM QUE SER NOVO (não pode estar registado no WhatsApp normal)
+
+- [ ] **3. Verificar Número de Telefone**
+  - [ ] Meta envia código SMS
+  - [ ] Inserir código para verificar
+  - [ ] Aguardar aprovação (pode demorar horas/dias)
+
+- [ ] **4. Configurar Webhook**
+  - [ ] No dashboard da app, ir para WhatsApp → Configuration
+  - [ ] Webhook URL: `https://TEU-DOMINIO.com/webhooks/whatsapp/`
+  - [ ] Verify Token: criar token secreto (ex: `WHATSAPP_VERIFY_SECRET_12345`)
+  - [ ] Subscribe to: `messages`, `message_status`
+  - [ ] **ATENÇÃO:** Webhook PRECISA de HTTPS (não funciona com HTTP)
+
+- [ ] **5. Guardar Credenciais**
+  - [ ] Adicionar ao `.env`:
+    ```
+    WHATSAPP_PHONE_NUMBER_ID=your_phone_id
+    WHATSAPP_TOKEN=your_access_token
+    WHATSAPP_VERIFY_TOKEN=WHATSAPP_VERIFY_SECRET_12345
+    WHATSAPP_BUSINESS_ACCOUNT_ID=your_business_account_id
+    ```
+
+- [ ] **6. Testar API (Postman/cURL)**
+  - [ ] Enviar mensagem de teste via cURL:
+    ```bash
+    curl -X POST \
+      "https://graph.facebook.com/v18.0/PHONE_NUMBER_ID/messages" \
+      -H "Authorization: Bearer WHATSAPP_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "messaging_product": "whatsapp",
+        "to": "351912345678",
+        "type": "text",
+        "text": {"body": "Hello from API!"}
+      }'
+    ```
+  - [ ] Verificar se recebeste a mensagem no teu WhatsApp
+
+- [ ] **7. Configurar Produção (quando estiver pronto)**
+  - [ ] Submeter app para review
+  - [ ] Aguardar aprovação da Meta
+  - [ ] Após aprovação, rate limit aumenta (1000 → ilimitado)
+
+- [ ] **Documentação**
+  - [ ] Criar documento interno `docs/whatsapp_setup.md`
+  - [ ] Documentar todos os passos
+  - [ ] Guardar screenshots importantes
+  - [ ] Listar erros comuns e soluções
+
+---
+
+## 13.2.2 Webhook para RECEBER Mensagens (Django View)
+
+Criar endpoint webhook para Meta enviar mensagens recebidas.
+
+- [ ] **Atualizar modelo WhatsAppConfig (tarefa 13.2)**
+  - [ ] Adicionar campos:
+    - [ ] phone_number_id (CharField, ID do número na Meta API)
+    - [ ] business_account_id (CharField)
+    - [ ] webhook_verify_token (CharField, token secreto)
+    - [ ] company (ForeignKey para Company, **OBRIGATÓRIO**)
+  - [ ] Criar migration
+
+- [ ] **Criar Webhook View**
+  - [ ] Criar `apps/marketing/views.py`
+  - [ ] View: `whatsapp_webhook`
+  - [ ] Decorators: `@csrf_exempt` (Meta não envia CSRF token)
+  - [ ] **GET request** (verificação do webhook):
+    ```python
+    def whatsapp_webhook(request):
+        if request.method == 'GET':
+            # Meta faz verificação inicial
+            mode = request.GET.get('hub.mode')
+            token = request.GET.get('hub.verify_token')
+            challenge = request.GET.get('hub.challenge')
+            
+            verify_token = os.getenv('WHATSAPP_VERIFY_TOKEN')
+            
+            if mode == 'subscribe' and token == verify_token:
+                return HttpResponse(challenge, content_type='text/plain')
+            else:
+                return HttpResponse('Forbidden', status=403)
+    ```
+  - [ ] **POST request** (mensagens recebidas):
+    ```python
+    elif request.method == 'POST':
+        # Parse JSON
+        data = json.loads(request.body)
+        
+        # Extrair mensagem
+        entry = data.get('entry', [])
+        if not entry:
+            return JsonResponse({'status': 'ok'})
+        
+        changes = entry[0].get('changes', [])
+        if not changes:
+            return JsonResponse({'status': 'ok'})
+        
+        value = changes[0].get('value', {})
+        
+        # Se é mensagem recebida
+        if 'messages' in value:
+            # Processar via Celery (assíncrono)
+            from apps.marketing.tasks import process_incoming_whatsapp_message
+            process_incoming_whatsapp_message.delay(value)
+        
+        # Se é status update (entregue, lido)
+        elif 'statuses' in value:
+            from apps.marketing.tasks import update_message_status
+            update_message_status.delay(value)
+        
+        return JsonResponse({'status': 'ok'})
+    ```
+
+- [ ] **Configurar rota**
+  - [ ] Adicionar em `config/urls.py`:
+    ```python
+    path('webhooks/whatsapp/', whatsapp_webhook, name='whatsapp_webhook')
+    ```
+  - [ ] **IMPORTANTE:** Rota TEM QUE ser pública (sem @login_required)
+
+- [ ] **Testing - Webhook**
+  - [ ] Test: GET request com token correto retorna challenge
+  - [ ] Test: GET request com token errado retorna 403
+  - [ ] Test: POST request com mensagem dispara Celery task
+  - [ ] Test: POST request com status update dispara task
+
+---
+
+## 13.2.3 Modelo WhatsAppMessage (Histórico de Conversas)
+
+Criar modelo para guardar todas as mensagens (enviadas E recebidas).
+
+- [ ] **Criar modelo WhatsAppMessage**
+  - [ ] Criar em `apps/marketing/models.py`
+  - [ ] Herdar de AbstractBaseModel
+  - [ ] **Campos identificação:**
+    - [ ] company (ForeignKey para Company, **OBRIGATÓRIO**, on_delete=CASCADE)
+    - [ ] contact (ForeignKey para Contact, on_delete=CASCADE)
+    - [ ] contact_phone (CharField, formato: 351912345678)
+  - [ ] **Campos mensagem:**
+    - [ ] message_id (CharField, unique, ID único da Meta API)
+    - [ ] conversation_id (CharField, para agrupar mensagens da mesma conversa)
+    - [ ] message_type (CharField, choices: SENT, RECEIVED)
+    - [ ] content (TextField, texto da mensagem)
+  - [ ] **Campos media:**
+    - [ ] media_type (CharField, choices: NONE, IMAGE, DOCUMENT, VIDEO, AUDIO, VOICE)
+    - [ ] media_id (CharField, nullable, ID do media na Meta API)
+    - [ ] media_url (URLField, nullable, URL do ficheiro após download)
+    - [ ] media_filename (CharField, nullable)
+    - [ ] media_mime_type (CharField, nullable, ex: image/jpeg, application/pdf)
+  - [ ] **Campos status:**
+    - [ ] status (CharField, choices: QUEUED, SENT, DELIVERED, READ, FAILED)
+    - [ ] error_code (CharField, nullable)
+    - [ ] error_message (TextField, nullable)
+  - [ ] **Campos timestamps:**
+    - [ ] sent_at (DateTimeField, auto_now_add=True)
+    - [ ] delivered_at (DateTimeField, nullable)
+    - [ ] read_at (DateTimeField, nullable)
+  - [ ] **Campos contexto:**
+    - [ ] context_message_id (CharField, nullable, se é resposta a outra mensagem)
+    - [ ] reply_to_message (ForeignKey self, nullable, para threads)
+  - [ ] **Meta:**
+    - [ ] ordering = ['-sent_at']
+    - [ ] indexes = ['contact', 'conversation_id', 'message_id']
+
+- [ ] **Criar migrations**
+  - [ ] makemigrations marketing
+  - [ ] migrate
+
+- [ ] **Métodos úteis:**
+  - [ ] `is_from_customer()` - retorna True se message_type == RECEIVED
+  - [ ] `mark_as_read()` - atualiza read_at
+  - [ ] `get_media_file()` - download media se ainda não tiver
+
+- [ ] **Registrar no Admin**
+  - [ ] Criar WhatsAppMessageAdmin
+  - [ ] list_display: company, contact, message_type, content (truncado), media_type, status, sent_at
+  - [ ] list_filter: company, message_type, media_type, status, sent_at
+  - [ ] search_fields: contact__name, contact_phone, content
+  - [ ] readonly_fields: message_id, sent_at, delivered_at, read_at
+
+- [ ] **Testing - WhatsAppMessage**
+  - [ ] Test: criar mensagem SENT funciona
+  - [ ] Test: criar mensagem RECEIVED funciona
+  - [ ] Test: company é obrigatório
+  - [ ] Test: message_id é único
+  - [ ] Test: filtrar por contact funciona
+
+---
+
+## 13.2.4 Processar Mensagens Recebidas (Celery Task)
+
+Criar Celery task para processar mensagens que chegam via webhook.
+
+- [ ] **Criar helper functions**
+  - [ ] Criar `apps/marketing/whatsapp_utils.py`
+  - [ ] Função: `get_or_create_contact_from_phone(phone, company)`
+    - [ ] Busca Contact por phone
+    - [ ] Se não existir, cria automaticamente
+    - [ ] Associa à company correta
+  - [ ] Função: `download_media_file(media_id, media_type)`
+    - [ ] Faz request à Meta API para obter URL do media
+    - [ ] Download do ficheiro
+    - [ ] Guarda em `/media/whatsapp/`
+    - [ ] Retorna caminho local
+  - [ ] Função: `get_media_url_from_meta(media_id, token)`
+    ```python
+    url = f"https://graph.facebook.com/v18.0/{media_id}"
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.get(url, headers=headers)
+    return response.json()['url']
+    ```
+
+- [ ] **Criar Celery task: process_incoming_whatsapp_message**
+  - [ ] Criar em `apps/marketing/tasks.py`
+  - [ ] Task: `@shared_task` `process_incoming_whatsapp_message(webhook_data)`
+  - [ ] Lógica:
+    1. Extrair dados do webhook:
+       - from (número de quem enviou)
+       - message_id
+       - timestamp
+       - type (text, image, document, video, audio)
+    2. Identificar company (via phone_number_id do webhook)
+    3. Obter/criar Contact via phone
+    4. **Se tipo TEXT:**
+       - Extrair text.body
+       - Criar WhatsAppMessage (RECEIVED, content=text)
+    5. **Se tipo IMAGE/DOCUMENT/VIDEO:**
+       - Extrair media.id, media.mime_type, media.filename
+       - Download via download_media_file()
+       - Criar WhatsAppMessage (RECEIVED, media_url, media_type)
+    6. **Se tipo AUDIO/VOICE:**
+       - Similar a image
+    7. Guardar na BD
+    8. [OPCIONAL] Enviar notificação ao user (WebSocket ou email)
+
+- [ ] **Criar Celery task: update_message_status**
+  - [ ] Task para atualizar status (delivered, read)
+  - [ ] Buscar WhatsAppMessage por message_id
+  - [ ] Atualizar campos: status, delivered_at, read_at
+
+- [ ] **Configurar Celery**
+  - [ ] Registar tasks no Celery app
+  - [ ] Configurar retry em caso de erro (max 3 tentativas)
+
+- [ ] **Logging robusto**
+  - [ ] Log cada mensagem recebida
+  - [ ] Log erros de download de media
+  - [ ] Log contacts criados automaticamente
+
+- [ ] **Testing - Process Incoming**
+  - [ ] Test: mensagem de texto é processada e guardada
+  - [ ] Test: mensagem com imagem faz download e guarda
+  - [ ] Test: contact é criado automaticamente se não existir
+  - [ ] Test: status updates funcionam (delivered, read)
+  - [ ] Test: erro no download de media é tratado
+
+---
+
+## 13.2.5 Interface Chatter (Enviar + Receber Mensagens)
+
+Criar interface estilo WhatsApp Web para conversas.
+
+- [ ] **Criar ContactWhatsAppChatView**
+  - [ ] View em `apps/contacts/views.py` ou `apps/marketing/views.py`
+  - [ ] URL: `/contacts/<uuid:pk>/whatsapp-chat/`
+  - [ ] Buscar Contact
+  - [ ] Buscar todas as WhatsAppMessage do contact (ordenadas por sent_at)
+  - [ ] Contexto: messages, contact, can_send (se configuração ativa)
+
+- [ ] **Criar template chatter**
+  - [ ] Criar `templates/marketing/whatsapp_chat.html` (standalone)
+  - [ ] **Estrutura HTML:**
+    ```html
+    <div class="whatsapp-chat-container">
+      <!-- Header -->
+      <div class="chat-header">
+        <img src="{{ contact.photo }}" class="avatar">
+        <div>
+          <h3>{{ contact.name }}</h3>
+          <span class="phone">{{ contact.phone }}</span>
+        </div>
+      </div>
+      
+      <!-- Messages Area -->
+      <div class="messages-container" id="messages">
+        {% for msg in messages %}
+        <div class="message {{ msg.message_type|lower }}">
+          <div class="bubble">
+            <!-- Se tem media -->
+            {% if msg.media_url %}
+              {% if msg.media_type == 'IMAGE' %}
+                <img src="{{ msg.media_url }}" class="chat-image">
+              {% elif msg.media_type == 'DOCUMENT' %}
+                <a href="{{ msg.media_url }}" download>
+                  📄 {{ msg.media_filename }}
+                </a>
+              {% endif %}
+            {% endif %}
+            
+            <!-- Texto -->
+            {% if msg.content %}
+              <p>{{ msg.content }}</p>
+            {% endif %}
+            
+            <!-- Timestamp e Status -->
+            <div class="msg-footer">
+              <span class="time">{{ msg.sent_at|date:"H:i" }}</span>
+              {% if msg.message_type == 'SENT' %}
+                <span class="status">
+                  {% if msg.status == 'READ' %}✓✓ Lido
+                  {% elif msg.status == 'DELIVERED' %}✓✓ Entregue
+                  {% elif msg.status == 'SENT' %}✓ Enviado
+                  {% endif %}
+                </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      
+      <!-- Input Area -->
+      <div class="chat-input">
+        <form id="send-message-form">
+          <input type="file" id="file-input" accept="image/*,.pdf" style="display:none">
+          <button type="button" id="attach-btn">📎</button>
+          <input type="text" id="message-input" placeholder="Digite sua mensagem...">
+          <button type="submit">Enviar</button>
+        </form>
+      </div>
+    </div>
+    ```
+
+  - [ ] **CSS (estilo WhatsApp):**
+    ```css
+    .messages-container {
+      height: 500px;
+      overflow-y: auto;
+      padding: 20px;
+      background: #e5ddd5;
+    }
+    .message.sent .bubble {
+      background: #dcf8c6;
+      margin-left: auto;
+      max-width: 70%;
+    }
+    .message.received .bubble {
+      background: white;
+      margin-right: auto;
+      max-width: 70%;
+    }
+    .chat-image {
+      max-width: 300px;
+      border-radius: 8px;
+    }
+    ```
+
+  - [ ] **JavaScript (AJAX envio):**
+    ```javascript
+    // Enviar mensagem
+    document.getElementById('send-message-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const message = document.getElementById('message-input').value;
+      
+      const response = await fetch('/api/whatsapp/send/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+          contact_id: '{{ contact.id }}',
+          message: message
+        })
+      });
+      
+      if (response.ok) {
+        // Adicionar mensagem ao chat sem refresh
+        const data = await response.json();
+        addMessageToChat(data.message);
+        document.getElementById('message-input').value = '';
+        scrollToBottom();
+      }
+    };
+    
+    // Upload de ficheiro
+    document.getElementById('attach-btn').onclick = () => {
+      document.getElementById('file-input').click();
+    };
+    
+    document.getElementById('file-input').onchange = async (e) => {
+      const file = e.target.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('contact_id', '{{ contact.id }}');
+      
+      const response = await fetch('/api/whatsapp/send-media/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')},
+        body: formData
+      });
+      
+      // ... adicionar ao chat
+    };
+    
+    // Polling para novas mensagens (ou usar WebSockets)
+    setInterval(async () => {
+      const response = await fetch('/api/whatsapp/new-messages/{{ contact.id }}/');
+      const data = await response.json();
+      data.messages.forEach(msg => addMessageToChat(msg));
+    }, 5000);  // A cada 5 segundos
+    ```
+
+- [ ] **Configurar rota**
+  - [ ] `path('contacts/<uuid:pk>/whatsapp/', ContactWhatsAppChatView, name='contact_whatsapp_chat')`
+
+- [ ] **Adicionar link no ContactDetailView**
+  - [ ] Botão "💬 Abrir WhatsApp Chat"
+  - [ ] Só mostrar se WhatsAppConfig está ativa
+
+- [ ] **Testing - Chatter**
+  - [ ] Test: abrir chat mostra mensagens históricas
+  - [ ] Test: enviar mensagem via AJAX funciona
+  - [ ] Test: mensagem aparece no chat sem refresh
+  - [ ] Test: receber mensagem atualiza chat (polling)
+
+---
+
+## 13.2.6 API Endpoints para Enviar Mensagens (AJAX)
+
+Criar endpoints REST para enviar mensagens via JavaScript.
+
+- [ ] **Criar WhatsAppSendMessageAPI**
+  - [ ] View em `apps/marketing/views.py`
+  - [ ] Método: POST
+  - [ ] URL: `/api/whatsapp/send/`
+  - [ ] Body JSON:
+    ```json
+    {
+      "contact_id": "uuid",
+      "message": "Olá! Como posso ajudar?"
+    }
+    ```
+  - [ ] Lógica:
+    1. Validar contact_id e company
+    2. Obter WhatsAppConfig da company
+    3. Enviar mensagem via Meta API:
+       ```python
+       url = f"https://graph.facebook.com/v18.0/{config.phone_number_id}/messages"
+       headers = {
+         "Authorization": f"Bearer {config.api_key}",
+         "Content-Type": "application/json"
+       }
+       payload = {
+         "messaging_product": "whatsapp",
+         "to": contact.phone,
+         "type": "text",
+         "text": {"body": message}
+       }
+       response = requests.post(url, headers=headers, json=payload)
+       ```
+    4. Guardar WhatsAppMessage (SENT) na BD
+    5. Retornar JSON com message_id
+
+- [ ] **Criar WhatsAppSendMediaAPI**
+  - [ ] View para enviar imagens/PDFs
+  - [ ] Método: POST (multipart/form-data)
+  - [ ] URL: `/api/whatsapp/send-media/`
+  - [ ] Body: file (upload) + contact_id
+  - [ ] Lógica:
+    1. Upload ficheiro para `/media/whatsapp/`
+    2. Obter URL público do ficheiro
+    3. Enviar via Meta API:
+       ```python
+       payload = {
+         "messaging_product": "whatsapp",
+         "to": contact.phone,
+         "type": "image",  # ou "document"
+         "image": {"link": file_url}
+       }
+       ```
+    4. Guardar WhatsAppMessage com media_url
+
+- [ ] **Criar WhatsAppNewMessagesAPI**
+  - [ ] View para polling de novas mensagens
+  - [ ] Método: GET
+  - [ ] URL: `/api/whatsapp/new-messages/<contact_id>/`
+  - [ ] Query param: `?since=timestamp`
+  - [ ] Retorna JSON com mensagens recebidas após timestamp
+
+- [ ] **Configurar rotas**
+  - [ ] `path('api/whatsapp/send/', WhatsAppSendMessageAPI, name='whatsapp_send_api')`
+  - [ ] `path('api/whatsapp/send-media/', WhatsAppSendMediaAPI, name='whatsapp_send_media_api')`
+  - [ ] `path('api/whatsapp/new-messages/<uuid:contact_id>/', WhatsAppNewMessagesAPI, name='whatsapp_new_messages_api')`
+
+- [ ] **Permissões**
+  - [ ] Apenas users autenticados
+  - [ ] Verificar company do user = company do contact
+
+- [ ] **Testing - APIs**
+  - [ ] Test: enviar mensagem via API funciona
+  - [ ] Test: enviar imagem via API funciona
+  - [ ] Test: polling retorna mensagens novas
+  - [ ] Test: user de empresa A não envia mensagens de empresa B
+
+---
+
+## 13.2.7 Notificações em Tempo Real (Opcional - WebSockets)
+
+Melhorar experiência com notificações em tempo real (alternativa ao polling).
+
+- [ ] **Instalar Django Channels**
+  - [ ] Adicionar `channels` ao requirements.txt
+  - [ ] pip install channels
+  - [ ] Configurar ASGI em settings
+
+- [ ] **Criar Consumer WebSocket**
+  - [ ] Criar `apps/marketing/consumers.py`
+  - [ ] ChatConsumer para receber updates em tempo real
+  - [ ] Quando nova mensagem chega (webhook), broadcast via WebSocket
+
+- [ ] **Atualizar JavaScript**
+  - [ ] Remover polling (setInterval)
+  - [ ] Conectar WebSocket: `ws://localhost:8000/ws/chat/`
+  - [ ] Escutar eventos de nova mensagem
+
+- [ ] **Testing - WebSockets**
+  - [ ] Test: WebSocket conecta
+  - [ ] Test: nova mensagem dispara evento
+  - [ ] Test: múltiplos users veem updates em tempo real
+
+**NOTA:** WebSockets é opcional. Polling funciona bem para começar!
+
+---
+
+## 13.2.8 Dashboard de Conversas WhatsApp
+
+Criar página central para ver todas as conversas ativas.
+
+- [ ] **Criar WhatsAppConversationsListView**
+  - [ ] Listar todos os contactos com mensagens WhatsApp
+  - [ ] Mostrar última mensagem
+  - [ ] Badge com contador de não lidas
+  - [ ] Ordenar por mensagem mais recente
+
+- [ ] **Criar template**
+  - [ ] `templates/marketing/whatsapp_conversations.html` (standalone)
+  - [ ] Lista de conversas (estilo WhatsApp Web)
+  - [ ] Ao clicar, abre chatter
+
+- [ ] **Configurar rota**
+  - [ ] `path('whatsapp/conversations/', WhatsAppConversationsListView, name='whatsapp_conversations')`
+
+- [ ] **Adicionar ao menu**
+  - [ ] Link "💬 WhatsApp" no navbar
+  - [ ] Badge com total de mensagens não lidas
+
+- [ ] **Testing - Conversations**
+  - [ ] Test: listar conversas funciona
+  - [ ] Test: contador de não lidas está correto
+  - [ ] Test: clicar abre chatter
+
+---
+
+## 💰 CUSTOS RESUMIDOS (Meta WhatsApp API)
+
+**Incluir no README ou docs:**
+
+| Item | Detalhe | Custo |
+|------|---------|-------|
+| **Setup** | Criar conta Meta Business | Grátis |
+| **Verificação** | Verificar número de telefone | Grátis |
+| **Primeiras mensagens** | 1000 conversas/mês | **GRÁTIS** 🎉 |
+| **Após 1000/mês** | Conversas adicionais | ~€0.038/conversa |
+| **Marketing** | Campanhas promocionais | ~€0.076/conversa |
+| **Media** | Enviar/receber imagens, PDFs | Incluído |
+
+**Conversa = janela de 24 horas**
+- 10 mensagens em 24h para mesma pessoa = 1 conversa
+
+**Exemplo real:**
+- 5000 conversas/mês = €152 (4000 × €0.038)
+- 10000 conversas/mês = €342
+
+---
+
+## ✅ CHECKLIST DE IMPLEMENTAÇÃO
+
+Ao implementar estas tarefas, seguir esta ordem:
+
+1. ✅ **13.2.1** - Setup Meta API (PRIMEIRO! Sem isto nada funciona)
+2. ✅ **13.2.3** - Modelo WhatsAppMessage (base de dados)
+3. ✅ **13.2.2** - Webhook (receber mensagens)
+4. ✅ **13.2.4** - Celery task (processar mensagens)
+5. ✅ **13.2.6** - APIs (enviar mensagens)
+6. ✅ **13.2.5** - Chatter UI (interface)
+7. ✅ **13.2.8** - Dashboard conversas
+8. 🔄 **13.2.7** - WebSockets (opcional, pode ser depois)
+
+---
+
+## 🎯 FLUXO COMPLETO - COMO FUNCIONA
+
+```
+ENVIAR MENSAGEM:
+User no chatter → Escreve mensagem → Clica "Enviar"
+→ AJAX POST /api/whatsapp/send/
+→ Python chama Meta API
+→ Guarda WhatsAppMessage (SENT) na BD
+→ JavaScript adiciona mensagem ao chat (sem refresh)
+→ Cliente recebe no WhatsApp dele ✅
+
+RECEBER MENSAGEM:
+Cliente envia mensagem no WhatsApp dele
+→ Meta API → POST /webhooks/whatsapp/ (webhook)
+→ Django recebe webhook
+→ Celery task: process_incoming_whatsapp_message
+→ Identifica company e contact
+→ Se tem imagem/PDF: faz download
+→ Guarda WhatsAppMessage (RECEIVED) na BD
+→ [Opcional] Notifica via WebSocket
+→ Frontend (polling ou WebSocket) busca novas mensagens
+→ JavaScript adiciona ao chat automaticamente
+→ User vê a resposta! ✅
+
+ANEXOS:
+Cliente envia foto
+→ Webhook recebe media_id
+→ Celery task chama Meta API para obter URL
+→ Download da imagem para /media/whatsapp/
+→ Guarda media_url na BD
+→ Chatter mostra imagem renderizada ✅
+```
+
+---
+
+## 📋 REQUISITOS TÉCNICOS
+
+**Servidor:**
+- ✅ HTTPS obrigatório (webhook não funciona com HTTP)
+- ✅ Domínio público (não pode ser localhost)
+- ✅ Porta 443 aberta
+
+**Para desenvolvimento local:**
+- Use **ngrok** para criar túnel HTTPS:
+  ```bash
+  ngrok http 8000
+  # Retorna: https://abc123.ngrok.io
+  # Usar este URL no webhook da Meta
+  ```
+
 ---
 
 ## 13.3 Modelo Campaign
@@ -4704,6 +6908,253 @@ Tratar casos onde produtos não existem ou dados estão incorretos.
 **⏱ Tempo estimado:** 4-5 dias
 **🎯 Objetivo:** Criar sistema de relatórios e dashboard com KPIs principais
 **📦 Dependências:** Fase 8 (Vendas), Fase 7 (Compras), Fase 9 (Financeiro), Fase 6 (Inventário)
+
+
+## 14.7 Modelo EmailInboxConfig (Configuração de Email Input por Empresa)
+
+Criar modelo para configurar contas de email que receberão PDFs automaticamente.
+
+- [ ] **Criar modelo EmailInboxConfig**
+  - [ ] Criar em `apps/purchases/models.py` ou `apps/core/models.py`
+  - [ ] Herdar de AbstractBaseModel
+  - [ ] Campo: company (ForeignKey para Company, **OBRIGATÓRIO**, on_delete=CASCADE)
+  - [ ] Campo: name (CharField, descrição tipo "Scanner Compras Fornecedor X")
+  - [ ] Campo: email_address (EmailField, email que vai receber os PDFs)
+  - [ ] Campo: email_password (CharField, encriptado)
+  - [ ] Campo: imap_server (CharField, default='imap.gmail.com')
+  - [ ] Campo: imap_port (IntegerField, default=993)
+  - [ ] Campo: use_ssl (BooleanField, default=True)
+  - [ ] Campo: auto_process (BooleanField, default=True, se deve processar automaticamente)
+  - [ ] Campo: default_supplier (ForeignKey para Contact, opcional, fornecedor padrão)
+  - [ ] Campo: folder_to_monitor (CharField, default='INBOX', pasta IMAP a monitorar)
+  - [ ] Campo: mark_as_read (BooleanField, default=True)
+  - [ ] Campo: last_check (DateTimeField, nullable, último check de emails)
+  - [ ] Campo: is_active (BooleanField, default=True)
+  - [ ] Meta: unique_together = ['company', 'email_address']
+  - [ ] Método: test_connection() - testa ligação IMAP
+  - [ ] Método: get_unread_emails() - retorna lista de emails não lidos com PDFs
+
+- [ ] **Validações importantes**
+  - [ ] Validar que company não pode ser null (OBRIGATÓRIO!)
+  - [ ] Validar formato de email
+  - [ ] Validar credenciais antes de guardar (botão "Testar Conexão")
+
+- [ ] **Criar migrations**
+  - [ ] Executar makemigrations
+  - [ ] Executar migrate
+
+- [ ] **Registrar no Admin**
+  - [ ] Criar EmailInboxConfigAdmin
+  - [ ] list_display: company, name, email_address, auto_process, is_active, last_check
+  - [ ] list_filter: company, is_active, auto_process
+  - [ ] search_fields: name, email_address
+  - [ ] Botão customizado "Testar Conexão" (chama test_connection())
+  - [ ] Botão customizado "Processar Agora" (força check manual)
+  - [ ] Fieldsets: Empresa, Configuração de Email (IMAP), Processamento, Status
+
+- [ ] **Security - Encriptação de Password**
+  - [ ] Usar django.contrib.auth.hashers ou cryptography.fernet
+  - [ ] Encriptar email_password antes de guardar
+  - [ ] Desencriptar apenas quando necessário (no Celery task)
+
+- [ ] **Testing - EmailInboxConfig**
+  - [ ] Test: criar config com company obrigatório funciona
+  - [ ] Test: criar config sem company falha (ValidationError)
+  - [ ] Test: test_connection() funciona com credenciais válidas
+  - [ ] Test: test_connection() falha com credenciais inválidas
+  - [ ] Test: get_unread_emails() retorna emails com PDFs
+  - [ ] Test: duas empresas podem ter configs diferentes
+  - [ ] Test: password é encriptado no save
+
+---
+
+## 14.8 Sistema de Monitoramento de Email Automático (Celery Task)
+
+Criar Celery task que verifica emails periodicamente e processa PDFs.
+
+- [ ] **Criar helper functions em apps/purchases/email_utils.py**
+  - [ ] Função: connect_to_imap(config) - conecta ao servidor IMAP
+  - [ ] Função: fetch_unread_emails_with_pdfs(mail, folder) - busca emails não lidos com PDFs
+  - [ ] Função: download_pdf_from_email(email_message) - extrai PDF do anexo
+  - [ ] Função: mark_email_as_processed(mail, email_id) - marca como lido/processado
+  - [ ] Tratamento de erros robusto (conexão falha, timeout, etc.)
+
+- [ ] **Criar Celery task periódica**
+  - [ ] Criar `apps/purchases/tasks.py`
+  - [ ] Task: `check_inbox_for_pdfs()` (roda periodicamente)
+  - [ ] Lógica:
+    1. Buscar todas as EmailInboxConfig ativas (is_active=True, auto_process=True)
+    2. Para cada config:
+       - Conectar ao IMAP
+       - Buscar emails não lidos com PDFs
+       - Para cada email com PDF:
+         * Download do PDF
+         * Processar via parse_purchase_lines() (já existe na tarefa 14.3)
+         * Criar PurchaseOrder em DRAFT (tarefa 14.5)
+         * Marcar email como lido
+         * Registrar em log
+       - Atualizar last_check
+    3. Registrar estatísticas (quantos emails processados, quantos falharam)
+    4. Enviar notificação em caso de erros
+
+- [ ] **Configurar Celery Beat (agendamento)**
+  - [ ] Configurar em `config/celery.py`
+  - [ ] Schedule: rodar a cada 5 minutos (ajustável via SystemSetting)
+  - [ ] Task: `check_inbox_for_pdfs.apply_async()`
+
+- [ ] **Criar modelo EmailProcessingLog**
+  - [ ] Campos: config (FK), email_from, email_subject, email_date, pdf_filename
+  - [ ] Campos: status (SUCCESS, FAILED, PARTIAL), error_message
+  - [ ] Campos: purchase_order (FK, nullable, se criou PO)
+  - [ ] Campos: processed_at, processing_time_seconds
+  - [ ] Para auditoria e debug
+
+- [ ] **Registrar EmailProcessingLog no Admin**
+  - [ ] Criar EmailProcessingLogAdmin
+  - [ ] list_display: config, email_from, status, pdf_filename, purchase_order, processed_at
+  - [ ] list_filter: status, config__company
+  - [ ] search_fields: email_from, email_subject, pdf_filename
+
+- [ ] **Criar SystemSetting para controlo**
+  - [ ] Criar setting: `email_check_interval_minutes` (default: 5)
+  - [ ] Criar setting: `email_processing_enabled` (ON/OFF global)
+  - [ ] Criar setting: `email_notification_on_error` (default: True)
+
+- [ ] **Testing - Email Monitoring**
+  - [ ] Test: task conecta ao email e busca PDFs
+  - [ ] Test: task processa PDF e cria PurchaseOrder
+  - [ ] Test: task marca email como lido
+  - [ ] Test: task regista logs corretamente
+  - [ ] Test: task falha gracefully quando credenciais estão erradas
+  - [ ] Test: task respeita auto_process=False
+  - [ ] Test: task processa apenas emails da empresa correta (multi-company)
+  - [ ] Test: Celery Beat schedule funciona (mock de tempo)
+
+---
+
+## 14.9 Views de Gestão de Email Inbox Config
+
+Criar interface para configurar e monitorar emails.
+
+- [ ] **Criar EmailInboxConfigListView**
+  - [ ] Listar todas as configs da empresa ativa
+  - [ ] Filtrar por company automaticamente (session['active_company'])
+  - [ ] Mostrar: email, fornecedor default, status (ativo/inativo), último check, auto-process
+  - [ ] Badges visuais: ✅ Ativo, ⏸️ Pausado, ❌ Erro
+  - [ ] Link para editar, testar conexão, ver logs
+
+- [ ] **Criar EmailInboxConfigCreateView**
+  - [ ] Form com todos os campos
+  - [ ] Campo company auto-preenchido com active_company (hidden + readonly)
+  - [ ] Input de password tipo password (escondido)
+  - [ ] Botão "Testar Conexão" AJAX (testa antes de guardar)
+  - [ ] Validação: email único por empresa
+  - [ ] Após criar, redirecionar para lista
+
+- [ ] **Criar EmailInboxConfigUpdateView**
+  - [ ] Mesmo form que Create
+  - [ ] Campo company desabilitado (não pode mudar empresa)
+  - [ ] Mostrar last_check e estatísticas
+  - [ ] Botão "Processar Agora" (dispara task manualmente)
+
+- [ ] **Criar EmailInboxConfigTestView (AJAX)**
+  - [ ] Endpoint POST para testar conexão
+  - [ ] Recebe: email, password, imap_server, imap_port
+  - [ ] Tenta conectar via IMAP
+  - [ ] Retorna JSON: {success: true/false, message: "...", email_count: X}
+  - [ ] Se sucesso, mostra quantos emails não lidos existem
+
+- [ ] **Criar EmailProcessingLogListView**
+  - [ ] Listar logs da config selecionada
+  - [ ] Filtros: status, período
+  - [ ] Mostrar: email remetente, assunto, status, PO criada, erro
+  - [ ] Link para ver PurchaseOrder criada
+
+- [ ] **Criar templates**
+  - [ ] `templates/purchases/email_inbox_config_list.html` (standalone)
+  - [ ] `templates/purchases/email_inbox_config_form.html` (standalone, usado em create/update)
+  - [ ] `templates/purchases/email_processing_logs.html` (standalone)
+
+- [ ] **Configurar rotas**
+  - [ ] `path('purchases/email-configs/', EmailInboxConfigListView, name='email_inbox_config_list')`
+  - [ ] `path('purchases/email-configs/new/', EmailInboxConfigCreateView, name='email_inbox_config_create')`
+  - [ ] `path('purchases/email-configs/<uuid:pk>/edit/', EmailInboxConfigUpdateView, name='email_inbox_config_update')`
+  - [ ] `path('purchases/email-configs/test/', EmailInboxConfigTestView, name='email_inbox_config_test')` (AJAX)
+  - [ ] `path('purchases/email-configs/<uuid:pk>/logs/', EmailProcessingLogListView, name='email_processing_logs')`
+
+- [ ] **Adicionar ao menu de Compras**
+  - [ ] Link "Configurar Emails" no dropdown de Compras
+  - [ ] Badge com contagem de configs ativas
+
+- [ ] **Testing - Email Config Views**
+  - [ ] Test: criar config funciona
+  - [ ] Test: company é obrigatório e auto-preenchido
+  - [ ] Test: testar conexão via AJAX funciona
+  - [ ] Test: editar config funciona (mas não permite mudar company)
+  - [ ] Test: listar configs filtra por empresa ativa
+  - [ ] Test: user de empresa A não vê configs de empresa B
+  - [ ] Test: ver logs funciona
+  - [ ] Test: botão "Processar Agora" dispara task
+
+---
+
+## 💡 INTEGRAÇÃO COM FASE 16 (OPCIONAL)
+
+**Sugestão:** Adicionar também na **Fase 16 (Configurações)** uma tarefa:
+
+### 16.9 Configuração Global de Email Input (UI Settings)
+
+- [ ] **Adicionar ao SettingsIndexView**
+  - [ ] Card "Email Automation" com link para EmailInboxConfigListView
+  - [ ] Mostrar: quantas configs ativas, último processamento
+
+- [ ] **Adicionar SystemSettings**
+  - [ ] Setting: `email_check_interval_minutes`
+  - [ ] Setting: `email_processing_enabled` (ON/OFF toggle)
+  - [ ] Setting: `email_max_retries` (quantas tentativas em caso de erro)
+
+---
+
+## 📋 FLUXO COMPLETO - COMO FUNCIONA
+
+```
+1. USER CONFIG (Fase 16 ou Purchase Settings):
+   └─ Cria EmailInboxConfig para cubicxscanner@gmail.com
+   └─ Associa à Empresa A (company obrigatório!)
+   └─ Define fornecedor padrão (opcional)
+   └─ Ativa auto_process = True
+
+2. CELERY TASK (roda a cada 5 min):
+   └─ Busca EmailInboxConfig ativas
+   └─ Conecta ao cubicxscanner@gmail.com (IMAP)
+   └─ Busca emails não lidos com PDFs
+   └─ Para cada email:
+      ├─ Download PDF
+      ├─ Extrai texto (PyPDF2)
+      ├─ Parse referências/quantidades/preços (Tarefa 14.3)
+      ├─ Cria PurchaseOrder DRAFT (Tarefa 14.5)
+      ├─ Associa à Empresa A (via config.company)
+      ├─ Marca email como lido
+      └─ Regista em EmailProcessingLog
+
+3. USER REVIEW (Purchase Orders):
+   └─ Vê lista de POs em DRAFT
+   └─ Revê dados extraídos
+   └─ Confirma ou edita
+   └─ Aprova PO → Stock movement automático
+```
+
+---
+
+## ✅ CONFIRMAÇÕES IMPORTANTES
+
+1. ✅ **Company é OBRIGATÓRIO** - EmailInboxConfig.company não pode ser null
+2. ✅ **Multi-company funciona** - Cada empresa tem seus próprios emails configurados
+3. ✅ **Emails ficam separados** - Empresa A não vê/processa emails da Empresa B
+4. ✅ **Segurança** - Passwords encriptados
+5. ✅ **Auditoria** - Todos os processamentos registados em EmailProcessingLog
+6. ✅ **Flexibilidade** - Pode ter 1, 5, 10+ emails configurados por empresa
+7. ✅ **Controlo** - Pode desativar globalmente ou por config
 
 ---
 

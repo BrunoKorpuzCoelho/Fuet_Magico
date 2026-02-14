@@ -1,5 +1,6 @@
 ﻿from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
 from django.db.models import Q, F, Sum, Count
 from django.utils import timezone
@@ -10,10 +11,12 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import ensure_csrf_cookie
 from apps.accounts.decorators import admin_required
 from apps.core.multi_company import filter_by_company, get_active_company
-from .models import CRMStage, Lead
-from .forms import CRMStageForm
+from .models import CRMTag, CRMStage, Lead
+from .forms import CRMStageForm, CRMTagForm
 import json
 import random
+
+User = get_user_model()
 
 
 def generate_random_color():
@@ -102,6 +105,7 @@ def stage_create(request):
         color = data.get('color', '#6c757d')
         routing_in_days = data.get('routing_in_days', 0)
         is_won_stage = data.get('is_won_stage', False)
+        is_lost_stage = data.get('is_lost_stage', False)
         fold_by_default = data.get('fold_by_default', False)
         
         # Validar que só pode haver um estágio de vitória
@@ -111,7 +115,6 @@ def stage_create(request):
                 is_won_stage=True,
                 is_active=True
             )
-            # Filter by company
             if company:
                 existing_won = existing_won.filter(
                     Q(owner_company_id=company) | Q(owner_company__isnull=True)
@@ -128,6 +131,28 @@ def stage_create(request):
                     }
                 }, status=400)
         
+        # Validar que só pode haver um estágio de perda
+        if is_lost_stage:
+            existing_lost = CRMStage.objects.filter(
+                is_lost_stage=True,
+                is_active=True
+            )
+            if company:
+                existing_lost = existing_lost.filter(
+                    Q(owner_company_id=company) | Q(owner_company__isnull=True)
+                )
+            else:
+                existing_lost = existing_lost.filter(owner_company__isnull=True)
+            
+            if existing_lost.exists():
+                return JsonResponse({
+                    'success': False,
+                    'error': {
+                        'code': 'LOST_STAGE_EXISTS',
+                        'message': 'Já existe um estágio de perda. Só pode existir um estágio com "Perda" ativo por empresa.'
+                    }
+                }, status=400)
+        
         # Obter owner_company
         owner_company = get_active_company(request)
         
@@ -138,6 +163,7 @@ def stage_create(request):
             color=color,
             routing_in_days=routing_in_days,
             is_won_stage=is_won_stage,
+            is_lost_stage=is_lost_stage,
             fold_by_default=fold_by_default,
             owner_company=owner_company
         )
@@ -288,8 +314,8 @@ def stage_duplicate(request):
     Duplica estágios selecionados.
     Cria cópias exatas com sequence = original.sequence + 1
     
-    IMPORTANTE: Estágios com is_won_stage=True não podem ser duplicados.
-    Só pode existir um estágio de vitória por empresa.
+    IMPORTANTE: Estágios com is_won_stage=True ou is_lost_stage=True não podem ser duplicados.
+    Só pode existir um estágio de vitória e um de perda por empresa.
     """
     try:
         data = json.loads(request.body)
@@ -301,17 +327,16 @@ def stage_duplicate(request):
                 'error': 'Nenhum estágio selecionado'
             }, status=400)
         
-        # Verificar se algum dos estágios selecionados é um estágio de vitória
-        won_stages = CRMStage.objects.filter(
+        # Verificar se algum dos estágios selecionados é um estágio de vitória ou perda
+        special_stages = CRMStage.objects.filter(
             id__in=stage_ids,
-            is_won_stage=True,
             is_active=True
-        )
+        ).filter(Q(is_won_stage=True) | Q(is_lost_stage=True))
         
-        if won_stages.exists():
+        if special_stages.exists():
             return JsonResponse({
                 'success': False,
-                'error': 'Não é possível duplicar estágios de vitória. Só pode existir um estágio com "Vitória" ativo por empresa.'
+                'error': 'Não é possível duplicar estágios de vitória ou perda. Só pode existir um de cada por empresa.'
             }, status=400)
         
         duplicated_count = 0
@@ -330,6 +355,7 @@ def stage_duplicate(request):
                 name=f"{original_stage.name} (cópia)",
                 sequence=original_stage.sequence + 1,
                 is_won_stage=original_stage.is_won_stage,
+                is_lost_stage=original_stage.is_lost_stage,
                 fold_by_default=original_stage.fold_by_default,
                 routing_in_days=original_stage.routing_in_days,
                 color=original_stage.color,
@@ -393,6 +419,11 @@ def stage_bulk_delete(request):
                 related_warnings.append({
                     'stage': stage.name,
                     'warning': 'Este é um estágio de vitória'
+                })
+            if stage.is_lost_stage:
+                related_warnings.append({
+                    'stage': stage.name,
+                    'warning': 'Este é um estágio de perda'
                 })
         
         # Delete stages (hard delete)
@@ -697,3 +728,556 @@ def lead_change_stage(request, lead_id):
             'error': str(e),
             'traceback': traceback.format_exc()
         }, status=500)
+
+
+@login_required
+def lead_create_view(request):
+    """
+    Criar nova lead (oportunidade de venda).
+    """
+    from .forms import LeadForm
+    from apps.contacts.models import Contact
+    
+    active_company = get_active_company(request)
+    
+    if request.method == 'POST':
+        form = LeadForm(request.POST)
+        
+        if form.is_valid():
+            lead = form.save(commit=False)
+            lead.owner_company = active_company
+            lead.save()
+            
+            # Handle M2M tags
+            tag_ids = request.POST.getlist('tags')
+            if tag_ids:
+                tags = CRMTag.objects.filter(id__in=tag_ids, is_active=True)
+                lead.tags.set(tags)
+            
+            messages.success(request, f'Oportunidade "{lead.title}" criada com sucesso!')
+            return redirect('crm:crm_home')
+    else:
+        # Get first stage as default
+        default_stage = CRMStage.objects.filter(
+            is_active=True
+        ).filter(
+            Q(owner_company__isnull=True) | Q(owner_company=active_company)
+        ).order_by('sequence').first()
+        
+        form = LeadForm(initial={
+            'stage': default_stage,
+            'assigned_to': request.user,
+            'probability': 10,
+        })
+    
+    # Filtrar contactos e stages da empresa
+    form.fields['contact'].queryset = Contact.objects.filter(
+        is_active=True,
+        owner_company=active_company
+    ).order_by('name')
+    
+    form.fields['stage'].queryset = CRMStage.objects.filter(
+        is_active=True
+    ).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).order_by('sequence')
+    
+    form.fields['assigned_to'].queryset = User.objects.filter(is_active=True).order_by('username')
+    
+    stages = CRMStage.objects.filter(
+        is_active=True
+    ).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).exclude(is_lost_stage=True).order_by('sequence')
+
+    context = {
+        'form': form,
+        'page_title': 'Nova Oportunidade',
+        'stages': stages,
+    }
+    
+    return render(request, 'crm/lead_create.html', context)
+
+
+@login_required
+def lead_detail_view(request, lead_id):
+    """
+    Detail/Edit view para uma lead (estilo Odoo).
+    Layout: Form 70% | Chatter 30%
+    """
+    from .forms import LeadForm
+    
+    active_company = get_active_company(request)
+    
+    # Get lead
+    lead = get_object_or_404(Lead, id=lead_id, owner_company=active_company)
+    
+    # Handle POST (save changes)
+    if request.method == 'POST':
+        form = LeadForm(request.POST, instance=lead)
+        
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Oportunidade "{lead.title}" atualizada com sucesso!')
+            return redirect('crm:lead_detail', lead_id=lead.id)
+    else:
+        form = LeadForm(instance=lead)
+    
+    # Filtrar contactos e stages da empresa
+    form.fields['contact'].queryset = Contact.objects.filter(
+        is_active=True,
+        owner_company=active_company
+    ).order_by('name')
+    
+    form.fields['stage'].queryset = CRMStage.objects.filter(
+        is_active=True
+    ).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).order_by('sequence')
+    
+    form.fields['assigned_to'].queryset = User.objects.filter(is_active=True).order_by('username')
+    
+    # Get all stages for status bar
+    all_stages = CRMStage.objects.filter(
+        is_active=True
+    ).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).order_by('sequence')
+    
+    # Smart buttons counts (TODO: implement when models exist)
+    quotations_count = 0  # TODO: lead.quotations.count()
+    revenue_total = 0  # TODO: lead.quotations.filter(state='won').aggregate(Sum('amount'))['amount__sum'] or 0
+    
+    # Serialize stages for JavaScript
+    all_stages_json = json.dumps([{
+        'id': str(stage.id),
+        'name': stage.name,
+        'is_won_stage': stage.is_won_stage,
+        'is_lost_stage': stage.is_lost_stage
+    } for stage in all_stages])
+    
+    context = {
+        'lead': lead,
+        'form': form,
+        'all_stages': all_stages,
+        'all_stages_json': all_stages_json,
+        'quotations_count': quotations_count,
+        'revenue_total': revenue_total,
+        'page_title': lead.title,
+    }
+    
+    return render(request, 'crm/lead_detail.html', context)
+
+
+# ============================================================
+# CRM TAGS VIEWS
+# ============================================================
+
+@login_required
+def crm_tag_list_view(request):
+    """View para listar CRM Tags com paginação, busca e filtros"""
+    from django.db.models import Count
+    
+    search_query = request.GET.get('search', '')
+    search_field = request.GET.get('field', 'name')
+    page_number = request.GET.get('page', 1)
+    page_size = request.GET.get('page_size', 50)
+    status_filter = request.GET.get('status', 'active')
+    
+    try:
+        page_size = int(page_size)
+        if page_size < 1:
+            page_size = 50
+    except (ValueError, TypeError):
+        page_size = 50
+    
+    if status_filter == 'archived':
+        tags = CRMTag.objects.filter(is_active=False).annotate(lead_count=Count('leads')).order_by('name')
+    else:
+        tags = CRMTag.objects.filter(is_active=True).annotate(lead_count=Count('leads')).order_by('name')
+    
+    tags = filter_by_company(tags, request)
+    
+    if search_query:
+        field_mapping = {
+            'name': Q(name__icontains=search_query),
+            'color': Q(color__icontains=search_query),
+        }
+        if search_field in field_mapping:
+            tags = tags.filter(field_mapping[search_field])
+    
+    paginator = Paginator(tags, page_size)
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'tags': page_obj,
+        'search_query': search_query,
+        'search_field': search_field,
+        'total_count': paginator.count,
+        'page_size': page_size,
+        'status_filter': status_filter,
+    }
+    
+    return render(request, 'crm/crm_tag_list.html', context)
+
+
+@login_required
+def crm_tag_create_view(request):
+    """View para criar nova CRM tag"""
+    active_company = get_active_company(request)
+    
+    if request.method == 'POST':
+        form = CRMTagForm(request.POST)
+        if form.is_valid():
+            tag = form.save(commit=False)
+            if not tag.owner_company:
+                tag.owner_company = active_company
+            tag.save()
+            messages.success(request, f'Tag "{tag.name}" criada com sucesso!')
+            return redirect('crm:crm_tag_list')
+    else:
+        form = CRMTagForm()
+    
+    context = {
+        'form': form,
+        'is_edit': False,
+    }
+    
+    return render(request, 'crm/crm_tag_form.html', context)
+
+
+@login_required
+def crm_tag_edit_view(request, tag_id):
+    """View para editar CRM tag existente"""
+    active_company = get_active_company(request)
+    tag = get_object_or_404(CRMTag, id=tag_id)
+    
+    if request.method == 'POST':
+        form = CRMTagForm(request.POST, instance=tag)
+        if form.is_valid():
+            tag = form.save(commit=False)
+            if not tag.owner_company:
+                tag.owner_company = active_company
+            tag.save()
+            messages.success(request, f'Tag "{tag.name}" atualizada com sucesso!')
+            return redirect('crm:crm_tag_list')
+    else:
+        form = CRMTagForm(instance=tag)
+    
+    context = {
+        'form': form,
+        'tag': tag,
+        'is_edit': True,
+    }
+    
+    return render(request, 'crm/crm_tag_form.html', context)
+
+
+@require_http_methods(["POST"])
+@login_required
+def crm_bulk_archive_tags(request):
+    """Arquivar múltiplas CRM tags em massa"""
+    from django.db import transaction
+    
+    try:
+        data = json.loads(request.body)
+        tag_ids = data.get('tag_ids', [])
+        
+        if not isinstance(tag_ids, list):
+            return JsonResponse({'success': False, 'error': {'code': 'INVALID_FORMAT', 'message': 'tag_ids deve ser uma lista'}}, status=400)
+        
+        if not tag_ids:
+            return JsonResponse({'success': False, 'error': {'code': 'EMPTY_SELECTION', 'message': 'Nenhuma tag selecionada para arquivar'}}, status=400)
+        
+        tags = CRMTag.objects.filter(id__in=tag_ids)
+        
+        if not tags.exists():
+            return JsonResponse({'success': False, 'error': {'code': 'TAGS_NOT_FOUND', 'message': 'Nenhuma tag válida encontrada'}}, status=404)
+        
+        already_archived = []
+        to_archive = []
+        
+        for tag in tags:
+            if not tag.is_active:
+                already_archived.append(tag.name)
+            else:
+                to_archive.append(tag)
+        
+        # Se TODAS já estiverem arquivadas, retorna erro
+        if already_archived and not to_archive:
+            return JsonResponse({
+                'success': False,
+                'error': {
+                    'code': 'ALREADY_ARCHIVED',
+                    'message': 'As tags selecionadas já estão arquivadas. Use a opção desarquivar se pretende restaurá-las.',
+                    'tags': already_archived
+                }
+            }, status=409)
+        
+        # Arquivar apenas as que estão ativas
+        with transaction.atomic():
+            archived_count = 0
+            for tag in to_archive:
+                tag.is_active = False
+                tag.save(update_fields=['is_active'])
+                archived_count += 1
+        
+        result = {
+            'success': True,
+            'archived_count': archived_count,
+            'message': f'{archived_count} tag(s) arquivada(s) com sucesso'
+        }
+        
+        if already_archived:
+            result['already_archived'] = already_archived
+            result['warning'] = f'{len(already_archived)} tag(s) já estavam arquivadas'
+        
+        return JsonResponse(result, status=200)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': {'code': 'INVALID_JSON', 'message': 'Formato JSON inválido'}}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': 'Ocorreu um erro inesperado'}}, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def crm_bulk_unarchive_tags(request):
+    """Desarquivar múltiplas CRM tags em massa"""
+    from django.db import transaction
+    
+    try:
+        data = json.loads(request.body)
+        tag_ids = data.get('tag_ids', [])
+        
+        if not isinstance(tag_ids, list):
+            return JsonResponse({'success': False, 'error': {'code': 'INVALID_FORMAT', 'message': 'tag_ids deve ser uma lista'}}, status=400)
+        
+        if not tag_ids:
+            return JsonResponse({'success': False, 'error': {'code': 'EMPTY_SELECTION', 'message': 'Nenhuma tag selecionada para desarquivar'}}, status=400)
+        
+        tags = CRMTag.objects.filter(id__in=tag_ids)
+        
+        if not tags.exists():
+            return JsonResponse({'success': False, 'error': {'code': 'TAGS_NOT_FOUND', 'message': 'Nenhuma tag válida encontrada'}}, status=404)
+        
+        already_active = []
+        to_unarchive = []
+        
+        for tag in tags:
+            if tag.is_active:
+                already_active.append(tag.name)
+            else:
+                to_unarchive.append(tag)
+        
+        # Se TODAS já estiverem ativas, retorna erro
+        if already_active and not to_unarchive:
+            return JsonResponse({
+                'success': False,
+                'error': {
+                    'code': 'ALREADY_ACTIVE',
+                    'message': 'As tags selecionadas já estão ativas.',
+                    'tags': already_active
+                }
+            }, status=409)
+        
+        # Desarquivar apenas as que estão arquivadas
+        with transaction.atomic():
+            unarchived_count = 0
+            for tag in to_unarchive:
+                tag.is_active = True
+                tag.save(update_fields=['is_active'])
+                unarchived_count += 1
+        
+        result = {
+            'success': True,
+            'unarchived_count': unarchived_count,
+            'message': f'{unarchived_count} tag(s) desarquivada(s) com sucesso'
+        }
+        
+        if already_active:
+            result['already_active'] = already_active
+            result['warning'] = f'{len(already_active)} tag(s) já estavam ativas'
+        
+        return JsonResponse(result, status=200)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': {'code': 'INVALID_JSON', 'message': 'Formato JSON inválido'}}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': 'Ocorreu um erro inesperado'}}, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def crm_bulk_delete_tags(request):
+    """Eliminar múltiplas CRM tags em massa"""
+    try:
+        data = json.loads(request.body)
+        tag_ids = data.get('tag_ids', [])
+        
+        if not tag_ids:
+            return JsonResponse({'success': False, 'error': {'code': 'EMPTY_SELECTION', 'message': 'Nenhuma tag selecionada'}}, status=400)
+        
+        tags = CRMTag.objects.filter(id__in=tag_ids)
+        count = tags.count()
+        tags.delete()
+        
+        return JsonResponse({'success': True, 'message': f'{count} tag(s) eliminada(s) com sucesso!'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': {'message': str(e)}}, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def crm_check_tags_leads(request):
+    """Verificar se tags CRM têm leads associados antes de apagar"""
+    try:
+        data = json.loads(request.body)
+        tag_ids = data.get('tag_ids', [])
+        
+        tags = CRMTag.objects.filter(id__in=tag_ids).annotate(lead_count=Count('leads'))
+        total_affected = sum(t.lead_count for t in tags)
+        
+        tags_info = [{'id': str(t.id), 'name': t.name, 'lead_count': t.lead_count} for t in tags if t.lead_count > 0]
+        
+        return JsonResponse({
+            'success': True,
+            'total_affected': total_affected,
+            'tags': tags_info
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+@login_required
+def crm_search_tags_api(request):
+    """API para pesquisar CRM tags (autocomplete no formulário de leads)"""
+    active_company = get_active_company(request)
+    query = request.GET.get('q', '').strip()
+    limit = int(request.GET.get('limit', 7))
+    
+    if not query:
+        tags = CRMTag.objects.filter(
+            owner_company=active_company,
+            is_active=True
+        ).order_by('-created_at')[:limit]
+    else:
+        tags = CRMTag.objects.filter(
+            owner_company=active_company,
+            is_active=True,
+            name__icontains=query
+        ).order_by('name')[:limit]
+    
+    results = [
+        {
+            'id': str(tag.id),
+            'name': tag.name,
+            'color': tag.color,
+            'lead_count': tag.leads.count()
+        }
+        for tag in tags
+    ]
+    
+    return JsonResponse({
+        'success': True,
+        'results': results,
+        'count': len(results),
+        'has_more': CRMTag.objects.filter(
+            owner_company=active_company,
+            is_active=True,
+            name__icontains=query
+        ).count() > limit if query else False
+    })
+
+
+@require_http_methods(["POST"])
+@login_required
+def crm_quick_create_tag_api(request):
+    """API para criar CRM tag rapidamente (autocomplete no formulário de leads)"""
+    active_company = get_active_company(request)
+    
+    try:
+        data = json.loads(request.body)
+        name = data.get('name', '').strip()
+        color = data.get('color', '').strip()
+        
+        if not name:
+            return JsonResponse({'success': False, 'error': 'Nome da tag é obrigatório'}, status=400)
+        
+        if CRMTag.objects.filter(owner_company=active_company, name__iexact=name).exists():
+            return JsonResponse({'success': False, 'error': 'Já existe uma tag CRM com este nome'}, status=400)
+        
+        if not color:
+            colors = [
+                '#dc2626', '#ea580c', '#d97706', '#ca8a04', '#65a30d',
+                '#16a34a', '#059669', '#0891b2', '#0284c7', '#2563eb',
+                '#4f46e5', '#7c3aed', '#9333ea', '#c026d3', '#db2777',
+                '#dbc693'
+            ]
+            color = random.choice(colors)
+        
+        tag = CRMTag.objects.create(
+            name=name,
+            color=color,
+            owner_company=active_company
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'tag': {
+                'id': str(tag.id),
+                'name': tag.name,
+                'color': tag.color,
+                'lead_count': 0
+            },
+            'message': f'Tag "{tag.name}" criada com sucesso!'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Formato JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ============================================================
+# CONTACT SEARCH API (for lead form autocomplete)
+# ============================================================
+
+@require_http_methods(["GET"])
+@login_required
+def search_contacts_for_lead_api(request):
+    """API para pesquisar contactos (autocomplete no campo contacto do lead)"""
+    from apps.contacts.models import Contact
+    
+    active_company = get_active_company(request)
+    query = request.GET.get('q', '').strip()
+    limit = int(request.GET.get('limit', 7))
+    
+    contacts = Contact.objects.filter(
+        is_active=True,
+        owner_company=active_company
+    )
+    
+    if query:
+        contacts = contacts.filter(
+            Q(name__icontains=query) | 
+            Q(email__icontains=query) | 
+            Q(phone__icontains=query)
+        )
+    
+    contacts = contacts.order_by('name')[:limit]
+    
+    results = [
+        {
+            'id': str(c.id),
+            'name': c.name,
+            'email': c.email or '',
+            'phone': c.phone or '',
+        }
+        for c in contacts
+    ]
+    
+    return JsonResponse({
+        'success': True,
+        'results': results,
+        'count': len(results),
+    })

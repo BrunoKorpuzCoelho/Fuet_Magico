@@ -9,6 +9,33 @@ from apps.contacts.models import Contact
 User = get_user_model()
 
 
+class CRMTag(AbstractBaseModel):
+    """
+    Modelo para tags de CRM reutilizáveis em múltiplos leads/oportunidades.
+    Replicação do ContactTag para o módulo CRM.
+    """
+    name = models.CharField(max_length=50, unique=True, verbose_name='Tag Name')
+    color = models.CharField(max_length=7, default='#dbc693', verbose_name='Tag Color')
+    
+    owner_company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='crm_tags',
+        verbose_name='Owner Company',
+        help_text='Leave empty for global tags. Set to make tag private to specific company.'
+    )
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'CRM Tag'
+        verbose_name_plural = 'CRM Tags'
+    
+    def __str__(self):
+        return self.name
+
+
 class CRMStage(AbstractBaseModel):
     """
     Modelo para estágios personalizáveis do pipeline CRM.
@@ -28,6 +55,11 @@ class CRMStage(AbstractBaseModel):
         default=False,
         verbose_name='Estágio de Vitória',
         help_text='Marca este estágio como ganho/venda concluída'
+    )
+    is_lost_stage = models.BooleanField(
+        default=False,
+        verbose_name='Estágio de Perda',
+        help_text='Marca este estágio como perdido/oportunidade falhada'
     )
     fold_by_default = models.BooleanField(
         default=False,
@@ -101,6 +133,24 @@ class Lead(AbstractBaseModel):
         related_name='leads',
         verbose_name='Contact'
     )
+    contact_name = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name='Contact Name',
+        help_text='Nome do contacto (preenchido automaticamente se selecionar contacto)'
+    )
+    email_from = models.EmailField(
+        max_length=254,
+        blank=True,
+        verbose_name='Email',
+        help_text='Email do contacto da oportunidade'
+    )
+    phone = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='Phone',
+        help_text='Telefone do contacto da oportunidade'
+    )
     title = models.CharField(
         max_length=255,
         verbose_name='Opportunity Title'
@@ -159,11 +209,16 @@ class Lead(AbstractBaseModel):
         verbose_name='Lost Reason',
         help_text='Required if stage is Lost'
     )
-    tags = models.JSONField(
-        default=list,
+    tags = models.ManyToManyField(
+        CRMTag,
         blank=True,
-        verbose_name='Tags',
-        help_text='Tag system same as Contacts (list of dicts with name+color)'
+        related_name='leads',
+        verbose_name='Tags'
+    )
+    notes = models.TextField(
+        blank=True,
+        verbose_name='Notes',
+        help_text='Rich text notes (HTML formatted)'
     )
     owner_company = models.ForeignKey(
         Company,

@@ -14,13 +14,6 @@
         overflow: hidden;
     }
     
-    /* Wrapper do pipeline - preenche o espaço restante com scroll em ambas direções */
-    .pipeline-wrapper {
-        flex: 1;
-        width: 100%;
-        overflow: auto;
-    }
-    
     /* Custom scrollbar - horizontal */
     .pipeline-wrapper::-webkit-scrollbar {
         height: 8px;
@@ -103,7 +96,7 @@
             <div class="flex items-center justify-between gap-4">
                 <!-- Left: New Button -->
                 <div class="flex items-center space-x-3">
-                    <a href="#" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center space-x-2">
+                    <a href="{% url 'crm:lead_create' %}" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center space-x-2">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
@@ -202,7 +195,7 @@
         <div class="px-4">
             <div class="flex items-center gap-2 mb-3">
                 <!-- New Button -->
-                <a href="#" class="p-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors">
+                <a href="{% url 'crm:lead_create' %}" class="p-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                     </svg>
@@ -237,7 +230,7 @@
     </div>
     
     <!-- Kanban Pipeline Wrapper -->
-    <div class="pipeline-wrapper" style="width: 95%; margin: 0 auto; padding-top: 0.5rem; padding-bottom: 2rem;">
+    <div class="pipeline-wrapper" style="width: 95%; margin: 0 auto; padding-top: 0.5rem; padding-bottom: 2rem; overflow: auto;">
         <div class="pipeline-container" style="display: flex; flex-direction: row; gap: 1rem;">
         {% for stage_data in pipeline_data %}
             <div id="column-{{ stage_data.stage.id }}" 
@@ -311,7 +304,9 @@
                 {% for lead in stage_data.leads %}
                 <div class="lead-card rounded-lg p-3 shadow-sm cursor-move border hover:border-gray-600
                     {% if lead.is_overdue %}bg-red-900/30 border-red-700/50{% elif lead.is_warning %}bg-yellow-900/30 border-yellow-700/50{% else %}bg-gray-800 dark:bg-gray-800 border-gray-700{% endif %}"
-                    data-lead-id="{{ lead.id }}">
+                    data-lead-id="{{ lead.id }}"
+                    onclick="navigateToLead('{{ lead.id }}')"
+                    style="cursor: pointer;">
                     
                     <!-- Lead Title -->
                     <h4 class="font-medium text-white text-sm mb-1">
@@ -461,6 +456,16 @@
             });
         }
 
+        // Track drag state to prevent click navigation during drag
+        let isDragging = false;
+        
+        // Navigate to lead detail page
+        function navigateToLead(leadId) {
+            if (!isDragging) {
+                window.location.href = `/crm/leads/${leadId}/`;
+            }
+        }
+
         // Initialize Sortable on each column
         const columns = document.querySelectorAll('.kanban-column-body');
         columns.forEach(column => {
@@ -473,6 +478,9 @@
                 swapThreshold: 0.65,
                 handle: '.lead-card',  // Only cards are draggable
                 draggable: '.lead-card',
+                onStart: function(evt) {
+                    isDragging = true;
+                },
                 onEnd: function(evt) {
                     const leadId = evt.item.dataset.leadId;
                     const oldStageId = evt.from.dataset.stageId;
@@ -481,6 +489,11 @@
                     if (oldStageId !== newStageId) {
                         moveLeadToStage(leadId, newStageId, evt.item);
                     }
+                    
+                    // Reset drag state after a short delay to prevent click
+                    setTimeout(() => {
+                        isDragging = false;
+                    }, 100);
                 }
             });
         });

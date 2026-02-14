@@ -1,12 +1,38 @@
 from django.contrib import admin
-from .models import CRMStage, Lead, Activity
+from .models import CRMTag, CRMStage, Lead, Activity
+
+
+@admin.register(CRMTag)
+class CRMTagAdmin(admin.ModelAdmin):
+    list_display = ['name', 'color', 'lead_count', 'is_active', 'created_at']
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['name']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+    
+    fieldsets = [
+        ('Tag Information', {
+            'fields': ['name', 'color', 'is_active']
+        }),
+        ('Multi-Company', {
+            'fields': ['owner_company'],
+            'classes': ['collapse']
+        }),
+        ('System', {
+            'fields': ['id', 'created_at', 'updated_at'],
+            'classes': ['collapse']
+        }),
+    ]
+    
+    def lead_count(self, obj):
+        return obj.leads.count()
+    lead_count.short_description = 'Leads'
 
 
 @admin.register(CRMStage)
 class CRMStageAdmin(admin.ModelAdmin):
-    list_display = ['name', 'sequence', 'is_won_stage', 'routing_in_days', 'color', 'fold_by_default', 'owner_company']
+    list_display = ['name', 'sequence', 'is_won_stage', 'is_lost_stage', 'routing_in_days', 'color', 'fold_by_default', 'owner_company']
     list_editable = ['sequence', 'fold_by_default']
-    list_filter = ['is_won_stage', 'fold_by_default', 'owner_company']
+    list_filter = ['is_won_stage', 'is_lost_stage', 'fold_by_default', 'owner_company']
     search_fields = ['name']
     ordering = ['sequence', 'name']
     
@@ -15,7 +41,7 @@ class CRMStageAdmin(admin.ModelAdmin):
             'fields': ('name', 'sequence', 'color')
         }),
         ('Configurações', {
-            'fields': ('is_won_stage', 'fold_by_default', 'routing_in_days')
+            'fields': ('is_won_stage', 'is_lost_stage', 'fold_by_default', 'routing_in_days')
         }),
         ('Multi-Company', {
             'fields': ('owner_company',),

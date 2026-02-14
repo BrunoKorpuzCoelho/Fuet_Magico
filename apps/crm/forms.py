@@ -1,6 +1,59 @@
 from django import forms
 from datetime import date
-from .models import CRMStage, Lead, Activity
+from .models import CRMTag, CRMStage, Lead, Activity
+
+
+class CRMTagForm(forms.ModelForm):
+    """Formulário para criação e edição de Tags CRM"""
+    
+    class Meta:
+        model = CRMTag
+        fields = ['name', 'color']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 placeholder-gray-500 focus:border-primary focus:ring-primary',
+                'placeholder': 'Ex: Urgente, VIP, Follow-up...',
+                'maxlength': '50',
+                'required': True,
+            }),
+            'color': forms.TextInput(attrs={
+                'type': 'color',
+                'class': 'h-12 w-full rounded-lg border-gray-700 bg-gray-800 cursor-pointer',
+                'required': True,
+            }),
+        }
+        labels = {
+            'name': 'Nome da Tag',
+            'color': 'Cor',
+        }
+        help_texts = {
+            'name': 'Escolha um nome único e descritivo para identificar esta tag.',
+            'color': 'Selecione uma cor para destacar esta tag visualmente.',
+        }
+    
+    def clean_name(self):
+        """Validar nome único (case-insensitive)"""
+        name = self.cleaned_data.get('name')
+        if self.instance and self.instance.pk:
+            if CRMTag.objects.filter(name__iexact=name).exclude(pk=self.instance.pk).exists():
+                raise forms.ValidationError('Já existe uma tag CRM com este nome.')
+        else:
+            if CRMTag.objects.filter(name__iexact=name).exists():
+                raise forms.ValidationError('Já existe uma tag CRM com este nome.')
+        return name
+    
+    def clean_color(self):
+        """Validar formato de cor hexadecimal"""
+        color = self.cleaned_data.get('color')
+        if not color.startswith('#'):
+            color = '#' + color
+        if len(color) != 7:
+            raise forms.ValidationError('Cor deve estar no formato #RRGGBB')
+        try:
+            int(color[1:], 16)
+        except ValueError:
+            raise forms.ValidationError('Cor inválida. Use formato hexadecimal (#RRGGBB)')
+        return color
 
 
 class CRMStageForm(forms.ModelForm):
@@ -8,7 +61,7 @@ class CRMStageForm(forms.ModelForm):
     
     class Meta:
         model = CRMStage
-        fields = ['name', 'sequence', 'color', 'routing_in_days', 'is_won_stage', 'fold_by_default']
+        fields = ['name', 'sequence', 'color', 'routing_in_days', 'is_won_stage', 'is_lost_stage', 'fold_by_default']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 placeholder-gray-500 focus:border-primary focus:ring-primary',
@@ -33,6 +86,9 @@ class CRMStageForm(forms.ModelForm):
             'is_won_stage': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-green-600 bg-gray-700 border-gray-600 rounded focus:ring-green-500 focus:ring-2',
             }),
+            'is_lost_stage': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500 focus:ring-2',
+            }),
             'fold_by_default': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-primary bg-gray-700 border-gray-600 rounded focus:ring-primary focus:ring-2',
             }),
@@ -43,6 +99,7 @@ class CRMStageForm(forms.ModelForm):
             'color': 'Cor',
             'routing_in_days': 'Dias de Encaminhamento',
             'is_won_stage': 'Estágio de Vitória',
+            'is_lost_stage': 'Estágio de Perda',
             'fold_by_default': 'Colapsado por Padrão',
         }
         help_texts = {
@@ -51,6 +108,7 @@ class CRMStageForm(forms.ModelForm):
             'color': 'Selecione uma cor para destacar este estágio visualmente.',
             'routing_in_days': 'Número de dias antes do encaminhamento automático (0 = desativado).',
             'is_won_stage': 'Marque se este estágio representa uma venda ganha.',
+            'is_lost_stage': 'Marque se este estágio representa uma oportunidade perdida.',
             'fold_by_default': 'Marque para ocultar este estágio na visualização do pipeline por padrão.',
         }
     
@@ -105,57 +163,80 @@ class CRMStageForm(forms.ModelForm):
                 raise forms.ValidationError('Já existe um estágio de vitória. Só pode existir um estágio com "Vitória" ativo por empresa.')
         
         return is_won
+    
+    def clean_is_lost_stage(self):
+        """Validar que só pode haver um estágio de perda"""
+        is_lost = self.cleaned_data.get('is_lost_stage')
+        
+        if is_lost:
+            existing_lost = CRMStage.objects.filter(is_lost_stage=True, is_active=True)
+            
+            if self.instance and self.instance.pk:
+                existing_lost = existing_lost.exclude(pk=self.instance.pk)
+            
+            if existing_lost.exists():
+                raise forms.ValidationError('Já existe um estágio de perda. Só pode existir um estágio com "Perda" ativo por empresa.')
+        
+        return is_lost
 
 
 class LeadForm(forms.ModelForm):
     class Meta:
         model = Lead
         fields = [
-            'contact', 'title', 'description', 'estimated_value', 
+            'contact', 'contact_name', 'email_from', 'phone',
+            'title', 'description', 'estimated_value', 
             'probability', 'priority', 'stage', 'source', 
-            'expected_close_date', 'assigned_to', 'lost_reason', 'tags'
+            'expected_close_date', 'assigned_to', 'lost_reason', 'notes'
         ]
         widgets = {
-            'contact': forms.Select(attrs={
-                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-primary focus:ring-primary',
-                'required': True,
+            'contact': forms.HiddenInput(),
+            'contact_name': forms.TextInput(attrs={
+                'class': 'w-full border-0 border-b border-transparent bg-transparent text-sm text-gray-300 placeholder-gray-600 focus:border-primary focus:ring-0 focus:outline-none py-1',
+                'placeholder': '',
+                'autocomplete': 'off',
+            }),
+            'email_from': forms.EmailInput(attrs={
+                'class': 'w-full border-0 border-b border-transparent bg-transparent text-sm text-gray-300 placeholder-gray-600 focus:border-primary focus:ring-0 focus:outline-none py-1',
+                'placeholder': '',
+                'autocomplete': 'off',
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'w-full border-0 border-b border-transparent bg-transparent text-sm text-gray-300 placeholder-gray-600 focus:border-primary focus:ring-0 focus:outline-none py-1',
+                'placeholder': '',
+                'autocomplete': 'off',
             }),
             'title': forms.TextInput(attrs={
-                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 placeholder-gray-500 focus:border-primary focus:ring-primary',
-                'placeholder': 'Ex: Bolo de Aniversário Premium',
+                'class': 'w-full border-0 border-b-2 border-gray-600 bg-transparent text-3xl font-light text-gray-400 placeholder-gray-600 focus:border-primary focus:ring-0 focus:outline-none py-2',
+                'placeholder': 'e.g. Product Pricing',
                 'maxlength': '255',
                 'required': True,
             }),
             'description': forms.Textarea(attrs={
-                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 placeholder-gray-500 focus:border-primary focus:ring-primary',
-                'placeholder': 'Descrição detalhada da oportunidade...',
-                'rows': '4',
+                'class': 'w-full border-0 bg-transparent text-sm text-gray-300 placeholder-gray-600 focus:ring-0 focus:outline-none resize-none',
+                'placeholder': 'Type "/" for commands',
+                'rows': '6',
             }),
             'estimated_value': forms.NumberInput(attrs={
-                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 placeholder-gray-500 focus:border-primary focus:ring-primary',
+                'class': 'w-full border-0 border-b border-transparent bg-transparent text-sm text-gray-300 placeholder-gray-600 focus:border-primary focus:ring-0 focus:outline-none py-1',
                 'min': '0',
                 'step': '0.01',
                 'placeholder': '0.00',
             }),
             'probability': forms.NumberInput(attrs={
-                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 placeholder-gray-500 focus:border-primary focus:ring-primary',
+                'class': 'w-full border-0 border-b border-transparent bg-transparent text-sm text-gray-300 placeholder-gray-600 focus:border-primary focus:ring-0 focus:outline-none py-1',
                 'min': '0',
                 'max': '100',
                 'placeholder': '10',
             }),
-            'priority': forms.Select(attrs={
-                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-primary focus:ring-primary',
-            }),
-            'stage': forms.Select(attrs={
-                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-primary focus:ring-primary',
-                'required': True,
-            }),
+            'priority': forms.HiddenInput(),
+            'stage': forms.HiddenInput(),
             'source': forms.Select(attrs={
                 'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-primary focus:ring-primary',
             }),
             'expected_close_date': forms.DateInput(attrs={
                 'type': 'date',
-                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-primary focus:ring-primary',
+                'class': 'border-0 border-b border-transparent bg-transparent text-sm text-gray-300 focus:border-primary focus:ring-0 focus:outline-none py-1',
             }),
             'assigned_to': forms.Select(attrs={
                 'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-primary focus:ring-primary',
@@ -165,30 +246,38 @@ class LeadForm(forms.ModelForm):
                 'placeholder': 'Motivo da perda (obrigatório se Lost)...',
                 'rows': '3',
             }),
-            'tags': forms.HiddenInput(),
+            'notes': forms.HiddenInput(),
         }
         labels = {
             'contact': 'Contacto',
+            'contact_name': 'Contact',
+            'email_from': 'Email',
+            'phone': 'Phone',
             'title': 'Título da Oportunidade',
             'description': 'Descrição',
-            'estimated_value': 'Valor Estimado (Expected Revenue)',
-            'probability': 'Probabilidade (%)',
+            'estimated_value': 'Expected Revenue',
+            'probability': 'Probability',
             'priority': 'Prioridade',
             'stage': 'Estágio',
             'source': 'Origem',
-            'expected_close_date': 'Data Prevista de Fecho',
-            'assigned_to': 'Responsável',
+            'expected_close_date': 'Expected Closing',
+            'assigned_to': 'Salesperson',
             'lost_reason': 'Motivo da Perda',
-            'tags': 'Etiquetas',
+            'notes': 'Notas',
         }
         help_texts = {
-            'contact': 'Selecione o contacto associado a esta oportunidade.',
-            'title': 'Título descritivo da oportunidade de venda.',
-            'estimated_value': 'Valor estimado da receita esperada.',
-            'probability': 'Probabilidade de fecho entre 0 e 100%.',
-            'priority': 'Nível de prioridade (LOW=★, MEDIUM=★★, HIGH=★★★).',
-            'stage': 'Estágio atual no pipeline.',
+            'contact_name': '',
+            'email_from': '',
+            'phone': '',
+            'title': '',
+            'estimated_value': '',
+            'probability': '',
+            'priority': '',
+            'stage': '',
+            'expected_close_date': '',
+            'assigned_to': '',
             'lost_reason': 'Obrigatório se o estágio for marcado como perdido.',
+            'notes': '',
         }
     
     def clean_estimated_value(self):
