@@ -1,7 +1,7 @@
 {% load static %}
 <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between h-12">
+        <div class="flex items-center justify-between h-14">
             <!-- Left: Navigation Tabs -->
             <div class="flex items-center space-x-6">
                 <a href="{% url 'contacts:contact_list' %}" 
@@ -26,7 +26,7 @@
                          x-transition:leave="transition ease-in duration-75"
                          x-transition:leave-start="opacity-100 scale-100"
                          x-transition:leave-end="opacity-0 scale-95"
-                         class="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+                         class="absolute right-0 sm:left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
                          style="display: none;">
                         <div class="py-1">
                             <a href="{% url 'contacts:tag_list' %}" 

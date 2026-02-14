@@ -1,26 +1,22 @@
-# Fuet Mágico - Python Dependencies
-# Django Framework
-Django==5.0.*
+# Django Framework (LTS com suporte até ~2029)
+Django==5.2.11
 
 # Database
-psycopg2-binary
+psycopg2-binary==2.9.10
 
 # Cache & Task Queue
-redis
-celery
+redis==5.2.1
+celery==5.4.0
 
 # Environment Variables
-python-dotenv
+python-dotenv==1.0.1
 
-# Image Processing
-Pillow
+# Image Processing (para upload de imagens)
+# Pillow==11.0.0
 
-# PDF Generation & Processing
-reportlab
-PyPDF2
+# PDF Generation (para gerar orçamentos/faturas)
+# reportlab==4.2.5
 
-# HTTP Requests
-requests
+# PDF Reading/Manipulation (para ler/editar PDFs)
+# pypdf==4.3.1
 
-# Date/Time Utilities
-python-dateutil
