@@ -3,14 +3,14 @@
 
 {% block title %}
 {% if is_edit %}
-Editar Tag - {{ tag.name }}
+Editar Tag CRM - {{ tag.name }}
 {% else %}
-Nova Tag
+Nova Tag CRM
 {% endif %}
 {% endblock %}
 
 {% block sub_navbar %}
-{% include 'components/contacts_navbar.html' %}
+{% include 'components/crm_navbar.html' %}
 {% endblock %}
 
 {% block content %}
@@ -21,16 +21,16 @@ Nova Tag
             <div>
                 <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
                     {% if is_edit %}
-                    Editar Tag
+                    Editar Tag CRM
                     {% else %}
-                    Nova Tag
+                    Nova Tag CRM
                     {% endif %}
                 </h1>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                     {% if is_edit %}
                     Atualize as informações da tag "{{ tag.name }}"
                     {% else %}
-                    Crie uma nova tag para organizar os seus contactos
+                    Crie uma nova tag para organizar as suas oportunidades
                     {% endif %}
                 </p>
             </div>
@@ -142,7 +142,7 @@ Nova Tag
 
                 <!-- Form Actions -->
                 <div class="flex items-center justify-between pt-4 border-t border-gray-700">
-                    <a href="{% url 'contacts:tag_list' %}" 
+                    <a href="{% url 'crm:crm_tag_list' %}" 
                        class="inline-flex items-center px-4 py-2 border border-gray-600 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-700 transition-colors">
                         <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -184,7 +184,6 @@ document.addEventListener('DOMContentLoaded', function() {
         tagPreview.style.backgroundColor = color;
         hexCodeDisplay.textContent = color.toUpperCase();
         
-        // Calculate if we need light or dark text based on background
         const rgb = hexToRgb(color);
         const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
         tagPreview.style.color = brightness > 128 ? '#000000' : '#FFFFFF';

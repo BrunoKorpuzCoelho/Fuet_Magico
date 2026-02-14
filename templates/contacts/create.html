@@ -15,17 +15,6 @@
     <form method="post" enctype="multipart/form-data" id="contact-form">
         {% csrf_token %}
         
-        <!-- Mensagens de erro/sucesso -->
-        {% if messages %}
-        <div class="mx-auto max-w-7xl px-6 pt-6">
-            {% for message in messages %}
-            <div class="mb-4 rounded-lg p-4 {% if message.tags == 'error' %}bg-red-900/20 border border-red-500 text-red-400{% elif message.tags == 'success' %}bg-green-900/20 border border-green-500 text-green-400{% else %}bg-blue-900/20 border border-blue-500 text-blue-400{% endif %}">
-                {{ message }}
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-        
         <div class="mx-auto max-w-7xl p-6">
             <!-- Avatar + Nome Principal Grid -->
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">

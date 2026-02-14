@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.urls import reverse
 import json
 from .models import UserSettings, Notification
 
@@ -12,7 +13,7 @@ def dashboard_view(request):
     unread_count = Notification.get_unread_count(request.user)
     
     apps = [
-        {'name': 'CRM', 'icon': '🤝', 'url': '#', 'color': 'from-pink-500 to-rose-600'},
+        {'name': 'CRM', 'icon': '🤝', 'url': reverse('crm:crm_home'), 'color': 'from-pink-500 to-rose-600'},
         {'name': 'Contactos', 'icon': '👥', 'url': '/contacts/', 'color': 'from-purple-500 to-indigo-600'},
         {'name': 'Inventário', 'icon': '📦', 'url': '#', 'color': 'from-blue-500 to-cyan-600'},
         {'name': 'Compras', 'icon': '🛒', 'url': '#', 'color': 'from-green-500 to-emerald-600'},

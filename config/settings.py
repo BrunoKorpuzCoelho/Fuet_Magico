@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     'apps.website',
     'apps.dashboard',
     'apps.contacts',
+    'apps.crm',
 ]
 
 MIDDLEWARE = [
@@ -71,6 +72,9 @@ DATABASES = {
         'CONN_MAX_AGE': 600,
         'OPTIONS': {
             'connect_timeout': 10,
+        },
+        'TEST': {
+            'NAME': 'fuet_magico_db',
         }
     }
 }

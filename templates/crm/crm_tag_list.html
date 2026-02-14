@@ -1,0 +1,551 @@
+{% extends 'base.html' %}
+
+{% block title %}Tags CRM - Fuet Mágico{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/crm_navbar.html' %}
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900" x-data="{
+    selectedTags: [],
+    selectAll: false,
+    
+    init() {
+        window.getSelectedTags = () => this.selectedTags;
+    },
+    
+    toggleAll() {
+        if (this.selectAll) {
+            this.selectedTags = Array.from(document.querySelectorAll('.tag-checkbox')).map(el => el.value);
+        } else {
+            this.selectedTags = [];
+        }
+    },
+    
+    isSelected(id) {
+        return this.selectedTags.includes(id);
+    },
+    
+    toggleTag(id) {
+        const index = this.selectedTags.indexOf(id);
+        if (index > -1) {
+            this.selectedTags.splice(index, 1);
+        } else {
+            this.selectedTags.push(id);
+        }
+        const totalCheckboxes = document.querySelectorAll('.tag-checkbox').length;
+        this.selectAll = this.selectedTags.length === totalCheckboxes;
+    }
+}">
+    <!-- Search & Actions Bar -->
+    <div class="hidden md:block bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-3">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between gap-4">
+                <!-- Left: New Button + Bulk Actions -->
+                <div class="flex items-center space-x-3">
+                    <a href="{% url 'crm:crm_tag_create' %}" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center space-x-2">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        <span>Nova Tag</span>
+                    </a>
+                    
+                    <!-- Bulk Actions Button -->
+                    <div x-show="selectedTags.length > 0" 
+                         x-transition
+                         class="relative" 
+                         x-data="{ actionsOpen: false }"
+                         style="display: none;">
+                        <button @click="actionsOpen = !actionsOpen" class="flex items-center space-x-2 px-4 py-2 bg-primary/10 dark:bg-primary/20 border-2 border-primary hover:bg-primary/20 text-gray-900 dark:text-white rounded-lg font-medium transition-colors">
+                            <svg class="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            <span class="text-sm font-medium">
+                                <span x-text="selectedTags.length"></span> selecionado(s)
+                            </span>
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        
+                        <div x-show="actionsOpen" 
+                             @click.away="actionsOpen = false"
+                             x-transition
+                             class="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+                             style="display: none;">
+                            <div class="py-1">
+                                <button @click="archiveSelected()" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                                    </svg>
+                                    <span>Arquivar</span>
+                                </button>
+                                <button @click="unarchiveSelected()" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                                    </svg>
+                                    <span>Desarquivar</span>
+                                </button>
+                                {% if user.role == 'ADMIN' %}
+                                <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                                <button @click="deleteSelected()" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                    <span>Eliminar</span>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Center: Search Bar -->
+                <div class="flex-1 max-w-2xl relative" x-data="{ filtersOpen: false, searchQuery: '{{ search_query }}' }">
+                    <form method="GET" action="{% url 'crm:crm_tag_list' %}" id="searchForm">
+                        <div class="relative">
+                            <input type="text" name="search" x-model="searchQuery"
+                                @focus="filtersOpen = true"
+                                @input="filtersOpen = searchQuery.length > 0"
+                                placeholder="Pesquisar tags CRM..."
+                                class="w-full px-4 py-2 pl-10 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <input type="hidden" name="field" id="searchField" value="{{ search_field }}">
+                            
+                            <svg class="absolute left-3 top-2.5 h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            
+                            <button type="button" @click="filtersOpen = !filtersOpen"
+                                class="absolute right-2 top-2 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                <svg class="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    
+                        <div x-show="filtersOpen" @click.away="filtersOpen = false" x-transition
+                             class="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto"
+                             style="display: none;">
+                            <div class="p-3">
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">FILTRAR POR STATUS:</p>
+                                <a href="?status=active{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}" 
+                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if status_filter == 'active' %}bg-primary/10 text-primary font-semibold{% endif %}">
+                                    Ativos
+                                </a>
+                                <a href="?status=archived{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}" 
+                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if status_filter == 'archived' %}bg-primary/10 text-primary font-semibold{% endif %}">
+                                    Arquivados
+                                </a>
+                                
+                                <div class="my-3 border-t border-gray-200 dark:border-gray-700"></div>
+                                
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">PESQUISAR POR CAMPO:</p>
+                                <a href="#" @click.prevent="document.getElementById('searchField').value='name'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Search <strong>Nome</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Right: Pagination -->
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                        <span>{{ tags.start_index }}-{{ tags.end_index }} / {{ total_count }}</span>
+                        <span class="text-gray-400">|</span>
+                        <div class="flex items-center space-x-1">
+                            <input type="text" id="pageSizeInput" value="{{ page_size }}"
+                                class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <span>/página</span>
+                        </div>
+                        {% if tags.has_previous %}
+                        <a href="?page={{ tags.previous_page_number }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}&status={{ status_filter }}" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </a>
+                        {% else %}
+                        <button disabled class="p-1 opacity-50 cursor-not-allowed">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </button>
+                        {% endif %}
+                        {% if tags.has_next %}
+                        <a href="?page={{ tags.next_page_number }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}&status={{ status_filter }}" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </a>
+                        {% else %}
+                        <button disabled class="p-1 opacity-50 cursor-not-allowed">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Table -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-900">
+                        <tr>
+                            <th class="px-6 py-3 text-left w-12">
+                                <input type="checkbox" x-model="selectAll" @change="toggleAll()"
+                                       class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Nome</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Cor</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Nº Leads</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Data Criação</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {% for tag in tags %}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors" onclick="window.location='{% url 'crm:crm_tag_edit' tag.id %}'">
+                            <td class="px-6 py-4 whitespace-nowrap" @click.stop>
+                                <input type="checkbox" value="{{ tag.pk }}"
+                                       :checked="isSelected('{{ tag.pk }}')"
+                                       @change="toggleTag('{{ tag.pk }}')"
+                                       class="tag-checkbox h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-white" style="background-color: {{ tag.color }};">
+                                    {{ tag.name }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-6 h-6 rounded border border-gray-300 dark:border-gray-600" style="background-color: {{ tag.color }};"></div>
+                                    <span class="text-sm text-gray-600 dark:text-gray-400 font-mono">{{ tag.color }}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                {{ tag.lead_count }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                {{ tag.created_at|date:"d/m/Y" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if tag.is_active %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Ativo</span>
+                                {% else %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">Arquivado</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-12">
+                                <div class="text-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                    </svg>
+                                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">Sem tags CRM registadas</h3>
+                                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Comece criando uma nova tag para organizar as suas oportunidades.</p>
+                                    <div class="mt-6">
+                                        <a href="{% url 'crm:crm_tag_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark">
+                                            <svg class="-ml-1 mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                                            </svg>
+                                            Nova Tag
+                                        </a>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const pageSizeInput = document.getElementById('pageSizeInput');
+    if (pageSizeInput) {
+        pageSizeInput.addEventListener('change', function() {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('page_size', this.value);
+            currentUrl.searchParams.set('page', 1);
+            window.location.href = currentUrl.toString();
+        });
+    }
+});
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showNotification(type, message) {
+    const bgColor = type === 'success' ? 'bg-green-500' : type === 'warning' ? 'bg-yellow-500' : 'bg-red-500';
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-4 rounded-lg shadow-lg z-50 transition-opacity duration-300`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => document.body.removeChild(notification), 300);
+    }, 3000);
+}
+
+async function archiveSelected() {
+    const selectedIds = window.getSelectedTags ? window.getSelectedTags() : [];
+    if (selectedIds.length === 0) { showNotification('error', 'Nenhuma tag selecionada'); return; }
+    try {
+        const response = await fetch('{% url "crm:crm_bulk_archive_tags" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ tag_ids: selectedIds })
+        });
+        const data = await response.json();
+        if (data.success) {
+            let message = data.message;
+            if (data.warning) {
+                message += ` (${data.warning})`;
+            }
+            showNotification('success', message);
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            if (data.error.code === 'ALREADY_ARCHIVED') {
+                showNotification('error', data.error.message);
+            } else {
+                showNotification('error', data.error.message || 'Erro ao arquivar tags');
+            }
+        }
+    } catch (error) { showNotification('error', 'Erro de conexão. Por favor, tente novamente.'); }
+}
+
+async function unarchiveSelected() {
+    const selectedIds = window.getSelectedTags ? window.getSelectedTags() : [];
+    if (selectedIds.length === 0) { showNotification('error', 'Nenhuma tag selecionada'); return; }
+    try {
+        const response = await fetch('{% url "crm:crm_bulk_unarchive_tags" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ tag_ids: selectedIds })
+        });
+        const data = await response.json();
+        if (data.success) {
+            let message = data.message;
+            if (data.warning) {
+                message += ` (${data.warning})`;
+            }
+            showNotification('success', message);
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            if (data.error.code === 'ALREADY_ACTIVE') {
+                showNotification('error', data.error.message);
+            } else {
+                showNotification('error', data.error.message || 'Erro ao desarquivar tags');
+            }
+        }
+    } catch (error) { showNotification('error', 'Erro de conexão. Por favor, tente novamente.'); }
+}
+
+async function deleteSelected() {
+    const selectedIds = window.getSelectedTags ? window.getSelectedTags() : [];
+    if (selectedIds.length === 0) { showNotification('error', 'Nenhuma tag selecionada'); return; }
+    
+    // Pre-check: quantos leads estão associados
+    let leadsInfo = null;
+    try {
+        const resp = await fetch('{% url "crm:crm_check_tags_leads" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ tag_ids: selectedIds })
+        });
+        const result = await resp.json();
+        if (result.success && result.total_affected > 0) {
+            leadsInfo = result;
+        }
+    } catch (e) {
+        console.error('Error checking tag leads:', e);
+    }
+    
+    openDeleteConfirmationModal(selectedIds, leadsInfo);
+}
+
+function openDeleteConfirmationModal(tagIds, leadsInfo) {
+    const count = tagIds.length;
+    
+    // Build leads warning HTML
+    let leadsWarningHtml = '';
+    if (leadsInfo && leadsInfo.total_affected > 0) {
+        const tagsList = leadsInfo.tags.map(t => 
+            `<li class="flex items-center justify-between py-1">
+                <span class="text-gray-300 text-xs">${t.name}</span>
+                <span class="text-amber-400 text-xs font-semibold">${t.lead_count} lead(s)</span>
+            </li>`
+        ).join('');
+        
+        leadsWarningHtml = `
+            <div class="bg-amber-950/40 border border-amber-700/50 rounded-lg p-3 mb-4">
+                <div class="flex items-start space-x-2 mb-2">
+                    <svg class="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <p class="text-amber-300 text-sm font-semibold">
+                        ${leadsInfo.total_affected > 1 ? leadsInfo.total_affected + ' leads estão associados' : '1 lead está associado'} a estas tags!
+                    </p>
+                </div>
+                <ul class="space-y-0.5 ml-6 border-t border-amber-800/30 pt-2">
+                    ${tagsList}
+                </ul>
+                <p class="text-amber-400/70 text-xs mt-2 ml-6">
+                    Ao eliminar, a ligação entre os leads e estas tags será removida.
+                </p>
+            </div>
+        `;
+    }
+    
+    const modal = document.createElement('div');
+    modal.id = 'delete-confirmation-modal';
+    modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+    modal.style.animation = 'fadeIn 0.2s ease-out';
+    
+    modal.innerHTML = `
+        <div class="bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full border-2 border-red-600/50" style="animation: scaleIn 0.2s ease-out;">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-red-900 to-red-800 px-6 py-4 rounded-t-2xl border-b border-red-700/50">
+                <div class="flex items-center space-x-3">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-full bg-red-600/30 border-2 border-red-500 flex-shrink-0">
+                        <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">ATENÇÃO!</h3>
+                        <p class="text-red-300 text-xs mt-0.5">Esta ação é <span class="font-bold text-red-200">IRREVERSÍVEL</span></p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Body -->
+            <div class="px-6 py-5">
+                <div class="bg-red-950/40 border border-red-800/50 rounded-lg p-3 mb-4">
+                    <p class="text-gray-200 text-sm leading-relaxed">
+                        Está prestes a <span class="font-bold text-red-400">ELIMINAR PERMANENTEMENTE</span> 
+                        <span class="font-bold text-white text-base">${count}</span> tag(s).
+                    </p>
+                    <p class="text-gray-400 text-xs mt-2">
+                        Esta modificação é <span class="font-semibold text-red-400">IRREVERSÍVEL</span> 
+                        e todos os dados serão perdidos para sempre.
+                    </p>
+                </div>
+                
+                ${leadsWarningHtml}
+                
+                <!-- Confirmation Checkbox -->
+                <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-3 mb-4">
+                    <label class="flex items-start space-x-2 cursor-pointer">
+                        <input type="checkbox" id="deleteConfirmCheckbox" 
+                               class="mt-0.5 w-4 h-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500 focus:ring-2">
+                        <span class="text-gray-300 text-xs leading-relaxed">
+                            Confirmo que compreendo que esta ação vai 
+                            <span class="font-semibold text-red-400">eliminar permanentemente</span> 
+                            as tags selecionadas e que 
+                            <span class="font-semibold text-red-400">não existe forma de recuperar</span> 
+                            os dados.
+                        </span>
+                    </label>
+                </div>
+                
+                <!-- Actions -->
+                <div class="flex space-x-3">
+                    <button onclick="closeDeleteConfirmationModal()" 
+                            class="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors">
+                        <span>Cancelar</span>
+                    </button>
+                    <button id="confirmDeleteButton" disabled 
+                            class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600 shadow-lg shadow-red-900/30">
+                        <div class="flex items-center justify-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            <span>ELIMINAR PERMANENTEMENTE</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Enable/disable confirm button based on checkbox
+    const checkbox = modal.querySelector('#deleteConfirmCheckbox');
+    const confirmButton = modal.querySelector('#confirmDeleteButton');
+    
+    checkbox.addEventListener('change', function() {
+        confirmButton.disabled = !this.checked;
+    });
+    
+    // Confirm button action
+    confirmButton.addEventListener('click', async function() {
+        if (!checkbox.checked) return;
+        
+        confirmButton.disabled = true;
+        confirmButton.innerHTML = `
+            <div class="flex items-center justify-center space-x-2">
+                <svg class="animate-spin h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span>A eliminar...</span>
+            </div>
+        `;
+        
+        try {
+            const response = await fetch('{% url "crm:crm_bulk_delete_tags" %}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ tag_ids: tagIds })
+            });
+            const data = await response.json();
+            
+            closeDeleteConfirmationModal();
+            
+            if (data.success) {
+                showNotification('success', data.message);
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showNotification('error', data.error.message);
+            }
+        } catch (error) {
+            closeDeleteConfirmationModal();
+            console.error('Error:', error);
+            showNotification('error', 'Erro ao eliminar tags');
+        }
+    });
+    
+    // Close on outside click
+    modal.onclick = (e) => {
+        if (e.target === modal) closeDeleteConfirmationModal();
+    };
+    
+    document.body.appendChild(modal);
+}
+
+function closeDeleteConfirmationModal() {
+    const modal = document.getElementById('delete-confirmation-modal');
+    if (modal) {
+        modal.style.animation = 'fadeOut 0.2s ease-out';
+        setTimeout(() => { modal.remove(); }, 200);
+    }
+}
+</script>
+{% endblock %}

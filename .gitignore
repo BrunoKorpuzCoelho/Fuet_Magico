@@ -13,3 +13,5 @@ db.sqlite3
 # Temp folder - track directory but ignore contents
 /temp/*
 !/temp/.gitkeep
+/pytest.ini
+/test

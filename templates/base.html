@@ -311,6 +311,103 @@
 
     {% block sub_navbar %}{% endblock %}
 
+    <!-- Global Toast Notifications -->
+    {% if messages %}
+    <div id="toast-container" class="fixed top-24 right-6 z-[9999] space-y-3" style="max-width: 400px;">
+        {% for message in messages %}
+        <div class="toast-message animate-slideIn bg-white dark:bg-gray-800 rounded-lg shadow-2xl border-l-4 
+                    {% if message.tags == 'error' or message.tags == 'danger' %}border-red-500{% elif message.tags == 'success' %}border-green-500{% elif message.tags == 'warning' %}border-yellow-500{% else %}border-blue-500{% endif %}
+                    p-4 flex items-start gap-3 transition-all duration-300"
+             data-dismiss-after="4000">
+            <!-- Icon -->
+            <div class="flex-shrink-0 mt-0.5">
+                {% if message.tags == 'error' or message.tags == 'danger' %}
+                <svg class="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                {% elif message.tags == 'success' %}
+                <svg class="h-6 w-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                {% elif message.tags == 'warning' %}
+                <svg class="h-6 w-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                {% else %}
+                <svg class="h-6 w-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                {% endif %}
+            </div>
+            
+            <!-- Message -->
+            <div class="flex-1 text-sm text-gray-900 dark:text-white font-medium">
+                {{ message }}
+            </div>
+            
+            <!-- Close Button -->
+            <button type="button" onclick="this.parentElement.remove()" class="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <style>
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+        
+        .animate-slideIn {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+        
+        .animate-slideOut {
+            animation: slideOut 0.3s ease-in forwards;
+        }
+    </style>
+    
+    <script>
+        // Auto-dismiss toast messages after specified time
+        document.addEventListener('DOMContentLoaded', function() {
+            const toasts = document.querySelectorAll('.toast-message[data-dismiss-after]');
+            
+            toasts.forEach(function(toast) {
+                const dismissAfter = parseInt(toast.getAttribute('data-dismiss-after'));
+                
+                setTimeout(function() {
+                    toast.classList.remove('animate-slideIn');
+                    toast.classList.add('animate-slideOut');
+                    
+                    setTimeout(function() {
+                        toast.remove();
+                    }, 300); // Match animation duration
+                }, dismissAfter);
+            });
+        });
+    </script>
+    {% endif %}
+
     <main>
         {% block content %}{% endblock %}
     </main>

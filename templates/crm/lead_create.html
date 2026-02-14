@@ -1,0 +1,1198 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<!-- Air Datepicker -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/air-datepicker@3.5.3/air-datepicker.css">
+<!-- Quill Rich Text Editor CSS -->
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+<style>
+    /* Air Datepicker Dark Theme - Fuet Mágico */
+    .air-datepicker {
+        --adp-font-family: inherit;
+        --adp-font-size: 14px;
+        --adp-width: 280px;
+        --adp-z-index: 100;
+        --adp-padding: 12px;
+        --adp-grid-areas: 'nav' 'body' 'timepicker' 'buttons';
+        --adp-transition-duration: .2s;
+        --adp-transition-ease: ease-out;
+        --adp-transition-offset: 8px;
+        --adp-background-color: #1f2937;
+        --adp-background-color-hover: #374151;
+        --adp-background-color-active: #dbc693;
+        --adp-background-color-in-range: rgba(219, 198, 147, 0.15);
+        --adp-background-color-in-range-focused: rgba(219, 198, 147, 0.25);
+        --adp-background-color-selected-other-month-focused: rgba(219, 198, 147, 0.8);
+        --adp-background-color-selected-other-month: rgba(219, 198, 147, 0.5);
+        --adp-color: #d1d5db;
+        --adp-color-secondary: #6b7280;
+        --adp-accent-color: #dbc693;
+        --adp-color-current-date: #dbc693;
+        --adp-color-other-month: #4b5563;
+        --adp-color-disabled: #374151;
+        --adp-color-disabled-in-range: #374151;
+        --adp-color-other-month-hover: #9ca3af;
+        --adp-border-color: #374151;
+        --adp-border-color-inner: #374151;
+        --adp-border-radius: 12px;
+        --adp-border-color-inline: #374151;
+        --adp-nav-height: 36px;
+        --adp-nav-arrow-color: #9ca3af;
+        --adp-nav-action-size: 32px;
+        --adp-nav-color-secondary: #dbc693;
+        --adp-day-name-color: #9ca3af;
+        --adp-day-name-color-hover: #dbc693;
+        --adp-day-cell-height: 36px;
+        --adp-month-cell-height: 42px;
+        --adp-year-cell-height: 42px;
+        --adp-pointer-size: 8px;
+        --adp-pointerArrow-size: 4px;
+        --adp-cell-border-radius: 8px;
+        --adp-cell-background-color-hover: #374151;
+        --adp-cell-background-color-selected: #dbc693;
+        --adp-cell-background-color-selected-hover: #c9b57e;
+        --adp-cell-background-color-in-range: rgba(219, 198, 147, 0.15);
+        --adp-cell-background-color-in-range-hover: rgba(219, 198, 147, 0.25);
+        --adp-cell-border-color-in-range: rgba(219, 198, 147, 0.3);
+        --adp-btn-height: 36px;
+        --adp-btn-color: #dbc693;
+        --adp-btn-color-hover: #1f2937;
+        --adp-btn-background-color-hover: #dbc693;
+        --adp-btn-background-color-active: #c9b57e;
+        border: 1px solid #374151;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+    .air-datepicker-cell.-selected- {
+        color: #1f2937 !important;
+        font-weight: 600;
+    }
+    .air-datepicker-cell.-current- {
+        color: #dbc693;
+    }
+    .air-datepicker-cell.-current-.-selected- {
+        color: #1f2937 !important;
+    }
+    .air-datepicker-nav--title {
+        color: #f3f4f6;
+        font-weight: 600;
+    }
+    .air-datepicker-nav--action:hover {
+        background: #374151;
+    }
+    .air-datepicker-body--day-name {
+        text-transform: uppercase;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    .air-datepicker--pointer {
+        border-color: #374151;
+        background: #1f2937;
+    }
+    .air-datepicker-button {
+        border-radius: 6px;
+        font-weight: 500;
+    }
+    
+    /* Remove setas dos campos numéricos */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    input[type="number"] {
+        -moz-appearance: textfield;
+    }
+    
+    /* Custom Dropdown Vendedor */
+    .salesperson-dropdown {
+        position: relative;
+    }
+    .salesperson-trigger {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        padding: 4px 8px;
+        border: 0;
+        border-bottom: 1px solid transparent;
+        background: transparent;
+        color: #d1d5db;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: left;
+    }
+    .salesperson-trigger:hover {
+        border-bottom-color: #4b5563;
+    }
+    .salesperson-trigger:focus {
+        outline: none;
+        border-bottom-color: #dbc693;
+    }
+    .salesperson-menu {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        background: #1f2937;
+        border: 1px solid #374151;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        max-height: 240px;
+        overflow-y: auto;
+        z-index: 50;
+        padding: 4px;
+    }
+    .salesperson-option {
+        padding: 10px 12px;
+        color: #d1d5db;
+        font-size: 14px;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: all 0.15s;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .salesperson-option:hover {
+        background: #374151;
+        color: #dbc693;
+    }
+    .salesperson-option.selected {
+        background: rgba(219, 198, 147, 0.15);
+        color: #dbc693;
+        font-weight: 500;
+    }
+    .salesperson-icon {
+        width: 24px;
+        height: 24px;
+        background: #374151;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .salesperson-icon svg {
+        width: 14px;
+        height: 14px;
+        color: #9ca3af;
+    }
+</style>
+{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/crm_navbar.html' with show_form_actions=True %}
+{% endblock %}
+
+{% block content %}
+<div class="bg-[#1f2937]">
+    <div class="flex gap-0">
+        <!-- FORMULÁRIO (Esquerda - 70%) -->
+        <div class="flex-1" style="max-width: 70%;">
+            <form method="post" id="lead-form">
+                {% csrf_token %}
+                
+                <!-- Hidden fields -->
+                {{ form.contact }}
+                <input type="hidden" name="stage" id="id_stage" value="{{ form.stage.value|default:'' }}">
+                <input type="hidden" name="priority" id="id_priority" value="{{ form.priority.value|default:'MEDIUM' }}">
+                <input type="hidden" name="source" id="id_source" value="{{ form.source.value|default:'OTHER' }}">
+
+                <div class="p-6">
+            <!-- Action Buttons + Stage Bar -->
+            <div x-data="stageBar()" class="flex items-center justify-between gap-4 mb-6">
+                <!-- Left: Action Buttons -->
+                <div class="flex items-center gap-3">
+                    <button type="button" class="px-4 py-1.5 rounded-md bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors">
+                        Novo Orçamento
+                    </button>
+                    <button type="button" class="px-4 py-1.5 rounded-md border border-green-500 bg-transparent hover:bg-green-500/10 text-green-500 text-sm font-medium transition-colors">
+                        Ganho
+                    </button>
+                    <button type="button" class="px-4 py-1.5 rounded-md border border-red-500 bg-transparent hover:bg-red-500/10 text-red-500 text-sm font-medium transition-colors">
+                        Perdido
+                    </button>
+                </div>
+
+                <!-- Right: Stage Status Bar (Odoo style) -->
+                <div class="flex items-center">
+                    {% for stage in stages %}
+                    <button type="button"
+                            @click="selectStage('{{ stage.id }}')"
+                            :class="getStageClass('{{ stage.id }}', {{ forloop.first|yesno:'true,false' }}, {{ forloop.last|yesno:'true,false' }})"
+                            class="relative px-4 py-1.5 text-xs font-semibold transition-all cursor-pointer border border-gray-600"
+                            :style="isActiveOrBefore('{{ stage.id }}') ? 'background-color: #dbc693; border-color: #dbc693; color: #1f2937;' : ''"
+                            style="{% if not forloop.first %}margin-left: -1px;{% endif %}">
+                        {{ stage.name }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <script>
+            function stageBar() {
+                const stageIds = [{% for stage in stages %}'{{ stage.id }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+                const stageInput = document.getElementById('id_stage');
+                const initialStage = stageInput ? stageInput.value : (stageIds.length > 0 ? stageIds[0] : '');
+                return {
+                    currentStage: initialStage,
+                    stageIds: stageIds,
+                    selectStage(stageId) {
+                        this.currentStage = stageId;
+                        if (stageInput) {
+                            stageInput.value = stageId;
+                        }
+                    },
+                    isActiveOrBefore(stageId) {
+                        const currentIndex = this.stageIds.indexOf(this.currentStage);
+                        const stageIndex = this.stageIds.indexOf(stageId);
+                        return stageIndex <= currentIndex;
+                    },
+                    getStageClass(stageId, isFirst, isLast) {
+                        let cls = '';
+                        if (isFirst) cls += ' rounded-l-full';
+                        if (isLast) cls += ' rounded-r-full';
+                        if (!this.isActiveOrBefore(stageId)) cls += ' text-gray-400 hover:bg-gray-700/50';
+                        return cls;
+                    }
+                }
+            }
+            </script>
+
+            <!-- Card principal do formulário -->
+            <div class="bg-[#1a2332] rounded-lg border border-gray-700/50 p-6">
+
+                <!-- Título (GIGANTE) -->
+                <div class="mb-6">
+                    <input class="w-full border-0 border-b-2 border-gray-600 bg-transparent text-3xl font-light text-gray-300 placeholder:text-gray-600 focus:border-primary focus:ring-0 focus:outline-none py-2 px-1" 
+                           id="id_title" 
+                           name="title"
+                           placeholder="ex: Preço do Produto" 
+                           value="{{ form.title.value|default:'' }}" 
+                           required>
+                </div>
+
+                <!-- Expected Revenue + Probability (mesma linha) -->
+                <div class="flex items-center gap-12 mb-6">
+                    <!-- Expected Revenue -->
+                    <div class="flex items-center gap-3">
+                        <label class="text-sm font-semibold text-gray-400 whitespace-nowrap">Receita Esperada</label>
+                        <div class="flex items-center gap-1">
+                            <span class="text-primary text-lg font-bold">€</span>
+                            <input class="w-28 border-0 border-b border-transparent bg-transparent text-base text-gray-300 placeholder:text-gray-600 focus:border-primary focus:ring-0 focus:outline-none py-0.5 hover:border-gray-600" 
+                                   type="number"
+                                   name="estimated_value"
+                                   step="0.01"
+                                   min="0"
+                                   placeholder="0.00" 
+                                   value="{{ form.estimated_value.value|default:'0.00' }}">
+                        </div>
+                    </div>
+
+                    <!-- Probability -->
+                    <div class="flex items-center gap-3">
+                        <label class="text-sm font-semibold text-gray-400 whitespace-nowrap">Probabilidade</label>
+                        <div class="flex items-center gap-1">
+                            <input class="w-16 border-0 border-b border-transparent bg-transparent text-base text-gray-300 placeholder:text-gray-600 focus:border-primary focus:ring-0 focus:outline-none py-0.5 hover:border-gray-600 text-right" 
+                                   type="number"
+                                   name="probability"
+                                   min="0"
+                                   max="100"
+                                   placeholder="10" 
+                                   value="{{ form.probability.value|default:'10' }}">
+                            <span class="text-sm text-gray-400 font-medium">%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Separator -->
+                <div class="border-t border-gray-700/50 my-5"></div>
+
+                <!-- Grid 2 Colunas - Campos tipo Odoo (label esquerda, valor direita) -->
+                <div class="grid grid-cols-2 gap-x-16 gap-y-4">
+                    <!-- LEFT COLUMN -->
+                    <!-- Contact (with autocomplete) -->
+                    <div class="flex items-center gap-4" x-data="contactAutocomplete()" @click.away="showResults = false">
+                        <label class="text-sm font-semibold text-gray-400 whitespace-nowrap min-w-[100px]">Contacto</label>
+                        <div class="flex-1 relative">
+                            <input class="w-full border-0 border-b border-transparent bg-transparent text-sm text-gray-300 placeholder:text-gray-600 focus:border-primary focus:ring-0 focus:outline-none py-1 hover:border-gray-600" 
+                                   type="text"
+                                   x-model="query"
+                                   @input.debounce.300ms="searchContacts()"
+                                   @focus="if(query.length > 0) showResults = true"
+                                   name="contact_name"
+                                   placeholder=""
+                                   autocomplete="off">
+                            <!-- Dropdown results -->
+                            <div x-show="showResults && (results.length > 0 || query.length > 0)"
+                                 x-transition
+                                 class="absolute z-50 mt-1 w-full bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-80 overflow-y-auto left-0"
+                                 style="display: none; min-width: 320px;">
+                                <!-- Loading -->
+                                <div x-show="isLoading" class="p-3 text-center text-gray-400 text-sm">
+                                    <svg class="animate-spin h-4 w-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                    </svg>
+                                </div>
+                                <!-- Contact results -->
+                                <div x-show="!isLoading">
+                                    <template x-for="contact in results" :key="contact.id">
+                                        <button type="button"
+                                                @click="selectContact(contact)"
+                                                class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-700 transition-colors text-left border-b border-gray-700/50 last:border-0">
+                                            <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                                                <span class="text-xs font-bold text-primary" x-text="contact.name.charAt(0).toUpperCase()"></span>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm text-gray-200 font-medium truncate" x-text="contact.name"></p>
+                                                <div class="flex items-center gap-3 text-xs text-gray-500">
+                                                    <span x-show="contact.email" x-text="contact.email"></span>
+                                                    <span x-show="contact.phone" x-text="contact.phone"></span>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    </template>
+                                    <!-- No results message -->
+                                    <div x-show="results.length === 0 && query.length > 0 && !isLoading" class="px-4 py-3 text-sm text-gray-500">
+                                        Nenhum contacto encontrado
+                                    </div>
+                                </div>
+                                <!-- Always show "Criar e Editar" at bottom -->
+                                <div class="border-t border-gray-700">
+                                    <button type="button"
+                                            @click="createAndEdit()"
+                                            class="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-primary hover:bg-gray-700 transition-colors text-left font-medium">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                        </svg>
+                                        <span>Criar e Editar</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT COLUMN -->
+                    <!-- Salesperson -->
+                    <div class="flex items-center gap-4">
+                        <label class="text-sm font-semibold text-gray-400 whitespace-nowrap min-w-[140px]">Vendedor</label>
+                        <div class="salesperson-dropdown flex-1" x-data="{
+                            open: false,
+                            selected: {{ form.assigned_to.value|default:'null' }},
+                            selectedName: '{% if form.assigned_to.value %}{% for user in form.assigned_to.field.queryset %}{% if user.id == form.assigned_to.value %}{{ user.get_full_name|default:user.username }}{% endif %}{% endfor %}{% else %}—{% endif %}',
+                            users: [
+                                { id: null, name: '—' },
+                                {% for user in form.assigned_to.field.queryset %}
+                                { id: {{ user.id }}, name: '{{ user.get_full_name|default:user.username }}' },
+                                {% endfor %}
+                            ],
+                            selectUser(userId, userName) {
+                                this.selected = userId;
+                                this.selectedName = userName;
+                                this.open = false;
+                            }
+                        }" @click.away="open = false">
+                            <div class="flex items-center gap-2">
+                                <div class="salesperson-icon">
+                                    <svg fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                    </svg>
+                                </div>
+                                <button type="button" class="salesperson-trigger" @click="open = !open" x-text="selectedName"></button>
+                                <input type="hidden" name="assigned_to" :value="selected">
+                            </div>
+                            <div x-show="open" x-transition class="salesperson-menu">
+                                <template x-for="(user, index) in users" :key="index">
+                                    <div class="salesperson-option" 
+                                         :class="{ 'selected': selected === user.id }"
+                                         @click="selectUser(user.id, user.name)"
+                                         x-text="user.name">
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="flex items-center gap-4">
+                        <label class="text-sm font-semibold text-gray-400 whitespace-nowrap min-w-[100px]">E-mail</label>
+                        <input class="flex-1 border-0 border-b border-transparent bg-transparent text-sm text-gray-300 placeholder:text-gray-600 focus:border-primary focus:ring-0 focus:outline-none py-1 hover:border-gray-600" 
+                               type="email"
+                               name="email_from"
+                               placeholder=""
+                               value="{{ form.email_from.value|default:'' }}"
+                               autocomplete="off">
+                    </div>
+
+                    <!-- Expected Closing + Stars -->
+                    <div class="flex items-center gap-4">
+                        <label class="text-sm font-semibold text-gray-400 whitespace-nowrap min-w-[140px]">Fecho Previsto</label>
+                        <div class="flex items-center gap-4 flex-1">
+                            <input class="border-0 border-b border-transparent bg-transparent text-sm text-gray-300 focus:border-primary focus:ring-0 focus:outline-none py-1 hover:border-gray-600 cursor-pointer" 
+                                   type="text"
+                                   id="id_expected_close_date"
+                                   name="expected_close_date"
+                                   value="{{ form.expected_close_date.value|default:'' }}"
+                                   placeholder="Selecionar data..."
+                                   readonly>
+                            <!-- Star Rating (Priority) -->
+                            <div x-data="starRating()" class="flex items-center gap-0.5 ml-auto">
+                                <template x-for="star in 3" :key="star">
+                                    <button type="button" 
+                                            @click="setRating(star)"
+                                            @mouseenter="hoverRating = star"
+                                            @mouseleave="hoverRating = 0"
+                                            class="text-lg transition-colors focus:outline-none"
+                                            :class="(hoverRating >= star || (!hoverRating && rating >= star)) ? 'text-primary' : 'text-gray-600 hover:text-gray-500'">
+                                        ★
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phone -->
+                    <div class="flex items-center gap-4">
+                        <label class="text-sm font-semibold text-gray-400 whitespace-nowrap min-w-[100px]">Telefone</label>
+                        <input class="flex-1 border-0 border-b border-transparent bg-transparent text-sm text-gray-300 placeholder:text-gray-600 focus:border-primary focus:ring-0 focus:outline-none py-1 hover:border-gray-600" 
+                               type="tel"
+                               name="phone"
+                               placeholder=""
+                               value="{{ form.phone.value|default:'' }}"
+                               autocomplete="off">
+                    </div>
+
+                    <!-- Tags (with tag selector) -->
+                    <div class="col-span-1" x-data="crmTagSelector()" @click.away="showDropdown = false">
+                        <div class="flex items-start gap-4">
+                            <label class="text-sm font-semibold text-gray-400 whitespace-nowrap min-w-[140px] pt-1.5">Tags</label>
+                            <div class="flex-1">
+                                <!-- Container com tags selecionadas + input -->
+                                <div class="flex flex-wrap gap-1.5 min-h-[28px] border-0 border-b border-transparent hover:border-gray-600 focus-within:border-primary py-1 transition-colors">
+                                    <!-- Tags selecionadas -->
+                                    <template x-for="tag in selectedTags" :key="tag.id">
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
+                                              :style="'background-color: ' + tag.color">
+                                            <span x-text="tag.name"></span>
+                                            <button type="button" 
+                                                    @click="removeTag(tag.id)"
+                                                    class="hover:bg-black/20 rounded-full p-0.5">
+                                                <svg class="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                </svg>
+                                            </button>
+                                        </span>
+                                    </template>
+                                    
+                                    <!-- Input de pesquisa -->
+                                    <input type="text"
+                                           x-model="searchQuery"
+                                           @input.debounce.300ms="searchTags()"
+                                           @focus="showDropdown = true"
+                                           placeholder="Adicionar tag..."
+                                           class="flex-1 min-w-[80px] bg-transparent border-0 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:ring-0 px-0 py-0">
+                                </div>
+                                
+                                <!-- Dropdown com resultados -->
+                                <div class="relative">
+                                    <div x-show="showDropdown && (searchResults.length > 0 || searchQuery.length > 0)"
+                                         x-transition
+                                         class="absolute z-50 mt-1 w-full bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-64 overflow-y-auto"
+                                         style="display: none; min-width: 280px;">
+                                        
+                                        <!-- Loading -->
+                                        <div x-show="isLoading" class="p-3 text-center text-gray-400 text-sm">
+                                            <svg class="animate-spin h-4 w-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                            </svg>
+                                        </div>
+                                        
+                                        <div x-show="!isLoading">
+                                            <!-- Tags encontradas -->
+                                            <template x-if="searchResults.length > 0">
+                                                <div>
+                                                    <template x-for="tag in searchResults" :key="tag.id">
+                                                        <button type="button"
+                                                                @click="selectTag(tag)"
+                                                                class="w-full flex items-center justify-between px-4 py-2 hover:bg-gray-700 transition-colors text-left">
+                                                            <div class="flex items-center gap-2">
+                                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white"
+                                                                      :style="'background-color: ' + tag.color"
+                                                                      x-text="tag.name"></span>
+                                                                <span class="text-xs text-gray-500" x-text="tag.lead_count + ' leads'"></span>
+                                                            </div>
+                                                        </button>
+                                                    </template>
+                                                    
+                                                    <!-- Ver mais -->
+                                                    <div x-show="hasMore" class="border-t border-gray-700">
+                                                        <button type="button"
+                                                                @click="openAllTagsModal()"
+                                                                class="w-full px-4 py-2 text-sm text-primary hover:bg-gray-700 transition-colors">
+                                                            Ver mais...
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                            
+                                            <!-- Sem resultados -->
+                                            <div x-show="searchResults.length === 0 && searchQuery.length > 0"
+                                                 class="p-3 text-center text-gray-400 text-sm">
+                                                <p>Nenhuma tag "<span x-text="searchQuery" class="text-white font-medium"></span>"</p>
+                                            </div>
+                                            
+                                            <!-- Criar tag -->
+                                            <div x-show="searchQuery.length > 0" class="border-t border-gray-700">
+                                                <button type="button"
+                                                        @click="createNewTag()"
+                                                        class="w-full flex items-center gap-2 px-4 py-2 text-sm text-primary hover:bg-gray-700 transition-colors text-left">
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                                    </svg>
+                                                    <span>Criar "<span x-text="searchQuery" class="font-medium"></span>"</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Hidden inputs para form submission -->
+                                <template x-for="tag in selectedTags" :key="tag.id">
+                                    <input type="hidden" name="tags" :value="tag.id">
+                                </template>
+                                
+                                <!-- Modal: Criar Tag Rápida -->
+                                <div x-show="showCreateModal"
+                                     x-transition:enter="transition ease-out duration-200"
+                                     x-transition:enter-start="opacity-0"
+                                     x-transition:enter-end="opacity-100"
+                                     x-transition:leave="transition ease-in duration-150"
+                                     x-transition:leave-start="opacity-100"
+                                     x-transition:leave-end="opacity-0"
+                                     class="fixed inset-0 z-50 overflow-y-auto"
+                                     style="display: none;">
+                                    <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" @click="closeCreateModal()"></div>
+                                    <div class="flex min-h-full items-center justify-center p-4">
+                                        <div class="relative bg-gray-800 rounded-xl shadow-2xl border border-gray-700 w-full max-w-md" @click.stop>
+                                            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+                                                <h3 class="text-lg font-semibold text-white">Criar Nova Tag CRM</h3>
+                                                <button type="button" @click="closeCreateModal()" class="text-gray-400 hover:text-white transition-colors">
+                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                            <div class="px-6 py-4 space-y-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-300 mb-2">Nome da Tag <span class="text-red-500">*</span></label>
+                                                    <input type="text" x-model="newTagName" placeholder="Ex: Prioritário, Parceiro..."
+                                                           class="w-full px-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-gray-300 placeholder-gray-500 focus:border-primary focus:ring-1 focus:ring-primary transition-colors">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-300 mb-2">Cor <span class="text-red-500">*</span></label>
+                                                    <div class="flex items-center gap-4">
+                                                        <input type="color" x-model="newTagColor" class="h-12 w-24 rounded-lg border border-gray-600 bg-gray-900 cursor-pointer">
+                                                        <div class="flex-1">
+                                                            <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium text-white shadow-lg"
+                                                                  :style="'background-color: ' + newTagColor">
+                                                                <span x-text="newTagName || 'Preview'"></span>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div x-show="createError" x-transition class="p-3 bg-red-900/20 border border-red-800 rounded-lg text-red-400 text-sm">
+                                                    <span x-text="createError"></span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-700">
+                                                <button type="button" @click="closeCreateModal()" class="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors">Cancelar</button>
+                                                <button type="button" @click="saveNewTag()" :disabled="!newTagName || isCreating"
+                                                        class="inline-flex items-center px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                                                    <span x-text="isCreating ? 'A criar...' : 'Criar Tag'"></span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Modal: Ver Todas as Tags -->
+                                <div x-show="showAllTagsModal"
+                                     x-transition:enter="transition ease-out duration-200"
+                                     x-transition:enter-start="opacity-0"
+                                     x-transition:enter-end="opacity-100"
+                                     x-transition:leave="transition ease-in duration-150"
+                                     x-transition:leave-start="opacity-100"
+                                     x-transition:leave-end="opacity-0"
+                                     class="fixed inset-0 z-50 overflow-y-auto"
+                                     style="display: none;">
+                                    <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" @click="closeAllTagsModal()"></div>
+                                    <div class="flex min-h-full items-center justify-center p-4">
+                                        <div class="relative bg-gray-800 rounded-xl shadow-2xl border border-gray-700 w-full max-w-2xl" @click.stop>
+                                            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+                                                <div>
+                                                    <h3 class="text-lg font-semibold text-white">Todas as Tags CRM</h3>
+                                                    <p class="text-sm text-gray-400 mt-1">Selecione tags para adicionar</p>
+                                                </div>
+                                                <button type="button" @click="closeAllTagsModal()" class="text-gray-400 hover:text-white transition-colors">
+                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                            <div class="px-6 py-4">
+                                                <div class="mb-4">
+                                                    <input type="text" x-model="allTagsSearch" @input.debounce.300ms="searchAllTags()" placeholder="Pesquisar tags..."
+                                                           class="w-full px-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-gray-300 placeholder-gray-500 focus:border-primary focus:ring-1 focus:ring-primary transition-colors">
+                                                </div>
+                                                <div x-show="isLoadingAllTags" class="text-center py-8">
+                                                    <svg class="animate-spin h-8 w-8 mx-auto text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                                    </svg>
+                                                </div>
+                                                <div x-show="!isLoadingAllTags" class="max-h-96 overflow-y-auto space-y-2">
+                                                    <template x-for="tag in allTagsResults" :key="tag.id">
+                                                        <button type="button" @click="selectTagFromModal(tag)"
+                                                                :class="selectedTags.some(t => t.id === tag.id) ? 'bg-gray-700 ring-2 ring-primary' : 'hover:bg-gray-700'"
+                                                                class="w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all text-left">
+                                                            <div class="flex items-center gap-3">
+                                                                <span class="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-medium text-white shadow-lg"
+                                                                      :style="'background-color: ' + tag.color"
+                                                                      x-text="tag.name"></span>
+                                                                <span class="text-xs text-gray-500" x-text="tag.lead_count + ' leads'"></span>
+                                                            </div>
+                                                            <svg x-show="selectedTags.some(t => t.id === tag.id)" class="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                            </svg>
+                                                        </button>
+                                                    </template>
+                                                    <div x-show="allTagsResults.length === 0" class="text-center py-8 text-gray-400">
+                                                        <p>Nenhuma tag encontrada</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center justify-between px-6 py-4 border-t border-gray-700">
+                                                <p class="text-sm text-gray-400"><span x-text="selectedTags.length"></span> tag(s) selecionada(s)</p>
+                                                <button type="button" @click="closeAllTagsModal()" class="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors">Concluído</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Star Rating Script -->
+                <script>
+                function starRating() {
+                    const priorityMap = {1: 'LOW', 2: 'MEDIUM', 3: 'HIGH'};
+                    const reverseMap = {'LOW': 1, 'MEDIUM': 2, 'HIGH': 3};
+                    const priorityInput = document.getElementById('id_priority');
+                    const initialValue = priorityInput ? priorityInput.value : 'MEDIUM';
+                    return {
+                        rating: reverseMap[initialValue] || 2,
+                        hoverRating: 0,
+                        setRating(star) {
+                            // Toggle off if clicking same star
+                            if (this.rating === star) {
+                                this.rating = star - 1;
+                            } else {
+                                this.rating = star;
+                            }
+                            if (priorityInput) {
+                                priorityInput.value = priorityMap[this.rating] || 'LOW';
+                            }
+                        }
+                    }
+                }
+                </script>
+
+                <!-- Separator -->
+                <div class="border-t border-gray-700/50 mt-6 mb-4"></div>
+
+                <!-- Tabs: Notes | Contacts -->
+                <div x-data="{ activeFormTab: 'notes' }" class="mt-2">
+                    <!-- Tab Headers -->
+                    <div class="flex items-center gap-0 border-b border-gray-700/50">
+                        <button type="button"
+                                @click="activeFormTab = 'notes'"
+                                :class="activeFormTab === 'notes' ? 'text-primary border-b-2 border-primary' : 'text-gray-400 hover:text-gray-300 border-b-2 border-transparent'"
+                                class="px-4 py-2 text-sm font-medium transition-all -mb-px">
+                            Notas
+                        </button>
+                        <button type="button"
+                                @click="activeFormTab = 'contacts'"
+                                :class="activeFormTab === 'contacts' ? 'text-primary border-b-2 border-primary' : 'text-gray-400 hover:text-gray-300 border-b-2 border-transparent'"
+                                class="px-4 py-2 text-sm font-medium transition-all -mb-px">
+                            Contactos
+                        </button>
+                    </div>
+
+                    <!-- Tab Content: Notes -->
+                    <div x-show="activeFormTab === 'notes'" class="pt-4">
+                        <div class="mb-2">
+                            <label class="block text-sm font-medium text-gray-400 mb-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline h-4 w-4 mr-1">
+                                    <path d="M12 20h9"></path>
+                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                                </svg>
+                                Notas e Observações
+                            </label>
+                            <p class="text-xs text-gray-500 mb-3">Use o editor abaixo para adicionar notas formatadas sobre esta oportunidade</p>
+                        </div>
+                        
+                        <!-- Quill Editor Container -->
+                        <div id="notes-editor" style="height: 300px; background: #1a2332; color: #e5e7eb;"></div>
+                        
+                        <!-- Hidden input para capturar o HTML -->
+                        <input type="hidden" name="notes" id="notes-input" value="{{ form.notes.value|default:'' }}">
+                        
+                        <div class="mt-2 text-xs text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline h-3 w-3 mr-1">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M12 16v-4"></path>
+                                <path d="M12 8h.01"></path>
+                            </svg>
+                            Suporta formatação rica: títulos, negrito, listas, links, imagens e mais
+                        </div>
+                    </div>
+
+                    <!-- Tab Content: Contacts -->
+                    <div x-show="activeFormTab === 'contacts'" class="pt-4">
+                        <div class="text-sm text-gray-500 py-4">
+                            <p>Contactos associados a esta oportunidade serão exibidos aqui após a criação.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- end card -->
+
+        </div>
+    </form>
+        </div>
+        
+        <!-- CHATTER (Direita - 30%) - PREVIEW DISABLED -->
+        <div class="w-[30%] border-l border-gray-700 bg-[#1a2332] h-[80vh] sticky top-0 flex flex-col" x-data="{ activeTab: 'whatsapp' }">
+            <!-- Tabs Header - HORIZONTAL -->
+            <div class="flex border-b border-gray-700 overflow-x-auto flex-shrink-0">
+                <button type="button"
+                        @click="activeTab = 'whatsapp'"
+                        :class="activeTab === 'whatsapp' ? 'bg-[#2d3748] text-white border-b-2 border-primary' : 'text-gray-400 hover:bg-[#1f2937] hover:text-white'"
+                        class="px-4 py-3 font-medium text-xs transition-all whitespace-nowrap opacity-50 cursor-not-allowed">
+                    WhatsApp
+                </button>
+                
+                <button type="button"
+                        @click="activeTab = 'message'"
+                        :class="activeTab === 'message' ? 'bg-[#2d3748] text-white border-b-2 border-primary' : 'text-gray-400 hover:bg-[#1f2937] hover:text-white'"
+                        class="px-4 py-3 font-medium text-xs transition-all whitespace-nowrap opacity-50 cursor-not-allowed">
+                    Enviar Mensagem
+                </button>
+                
+                <button type="button"
+                        @click="activeTab = 'note'"
+                        :class="activeTab === 'note' ? 'bg-[#2d3748] text-white border-b-2 border-primary' : 'text-gray-400 hover:bg-[#1f2937] hover:text-white'"
+                        class="px-4 py-3 font-medium text-xs transition-all whitespace-nowrap opacity-50 cursor-not-allowed">
+                    Nota
+                </button>
+                
+                <button type="button"
+                        @click="activeTab = 'log'"
+                        :class="activeTab === 'log' ? 'bg-[#2d3748] text-white border-b-2 border-primary' : 'text-gray-400 hover:bg-[#1f2937] hover:text-white'"
+                        class="px-4 py-3 font-medium text-xs transition-all whitespace-nowrap opacity-50 cursor-not-allowed">
+                    Log
+                </button>
+                
+                <button type="button"
+                        @click="activeTab = 'activity'"
+                        :class="activeTab === 'activity' ? 'bg-[#2d3748] text-white border-b-2 border-primary' : 'text-gray-400 hover:bg-[#1f2937] hover:text-white'"
+                        class="px-4 py-3 font-medium text-xs transition-all whitespace-nowrap opacity-50 cursor-not-allowed">
+                    Atividade
+                </button>
+            </div>
+            
+            <!-- Preview Message - Chatter Disabled -->
+            <div class="flex-1 flex items-center justify-center p-6">
+                <div class="text-center space-y-4 max-w-xs">
+                    <div class="w-16 h-16 mx-auto rounded-full bg-gray-700/50 flex items-center justify-center">
+                        <svg class="h-8 w-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-300 mb-1">Chatter Não Disponível</h3>
+                        <p class="text-xs text-gray-500">O sistema de comunicação estará disponível após criar a oportunidade</p>
+                    </div>
+                    <div class="pt-2">
+                        <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-700/30 rounded-lg">
+                            <svg class="h-3 w-3 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span class="text-xs text-gray-400">Crie primeiro para desbloquear</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Contact Autocomplete
+function contactAutocomplete() {
+    return {
+        query: '{{ form.contact_name.value|default:"" }}',
+        results: [],
+        showResults: false,
+        isLoading: false,
+        selectedContactId: '',
+        
+        async searchContacts() {
+            if (this.query.length === 0) {
+                this.results = [];
+                this.showResults = false;
+                return;
+            }
+            
+            this.isLoading = true;
+            this.showResults = true;
+            
+            try {
+                const response = await fetch(`/crm/api/contacts/search/?q=${encodeURIComponent(this.query)}`);
+                const data = await response.json();
+                if (data.success) {
+                    this.results = data.results;
+                }
+            } catch (error) {
+                console.error('Erro ao pesquisar contactos:', error);
+            } finally {
+                this.isLoading = false;
+            }
+        },
+        
+        selectContact(contact) {
+            this.query = contact.name;
+            this.selectedContactId = contact.id;
+            this.showResults = false;
+            
+            // Fill related fields
+            const emailField = document.querySelector('input[name="email_from"]');
+            const phoneField = document.querySelector('input[name="phone"]');
+            const contactField = document.querySelector('input[name="contact"]');
+            
+            if (emailField && contact.email) emailField.value = contact.email;
+            if (phoneField && contact.phone) phoneField.value = contact.phone;
+            if (contactField) contactField.value = contact.id;
+        },
+        
+        createAndEdit() {
+            // Open contacts create page in new tab
+            window.open('/contacts/create/', '_blank');
+            this.showResults = false;
+        }
+    }
+}
+
+// CRM Tag Selector
+function crmTagSelector() {
+    return {
+        selectedTags: [],
+        searchQuery: '',
+        searchResults: [],
+        showDropdown: false,
+        isLoading: false,
+        hasMore: false,
+        
+        showCreateModal: false,
+        newTagName: '',
+        newTagColor: '#dbc693',
+        isCreating: false,
+        createError: '',
+        
+        showAllTagsModal: false,
+        allTagsSearch: '',
+        allTagsResults: [],
+        isLoadingAllTags: false,
+        
+        init() {
+            this.generateRandomColor();
+        },
+        
+        generateRandomColor() {
+            const colors = [
+                '#dc2626', '#ea580c', '#d97706', '#ca8a04', '#65a30d',
+                '#16a34a', '#0891b2', '#0284c7', '#2563eb', '#7c3aed',
+                '#c026d3', '#db2777', '#be123c', '#dbc693'
+            ];
+            this.newTagColor = colors[Math.floor(Math.random() * colors.length)];
+        },
+        
+        async searchTags() {
+            if (this.searchQuery.length === 0) {
+                this.searchResults = [];
+                return;
+            }
+            this.isLoading = true;
+            this.showDropdown = true;
+            try {
+                const response = await fetch(`/crm/api/tags/search/?q=${encodeURIComponent(this.searchQuery)}&limit=7`);
+                const data = await response.json();
+                if (data.success) {
+                    this.searchResults = data.results.filter(tag => 
+                        !this.selectedTags.some(selected => selected.id === tag.id)
+                    );
+                    this.hasMore = data.has_more;
+                }
+            } catch (error) {
+                console.error('Erro ao pesquisar tags:', error);
+            } finally {
+                this.isLoading = false;
+            }
+        },
+        
+        selectTag(tag) {
+            if (!this.selectedTags.some(t => t.id === tag.id)) {
+                this.selectedTags.push(tag);
+            }
+            this.searchQuery = '';
+            this.searchResults = [];
+            this.showDropdown = false;
+        },
+        
+        removeTag(tagId) {
+            this.selectedTags = this.selectedTags.filter(tag => tag.id !== tagId);
+        },
+        
+        createNewTag() {
+            this.newTagName = this.searchQuery;
+            this.generateRandomColor();
+            this.createError = '';
+            this.showCreateModal = true;
+            this.showDropdown = false;
+        },
+        
+        closeCreateModal() {
+            this.showCreateModal = false;
+            this.newTagName = '';
+            this.createError = '';
+            this.generateRandomColor();
+        },
+        
+        async saveNewTag() {
+            if (!this.newTagName.trim()) {
+                this.createError = 'Nome da tag é obrigatório';
+                return;
+            }
+            this.isCreating = true;
+            this.createError = '';
+            try {
+                const response = await fetch('/crm/api/tags/quick-create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        name: this.newTagName.trim(),
+                        color: this.newTagColor
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.selectedTags.push(data.tag);
+                    this.closeCreateModal();
+                    this.searchQuery = '';
+                } else {
+                    this.createError = data.error;
+                }
+            } catch (error) {
+                this.createError = 'Erro ao criar tag. Tente novamente.';
+            } finally {
+                this.isCreating = false;
+            }
+        },
+        
+        async openAllTagsModal() {
+            this.showAllTagsModal = true;
+            this.showDropdown = false;
+            this.allTagsSearch = this.searchQuery || '';
+            await this.searchAllTags();
+        },
+        
+        closeAllTagsModal() {
+            this.showAllTagsModal = false;
+            this.allTagsSearch = '';
+            this.allTagsResults = [];
+        },
+        
+        async searchAllTags() {
+            this.isLoadingAllTags = true;
+            try {
+                const query = this.allTagsSearch.trim();
+                const response = await fetch(`/crm/api/tags/search/?q=${encodeURIComponent(query)}&limit=100`);
+                const data = await response.json();
+                if (data.success) {
+                    this.allTagsResults = data.results;
+                }
+            } catch (error) {
+                console.error('Erro ao pesquisar tags:', error);
+            } finally {
+                this.isLoadingAllTags = false;
+            }
+        },
+        
+        selectTagFromModal(tag) {
+            const index = this.selectedTags.findIndex(t => t.id === tag.id);
+            if (index !== -1) {
+                this.selectedTags.splice(index, 1);
+            } else {
+                this.selectedTags.push(tag);
+            }
+        }
+    }
+}
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Quill Rich Text Editor JS -->
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+
+<!-- Air Datepicker - shim for CommonJS module/exports -->
+<script>
+if(typeof module==='undefined'){window.module={exports:{}};}
+if(typeof exports==='undefined'){window.exports=module.exports;}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/air-datepicker@3.5.3/air-datepicker.js"></script>
+<script>
+// Extract AirDatepicker from CommonJS module.exports
+window.AirDatepicker = module.exports.default || module.exports.AirDatepicker || module.exports;
+</script>
+<script>
+// Aguardar carregamento do AirDatepicker e Quill
+document.addEventListener('DOMContentLoaded', function() {
+    // Air Datepicker
+    const dateInput = document.getElementById('id_expected_close_date');
+    if (dateInput) {
+        const ptLocale = {
+            days: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'],
+            daysShort: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+            daysMin: ['Do', 'Se', 'Te', 'Qu', 'Qi', 'Sx', 'Sá'],
+            months: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
+            monthsShort: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+            today: 'Hoje',
+            clear: 'Limpar',
+            dateFormat: 'dd/MM/yyyy',
+            timeFormat: 'HH:mm',
+            firstDay: 1
+        };
+        
+        new AirDatepicker(dateInput, {
+            locale: ptLocale,
+            dateFormat: 'yyyy-MM-dd',
+            autoClose: true,
+            position: 'bottom left',
+            buttons: ['today', 'clear'],
+            navTitles: {
+                days: 'MMMM yyyy',
+                months: 'yyyy',
+                years: 'yyyy1 - yyyy2'
+            },
+            onSelect({date, formattedDate}) {
+                if (date) {
+                    const y = date.getFullYear();
+                    const m = String(date.getMonth() + 1).padStart(2, '0');
+                    const d = String(date.getDate()).padStart(2, '0');
+                    dateInput.value = `${y}-${m}-${d}`;
+                }
+            }
+        });
+    }
+});
+
+// Inicializar Quill Editor para Notas
+document.addEventListener('DOMContentLoaded', function() {
+    const quill = new Quill('#notes-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'indent': '-1'}, { 'indent': '+1' }],
+                [{ 'color': [] }, { 'background': [] }],
+                [{ 'align': [] }],
+                ['link', 'image', 'code-block'],
+                ['blockquote', 'clean']
+            ]
+        },
+        placeholder: 'Comece a escrever notas sobre esta oportunidade...'
+    });
+
+    // Carregar conteúdo inicial se existir
+    const initialContent = document.getElementById('notes-input').value;
+    if (initialContent) {
+        quill.root.innerHTML = initialContent;
+    }
+
+    // Sincronizar conteúdo do Quill com o input hidden antes do submit
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function() {
+        const notesInput = document.getElementById('notes-input');
+        notesInput.value = quill.root.innerHTML;
+    });
+
+    // Estilização dark theme para o editor
+    const editorStyle = document.createElement('style');
+    editorStyle.textContent = `
+        .ql-toolbar {
+            background: #374151 !important;
+            border-color: #4b5563 !important;
+        }
+        .ql-toolbar button,
+        .ql-toolbar .ql-picker-label {
+            color: #e5e7eb !important;
+        }
+        .ql-toolbar button:hover,
+        .ql-toolbar .ql-picker-label:hover {
+            color: #dbc693 !important;
+        }
+        .ql-toolbar button.ql-active,
+        .ql-toolbar .ql-picker-label.ql-active {
+            color: #dbc693 !important;
+        }
+        .ql-stroke {
+            stroke: #e5e7eb !important;
+        }
+        .ql-fill {
+            fill: #e5e7eb !important;
+        }
+        .ql-picker-options {
+            background: #374151 !important;
+            border-color: #4b5563 !important;
+        }
+        .ql-picker-item {
+            color: #e5e7eb !important;
+        }
+        .ql-picker-item:hover {
+            color: #dbc693 !important;
+        }
+        .ql-container {
+            border-color: #4b5563 !important;
+            font-size: 14px;
+        }
+        .ql-editor {
+            min-height: 250px;
+            color: #e5e7eb;
+        }
+        .ql-editor.ql-blank::before {
+            color: #6b7280;
+            font-style: normal;
+        }
+    `;
+    document.head.appendChild(editorStyle);
+});
+</script>
+{% endblock %}
