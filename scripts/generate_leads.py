@@ -188,14 +188,14 @@ def generate_leads():
         print(f"🏢 Criando leads para: {company.name}")
         print(f"{'=' * 70}")
         
-        # Buscar contactos (preferir CLIENT ou BOTH)
+        # Buscar contactos ativos
         available_contacts = list(
-            Contact.objects.filter(contact_type__in=['CLIENT', 'BOTH'], is_active=True)[:30]
+            Contact.objects.filter(is_active=True)[:30]
         )
         
         if not available_contacts:
-            print(f"  ⚠️  Nenhum contacto CLIENT/BOTH disponível. Usando todos os contactos.")
-            available_contacts = list(Contact.objects.filter(is_active=True)[:30])
+            print(f"  ⚠️  Nenhum contacto disponível. Pulando esta empresa.")
+            continue
         
         # Distribuição de stages:
         # 5 WON, 5 LOST, 5 outras (NEW, QUALIFIED, PROPOSITION, NEGOTIATION)
