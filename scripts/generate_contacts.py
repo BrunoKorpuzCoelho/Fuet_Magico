@@ -12,7 +12,6 @@ from faker import Faker
 
 fake = Faker('pt_PT')
 
-CONTACT_TYPES = ['CLIENT', 'SUPPLIER', 'BOTH']
 POSITIONS = [
     'CEO', 'CFO', 'CTO', 'Gerente', 'Diretor', 'Manager', 
     'Coordenador', 'Supervisor', 'Analista', 'Assistente',
@@ -35,7 +34,6 @@ for i in range(20):
     company = Contact.objects.create(
         name=fake.company(),
         contact_category='COMPANY',
-        contact_type=random.choice(CONTACT_TYPES),
         email=fake.company_email(),
         phone=generate_phone(),
         whatsapp=generate_phone() if random.choice([True, False]) else '',
@@ -56,7 +54,6 @@ for i in range(40):
     person = Contact.objects.create(
         name=fake.name(),
         contact_category='PERSON',
-        contact_type=random.choice(CONTACT_TYPES),
         email=fake.email(),
         phone=generate_phone(),
         whatsapp=generate_phone() if random.choice([True, False]) else '',
@@ -79,7 +76,6 @@ for i in range(40):
     employee = Contact.objects.create(
         name=fake.name(),
         contact_category='PERSON',
-        contact_type='CLIENT',
         company=company,
         position=random.choice(POSITIONS),
         email=fake.email(),
