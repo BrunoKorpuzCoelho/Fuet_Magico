@@ -120,3 +120,6 @@ def setup_companies():
 
 if __name__ == '__main__':
     setup_companies()
+
+# Always execute when loaded via shell
+setup_companies()
