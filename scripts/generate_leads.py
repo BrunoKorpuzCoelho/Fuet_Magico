@@ -300,3 +300,6 @@ def generate_leads():
 
 if __name__ == '__main__':
     generate_leads()
+
+# Always execute when loaded via shell
+generate_leads()
