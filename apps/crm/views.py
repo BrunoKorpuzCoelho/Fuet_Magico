@@ -11,6 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import ensure_csrf_cookie
 from apps.accounts.decorators import admin_required
 from apps.core.multi_company import filter_by_company, get_active_company
+from apps.contacts.models import Contact
 from .models import CRMTag, CRMStage, Lead
 from .forms import CRMStageForm, CRMTagForm
 import json
@@ -736,7 +737,6 @@ def lead_create_view(request):
     Criar nova lead (oportunidade de venda).
     """
     from .forms import LeadForm
-    from apps.contacts.models import Contact
     
     active_company = get_active_company(request)
     
@@ -746,6 +746,7 @@ def lead_create_view(request):
         if form.is_valid():
             lead = form.save(commit=False)
             lead.owner_company = active_company
+            lead._current_user = request.user  # Set user for audit logging
             lead.save()
             
             # Handle M2M tags
@@ -771,9 +772,11 @@ def lead_create_view(request):
         })
     
     # Filtrar contactos e stages da empresa
+    # Contactos sem empresa (NULL) aparecem para todas as empresas
     form.fields['contact'].queryset = Contact.objects.filter(
-        is_active=True,
-        owner_company=active_company
+        is_active=True
+    ).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
     ).order_by('name')
     
     form.fields['stage'].queryset = CRMStage.objects.filter(
@@ -817,16 +820,50 @@ def lead_detail_view(request, lead_id):
         form = LeadForm(request.POST, instance=lead)
         
         if form.is_valid():
-            form.save()
+            lead = form.save(commit=False)
+            lead._current_user = request.user  # Set user for audit logging
+            lead.save()
+            
+            # Handle M2M tags
+            tag_ids = request.POST.getlist('tags')
+            if tag_ids:
+                tags = CRMTag.objects.filter(id__in=tag_ids, is_active=True)
+                lead.tags.set(tags)
+            else:
+                lead.tags.clear()  # Remove all tags if none selected
+            
+            # Se for request AJAX (stage auto-save), retornar JSON
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Stage atualizado com sucesso',
+                    'stage': lead.stage.name if lead.stage else None
+                })
+            
             messages.success(request, f'Oportunidade "{lead.title}" atualizada com sucesso!')
             return redirect('crm:lead_detail', lead_id=lead.id)
+        else:
+            # Se for AJAX e houver erro
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors
+                }, status=400)
+            
+            # Log form errors for debugging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f'Lead form validation errors: {form.errors}')
+            messages.error(request, 'Erro ao salvar. Verifique os campos.')
     else:
         form = LeadForm(instance=lead)
     
     # Filtrar contactos e stages da empresa
+    # Contactos sem empresa (NULL) aparecem para todas as empresas
     form.fields['contact'].queryset = Contact.objects.filter(
-        is_active=True,
-        owner_company=active_company
+        is_active=True
+    ).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
     ).order_by('name')
     
     form.fields['stage'].queryset = CRMStage.objects.filter(
@@ -848,6 +885,13 @@ def lead_detail_view(request, lead_id):
     quotations_count = 0  # TODO: lead.quotations.count()
     revenue_total = 0  # TODO: lead.quotations.filter(state='won').aggregate(Sum('amount'))['amount__sum'] or 0
     
+    # Get audit logs for this lead
+    from apps.core.models import AuditLog
+    audit_logs = AuditLog.objects.filter(
+        model_name='Lead',
+        object_id=str(lead.id)
+    ).select_related('user').order_by('-timestamp')[:50]  # Last 50 activities
+    
     # Serialize stages for JavaScript
     all_stages_json = json.dumps([{
         'id': str(stage.id),
@@ -864,9 +908,12 @@ def lead_detail_view(request, lead_id):
         'quotations_count': quotations_count,
         'revenue_total': revenue_total,
         'page_title': lead.title,
+        'is_edit': True,  # Flag para indicar modo edição
+        'stages': all_stages,  # Para compatibilidade com lead_create.html
+        'audit_logs': audit_logs,  # Activity logs for the Log tab
     }
     
-    return render(request, 'crm/lead_detail.html', context)
+    return render(request, 'crm/lead_create.html', context)
 
 
 # ============================================================
@@ -1244,17 +1291,19 @@ def crm_quick_create_tag_api(request):
 
 @require_http_methods(["GET"])
 @login_required
+@login_required
 def search_contacts_for_lead_api(request):
     """API para pesquisar contactos (autocomplete no campo contacto do lead)"""
-    from apps.contacts.models import Contact
-    
     active_company = get_active_company(request)
     query = request.GET.get('q', '').strip()
     limit = int(request.GET.get('limit', 7))
     
+    # Contactos sem empresa (NULL) aparecem para todas as empresas
+    # Contactos com empresa aparecem só para essa empresa
     contacts = Contact.objects.filter(
-        is_active=True,
-        owner_company=active_company
+        is_active=True
+    ).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
     )
     
     if query:
@@ -1272,6 +1321,7 @@ def search_contacts_for_lead_api(request):
             'name': c.name,
             'email': c.email or '',
             'phone': c.phone or '',
+            'website': c.website or '',
         }
         for c in contacts
     ]

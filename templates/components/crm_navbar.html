@@ -52,9 +52,11 @@
                 
                 <!-- Botões de Ação (Form Actions) -->
                 {% if show_form_actions %}
-                <div class="flex items-center gap-3 ml-2">
+                <div class="flex items-center gap-3 ml-2"
+                     id="form-action-buttons"
+                     {% if lead %}style="display: none;"{% endif %}>
                     <!-- Botão Descartar (Vermelho) -->
-                    <a href="{% url 'crm:crm_home' %}" 
+                    <a href="{% if lead %}{% url 'crm:lead_detail' lead.id %}{% else %}{% url 'crm:crm_home' %}{% endif %}" 
                        class="flex items-center justify-center hover:opacity-80 transition-opacity" 
                        title="Descartar">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 text-red-500">

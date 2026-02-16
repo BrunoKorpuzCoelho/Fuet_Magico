@@ -3828,6 +3828,171 @@ Task 5.5 - LeadListView (view alternativa, não default)
 Task 5.8 - LeadUpdateView (editar lead)
 
 no final ver o que falta e im-plementar
+
+---
+
+## 5.11 Integração da Aba Marketing com Módulo de Marketing (Futuro)
+
+Implementar a lógica completa de backend e integração futura entre os campos de Marketing da Lead e um módulo de Marketing dedicado.
+
+**CONTEXTO:**
+- Atualmente a aba "Marketing" no formulário de Lead (`lead_create.html`) tem 4 campos informativos:
+  - Campanha (campaign)
+  - Mídia (medium)
+  - Origem (source)
+  - Referenciado Por (referred_by)
+- Estes campos são atualmente apenas text inputs simples (não conectados a nenhum modelo)
+- No futuro, devem ser integrados com um módulo completo de Marketing (Campaigns, UTM tracking, Referral program)
+
+**OBJETIVO:** Criar os campos no modelo Lead, preparar relações para futuro módulo de Marketing, e implementar a lógica de salvamento/recuperação dos dados.
+
+- [ ] **Adicionar campos ao modelo Lead**
+  - [ ] Adicionar campos ao `apps/crm/models.py` (classe Lead):
+    ```python
+    # Marketing fields
+    marketing_campaign = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name='Campanha',
+        help_text='Nome da campanha de marketing (futuro: FK para Campaign)'
+    )
+    marketing_medium = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='Mídia',
+        help_text='Canal/mídia (ex: Google Ads, Facebook, Email, WhatsApp)'
+    )
+    marketing_source = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='Origem',
+        help_text='Origem da lead (ex: Website, Landing Page, Referral)'
+    )
+    marketing_referred_by = models.ForeignKey(
+        Contact,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='referred_leads',
+        verbose_name='Referenciado Por',
+        help_text='Contacto que referenciou esta lead'
+    )
+    ```
+  - [ ] Criar migration: `python manage.py makemigrations crm`
+  - [ ] Aplicar migration: `python manage.py migrate`
+
+- [ ] **Atualizar LeadForm**
+  - [ ] Adicionar campos ao `apps/crm/forms.py` (classe LeadForm):
+    - [ ] `marketing_campaign` - CharField widget
+    - [ ] `marketing_medium` - CharField widget
+    - [ ] `marketing_source` - CharField widget (ou ChoiceField com opções pré-definidas)
+    - [ ] `marketing_referred_by` - ModelChoiceField com autocomplete (igual ao campo contact)
+  - [ ] Labels em português
+  - [ ] Help texts informativos
+  - [ ] Todos os campos devem ser `required=False` (opcionais)
+
+- [ ] **Atualizar template lead_create.html**
+  - [ ] Conectar os inputs da aba Marketing aos campos do form:
+    - [ ] `name="marketing_campaign"` → `{{ form.marketing_campaign }}`
+    - [ ] `name="marketing_medium"` → `{{ form.marketing_medium }}`
+    - [ ] `name="marketing_source"` → `{{ form.marketing_source }}`
+    - [ ] `name="marketing_referred_by"` → implementar autocomplete igual ao campo contact
+  - [ ] Manter o aviso amarelo: "Estes campos serão integrados com o módulo de Marketing no futuro"
+  - [ ] Adicionar autocomplete para campo "Referenciado Por":
+    - [ ] Usar mesmo endpoint `/crm/api/contacts/search/`
+    - [ ] Dropdown com resultados
+    - [ ] Ao selecionar, preenche input hidden `marketing_referred_by`
+
+- [ ] **Preparar Choices predefinidas (opcional)**
+  - [ ] Criar choices para `marketing_medium`:
+    ```python
+    MARKETING_MEDIUM_CHOICES = [
+        ('', '---'),
+        ('GOOGLE_ADS', 'Google Ads'),
+        ('FACEBOOK_ADS', 'Facebook Ads'),
+        ('INSTAGRAM', 'Instagram'),
+        ('EMAIL', 'Email Marketing'),
+        ('WHATSAPP', 'WhatsApp'),
+        ('SMS', 'SMS'),
+        ('REFERRAL', 'Indicação'),
+        ('OTHER', 'Outro'),
+    ]
+    ```
+  - [ ] Criar choices para `marketing_source`:
+    ```python
+    MARKETING_SOURCE_CHOICES = [
+        ('', '---'),
+        ('WEBSITE', 'Website'),
+        ('LANDING_PAGE', 'Landing Page'),
+        ('SOCIAL_MEDIA', 'Redes Sociais'),
+        ('REFERRAL', 'Indicação'),
+        ('EVENT', 'Evento'),
+        ('COLD_CALL', 'Cold Call'),
+        ('OTHER', 'Outro'),
+    ]
+    ```
+  - [ ] No form, usar Select ou Datalist HTML5 (autocomplete nativo)
+
+- [ ] **Implementar autocomplete para "Referenciado Por"**
+  - [ ] Criar função Alpine.js `referredByAutocomplete()` em `lead_create.html`
+  - [ ] Similar a `contactAutocomplete()` mas para campo separado
+  - [ ] Usar endpoint `/crm/api/contacts/search/`
+  - [ ] Ao selecionar contacto:
+    - [ ] Preencher input visível com nome do contacto
+    - [ ] Preencher input hidden `marketing_referred_by` com contact.id
+
+- [ ] **Exibir dados na LeadDetailView**
+  - [ ] Adicionar secção "Marketing" no `lead_detail.html`
+  - [ ] Mostrar os 4 campos em formato read-only:
+    - [ ] Campanha
+    - [ ] Mídia
+    - [ ] Origem
+    - [ ] Referenciado Por (com link para ficha do contacto se existir)
+  - [ ] Se todos vazios, mostrar mensagem: "Sem informação de marketing"
+
+- [ ] **UTM Tracking (Preparação para futuro)**
+  - [ ] Adicionar 3 campos adicionais ao modelo Lead (opcional, para captura automática):
+    ```python
+    # UTM Parameters (auto-captured from URL)
+    utm_source = models.CharField(max_length=100, blank=True)
+    utm_medium = models.CharField(max_length=100, blank=True)
+    utm_campaign = models.CharField(max_length=100, blank=True)
+    utm_content = models.CharField(max_length=255, blank=True)
+    utm_term = models.CharField(max_length=255, blank=True)
+    ```
+  - [ ] Estes campos serão preenchidos automaticamente quando Lead for criada via formulário web (futuro)
+  - [ ] Por agora, deixar como hidden fields ou não exibir no form
+
+- [ ] **Reportórios e Analytics (Futuro)**
+  - [ ] Preparar para módulo futuro "Marketing Analytics"
+  - [ ] Queries de exemplo que serão úteis:
+    - [ ] Leads por campanha (GROUP BY marketing_campaign)
+    - [ ] Taxa de conversão por mídia (% de Leads Won por marketing_medium)
+    - [ ] ROI por origem (custo da campanha vs. receita gerada)
+    - [ ] Top referrers (contactos que mais referenciaram leads)
+
+- [ ] **Testing - Marketing Tab**
+  - [ ] Test: campos de marketing salvam corretamente
+  - [ ] Test: campo "Referenciado Por" aceita contacto válido
+  - [ ] Test: autocomplete de "Referenciado Por" funciona
+  - [ ] Test: campos aparecem em lead_detail
+  - [ ] Test: campos são opcionais (lead pode ser criada sem marketing info)
+  - [ ] Test: migration não quebra leads existentes (campos devem aceitar blank=True)
+
+- [ ] **Documentação**
+  - [ ] Atualizar `docs/CRM_Features_Overview.md`:
+    - [ ] Adicionar secção sobre Marketing tracking
+    - [ ] Explicar campos disponíveis
+    - [ ] Notar que integração completa será implementada em módulo futuro
+  - [ ] Criar `docs/Marketing_Integration_Roadmap.md` (opcional):
+    - [ ] Roadmap para módulo de Marketing
+    - [ ] Campaigns, UTM tracking, Landing pages, Email marketing
+    - [ ] Integração com Leads CRM
+
+**PRIORIDADE:** Média (não urgente, mas importante preparar os campos para futuro)
+
+**STATUS:** Pendente (campos criados no template, falta backend)
+
 ---
 
 ## 4.16 Template Base de Smart Buttons (Relações Modulares)

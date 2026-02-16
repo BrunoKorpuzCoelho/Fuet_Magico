@@ -381,6 +381,16 @@
 <!-- SortableJS for Drag & Drop (loaded from CDN) -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 <script>
+    // Global variables and functions (must be outside DOMContentLoaded for onclick handlers)
+    let isDragging = false;
+    
+    // Navigate to lead detail/edit page
+    function navigateToLead(leadId) {
+        if (!isDragging) {
+            window.location.href = `/crm/leads/${leadId}/`;
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         // Get CSRF token for AJAX requests
         function getCookie(name) {
@@ -454,16 +464,6 @@
                 alert('Erro na comunicação com o servidor');
                 location.reload();
             });
-        }
-
-        // Track drag state to prevent click navigation during drag
-        let isDragging = false;
-        
-        // Navigate to lead detail page
-        function navigateToLead(leadId) {
-            if (!isDragging) {
-                window.location.href = `/crm/leads/${leadId}/`;
-            }
         }
 
         // Initialize Sortable on each column

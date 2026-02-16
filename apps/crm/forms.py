@@ -282,9 +282,21 @@ class LeadForm(forms.ModelForm):
     
     def clean_estimated_value(self):
         value = self.cleaned_data.get('estimated_value')
-        if value and value < 0:
+        if value is None:
+            return 0
+        if value < 0:
             raise forms.ValidationError('Valor estimado deve ser maior ou igual a zero.')
         return value
+    
+    def clean_contact(self):
+        """
+        Garante que quando o campo contact vem vazio, retorna None.
+        Django ModelForm com ForeignKey pode não limpar corretamente quando recebe string vazia.
+        """
+        contact = self.cleaned_data.get('contact')
+        if not contact or contact == '':
+            return None
+        return contact
     
     def clean_probability(self):
         probability = self.cleaned_data.get('probability')

@@ -164,6 +164,7 @@ class Lead(AbstractBaseModel):
         decimal_places=2,
         validators=[MinValueValidator(0)],
         default=0,
+        blank=True,  # Permite vazio no form
         verbose_name='Expected Revenue'
     )
     probability = models.IntegerField(
