@@ -71,7 +71,8 @@
             
             <!-- Right: Smart Buttons (inline layout) -->
             <div class="flex items-center gap-2">
-                <button class="flex items-center gap-2 px-3 py-1 rounded-md border border-purple-500 bg-transparent hover:bg-purple-500/10 transition-all">
+                <a href="{% if contact %}{% url 'crm:lead_list' %}?contact={{ contact.id }}{% else %}#{% endif %}" 
+                   class="flex items-center gap-2 px-3 py-1 rounded-md border border-purple-500 bg-transparent hover:bg-purple-500/10 transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-purple-400">
                         <circle cx="12" cy="12" r="10"></circle>
                         <circle cx="12" cy="12" r="6"></circle>
@@ -79,7 +80,7 @@
                     </svg>
                     <span class="text-sm font-semibold text-purple-400">{{ crm_count|default:0 }}</span>
                     <span class="text-xs text-purple-400">CRM</span>
-                </button>
+                </a>
                 
                 <button class="flex items-center gap-2 px-3 py-1 rounded-md border border-green-500 bg-transparent hover:bg-green-500/10 transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-green-400">

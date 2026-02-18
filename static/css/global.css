@@ -11,3 +11,34 @@ body {
     line-height: 1.6;
     color: #333;
 }
+
+/* ==========================================
+   CUSTOM SCROLLBAR - Dourado Fuet Mágico
+   Aplicado globalmente em todo o sistema
+   ========================================== */
+
+/* Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+    width: 6px !important;
+    height: 6px !important;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #dbc693 !important;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #c9b580 !important;
+}
+
+/* Firefox */
+* {
+    scrollbar-width: thin !important;
+    scrollbar-color: #dbc693 transparent !important;
+}
+

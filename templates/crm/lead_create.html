@@ -104,6 +104,52 @@
         -moz-appearance: textfield;
     }
     
+    /* Alpine.js x-cloak (hide until Alpine loads) */
+    [x-cloak] {
+        display: none !important;
+    }
+    
+    /* Ribbon Styles (Odoo-like) */
+    .ribbon {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 150px;
+        height: 150px;
+        overflow: hidden;
+        z-index: 10;
+        pointer-events: none;
+    }
+    
+    .ribbon-content {
+        position: absolute;
+        top: 30px;
+        right: -35px;
+        width: 200px;
+        padding: 10px 0;
+        text-align: center;
+        font-weight: bold;
+        font-size: 14px;
+        letter-spacing: 1px;
+        transform: rotate(45deg);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+    
+    .ribbon-won .ribbon-content {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #ffffff;
+    }
+    
+    .ribbon-lost .ribbon-content {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: #ffffff;
+    }
+        margin: 0;
+    }
+    input[type="number"] {
+        -moz-appearance: textfield;
+    }
+    
     /* Custom Dropdown Vendedor */
     .salesperson-dropdown {
         position: relative;
@@ -190,8 +236,23 @@
 <div class="bg-[#1f2937]">
     <div class="flex gap-0">
         <!-- FORMULÁRIO (Esquerda - 70%) -->
-        <div class="flex-1" style="max-width: 70%;">
-            <form method="post" id="lead-form">
+        <div class="flex-1 relative" style="max-width: 70%;">
+            
+            <!-- Ribbon: Won (Ganho) -->
+            {% if is_edit and lead.stage and lead.stage.is_won_stage %}
+            <div class="ribbon ribbon-won">
+                <div class="ribbon-content">GANHO</div>
+            </div>
+            {% endif %}
+            
+            <!-- Ribbon: Lost (Perdido) -->
+            {% if is_edit and lead.stage and lead.stage.is_lost_stage %}
+            <div class="ribbon ribbon-lost">
+                <div class="ribbon-content">PERDIDO</div>
+            </div>
+            {% endif %}
+            
+            <form method="post" enctype="multipart/form-data" id="lead-form">
                 {% csrf_token %}
                 
                 <!-- Mensagens de erro do formulário -->
@@ -210,24 +271,73 @@
                 
                 <!-- Hidden fields -->
                 {{ form.contact }}
+                {{ form.lost_reason }}
                 <input type="hidden" name="stage" id="id_stage" value="{% if is_edit and lead.stage %}{{ lead.stage.id }}{% elif form.stage.value %}{{ form.stage.value }}{% endif %}">
                 <input type="hidden" name="priority" id="id_priority" value="{{ form.priority.value|default:'MEDIUM' }}">
                 <input type="hidden" name="source" id="id_source" value="{{ form.source.value|default:'OTHER' }}">
 
                 <div class="p-6">
-            <!-- Action Buttons + Stage Bar -->
-            <div x-data="stageBar()" class="flex items-center justify-between gap-4 mb-6"
+            
+            <!-- Alpine.js Wrapper for Stage Bar + Buttons + Modal -->
+            <div x-data="stageBar()"
                  data-lead-id="{% if is_edit %}{{ lead.id }}{% endif %}"
-                 data-is-edit="{% if is_edit %}true{% else %}false{% endif %}">
+                 data-is-edit="{% if is_edit %}true{% else %}false{% endif %}"
+                 data-won-stage-id="{% if won_stage %}{{ won_stage.id }}{% endif %}"
+                 data-lost-stage-id="{% if lost_stage %}{{ lost_stage.id }}{% endif %}"
+                 data-new-stage-id="{% if new_stage %}{{ new_stage.id }}{% endif %}"
+                 data-current-stage-id="{% if is_edit and lead.stage %}{{ lead.stage.id }}{% endif %}">
+            
+            <!-- Action Buttons + Stage Bar -->
+            <div class="flex items-center justify-between gap-4 mb-6">
                 <!-- Left: Action Buttons -->
                 <div class="flex items-center gap-3">
-                    <button type="button" class="px-4 py-1.5 rounded-md bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors">
+                    <!-- Novo Orçamento: Sempre visível exceto quando Lost -->
+                    <button type="button" 
+                            x-show="!isLostStage()"
+                            class="px-4 py-1.5 rounded-md bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors"
+                            x-transition>
                         Novo Orçamento
                     </button>
-                    <button type="button" class="px-4 py-1.5 rounded-md border border-green-500 bg-transparent hover:bg-green-500/10 text-green-500 text-sm font-medium transition-colors">
+                    
+                    <!-- Restaurar: Só visível quando Lost -->
+                    <button type="button" 
+                            x-show="isLostStage()"
+                            @click="restoreLead()"
+                            class="px-4 py-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium transition-colors flex items-center gap-2"
+                            x-transition>
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
+                        </svg>
+                        Restaurar
+                    </button>
+                    
+                    <!-- Motivos de Perda: Só visível quando Lost -->
+                    <button type="button" 
+                            x-show="isLostStage()"
+                            @click="viewEditLostReason()"
+                            class="px-4 py-1.5 rounded-md bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition-colors flex items-center gap-2"
+                            x-transition>
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                        Motivos de Perda
+                    </button>
+                    
+                    <!-- Ganho: Visível em todos os estágios exceto Won e Lost -->
+                    <button type="button" 
+                            x-show="!isWonStage() && !isLostStage()"
+                            @click="markAsWon()"
+                            class="px-4 py-1.5 rounded-md border border-green-500 bg-transparent hover:bg-green-500/10 text-green-500 text-sm font-medium transition-colors"
+                            x-transition>
                         Ganho
                     </button>
-                    <button type="button" class="px-4 py-1.5 rounded-md border border-red-500 bg-transparent hover:bg-red-500/10 text-red-500 text-sm font-medium transition-colors">
+                    
+                    <!-- Perdido: Visível em todos os estágios exceto Won e Lost -->
+                    <button type="button" 
+                            x-show="!isWonStage() && !isLostStage()"
+                            @click="openLostReasonModal()"
+                            class="px-4 py-1.5 rounded-md border border-red-500 bg-transparent hover:bg-red-500/10 text-red-500 text-sm font-medium transition-colors"
+                            x-transition>
                         Perdido
                     </button>
                 </div>
@@ -252,11 +362,100 @@
                 const stageIds = [{% for stage in stages %}'{{ stage.id }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
                 const stageInput = document.getElementById('id_stage');
                 const initialStage = stageInput ? stageInput.value : (stageIds.length > 0 ? stageIds[0] : '');
+                const wonStageId = document.querySelector('[data-won-stage-id]')?.dataset.wonStageId || '';
+                const lostStageId = document.querySelector('[data-lost-stage-id]')?.dataset.lostStageId || '';
+                const newStageId = document.querySelector('[data-new-stage-id]')?.dataset.newStageId || '';
                 
                 return {
                     currentStage: initialStage,
                     stageIds: stageIds,
                     saving: false,
+                    wonStageId: wonStageId,
+                    lostStageId: lostStageId,
+                    newStageId: newStageId,
+                    showLostReasonModal: false,
+                    lostReasonText: '',
+                    isEditingLostReason: false, // Novo: para diferenciar entre marcar perdido vs editar
+                    
+                    isWonStage() {
+                        return this.currentStage === this.wonStageId;
+                    },
+                    
+                    isLostStage() {
+                        return this.currentStage === this.lostStageId;
+                    },
+                    
+                    async markAsWon() {
+                        if (!confirm('Marcar esta oportunidade como GANHA?')) return;
+                        if (this.wonStageId) {
+                            await this.selectStage(this.wonStageId);
+                            window.location.reload(); // Reload to show banner
+                        }
+                    },
+                    
+                    openLostReasonModal() {
+                        this.lostReasonText = '';
+                        this.isEditingLostReason = false;
+                        this.showLostReasonModal = true;
+                    },
+                    
+                    viewEditLostReason() {
+                        // Pega o valor atual do lost_reason
+                        const lostReasonField = document.getElementById('id_lost_reason') || document.querySelector('[name="lost_reason"]');
+                        this.lostReasonText = lostReasonField ? lostReasonField.value : '';
+                        this.isEditingLostReason = true;
+                        this.showLostReasonModal = true;
+                    },
+                    
+                    async markAsLost() {
+                        if (!this.lostReasonText || this.lostReasonText.trim().length < 1) {
+                            showNotification('warning', 'Por favor, indique o motivo da perda.');
+                            return;
+                        }
+                        
+                        // Set lost reason in form
+                        const lostReasonField = document.getElementById('id_lost_reason') || document.querySelector('[name="lost_reason"]');
+                        if (lostReasonField) {
+                            lostReasonField.value = this.lostReasonText;
+                            console.log('Lost reason updated:', this.lostReasonText);
+                        } else {
+                            console.error('Lost reason field not found!');
+                        }
+                        
+                        this.showLostReasonModal = false;
+                        
+                        // Se estamos editando, não mudar de stage
+                        if (this.isEditingLostReason) {
+                            // Trigger save do formulário diretamente
+                            setTimeout(() => {
+                                const form = document.getElementById('lead-form');
+                                if (form) {
+                                    showNotification('success', 'Motivo de perda atualizado! A guardar...');
+                                    form.submit();
+                                }
+                            }, 100); // Pequeno delay para garantir que o valor foi setado
+                            return;
+                        }
+                        
+                        // Marcar como perdido (mover para lost stage)
+                        if (this.lostStageId) {
+                            await this.selectStage(this.lostStageId);
+                            window.location.reload(); // Reload to show banner
+                        }
+                    },
+                    
+                    async restoreLead() {
+                        // Clear lost reason
+                        const lostReasonField = document.getElementById('id_lost_reason') || document.querySelector('[name="lost_reason"]');
+                        if (lostReasonField) {
+                            lostReasonField.value = '';
+                        }
+                        
+                        if (this.newStageId) {
+                            await this.selectStage(this.newStageId);
+                            window.location.reload(); // Reload to remove banner
+                        }
+                    },
                     
                     async selectStage(stageId) {
                         // Atualizar UI imediatamente
@@ -321,25 +520,13 @@
                             
                             if (response.ok) {
                                 // Feedback visual
-                                const successMsg = document.createElement('div');
-                                successMsg.className = 'fixed top-20 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm';
-                                successMsg.textContent = '✓ Estágio atualizado';
-                                document.body.appendChild(successMsg);
-                                setTimeout(() => successMsg.remove(), 2000);
+                                showNotification('success', '✓ Estágio atualizado');
                             } else {
                                 // Feedback de erro
-                                const errorMsg = document.createElement('div');
-                                errorMsg.className = 'fixed top-20 right-4 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm';
-                                errorMsg.textContent = '✗ Erro ao atualizar estágio';
-                                document.body.appendChild(errorMsg);
-                                setTimeout(() => errorMsg.remove(), 3000);
+                                showNotification('error', '✗ Erro ao atualizar estágio');
                             }
                         } catch (error) {
-                            const errorMsg = document.createElement('div');
-                            errorMsg.className = 'fixed top-20 right-4 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm';
-                            errorMsg.textContent = '✗ Erro de conexão';
-                            document.body.appendChild(errorMsg);
-                            setTimeout(() => errorMsg.remove(), 3000);
+                            showNotification('error', '✗ Erro de conexão');
                         } finally {
                             this.saving = false;
                         }
@@ -360,10 +547,103 @@
                     }
                 }
             }
+            
+            // Notification System
+            function showNotification(type, message) {
+                const bgColor = type === 'success' ? 'bg-green-500' : type === 'warning' ? 'bg-yellow-500' : 'bg-red-500';
+                
+                const notification = document.createElement('div');
+                notification.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-4 rounded-lg shadow-lg z-50 transition-opacity duration-300`;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    setTimeout(() => {
+                        document.body.removeChild(notification);
+                    }, 300);
+                }, 3000);
+            }
             </script>
+            
+            <!-- Modal: Lost Reason -->
+            <div x-show="showLostReasonModal" 
+                 x-cloak
+                 class="fixed inset-0 z-50 overflow-y-auto"
+                 @keydown.escape.window="showLostReasonModal = false">
+                <!-- Overlay -->
+                <div class="fixed inset-0 bg-black/70 transition-opacity" 
+                     @click="showLostReasonModal = false"></div>
+                
+                <!-- Modal -->
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <div class="relative bg-[#1a2332] rounded-lg border border-gray-700 shadow-2xl max-w-lg w-full p-6"
+                         @click.away="showLostReasonModal = false">
+                        <!-- Header -->
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-bold flex items-center gap-2"
+                                :class="isEditingLostReason ? 'text-yellow-400' : 'text-red-400'">
+                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                    <path x-show="!isEditingLostReason" fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                    <path x-show="isEditingLostReason" fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                                <span x-text="isEditingLostReason ? 'Ver/Editar Motivo de Perda' : 'Marcar como Perdido'"></span>
+                            </h3>
+                            <button type="button" 
+                                    @click="showLostReasonModal = false"
+                                    class="text-gray-400 hover:text-white transition-colors">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <!-- Content -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-300 mb-2">
+                                <span x-show="!isEditingLostReason">Porquê perdeste esta oportunidade?</span>
+                                <span x-show="isEditingLostReason">Motivo da Perda</span>
+                                <span class="text-red-400">*</span>
+                            </label>
+                            <p class="text-xs text-gray-500 mb-3" x-show="!isEditingLostReason">
+                                Esta informação é importante para análises futuras e melhorar o processo de vendas.
+                            </p>
+                            <p class="text-xs text-gray-500 mb-3" x-show="isEditingLostReason">
+                                Edite o motivo da perda se necessário ou apenas visualize.
+                            </p>
+                            <textarea x-model="lostReasonText"
+                                      class="w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 placeholder-gray-500 focus:border-red-500 focus:ring-red-500 resize-none"
+                                      placeholder="Ex: Cliente escolheu concorrente com preço mais baixo..."
+                                      rows="5"></textarea>
+                            <p class="text-xs text-gray-500 mt-1" x-text="`${lostReasonText.length} caracteres (obrigatório)`"></p>
+                        </div>
+                        
+                        <!-- Actions -->
+                        <div class="flex items-center justify-end gap-3">
+                            <button type="button"
+                                    @click="showLostReasonModal = false"
+                                    class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition-colors">
+                                Cancelar
+                            </button>
+                            <button type="button"
+                                    @click="markAsLost()"
+                                    :class="isEditingLostReason ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-red-600 hover:bg-red-700'"
+                                    class="px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span x-text="isEditingLostReason ? 'Atualizar Motivo' : 'Confirmar Perda'"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            </div><!-- Fecha wrapper Alpine.js stageBar -->
 
             <!-- Card principal do formulário -->
-            <div class="bg-[#1a2332] rounded-lg border border-gray-700/50 p-6">
+            <div class="bg-[#1a2332] rounded-lg border border-gray-700/50 p-6 {% if is_edit and lead.stage.is_lost_stage %}opacity-60 pointer-events-none{% endif %}">
 
                 <!-- Título (GIGANTE) -->
                 <div class="mb-6">
@@ -372,6 +652,7 @@
                            name="title"
                            placeholder="ex: Preço do Produto" 
                            value="{{ form.title.value|default:'' }}" 
+                           {% if is_edit and lead.stage.is_lost_stage %}readonly{% endif %}
                            required>
                 </div>
 
@@ -972,7 +1253,9 @@
         </div>
         
         <!-- CHATTER (Direita - 30%) -->
-        <div class="w-[30%] border-l border-gray-700 bg-[#1a2332] h-[80vh] sticky top-0 flex flex-col" x-data="{ activeTab: 'log' }">
+        <div class="w-[30%] border-l border-gray-700 bg-[#1a2332] h-[80vh] sticky top-0 flex flex-col" 
+             style="margin-right: 10px;"
+             x-data="{ activeTab: 'log' }">
             <!-- Tabs Header - HORIZONTAL -->
             <div class="flex border-b border-gray-700 overflow-x-auto flex-shrink-0">
                 <button type="button"
@@ -1559,19 +1842,52 @@ document.addEventListener('DOMContentLoaded', function() {
     const quill = new Quill('#notes-editor', {
         theme: 'snow',
         modules: {
-            toolbar: [
-                [{ 'header': [1, 2, 3, false] }],
-                ['bold', 'italic', 'underline', 'strike'],
-                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                [{ 'indent': '-1'}, { 'indent': '+1' }],
-                [{ 'color': [] }, { 'background': [] }],
-                [{ 'align': [] }],
-                ['link', 'image', 'code-block'],
-                ['blockquote', 'clean']
-            ]
+            toolbar: {
+                container: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'indent': '-1'}, { 'indent': '+1' }],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'align': [] }],
+                    ['link', 'image', 'code-block'],
+                    ['blockquote', 'clean']
+                ],
+                handlers: {
+                    image: imageHandler
+                }
+            }
         },
         placeholder: 'Comece a escrever notas sobre esta oportunidade...'
     });
+    
+    // Handler customizado para imagens - converte para Base64
+    function imageHandler() {
+        const input = document.createElement('input');
+        input.setAttribute('type', 'file');
+        input.setAttribute('accept', 'image/*');
+        input.click();
+        
+        input.onchange = async () => {
+            const file = input.files[0];
+            if (!file) return;
+            
+            // Validar tamanho (máx 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showNotification('warning', 'Imagem muito grande! Máximo 5MB.');
+                return;
+            }
+            
+            // Converter para Base64
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const range = quill.getSelection(true);
+                quill.insertEmbed(range.index, 'image', e.target.result);
+                quill.setSelection(range.index + 1);
+            };
+            reader.readAsDataURL(file);
+        };
+    }
 
     // Carregar conteúdo inicial se existir
     const initialContent = document.getElementById('notes-input').value;
@@ -1593,6 +1909,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Sincronizar notas do Quill
         const notesInput = document.getElementById('notes-input');
         notesInput.value = quill.root.innerHTML;
+        
+        // Debug: verificar lost_reason antes de submeter
+        const lostReasonField = document.getElementById('id_lost_reason') || document.querySelector('[name="lost_reason"]');
+        if (lostReasonField) {
+            console.log('Submitting form with lost_reason:', lostReasonField.value);
+        }
     });
 
     // Estilização dark theme para o editor

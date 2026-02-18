@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Motivos de Perda - CRM{% endblock %}
+
+{% block content %}
+{% include 'components/crm_navbar_simple.html' %}
+
+<!-- Search Bar -->
+<div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-3">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between gap-4">
+            <!-- Search Bar -->
+            <div class="flex-1 max-w-2xl">
+                <form method="GET" action="{% url 'crm:lost_reasons_list' %}">
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            name="search"
+                            value="{{ search_query|default:'' }}"
+                            placeholder="Pesquisar por oportunidade..."
+                            class="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        {% if search_query %}
+                        <a href="{% url 'crm:lost_reasons_list' %}" 
+                           class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Pagination Info -->
+            <div class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                <span>{{ page_obj.start_index }}-{{ page_obj.end_index }} / {{ total_count }}</span>
+                <span class="text-gray-400">|</span>
+                <div class="flex items-center space-x-1">
+                    <input 
+                        type="text" 
+                        id="pageSizeInput"
+                        value="{{ page_size }}"
+                        class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                        onchange="window.location.href='?page=1&search={{ search_query }}&page_size='+this.value"
+                    >
+                    <span>/página</span>
+                </div>
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}&page_size={{ page_size }}" 
+                   class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </a>
+                {% else %}
+                <button disabled class="p-1 opacity-50 cursor-not-allowed">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </button>
+                {% endif %}
+                
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&search={{ search_query }}&page_size={{ page_size }}" 
+                   class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </a>
+                {% else %}
+                <button disabled class="p-1 opacity-50 cursor-not-allowed">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- Header -->
+    <div class="mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Motivos de Perda</h1>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Oportunidades perdidas com motivos registados
+                </p>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-sm text-gray-500 dark:text-gray-400">
+                    Total: <span class="font-semibold text-gray-900 dark:text-white">{{ total_count }}</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {% if page_obj %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Oportunidade
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Motivo de Perda
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for lead in page_obj %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                        onclick="window.location.href='{% url 'crm:lead_detail' lead.id %}'">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex flex-col">
+                                <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                    {{ lead.title }}
+                                </div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {% if lead.contact %}
+                                        {{ lead.contact.name }}
+                                    {% else %}
+                                        {{ lead.contact_name|default:"Sem contacto" }}
+                                    {% endif %}
+                                    {% if lead.assigned_to %}
+                                        • <span class="text-gray-400">Atribuído a:</span> {{ lead.assigned_to.get_full_name|default:lead.assigned_to.username }}
+                                    {% endif %}
+                                </div>
+                                <div class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                    Perdido em: {{ lead.updated_at|date:"d/m/Y H:i" }}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-700 dark:text-gray-300">
+                                {{ lead.lost_reason|truncatewords:30 }}
+                            </div>
+                            {% if lead.lost_reason|length > 150 %}
+                            <button type="button" 
+                                    class="text-xs text-primary hover:underline mt-1"
+                                    onclick="event.stopPropagation(); alert('{{ lead.lost_reason|escapejs }}')">
+                                Ver completo
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">Nenhum motivo de perda registado</h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {% if search_query %}
+                    Nenhuma oportunidade encontrada com "{{ search_query }}".
+                {% else %}
+                    Quando marcares oportunidades como perdidas com motivo, elas aparecerão aqui.
+                {% endif %}
+            </p>
+            <div class="mt-6">
+                {% if search_query %}
+                <a href="{% url 'crm:lost_reasons_list' %}" 
+                   class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90">
+                    Limpar Pesquisa
+                </a>
+                {% else %}
+                <a href="{% url 'crm:crm_home' %}" 
+                   class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90">
+                    Ir para Pipeline
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if page_obj %}
+    <!-- Stats Footer -->
+    <div class="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+        <div>
+            Mostrando {{ page_obj|length }} de {{ total_count }} oportunidade{{ total_count|pluralize }} perdida{{ total_count|pluralize }}
+        </div>
+        <div class="flex items-center gap-4">
+            <a href="{% url 'crm:crm_home' %}" class="text-primary hover:underline">
+                Ver todas as oportunidades
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

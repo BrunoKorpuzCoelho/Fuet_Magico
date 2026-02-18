@@ -241,11 +241,7 @@ class LeadForm(forms.ModelForm):
             'assigned_to': forms.Select(attrs={
                 'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-primary focus:ring-primary',
             }),
-            'lost_reason': forms.Textarea(attrs={
-                'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 placeholder-gray-500 focus:border-primary focus:ring-primary',
-                'placeholder': 'Motivo da perda (obrigatório se Lost)...',
-                'rows': '3',
-            }),
+            'lost_reason': forms.HiddenInput(),  # Hidden - gerenciado via modal JS
             'notes': forms.HiddenInput(),
         }
         labels = {
@@ -303,19 +299,6 @@ class LeadForm(forms.ModelForm):
         if probability is not None and (probability < 0 or probability > 100):
             raise forms.ValidationError('Probabilidade deve estar entre 0 e 100%.')
         return probability
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        stage = cleaned_data.get('stage')
-        lost_reason = cleaned_data.get('lost_reason')
-        
-        if stage and stage.name and 'lost' in stage.name.lower():
-            if not lost_reason or len(lost_reason.strip()) < 10:
-                raise forms.ValidationError({
-                    'lost_reason': 'Motivo da perda é obrigatório e deve ter pelo menos 10 caracteres quando o estágio é "Lost".'
-                })
-        
-        return cleaned_data
 
 
 class ActivityForm(forms.ModelForm):

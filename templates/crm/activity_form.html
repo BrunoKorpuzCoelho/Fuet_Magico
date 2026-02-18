@@ -1,0 +1,307 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}{% if is_edit %}Editar Atividade{% else %}Nova Atividade{% endif %}  CRM{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Dark mode native select options */
+    #activity-form select option {
+        background-color: #1f2937;
+        color: #d1d5db;
+    }
+    #activity-form select option:hover,
+    #activity-form select option:checked {
+        background-color: #374151;
+    }
+</style>
+{% endblock %}
+
+{% block sub_navbar %}
+{% url 'crm:activities_list' as activities_list_url %}
+{% include 'components/crm_navbar_simple.html' with show_form_actions=True form_id='activity-form' action_discard_url=activities_list_url hide_initially=is_edit %}
+{% endblock %}
+
+{% block content %}
+<div class="bg-[#1f2937] min-h-screen">
+    <form method="post" action="" id="activity-form">
+        {% csrf_token %}
+        {{ form.icon_color }}
+
+        <div class="max-w-5xl mx-auto px-6 py-8">
+
+            {% if form.non_field_errors %}
+            <div class="mb-4 px-4 py-3 rounded-lg bg-red-900/30 border border-red-700 text-red-300">
+                {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- NOME (large title like lead) -->
+            {{ form.name }}
+            {% if form.name.errors %}
+            <p class="mt-1 text-xs text-red-400">{{ form.name.errors.0 }}</p>
+            {% endif %}
+
+            <!-- CORPO: campos + preview -->
+            <div class="mt-10 grid grid-cols-3 gap-x-10 gap-y-0">
+
+                <!-- Coluna esquerda (campos) -->
+                <div class="col-span-2 space-y-0">
+
+                    <!-- Tipo -->
+                    <div class="flex items-center gap-4 py-3 border-b border-gray-700/50">
+                        <span class="w-28 flex-shrink-0 text-sm text-gray-500">Tipo</span>
+                        <div class="flex-1">
+                            {{ form.activity_type }}
+                            {% if form.activity_type.errors %}
+                            <p class="mt-1 text-xs text-red-400">{{ form.activity_type.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Sumário -->
+                    <div class="flex items-center gap-4 py-3 border-b border-gray-700/50">
+                        <span class="w-28 flex-shrink-0 text-sm text-gray-500">Sumário</span>
+                        <div class="flex-1">
+                            {{ form.summary }}
+                            {% if form.summary.errors %}
+                            <p class="mt-1 text-xs text-red-400">{{ form.summary.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Descrição -->
+                    <div class="flex gap-4 py-3">
+                        <span class="w-28 flex-shrink-0 text-sm text-gray-500 pt-1">Descrição</span>
+                        <div class="flex-1">
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                            <p class="mt-1 text-xs text-red-400">{{ form.description.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Coluna direita (preview ao vivo) -->
+                <div class="col-span-1">
+                    <div class="sticky top-6 flex flex-col items-center bg-gray-900 rounded-2xl border border-gray-700/60 p-6">
+                        <!-- Ícone -->
+                        <div id="iconPreviewWrapper"
+                             class="flex items-center justify-center w-20 h-20 rounded-2xl bg-gray-800 border border-gray-700 mb-4">
+                            <div id="iconPreview" class="w-10 h-10 flex items-center justify-center text-gray-500">
+                                {% if is_edit and activity.icon_svg %}
+                                <span style="color: {{ activity.icon_color|default:'#6B7280' }}; width:40px; height:40px; display:flex; align-items:center; justify-content:center;">{{ activity.icon_svg|safe }}</span>
+                                {% else %}
+                                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <!-- Cor atual -->
+                        <div class="flex items-center gap-2 mb-1">
+                            <div id="colorDot" class="w-3 h-3 rounded-full border border-gray-600" style="background-color: {{ form.icon_color.value|default:'#6B7280' }};"></div>
+                            <span id="hexDisplay" class="text-xs font-mono text-gray-400">{{ form.icon_color.value|default:'#6B7280'|upper }}</span>
+                        </div>
+                        <!-- Nome e Tipo -->
+                        <p id="namePreview" class="text-sm font-semibold text-white text-center mt-3">
+                            {% if is_edit %}{{ activity.name }}{% else %}Nome da Atividade{% endif %}
+                        </p>
+                        <p id="typePreview" class="text-xs text-gray-500 mt-0.5">
+                            {% if is_edit %}{{ activity.get_activity_type_display }}{% else %}Tipo{% endif %}
+                        </p>
+                        <!-- SVG status -->
+                        <div id="svgStatus" class="mt-3 text-xs hidden">
+                            <span id="svgStatusText"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEPARADOR -->
+            <div class="mt-8 mb-6 border-t border-gray-700/50"></div>
+
+            <!-- ÍCONE VISUAL -->
+            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-5">Ícone Visual</h3>
+
+            <div class="grid grid-cols-3 gap-x-10">
+
+                <!-- SVG textarea -->
+                <div class="col-span-2">
+                    <label class="block text-sm text-gray-500 mb-2">Código SVG</label>
+                    {{ form.icon_svg }}
+                    {% if form.icon_svg.errors %}
+                    <p class="mt-1 text-xs text-red-400">{{ form.icon_svg.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-2 text-xs text-gray-600">Cole o código SVG  as cores fixas serão convertidas para <code class="text-primary">currentColor</code> automaticamente</p>
+                </div>
+
+                <!-- Cores -->
+                <div class="col-span-1 space-y-4">
+                    <div>
+                        <label class="block text-sm text-gray-500 mb-2">Cor do Ícone</label>
+                        <div class="flex items-center gap-3">
+                            <input type="color"
+                                   id="colorPickerInput"
+                                   value="{{ form.icon_color.value|default:'#6B7280' }}"
+                                   class="h-9 w-14 rounded-lg border border-gray-700 bg-gray-900 cursor-pointer p-0.5">
+                            <span class="text-sm font-mono text-gray-400" id="hexDisplayFull">{{ form.icon_color.value|default:'#6B7280'|upper }}</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="text-xs text-gray-500 mb-2">Cores rápidas</p>
+                        <div class="grid grid-cols-5 gap-1.5">
+                            {% for hex, label in color_presets %}
+                            <button type="button" onclick="setIconColor('{{ hex }}')"
+                                    class="h-7 rounded-md border-2 border-gray-700 hover:border-primary transition-colors"
+                                    style="background-color: {{ hex }};" title="{{ label }}"></button>
+                            {% empty %}
+                            <button type="button" onclick="setIconColor('#dc2626')" class="h-7 rounded-md border-2 border-gray-700 hover:border-primary" style="background-color:#dc2626;" title="Vermelho"></button>
+                            <button type="button" onclick="setIconColor('#ea580c')" class="h-7 rounded-md border-2 border-gray-700 hover:border-primary" style="background-color:#ea580c;" title="Laranja"></button>
+                            <button type="button" onclick="setIconColor('#d97706')" class="h-7 rounded-md border-2 border-gray-700 hover:border-primary" style="background-color:#d97706;" title="Âmbar"></button>
+                            <button type="button" onclick="setIconColor('#65a30d')" class="h-7 rounded-md border-2 border-gray-700 hover:border-primary" style="background-color:#65a30d;" title="Lima"></button>
+                            <button type="button" onclick="setIconColor('#16a34a')" class="h-7 rounded-md border-2 border-gray-700 hover:border-primary" style="background-color:#16a34a;" title="Verde"></button>
+                            <button type="button" onclick="setIconColor('#0891b2')" class="h-7 rounded-md border-2 border-gray-700 hover:border-primary" style="background-color:#0891b2;" title="Ciano"></button>
+                            <button type="button" onclick="setIconColor('#2563eb')" class="h-7 rounded-md border-2 border-gray-700 hover:border-primary" style="background-color:#2563eb;" title="Azul"></button>
+                            <button type="button" onclick="setIconColor('#7c3aed')" class="h-7 rounded-md border-2 border-gray-700 hover:border-primary" style="background-color:#7c3aed;" title="Violeta"></button>
+                            <button type="button" onclick="setIconColor('#c026d3')" class="h-7 rounded-md border-2 border-gray-700 hover:border-primary" style="background-color:#c026d3;" title="Fúcsia"></button>
+                            <button type="button" onclick="setIconColor('#db2777')" class="h-7 rounded-md border-2 border-gray-700 hover:border-primary" style="background-color:#db2777;" title="Rosa"></button>
+                            <button type="button" onclick="setIconColor('#6b7280')" class="h-7 rounded-md border-2 border-gray-700 hover:border-primary" style="background-color:#6b7280;" title="Cinza"></button>
+                            <button type="button" onclick="setIconColor('#374151')" class="h-7 rounded-md border-2 border-gray-700 hover:border-primary" style="background-color:#374151;" title="Escuro"></button>
+                            <button type="button" onclick="setIconColor('#dbc693')" class="h-7 rounded-md border-2 border-gray-700 hover:border-primary" style="background-color:#dbc693;" title="Dourado"></button>
+                            <button type="button" onclick="setIconColor('#ffffff')" class="h-7 rounded-md border-2 border-gray-700 hover:border-primary" style="background-color:#ffffff;" title="Branco"></button>
+                            <button type="button" onclick="setIconColor('#000000')" class="h-7 rounded-md border-2 border-gray-700 hover:border-primary" style="background-color:#000000;" title="Preto"></button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="h-16"></div>
+        </div>
+    </form>
+</div>
+
+<script>
+(function () {
+    const svgTextarea    = document.getElementById('id_icon_svg');
+    const colorHidden    = document.getElementById('id_icon_color');
+    const colorPicker    = document.getElementById('colorPickerInput');
+    const hexDisplay     = document.getElementById('hexDisplay');
+    const hexDisplayFull = document.getElementById('hexDisplayFull');
+    const colorDot       = document.getElementById('colorDot');
+    const iconPreview    = document.getElementById('iconPreview');
+    const namePreview    = document.getElementById('namePreview');
+    const typePreview    = document.getElementById('typePreview');
+    const svgStatus      = document.getElementById('svgStatus');
+    const svgStatusText  = document.getElementById('svgStatusText');
+    const nameInput      = document.querySelector('[name="name"]');
+    const typeSelect     = document.querySelector('[name="activity_type"]');
+
+    function setIconColor(hex) {
+        colorPicker.value = hex;
+        colorHidden.value = hex;
+        const upper = hex.toUpperCase();
+        if (hexDisplay)      hexDisplay.textContent = upper;
+        if (hexDisplayFull)  hexDisplayFull.textContent = upper;
+        if (colorDot)        colorDot.style.backgroundColor = hex;
+        renderPreview();
+    }
+    window.setIconColor = setIconColor;
+
+    colorPicker.addEventListener('input', function () { setIconColor(this.value); });
+
+    function normalizeSvg(raw) {
+        raw = raw.replace(/fill="(?!none)[^"]+"/gi, 'fill="currentColor"');
+        raw = raw.replace(/stroke="(?!none|currentColor)[^"]+"/gi, 'stroke="currentColor"');
+        raw = raw.replace(/(fill\s*:\s*)(?!none|currentColor)(#[0-9a-fA-F]{3,8}|rgb\([^)]+\)|[a-z]+)/gi, '$1currentColor');
+        raw = raw.replace(/(stroke\s*:\s*)(?!none|currentColor)(#[0-9a-fA-F]{3,8}|rgb\([^)]+\)|[a-z]+)/gi, '$1currentColor');
+        if (!/<svg[^>]+fill=/i.test(raw)) raw = raw.replace(/(<svg\b)/i, '$1 fill="currentColor"');
+        return raw.trim();
+    }
+
+    function renderPreview() {
+        const color  = colorPicker.value || '#6B7280';
+        const rawSvg = svgTextarea ? svgTextarea.value.trim() : '';
+
+        if (rawSvg) {
+            const normalized = normalizeSvg(rawSvg);
+            if (svgTextarea.value !== normalized) svgTextarea.value = normalized;
+            iconPreview.innerHTML = `<span style="color:${color}; width:40px; height:40px; display:flex; align-items:center; justify-content:center;">${normalized}</span>`;
+            const hasSvgTag = /<svg[\s>]/i.test(normalized);
+            svgStatus.classList.remove('hidden');
+            if (hasSvgTag) {
+                svgStatusText.className = 'text-green-400';
+                svgStatusText.textContent = ' SVG válido';
+            } else {
+                svgStatusText.className = 'text-amber-400';
+                svgStatusText.textContent = ' Não parece um SVG válido';
+            }
+        } else {
+            iconPreview.innerHTML = `<svg class="w-10 h-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`;
+            svgStatus.classList.add('hidden');
+        }
+    }
+
+    function updateLabels() {
+        if (nameInput) {
+            const n = nameInput.value.trim();
+            namePreview.textContent = n || '{% if is_edit %}{{ activity.name|escapejs }}{% else %}Nome da Atividade{% endif %}';
+        }
+        if (typeSelect) {
+            const opt = typeSelect.options[typeSelect.selectedIndex];
+            typePreview.textContent = opt && opt.value ? opt.text : 'Tipo';
+        }
+    }
+
+    if (svgTextarea) svgTextarea.addEventListener('input', renderPreview);
+    if (nameInput)   nameInput.addEventListener('input', updateLabels);
+    if (typeSelect)  typeSelect.addEventListener('change', updateLabels);
+
+    const initialColor = colorHidden.value || '{{ form.icon_color.value|default:"#6B7280" }}';
+    setIconColor(initialColor);
+    renderPreview();
+    updateLabels();
+
+    // ── Dirty state (edit only) ────────────────────────────────────
+    {% if is_edit %}
+    const actionButtons = document.getElementById('form-action-buttons');
+    const initialState = {
+        name:          nameInput  ? nameInput.value  : '',
+        type:          typeSelect ? typeSelect.value : '',
+        summary:       document.querySelector('[name="summary"]')  ? document.querySelector('[name="summary"]').value  : '',
+        description:   document.querySelector('[name="description"]') ? document.querySelector('[name="description"]').value : '',
+        icon_svg:      svgTextarea  ? svgTextarea.value  : '',
+        icon_color:    colorHidden  ? colorHidden.value  : '',
+    };
+
+    function isDirty() {
+        if (nameInput  && nameInput.value  !== initialState.name)        return true;
+        if (typeSelect && typeSelect.value !== initialState.type)        return true;
+        const sum = document.querySelector('[name="summary"]');
+        if (sum  && sum.value  !== initialState.summary)                 return true;
+        const desc = document.querySelector('[name="description"]');
+        if (desc && desc.value !== initialState.description)             return true;
+        if (svgTextarea && svgTextarea.value !== initialState.icon_svg)  return true;
+        if (colorHidden && colorHidden.value !== initialState.icon_color) return true;
+        return false;
+    }
+
+    function checkDirty() {
+        if (actionButtons) actionButtons.style.display = isDirty() ? '' : 'none';
+    }
+
+    // Hook dirty check into every field
+    document.querySelectorAll('#activity-form input, #activity-form select, #activity-form textarea').forEach(function (el) {
+        el.addEventListener('input',  checkDirty);
+        el.addEventListener('change', checkDirty);
+    });
+
+    // Also hook into setIconColor (called by color picker and presets)
+    const _origSetIconColor = window.setIconColor;
+    window.setIconColor = function (hex) { _origSetIconColor(hex); checkDirty(); };
+    {% endif %}
+})();
+</script>
+{% endblock %}

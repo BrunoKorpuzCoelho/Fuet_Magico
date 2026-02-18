@@ -7,13 +7,37 @@ urlpatterns = [
     # Pipeline / Kanban (Default View)
     path('', views.lead_pipeline_view, name='crm_home'),  # /crm/ → Pipeline (DEFAULT)
     path('pipeline/', views.lead_pipeline_view, name='lead_pipeline'),  # Alias
+    path('list/', views.lead_list_view, name='lead_list'),  # List View
     
     # Lead CRUD
     path('leads/new/', views.lead_create_view, name='lead_create'),
     path('leads/<uuid:lead_id>/', views.lead_detail_view, name='lead_detail'),
+    path('leads/bulk-delete/', views.bulk_delete_leads, name='bulk_delete_leads'),
+    path('leads/bulk-mark-won/', views.bulk_mark_won, name='bulk_mark_won'),
+    path('leads/bulk-mark-lost/', views.bulk_mark_lost, name='bulk_mark_lost'),
     
     # Lead Actions (API)
     path('leads/<uuid:lead_id>/change-stage/', views.lead_change_stage, name='lead_change_stage'),
+    
+    # Configuração
+    path('lost-reasons/', views.lost_reasons_list_view, name='lost_reasons_list'),
+    
+    # Tipos de Atividade (Configuração)
+    path('activity-types/', views.activity_type_list_view, name='activity_type_list'),
+    path('activity-types/new/', views.activity_type_create_view, name='activity_type_create'),
+    path('activity-types/<uuid:type_id>/edit/', views.activity_type_edit_view, name='activity_type_edit'),
+    path('activity-types/bulk-archive/', views.bulk_archive_activity_types, name='bulk_archive_activity_types'),
+    path('activity-types/bulk-unarchive/', views.bulk_unarchive_activity_types, name='bulk_unarchive_activity_types'),
+    path('activity-types/bulk-delete/', views.bulk_delete_activity_types, name='bulk_delete_activity_types'),
+    
+    # Activities (Atividades)
+    path('activities/', views.activities_list_view, name='activities_list'),
+    path('activities/new/', views.activity_create_view, name='activity_create'),
+    path('activities/<uuid:activity_id>/edit/', views.activity_edit_view, name='activity_edit'),
+    path('activities/bulk-archive/', views.bulk_archive_activities, name='bulk_archive_activities'),
+    path('activities/bulk-unarchive/', views.bulk_unarchive_activities, name='bulk_unarchive_activities'),
+    path('activities/bulk-delete/', views.bulk_delete_activities, name='bulk_delete_activities'),
+    path('activities/bulk-duplicate/', views.bulk_duplicate_activities, name='bulk_duplicate_activities'),
     
     # Stages (Configuração)
     path('stages/', views.stage_list_view, name='stage_list'),

@@ -351,12 +351,25 @@ def contact_edit_view(request, contact_id):
     companies = Contact.objects.filter(contact_category='COMPANY', is_active=True).order_by('name')
     companies = filter_by_company(companies, request)
     
-    # TODO: Calcular contadores reais quando os módulos estiverem implementados
+    # Calcular contadores reais
+    # CRM: contar apenas leads ativas (excluindo Won e Lost)
+    from apps.crm.models import Lead
+    crm_leads = Lead.objects.filter(
+        contact=contact,
+        is_active=True
+    ).exclude(
+        Q(stage__is_won_stage=True) | Q(stage__is_lost_stage=True)
+    )
+    # Aplicar filtro de company (consistente com lead_list_view)
+    crm_leads = filter_by_company(crm_leads, request)
+    crm_count = crm_leads.count()
+    
+    # TODO: Calcular outros contadores quando os módulos estiverem implementados
     context = {
         'form': form,
         'contact': contact,  # Passa o contacto para o template
         'companies': companies,
-        'crm_count': 0,
+        'crm_count': crm_count,
         'sales_count': 0,
         'purchases_count': 0,
         'invoices_total': 0,

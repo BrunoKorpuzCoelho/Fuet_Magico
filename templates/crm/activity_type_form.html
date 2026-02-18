@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block title %}
+{% if is_edit %}Editar Tipo de Atividade{% else %}Novo Tipo de Atividade{% endif %} - Fuet Mágico
+{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/crm_navbar_simple.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div class="max-w-xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- Header -->
+        <div class="mb-6">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+                {% if is_edit %}Editar Tipo de Atividade{% else %}Novo Tipo de Atividade{% endif %}
+            </h1>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {% if is_edit %}
+                    Atualize as informações do tipo "{{ name }}"
+                {% else %}
+                    Crie um novo tipo para categorizar as atividades
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+            <form method="post"
+                  action="{% if is_edit %}{% url 'crm:activity_type_edit' object.id %}{% else %}{% url 'crm:activity_type_create' %}{% endif %}"
+                  class="p-6 space-y-6">
+                {% csrf_token %}
+
+                <!-- Nome -->
+                <div>
+                    <label for="id_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Nome <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="id_name" name="name" value="{{ name|default:'' }}"
+                           placeholder="ex: Reunião, Chamada, Email…"
+                           class="w-full px-4 py-2 text-sm bg-gray-50 dark:bg-gray-700 border {% if errors.name %}border-red-500{% else %}border-gray-200 dark:border-gray-600{% endif %} rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                    {% if errors.name %}
+                    <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ errors.name }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Código -->
+                <div>
+                    <label for="id_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Código <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="id_code" name="code" value="{{ code|default:'' }}"
+                           placeholder="ex: MEETING, CALL, EMAIL…"
+                           style="text-transform: uppercase;"
+                           class="w-full px-4 py-2 text-sm font-mono bg-gray-50 dark:bg-gray-700 border {% if errors.code %}border-red-500{% else %}border-gray-200 dark:border-gray-600{% endif %} rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Identificador único em maiúsculas. Usado internamente para filtros e automações.</p>
+                    {% if errors.code %}
+                    <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ errors.code }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <a href="{% url 'crm:activity_type_list' %}"
+                       class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
+                        Cancelar
+                    </a>
+                    <button type="submit"
+                            class="px-6 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors">
+                        {% if is_edit %}Guardar alterações{% else %}Criar tipo{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        {% if is_edit %}
+        <!-- Delete zone -->
+        <div class="mt-6 bg-white dark:bg-gray-800 rounded-lg border border-red-200 dark:border-red-900/40 p-4">
+            <h3 class="text-sm font-medium text-red-700 dark:text-red-400 mb-1">Zona de perigo</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Eliminar este tipo de atividade. Só é possível se não existirem blueprints associados.
+            </p>
+            <button onclick="confirmDelete()"
+                    class="px-4 py-2 text-sm font-medium text-red-700 dark:text-red-400 border border-red-300 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                Eliminar tipo
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if is_edit %}
+<script>
+function confirmDelete() {
+    if (!confirm('Tem a certeza que quer eliminar este tipo de atividade?')) return;
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    fetch('{% url "crm:bulk_delete_activity_types" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ type_ids: ['{{ object.id }}'] })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) { window.location.href = '{% url "crm:activity_type_list" %}'; }
+        else { alert('Erro: ' + (data.error?.message || data.error || 'desconhecido')); }
+    });
+}
+</script>
+{% endif %}
+{% endblock %}

@@ -9,8 +9,11 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.contrib.contenttypes.models import ContentType
 from apps.accounts.decorators import admin_required
 from apps.core.multi_company import filter_by_company, get_active_company
+from apps.core.models import ActivityType, ScheduledActivity
+from apps.core.forms import ScheduledActivityForm
 from apps.contacts.models import Contact
 from .models import CRMTag, CRMStage, Lead
 from .forms import CRMStageForm, CRMTagForm
@@ -732,6 +735,362 @@ def lead_change_stage(request, lead_id):
 
 
 @login_required
+def lost_reasons_list_view(request):
+    """
+    Lista de leads perdidas com motivos de perda preenchidos.
+    Mostra apenas: Oportunidade | Motivo de Perda
+    Com pesquisa por título da oportunidade e paginação.
+    """
+    active_company = get_active_company(request)
+    
+    # Get search parameters
+    search_query = request.GET.get('search', '').strip()
+    page_number = request.GET.get('page', 1)
+    page_size = request.GET.get('page_size', 50)
+    
+    # Validate page_size
+    try:
+        page_size = int(page_size)
+        if page_size < 1:
+            page_size = 50
+    except (ValueError, TypeError):
+        page_size = 50
+    
+    # Filtrar leads:
+    # 1. Que estão em stage Lost (is_lost_stage=True)
+    # 2. Que têm lost_reason preenchido (não vazio)
+    lost_leads = Lead.objects.filter(
+        owner_company=active_company,
+        stage__is_lost_stage=True,
+        lost_reason__isnull=False
+    ).exclude(
+        lost_reason=''
+    ).select_related(
+        'stage', 'assigned_to', 'contact'
+    )
+    
+    # Apply search filter (por título da oportunidade)
+    if search_query:
+        lost_leads = lost_leads.filter(title__icontains=search_query)
+    
+    # Order by most recent first
+    lost_leads = lost_leads.order_by('-updated_at')
+    
+    # Paginate
+    paginator = Paginator(lost_leads, page_size)
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'search_query': search_query,
+        'total_count': paginator.count,
+        'page_size': page_size,
+    }
+    
+    return render(request, 'crm/lost_reasons_list.html', context)
+
+
+@login_required
+def activities_list_view(request):
+    """
+    Lista de blueprints de atividades (ScheduledActivity).
+    
+    Mostra todos os blueprints reutilizáveis da empresa ativa.
+    Com pesquisa, filtro por status (ativos/arquivados) e bulk actions.
+    """
+    search_query = request.GET.get('search', '').strip()
+    search_field = request.GET.get('field', 'summary')
+    page_number = request.GET.get('page', 1)
+    page_size = request.GET.get('page_size', 50)
+    status_filter = request.GET.get('status', 'active')
+    
+    # Validate page_size
+    try:
+        page_size = int(page_size)
+        if page_size < 1:
+            page_size = 50
+    except (ValueError, TypeError):
+        page_size = 50
+    
+    # Get active company
+    active_company = get_active_company(request)
+    
+    # Filter blueprints: company-specific OR global (owner_company=None)
+    company_filter = Q(owner_company=active_company) | Q(owner_company__isnull=True)
+    if status_filter == 'archived':
+        activities = ScheduledActivity.objects.filter(
+            company_filter,
+            is_active=False
+        )
+    else:
+        activities = ScheduledActivity.objects.filter(
+            company_filter,
+            is_active=True
+        )
+    
+    # Apply search filter
+    if search_query:
+        field_mapping = {
+            'summary': Q(summary__icontains=search_query),
+            'name': Q(name__icontains=search_query),
+            'description': Q(description__icontains=search_query),
+            'activity_type': Q(activity_type__name__icontains=search_query),
+        }
+        
+        if search_field in field_mapping:
+            activities = activities.filter(field_mapping[search_field])
+        else:
+            # Search all text fields
+            activities = activities.filter(
+                Q(name__icontains=search_query) |
+                Q(summary__icontains=search_query) |
+                Q(description__icontains=search_query)
+            )
+    
+    # Order by type then name
+    activities = activities.order_by('activity_type__name', 'name')
+    
+    # Paginate
+    paginator = Paginator(activities, page_size)
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'activities': page_obj,
+        'search_query': search_query,
+        'search_field': search_field,
+        'total_count': paginator.count,
+        'page_size': page_size,
+        'status_filter': status_filter,
+    }
+    
+    return render(request, 'crm/activities_list.html', context)
+
+
+@login_required
+def activity_create_view(request):
+    """Criar novo blueprint de atividade"""
+    active_company = get_active_company(request)
+
+    if request.method == 'POST':
+        form = ScheduledActivityForm(request.POST)
+        if form.is_valid():
+            activity = form.save(commit=False)
+            activity.owner_company = active_company
+            # Normaliza o SVG para usar currentColor
+            if activity.icon_svg:
+                activity.icon_svg = _normalize_svg_colors(activity.icon_svg)
+            if not activity.icon_color:
+                activity.icon_color = '#6B7280'
+            activity.save()
+            messages.success(request, f'Atividade "{activity.name}" criada com sucesso!')
+            return redirect('crm:activities_list')
+    else:
+        form = ScheduledActivityForm()
+
+    return render(request, 'crm/activity_form.html', {
+        'form': form,
+        'is_edit': False,
+    })
+
+
+@login_required
+def activity_edit_view(request, activity_id):
+    """Editar blueprint de atividade existente"""
+    activity = get_object_or_404(ScheduledActivity, id=activity_id)
+
+    if request.method == 'POST':
+        form = ScheduledActivityForm(request.POST, instance=activity)
+        if form.is_valid():
+            activity = form.save(commit=False)
+            if activity.icon_svg:
+                activity.icon_svg = _normalize_svg_colors(activity.icon_svg)
+            if not activity.icon_color:
+                activity.icon_color = '#6B7280'
+            activity.save()
+            messages.success(request, f'Atividade "{activity.name}" atualizada com sucesso!')
+            return redirect('crm:activity_edit', activity_id=activity.id)
+    else:
+        form = ScheduledActivityForm(instance=activity)
+
+    return render(request, 'crm/activity_form.html', {
+        'form': form,
+        'activity': activity,
+        'is_edit': True,
+    })
+
+
+def _normalize_svg_colors(svg_code):
+    """
+    Remove atributos de cor do SVG e substitui por currentColor.
+    Garante que o ícone usa sempre a cor definida via icon_color.
+    """
+    import re
+    # Remove fill="#..." e fill="rgb(...)" exceto fill="none"
+    svg_code = re.sub(r'fill="(?!none)[^"]+"', 'fill="currentColor"', svg_code)
+    # Remove stroke="#..." exceto stroke="none" e stroke="currentColor"
+    svg_code = re.sub(r'stroke="(?!none|currentColor)[^"]+"', 'stroke="currentColor"', svg_code)
+    # Remove fill em style inline
+    svg_code = re.sub(r'(?i)(fill\s*:\s*)(?!none|currentColor)(#[0-9a-fA-F]{3,8}|rgb\([^)]+\)|[a-zA-Z]+)', r'\1currentColor', svg_code)
+    # Remove stroke em style inline
+    svg_code = re.sub(r'(?i)(stroke\s*:\s*)(?!none|currentColor)(#[0-9a-fA-F]{3,8}|rgb\([^)]+\)|[a-zA-Z]+)', r'\1currentColor', svg_code)
+    # Se a tag <svg> não tiver fill, adiciona fill="currentColor" para que
+    # todos os elementos filhos sem fill explícito herdem a cor
+    if not re.search(r'<svg[^>]+fill=', svg_code, re.IGNORECASE):
+        svg_code = re.sub(r'(<svg\b)', r'\1 fill="currentColor"', svg_code, count=1)
+    return svg_code.strip()
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_archive_activities(request):
+    """Arquivar múltiplos blueprints de atividade em massa"""
+    from django.db import transaction
+    try:
+        data = json.loads(request.body)
+        activity_ids = data.get('activity_ids', [])
+
+        if not isinstance(activity_ids, list):
+            return JsonResponse({'success': False, 'error': {'code': 'INVALID_FORMAT', 'message': 'activity_ids deve ser uma lista'}}, status=400)
+        if not activity_ids:
+            return JsonResponse({'success': False, 'error': {'code': 'EMPTY_SELECTION', 'message': 'Nenhuma atividade selecionada'}}, status=400)
+
+        activities = ScheduledActivity.objects.filter(id__in=activity_ids)
+        if not activities.exists():
+            return JsonResponse({'success': False, 'error': {'code': 'NOT_FOUND', 'message': 'Nenhuma atividade válida encontrada'}}, status=404)
+
+        already_archived = list(activities.filter(is_active=False).values_list('name', flat=True))
+        to_archive = list(activities.filter(is_active=True))
+
+        if already_archived and not to_archive:
+            return JsonResponse({'success': False, 'error': {'code': 'ALREADY_ARCHIVED', 'message': 'As atividades selecionadas já estão arquivadas. Use a opção desarquivar se pretende restaurá-las.', 'activities': already_archived}}, status=409)
+
+        with transaction.atomic():
+            archived_count = 0
+            for a in to_archive:
+                a.is_active = False
+                a.save(update_fields=['is_active'])
+                archived_count += 1
+
+        result = {'success': True, 'archived_count': archived_count, 'message': f'{archived_count} atividade(s) arquivada(s) com sucesso'}
+        if already_archived:
+            result['warning'] = f'{len(already_archived)} atividade(s) já estavam arquivadas'
+        return JsonResponse(result, status=200)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': {'code': 'INVALID_JSON', 'message': 'Formato JSON inválido'}}, status=400)
+    except Exception:
+        return JsonResponse({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': 'Ocorreu um erro inesperado'}}, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_unarchive_activities(request):
+    """Desarquivar múltiplos blueprints de atividade em massa"""
+    from django.db import transaction
+    try:
+        data = json.loads(request.body)
+        activity_ids = data.get('activity_ids', [])
+
+        if not isinstance(activity_ids, list):
+            return JsonResponse({'success': False, 'error': {'code': 'INVALID_FORMAT', 'message': 'activity_ids deve ser uma lista'}}, status=400)
+        if not activity_ids:
+            return JsonResponse({'success': False, 'error': {'code': 'EMPTY_SELECTION', 'message': 'Nenhuma atividade selecionada'}}, status=400)
+
+        activities = ScheduledActivity.objects.filter(id__in=activity_ids)
+        if not activities.exists():
+            return JsonResponse({'success': False, 'error': {'code': 'NOT_FOUND', 'message': 'Nenhuma atividade válida encontrada'}}, status=404)
+
+        already_active = list(activities.filter(is_active=True).values_list('name', flat=True))
+        to_unarchive = list(activities.filter(is_active=False))
+
+        if already_active and not to_unarchive:
+            return JsonResponse({'success': False, 'error': {'code': 'ALREADY_ACTIVE', 'message': 'As atividades selecionadas já estão ativas. Use a opção arquivar se pretende arquivá-las.', 'activities': already_active}}, status=409)
+
+        with transaction.atomic():
+            unarchived_count = 0
+            for a in to_unarchive:
+                a.is_active = True
+                a.save(update_fields=['is_active'])
+                unarchived_count += 1
+
+        result = {'success': True, 'unarchived_count': unarchived_count, 'message': f'{unarchived_count} atividade(s) restaurada(s) com sucesso'}
+        if already_active:
+            result['warning'] = f'{len(already_active)} atividade(s) já estavam ativas'
+        return JsonResponse(result, status=200)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': {'code': 'INVALID_JSON', 'message': 'Formato JSON inválido'}}, status=400)
+    except Exception:
+        return JsonResponse({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': 'Ocorreu um erro inesperado'}}, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_duplicate_activities(request):
+    """Duplicar blueprints de atividade selecionados, adicionando '(Cópia)' ao nome"""
+    from django.db import transaction
+    try:
+        data = json.loads(request.body)
+        activity_ids = data.get('activity_ids', [])
+
+        if not isinstance(activity_ids, list):
+            return JsonResponse({'success': False, 'error': {'code': 'INVALID_FORMAT', 'message': 'activity_ids deve ser uma lista'}}, status=400)
+        if not activity_ids:
+            return JsonResponse({'success': False, 'error': {'code': 'EMPTY_SELECTION', 'message': 'Nenhuma atividade selecionada'}}, status=400)
+
+        activities = ScheduledActivity.objects.filter(id__in=activity_ids)
+        if not activities.exists():
+            return JsonResponse({'success': False, 'error': {'code': 'NOT_FOUND', 'message': 'Nenhuma atividade válida encontrada'}}, status=404)
+
+        with transaction.atomic():
+            duplicated_count = 0
+            for activity in activities:
+                activity.pk = None  # força criação de novo registo
+                activity.name = f'{activity.name} (Cópia)'
+                activity.is_active = True
+                activity.save()
+                duplicated_count += 1
+
+        return JsonResponse({'success': True, 'duplicated_count': duplicated_count, 'message': f'{duplicated_count} atividade(s) duplicada(s) com sucesso'}, status=200)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': {'code': 'INVALID_JSON', 'message': 'Formato JSON inválido'}}, status=400)
+    except Exception:
+        return JsonResponse({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': 'Ocorreu um erro inesperado'}}, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+@admin_required
+def bulk_delete_activities(request):
+    """Eliminar permanentemente blueprints de atividade (ADMIN ONLY)"""
+    from django.db import transaction
+    try:
+        data = json.loads(request.body)
+        activity_ids = data.get('activity_ids', [])
+
+        if not isinstance(activity_ids, list):
+            return JsonResponse({'success': False, 'error': {'code': 'INVALID_FORMAT', 'message': 'activity_ids deve ser uma lista'}}, status=400)
+        if not activity_ids:
+            return JsonResponse({'success': False, 'error': {'code': 'EMPTY_SELECTION', 'message': 'Nenhuma atividade selecionada'}}, status=400)
+
+        activities = ScheduledActivity.objects.filter(id__in=activity_ids)
+        count = activities.count()
+        if count == 0:
+            return JsonResponse({'success': False, 'error': {'code': 'NOT_FOUND', 'message': 'Nenhuma atividade encontrada'}}, status=404)
+
+        with transaction.atomic():
+            activities.delete()
+
+        return JsonResponse({'success': True, 'message': f'{count} atividade(s) eliminada(s) permanentemente', 'count': count})
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': {'code': 'INVALID_JSON', 'message': 'Formato JSON inválido'}}, status=400)
+    except Exception:
+        return JsonResponse({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': 'Ocorreu um erro inesperado'}}, status=500)
+
+
+@login_required
 def lead_create_view(request):
     """
     Criar nova lead (oportunidade de venda).
@@ -741,7 +1100,7 @@ def lead_create_view(request):
     active_company = get_active_company(request)
     
     if request.method == 'POST':
-        form = LeadForm(request.POST)
+        form = LeadForm(request.POST, request.FILES)
         
         if form.is_valid():
             lead = form.save(commit=False)
@@ -758,12 +1117,29 @@ def lead_create_view(request):
             messages.success(request, f'Oportunidade "{lead.title}" criada com sucesso!')
             return redirect('crm:crm_home')
     else:
-        # Get first stage as default
-        default_stage = CRMStage.objects.filter(
-            is_active=True
-        ).filter(
-            Q(owner_company__isnull=True) | Q(owner_company=active_company)
-        ).order_by('sequence').first()
+        # Check if a stage parameter was provided (from pipeline + button)
+        stage_param = request.GET.get('stage', '').strip()
+        default_stage = None
+        
+        if stage_param:
+            # Try to get the specified stage
+            try:
+                default_stage = CRMStage.objects.filter(
+                    id=stage_param,
+                    is_active=True
+                ).filter(
+                    Q(owner_company__isnull=True) | Q(owner_company=active_company)
+                ).first()
+            except:
+                pass  # Invalid UUID, fallback to first stage
+        
+        # If no stage param or invalid, get first stage as default
+        if not default_stage:
+            default_stage = CRMStage.objects.filter(
+                is_active=True
+            ).filter(
+                Q(owner_company__isnull=True) | Q(owner_company=active_company)
+            ).order_by('sequence').first()
         
         form = LeadForm(initial={
             'stage': default_stage,
@@ -792,11 +1168,33 @@ def lead_create_view(request):
     ).filter(
         Q(owner_company__isnull=True) | Q(owner_company=active_company)
     ).exclude(is_lost_stage=True).order_by('sequence')
+    
+    # Get Won and Lost stages for button logic
+    won_stage = CRMStage.objects.filter(
+        is_active=True, is_won_stage=True
+    ).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).first()
+    
+    lost_stage = CRMStage.objects.filter(
+        is_active=True, is_lost_stage=True
+    ).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).first()
+    
+    new_stage = CRMStage.objects.filter(
+        is_active=True
+    ).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).order_by('sequence').first()
 
     context = {
         'form': form,
         'page_title': 'Nova Oportunidade',
         'stages': stages,
+        'won_stage': won_stage,
+        'lost_stage': lost_stage,
+        'new_stage': new_stage,
     }
     
     return render(request, 'crm/lead_create.html', context)
@@ -817,7 +1215,7 @@ def lead_detail_view(request, lead_id):
     
     # Handle POST (save changes)
     if request.method == 'POST':
-        form = LeadForm(request.POST, instance=lead)
+        form = LeadForm(request.POST, request.FILES, instance=lead)
         
         if form.is_valid():
             lead = form.save(commit=False)
@@ -874,12 +1272,31 @@ def lead_detail_view(request, lead_id):
     
     form.fields['assigned_to'].queryset = User.objects.filter(is_active=True).order_by('username')
     
-    # Get all stages for status bar
+    # Get all stages for status bar (exclude Lost stage from status bar)
     all_stages = CRMStage.objects.filter(
         is_active=True
     ).filter(
         Q(owner_company__isnull=True) | Q(owner_company=active_company)
-    ).order_by('sequence')
+    ).exclude(is_lost_stage=True).order_by('sequence')
+    
+    # Get Won and Lost stages for button logic
+    won_stage = CRMStage.objects.filter(
+        is_active=True, is_won_stage=True
+    ).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).first()
+    
+    lost_stage = CRMStage.objects.filter(
+        is_active=True, is_lost_stage=True
+    ).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).first()
+    
+    new_stage = CRMStage.objects.filter(
+        is_active=True
+    ).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).order_by('sequence').first()  # First stage is usually "New"
     
     # Smart buttons counts (TODO: implement when models exist)
     quotations_count = 0  # TODO: lead.quotations.count()
@@ -911,6 +1328,9 @@ def lead_detail_view(request, lead_id):
         'is_edit': True,  # Flag para indicar modo edição
         'stages': all_stages,  # Para compatibilidade com lead_create.html
         'audit_logs': audit_logs,  # Activity logs for the Log tab
+        'won_stage': won_stage,
+        'lost_stage': lost_stage,
+        'new_stage': new_stage,
     }
     
     return render(request, 'crm/lead_create.html', context)
@@ -1331,3 +1751,492 @@ def search_contacts_for_lead_api(request):
         'results': results,
         'count': len(results),
     })
+
+
+# ===================================================
+# LEAD LIST VIEW
+# ===================================================
+
+@login_required
+def lead_list_view(request):
+    """
+    Vista de lista de leads (formato tabela).
+    Filtra por etapas (ativas, ganhas, perdidas).
+    Pode filtrar por contacto específico via parâmetro GET 'contact'.
+    """
+    search_query = request.GET.get('search', '').strip()
+    search_field = request.GET.get('field', 'title')
+    page_number = request.GET.get('page', 1)
+    page_size = request.GET.get('page_size', 50)
+    stage_filter = request.GET.get('stage', 'active')
+    contact_filter = request.GET.get('contact', '')  # UUID do contacto
+    
+    try:
+        page_size = int(page_size)
+        if page_size < 1:
+            page_size = 50
+    except (ValueError, TypeError):
+        page_size = 50
+    
+    # Get active company
+    active_company = get_active_company(request)
+    
+    # Get leads based on stage filter
+    if stage_filter == 'won':
+        # Only Won stages
+        leads = Lead.objects.filter(
+            is_active=True,
+            stage__is_won_stage=True
+        ).select_related(
+            'contact', 
+            'assigned_to', 
+            'stage',
+            'owner_company'
+        ).prefetch_related('tags')
+    elif stage_filter == 'lost':
+        # Only Lost stages
+        leads = Lead.objects.filter(
+            is_active=True,
+            stage__is_lost_stage=True
+        ).select_related(
+            'contact', 
+            'assigned_to', 
+            'stage',
+            'owner_company'
+        ).prefetch_related('tags')
+    elif stage_filter == 'all':
+        # All stages (including Won and Lost)
+        leads = Lead.objects.filter(
+            is_active=True
+        ).select_related(
+            'contact', 
+            'assigned_to', 
+            'stage',
+            'owner_company'
+        ).prefetch_related('tags')
+    else:
+        # Default: Active (EXCLUDE Won and Lost stages)
+        leads = Lead.objects.filter(
+            is_active=True
+        ).exclude(
+            Q(stage__is_won_stage=True) | Q(stage__is_lost_stage=True)
+        ).select_related(
+            'contact', 
+            'assigned_to', 
+            'stage',
+            'owner_company'
+        ).prefetch_related('tags')
+    
+    # Filter by company
+    leads = filter_by_company(leads, request)
+    
+    # Filter by specific contact (if provided)
+    filtered_contact = None
+    if contact_filter:
+        try:
+            from apps.contacts.models import Contact
+            filtered_contact = Contact.objects.get(id=contact_filter)
+            leads = leads.filter(contact=filtered_contact)
+        except Contact.DoesNotExist:
+            pass  # Ignore invalid contact UUID
+    
+    # Apply search filter
+    if search_query:
+        search_filters = {
+            'title': Q(title__icontains=search_query),
+            'contact': Q(contact__name__icontains=search_query),
+            'email': Q(email_from__icontains=search_query),
+            'phone': Q(phone__icontains=search_query),
+            'source': Q(source__icontains=search_query),
+            'assigned_to': Q(assigned_to__username__icontains=search_query) | Q(assigned_to__first_name__icontains=search_query) | Q(assigned_to__last_name__icontains=search_query),
+            'priority': Q(priority__icontains=search_query),
+            'stage': Q(stage__name__icontains=search_query),
+            'description': Q(description__icontains=search_query),
+        }
+        
+        if search_field in search_filters:
+            leads = leads.filter(search_filters[search_field])
+    
+    # Order by most recent first
+    leads = leads.order_by('-created_at')
+    
+    # Paginate
+    paginator = Paginator(leads, page_size)
+    page_obj = paginator.get_page(page_number)
+    
+    # Get Won and Lost stage names for bulk actions
+    won_stage = CRMStage.objects.filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company),
+        is_won_stage=True
+    ).first()
+    
+    lost_stage = CRMStage.objects.filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company),
+        is_lost_stage=True
+    ).first()
+    
+    context = {
+        'leads': page_obj,
+        'search_query': search_query,
+        'search_field': search_field,
+        'stage_filter': stage_filter,
+        'total_count': paginator.count,
+        'page_size': page_size,
+        'won_stage_name': won_stage.name if won_stage else 'Won',
+        'lost_stage_name': lost_stage.name if lost_stage else 'Lost',
+        'filtered_contact': filtered_contact,  # Para exibir "Leads de [Nome do Contacto]"
+    }
+    
+    return render(request, 'crm/lead_list.html', context)
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_delete_leads(request):
+    """Delete multiple leads"""
+    try:
+        data = json.loads(request.body)
+        lead_ids = data.get('lead_ids', [])
+        
+        if not isinstance(lead_ids, list):
+            return JsonResponse({
+                'success': False,
+                'error': 'lead_ids deve ser uma lista'
+            }, status=400)
+        
+        # Filter by company before deleting
+        active_company = get_active_company(request)
+        leads = Lead.objects.filter(id__in=lead_ids)
+        leads = filter_by_company(leads, request)
+        
+        deleted_count = leads.count()
+        leads.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'deleted_count': deleted_count
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Formato JSON inválido'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_mark_won(request):
+    """Mark multiple leads as Won"""
+    try:
+        data = json.loads(request.body)
+        lead_ids = data.get('lead_ids', [])
+        
+        if not isinstance(lead_ids, list):
+            return JsonResponse({
+                'success': False,
+                'error': 'lead_ids deve ser uma lista'
+            }, status=400)
+        
+        # Get active company
+        active_company = get_active_company(request)
+        
+        # Get Won stage
+        won_stage = CRMStage.objects.filter(
+            Q(owner_company__isnull=True) | Q(owner_company=active_company),
+            is_won_stage=True
+        ).first()
+        
+        if not won_stage:
+            return JsonResponse({
+                'success': False,
+                'error': 'Etapa Won não encontrada'
+            }, status=404)
+        
+        # Filter leads by company
+        leads = Lead.objects.filter(id__in=lead_ids)
+        leads = filter_by_company(leads, request)
+        
+        # Update leads to Won stage
+        updated_count = leads.update(stage=won_stage)
+        
+        return JsonResponse({
+            'success': True,
+            'updated_count': updated_count
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Formato JSON inválido'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_mark_lost(request):
+    """Mark multiple leads as Lost"""
+    try:
+        data = json.loads(request.body)
+        lead_ids = data.get('lead_ids', [])
+        
+        if not isinstance(lead_ids, list):
+            return JsonResponse({
+                'success': False,
+                'error': 'lead_ids deve ser uma lista'
+            }, status=400)
+        
+        # Get active company
+        active_company = get_active_company(request)
+        
+        # Get Lost stage
+        lost_stage = CRMStage.objects.filter(
+            Q(owner_company__isnull=True) | Q(owner_company=active_company),
+            is_lost_stage=True
+        ).first()
+        
+        if not lost_stage:
+            return JsonResponse({
+                'success': False,
+                'error': 'Etapa Lost não encontrada'
+            }, status=404)
+        
+        # Filter leads by company
+        leads = Lead.objects.filter(id__in=lead_ids)
+        leads = filter_by_company(leads, request)
+        
+        # Update leads to Lost stage (no lost_reason required for bulk action)
+        updated_count = leads.update(stage=lost_stage)
+        
+        return JsonResponse({
+            'success': True,
+            'updated_count': updated_count
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Formato JSON inválido'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# ─────────────────────────────────────────────────────────
+# ActivityType CRUD
+# ─────────────────────────────────────────────────────────
+
+@login_required
+def activity_type_list_view(request):
+    """Lista os Tipos de Atividade com paginação, busca e filtros"""
+    search_query = request.GET.get('search', '')
+    search_field = request.GET.get('field', 'name')
+    page_number = request.GET.get('page', 1)
+    page_size = request.GET.get('page_size', 50)
+    status_filter = request.GET.get('status', 'active')
+
+    try:
+        page_size = int(page_size)
+        if page_size < 1:
+            page_size = 50
+    except (ValueError, TypeError):
+        page_size = 50
+
+    if status_filter == 'archived':
+        qs = ActivityType.objects.filter(is_active=False)
+    else:
+        qs = ActivityType.objects.filter(is_active=True)
+
+    qs = qs.annotate(blueprint_count=Count('blueprints')).order_by('name')
+
+    if search_query:
+        field_mapping = {
+            'name': Q(name__icontains=search_query),
+            'code': Q(code__icontains=search_query),
+        }
+        if search_field in field_mapping:
+            qs = qs.filter(field_mapping[search_field])
+        else:
+            qs = qs.filter(Q(name__icontains=search_query) | Q(code__icontains=search_query))
+
+    paginator = Paginator(qs, page_size)
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'activity_types': page_obj,
+        'search_query': search_query,
+        'search_field': search_field,
+        'total_count': paginator.count,
+        'page_size': page_size,
+        'status_filter': status_filter,
+    }
+    return render(request, 'crm/activity_type_list.html', context)
+
+
+@login_required
+def activity_type_create_view(request):
+    """Cria um novo Tipo de Atividade"""
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        code = request.POST.get('code', '').strip().upper()
+        errors = {}
+        if not name:
+            errors['name'] = 'O nome é obrigatório.'
+        if not code:
+            errors['code'] = 'O código é obrigatório.'
+        elif ActivityType.objects.filter(code=code).exists():
+            errors['code'] = f'Já existe um tipo com o código "{code}".'
+        if not errors:
+            obj = ActivityType.objects.create(name=name, code=code, is_active=True)
+            messages.success(request, f'Tipo de Atividade "{obj.name}" criado com sucesso!')
+            return redirect('crm:activity_type_list')
+        context = {'name': name, 'code': code, 'errors': errors, 'is_edit': False}
+        return render(request, 'crm/activity_type_form.html', context)
+
+    return render(request, 'crm/activity_type_form.html', {'is_edit': False})
+
+
+@login_required
+def activity_type_edit_view(request, type_id):
+    """Edita um Tipo de Atividade existente"""
+    obj = get_object_or_404(ActivityType, id=type_id)
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        code = request.POST.get('code', '').strip().upper()
+        errors = {}
+        if not name:
+            errors['name'] = 'O nome é obrigatório.'
+        if not code:
+            errors['code'] = 'O código é obrigatório.'
+        elif ActivityType.objects.filter(code=code).exclude(id=obj.id).exists():
+            errors['code'] = f'Já existe outro tipo com o código "{code}".'
+        if not errors:
+            obj.name = name
+            obj.code = code
+            obj.save(update_fields=['name', 'code'])
+            messages.success(request, f'Tipo de Atividade "{obj.name}" atualizado com sucesso!')
+            return redirect('crm:activity_type_list')
+        context = {'name': name, 'code': code, 'errors': errors, 'is_edit': True, 'object': obj}
+        return render(request, 'crm/activity_type_form.html', context)
+
+    context = {'name': obj.name, 'code': obj.code, 'is_edit': True, 'object': obj}
+    return render(request, 'crm/activity_type_form.html', context)
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_archive_activity_types(request):
+    """Arquiva múltiplos Tipos de Atividade sem confirmação"""
+    from django.db import transaction
+    try:
+        data = json.loads(request.body)
+        ids = data.get('type_ids', [])
+        if not isinstance(ids, list) or not ids:
+            return JsonResponse({'success': False, 'error': {'code': 'EMPTY_SELECTION', 'message': 'Nenhum tipo selecionado'}}, status=400)
+        qs = ActivityType.objects.filter(id__in=ids)
+        if not qs.exists():
+            return JsonResponse({'success': False, 'error': {'code': 'NOT_FOUND', 'message': 'Nenhum tipo encontrado'}}, status=404)
+        already = list(qs.filter(is_active=False).values_list('name', flat=True))
+        to_archive = list(qs.filter(is_active=True))
+        if already and not to_archive:
+            return JsonResponse({'success': False, 'error': {'code': 'ALREADY_ARCHIVED', 'message': 'Os tipos selecionados já estão arquivados.', 'types': already}}, status=409)
+        with transaction.atomic():
+            for obj in to_archive:
+                obj.is_active = False
+                obj.save(update_fields=['is_active'])
+        msg = f'{len(to_archive)} tipo(s) arquivado(s) com sucesso.'
+        warning = f'{len(already)} já estava(m) arquivado(s).' if already else None
+        return JsonResponse({'success': True, 'message': msg, 'warning': warning, 'archived_count': len(to_archive)})
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_unarchive_activity_types(request):
+    """Desarquiva múltiplos Tipos de Atividade sem confirmação"""
+    from django.db import transaction
+    try:
+        data = json.loads(request.body)
+        ids = data.get('type_ids', [])
+        if not isinstance(ids, list) or not ids:
+            return JsonResponse({'success': False, 'error': {'code': 'EMPTY_SELECTION', 'message': 'Nenhum tipo selecionado'}}, status=400)
+        qs = ActivityType.objects.filter(id__in=ids)
+        if not qs.exists():
+            return JsonResponse({'success': False, 'error': {'code': 'NOT_FOUND', 'message': 'Nenhum tipo encontrado'}}, status=404)
+        already = list(qs.filter(is_active=True).values_list('name', flat=True))
+        to_unarchive = list(qs.filter(is_active=False))
+        if already and not to_unarchive:
+            return JsonResponse({'success': False, 'error': {'code': 'ALREADY_ACTIVE', 'message': 'Os tipos selecionados já estão ativos.', 'types': already}}, status=409)
+        with transaction.atomic():
+            for obj in to_unarchive:
+                obj.is_active = True
+                obj.save(update_fields=['is_active'])
+        msg = f'{len(to_unarchive)} tipo(s) reativado(s) com sucesso.'
+        warning = f'{len(already)} já estava(m) ativo(s).' if already else None
+        return JsonResponse({'success': True, 'message': msg, 'warning': warning, 'unarchived_count': len(to_unarchive)})
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_delete_activity_types(request):
+    """Elimina múltiplos Tipos de Atividade em massa"""
+    from django.db import transaction
+    from django.db.models.deletion import ProtectedError
+
+    try:
+        data = json.loads(request.body)
+        ids = data.get('type_ids', [])
+
+        if not isinstance(ids, list) or not ids:
+            return JsonResponse({'success': False, 'error': {'code': 'EMPTY_SELECTION', 'message': 'Nenhum tipo selecionado'}}, status=400)
+
+        with transaction.atomic():
+            deleted_count, _ = ActivityType.objects.filter(id__in=ids).delete()
+
+        return JsonResponse({'success': True, 'deleted_count': deleted_count, 'message': f'{deleted_count} tipo(s) de atividade eliminado(s) com sucesso!'})
+
+    except ProtectedError as e:
+        blocking_blueprints = []
+        for obj in e.protected_objects:
+            if isinstance(obj, ScheduledActivity):
+                blocking_blueprints.append({
+                    'id': str(obj.id),
+                    'label': obj.name or obj.summary,
+                    'summary': obj.summary,
+                    'activity_type_name': obj.activity_type.name if obj.activity_type else '–',
+                })
+        return JsonResponse({
+            'success': False,
+            'error': {
+                'code': 'PROTECTED_BY_BLUEPRINTS',
+                'message': f'Não é possível eliminar: {len(blocking_blueprints)} blueprint(s) utiliza(m) este tipo de atividade.',
+                'blocking_blueprints': blocking_blueprints,
+                'count': len(blocking_blueprints),
+            }
+        }, status=409)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': {'code': 'INVALID_JSON', 'message': 'JSON inválido'}}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': {'code': 'UNKNOWN_ERROR', 'message': str(e)}}, status=500)

@@ -53,34 +53,9 @@ DEPENDÊNCIAS:
 - Django ContentTypes framework
 -->
 
-<style>
-    /* Custom Scrollbar - Golden (Dourado Fuet Mágico) */
-    .chatter-content::-webkit-scrollbar {
-        width: 6px !important;
-    }
-    
-    .chatter-content::-webkit-scrollbar-track {
-        background: transparent !important;
-    }
-    
-    .chatter-content::-webkit-scrollbar-thumb {
-        background: #dbc693 !important;
-        border-radius: 3px;
-    }
-    
-    .chatter-content::-webkit-scrollbar-thumb:hover {
-        background: #c9b580 !important;
-    }
-    
-    /* Firefox */
-    .chatter-content {
-        scrollbar-width: thin !important;
-        scrollbar-color: #dbc693 transparent !important;
-    }
-</style>
-
 <!-- CHATTER CONTAINER -->
 <div class="w-[30%] border-l border-gray-700 bg-[#1a2332] h-[80vh] sticky top-0 flex flex-col" 
+     style="margin-right: 10px;"
      x-data="chatterComponent('{{ object|content_type }}', '{{ object.id }}')">
     
     <!-- ═══════════════════════════════════════════════════════════════════════ -->

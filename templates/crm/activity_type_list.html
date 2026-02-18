@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Tags CRM - Fuet Mágico{% endblock %}
+{% block title %}Tipos de Atividade - Fuet Mágico{% endblock %}
 
 {% block sub_navbar %}
 {% include 'components/crm_navbar_simple.html' %}
@@ -8,35 +8,36 @@
 
 {% block content %}
 {% csrf_token %}
+{# matches crm_tag_list pattern #}
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900" x-data="{
-    selectedTags: [],
+    selectedTypes: [],
     selectAll: false,
-    
+
     init() {
-        window.getSelectedTags = () => this.selectedTags;
+        window.getSelectedTypes = () => this.selectedTypes;
     },
-    
+
     toggleAll() {
         if (this.selectAll) {
-            this.selectedTags = Array.from(document.querySelectorAll('.tag-checkbox')).map(el => el.value);
+            this.selectedTypes = Array.from(document.querySelectorAll('.type-checkbox')).map(el => el.value);
         } else {
-            this.selectedTags = [];
+            this.selectedTypes = [];
         }
     },
-    
+
     isSelected(id) {
-        return this.selectedTags.includes(id);
+        return this.selectedTypes.includes(id);
     },
-    
-    toggleTag(id) {
-        const index = this.selectedTags.indexOf(id);
+
+    toggleType(id) {
+        const index = this.selectedTypes.indexOf(id);
         if (index > -1) {
-            this.selectedTags.splice(index, 1);
+            this.selectedTypes.splice(index, 1);
         } else {
-            this.selectedTags.push(id);
+            this.selectedTypes.push(id);
         }
-        const totalCheckboxes = document.querySelectorAll('.tag-checkbox').length;
-        this.selectAll = this.selectedTags.length === totalCheckboxes;
+        const totalCheckboxes = document.querySelectorAll('.type-checkbox').length;
+        this.selectAll = this.selectedTypes.length === totalCheckboxes;
     }
 }">
     <!-- Search & Actions Bar -->
@@ -45,17 +46,17 @@
             <div class="flex items-center justify-between gap-4">
                 <!-- Left: New Button + Bulk Actions -->
                 <div class="flex items-center space-x-3">
-                    <a href="{% url 'crm:crm_tag_create' %}" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center space-x-2">
+                    <a href="{% url 'crm:activity_type_create' %}" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center space-x-2">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
-                        <span>Nova Tag</span>
+                        <span>Novo</span>
                     </a>
-                    
+
                     <!-- Bulk Actions Button -->
-                    <div x-show="selectedTags.length > 0" 
+                    <div x-show="selectedTypes.length > 0"
                          x-transition
-                         class="relative" 
+                         class="relative"
                          x-data="{ actionsOpen: false }"
                          style="display: none;">
                         <button @click="actionsOpen = !actionsOpen" class="flex items-center space-x-2 px-4 py-2 bg-primary/10 dark:bg-primary/20 border-2 border-primary hover:bg-primary/20 text-gray-900 dark:text-white rounded-lg font-medium transition-colors">
@@ -64,14 +65,14 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                             </svg>
                             <span class="text-sm font-medium">
-                                <span x-text="selectedTags.length"></span> selecionado(s)
+                                <span x-text="selectedTypes.length"></span> selecionado(s)
                             </span>
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
-                        
-                        <div x-show="actionsOpen" 
+
+                        <div x-show="actionsOpen"
                              @click.away="actionsOpen = false"
                              x-transition
                              class="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
@@ -102,22 +103,23 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Center: Search Bar -->
                 <div class="flex-1 max-w-2xl relative" x-data="{ filtersOpen: false, searchQuery: '{{ search_query }}' }">
-                    <form method="GET" action="{% url 'crm:crm_tag_list' %}" id="searchForm">
+                    <form method="GET" action="{% url 'crm:activity_type_list' %}" id="searchForm">
                         <div class="relative">
                             <input type="text" name="search" x-model="searchQuery"
                                 @focus="filtersOpen = true"
                                 @input="filtersOpen = searchQuery.length > 0"
-                                placeholder="Pesquisar tags CRM..."
+                                placeholder="Pesquisar tipos de atividade..."
                                 class="w-full px-4 py-2 pl-10 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                             <input type="hidden" name="field" id="searchField" value="{{ search_field }}">
-                            
+                            <input type="hidden" name="status" value="{{ status_filter }}">
+
                             <svg class="absolute left-3 top-2.5 h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                             </svg>
-                            
+
                             <button type="button" @click="filtersOpen = !filtersOpen"
                                 class="absolute right-2 top-2 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
                                 <svg class="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -125,44 +127,47 @@
                                 </svg>
                             </button>
                         </div>
-                    
+
                         <div x-show="filtersOpen" @click.away="filtersOpen = false" x-transition
                              class="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto"
                              style="display: none;">
                             <div class="p-3">
-                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">FILTRAR POR STATUS:</p>
-                                <a href="?status=active{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}" 
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">FILTRAR POR ESTADO:</p>
+                                <a href="?status=active{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}"
                                    class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if status_filter == 'active' %}bg-primary/10 text-primary font-semibold{% endif %}">
                                     Ativos
                                 </a>
-                                <a href="?status=archived{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}" 
+                                <a href="?status=archived{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}"
                                    class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if status_filter == 'archived' %}bg-primary/10 text-primary font-semibold{% endif %}">
                                     Arquivados
                                 </a>
-                                
+
                                 <div class="my-3 border-t border-gray-200 dark:border-gray-700"></div>
-                                
+
                                 <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">PESQUISAR POR CAMPO:</p>
-                                <a href="#" @click.prevent="document.getElementById('searchField').value='name'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                                    Search <strong>Nome</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                <a href="#" @click.prevent="document.getElementById('searchField').value='name'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if search_field == 'name' %}bg-primary/10 text-primary font-semibold{% endif %}">
+                                    Pesquisar <strong>Nome</strong> por: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('searchField').value='code'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if search_field == 'code' %}bg-primary/10 text-primary font-semibold{% endif %}">
+                                    Pesquisar <strong>Código</strong> por: <span class="text-primary" x-text="searchQuery || '...'"></span>
                                 </a>
                             </div>
                         </div>
                     </form>
                 </div>
-                
-                <!-- Right: Pagination -->
+
+                <!-- Right: Pagination info -->
                 <div class="flex items-center space-x-4">
                     <div class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                        <span>{{ tags.start_index }}-{{ tags.end_index }} / {{ total_count }}</span>
+                        <span>{{ activity_types.start_index }}-{{ activity_types.end_index }} / {{ total_count }}</span>
                         <span class="text-gray-400">|</span>
                         <div class="flex items-center space-x-1">
                             <input type="text" id="pageSizeInput" value="{{ page_size }}"
                                 class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                             <span>/página</span>
                         </div>
-                        {% if tags.has_previous %}
-                        <a href="?page={{ tags.previous_page_number }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}&status={{ status_filter }}" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                        {% if activity_types.has_previous %}
+                        <a href="?page={{ activity_types.previous_page_number }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}&status={{ status_filter }}" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         </a>
                         {% else %}
@@ -170,8 +175,8 @@
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         </button>
                         {% endif %}
-                        {% if tags.has_next %}
-                        <a href="?page={{ tags.next_page_number }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}&status={{ status_filter }}" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                        {% if activity_types.has_next %}
+                        <a href="?page={{ activity_types.next_page_number }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}&status={{ status_filter }}" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                         </a>
                         {% else %}
@@ -184,7 +189,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Table -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -197,40 +202,37 @@
                                        class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Nome</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Cor</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Nº Leads</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Código</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Blueprints</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Data Criação</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Estado</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        {% for tag in tags %}
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors" onclick="window.location='{% url 'crm:crm_tag_edit' tag.id %}'">
+                        {% for at in activity_types %}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors" onclick="window.location='{% url 'crm:activity_type_edit' at.id %}'">
                             <td class="px-6 py-4 whitespace-nowrap" @click.stop>
-                                <input type="checkbox" value="{{ tag.pk }}"
-                                       :checked="isSelected('{{ tag.pk }}')"
-                                       @change="toggleTag('{{ tag.pk }}')"
-                                       class="tag-checkbox h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
+                                <input type="checkbox" value="{{ at.pk }}"
+                                       :checked="isSelected('{{ at.pk }}')"
+                                       @change="toggleType('{{ at.pk }}')"
+                                       class="type-checkbox h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                {{ at.name }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-white" style="background-color: {{ tag.color }};">
-                                    {{ tag.name }}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-mono font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                                    {{ at.code }}
                                 </span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center space-x-2">
-                                    <div class="w-6 h-6 rounded border border-gray-300 dark:border-gray-600" style="background-color: {{ tag.color }};"></div>
-                                    <span class="text-sm text-gray-600 dark:text-gray-400 font-mono">{{ tag.color }}</span>
-                                </div>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                {{ at.blueprint_count }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                {{ tag.lead_count }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                {{ tag.created_at|date:"d/m/Y" }}
+                                {{ at.created_at|date:"d/m/Y" }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                {% if tag.is_active %}
+                                {% if at.is_active %}
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Ativo</span>
                                 {% else %}
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">Arquivado</span>
@@ -241,17 +243,17 @@
                         <tr>
                             <td colspan="6" class="px-6 py-12">
                                 <div class="text-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                                     </svg>
-                                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">Sem tags CRM registadas</h3>
-                                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Comece criando uma nova tag para organizar as suas oportunidades.</p>
+                                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">Sem tipos de atividade registados</h3>
+                                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Comece criando o primeiro tipo de atividade.</p>
                                     <div class="mt-6">
-                                        <a href="{% url 'crm:crm_tag_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark">
+                                        <a href="{% url 'crm:activity_type_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark">
                                             <svg class="-ml-1 mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                                                <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"/>
                                             </svg>
-                                            Nova Tag
+                                            Novo Tipo
                                         </a>
                                     </div>
                                 </div>
@@ -306,123 +308,58 @@ function showNotification(type, message) {
 }
 
 async function archiveSelected() {
-    const selectedIds = window.getSelectedTags ? window.getSelectedTags() : [];
-    if (selectedIds.length === 0) { showNotification('error', 'Nenhuma tag selecionada'); return; }
+    const selectedIds = window.getSelectedTypes ? window.getSelectedTypes() : [];
+    if (selectedIds.length === 0) { showNotification('error', 'Nenhum tipo selecionado'); return; }
     try {
-        const response = await fetch('{% url "crm:crm_bulk_archive_tags" %}', {
+        const response = await fetch('{% url "crm:bulk_archive_activity_types" %}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-            body: JSON.stringify({ tag_ids: selectedIds })
+            body: JSON.stringify({ type_ids: selectedIds })
         });
         const data = await response.json();
         if (data.success) {
-            let message = data.message;
-            if (data.warning) {
-                message += ` (${data.warning})`;
-            }
-            showNotification('success', message);
+            showNotification('success', data.message + (data.warning ? ` (${data.warning})` : ''));
             setTimeout(() => window.location.reload(), 1500);
         } else {
-            if (data.error.code === 'ALREADY_ARCHIVED') {
-                showNotification('error', data.error.message);
-            } else {
-                showNotification('error', data.error.message || 'Erro ao arquivar tags');
-            }
+            showNotification('error', data.error.message || 'Erro ao arquivar');
         }
     } catch (error) { showNotification('error', 'Erro de conexão. Por favor, tente novamente.'); }
 }
 
 async function unarchiveSelected() {
-    const selectedIds = window.getSelectedTags ? window.getSelectedTags() : [];
-    if (selectedIds.length === 0) { showNotification('error', 'Nenhuma tag selecionada'); return; }
+    const selectedIds = window.getSelectedTypes ? window.getSelectedTypes() : [];
+    if (selectedIds.length === 0) { showNotification('error', 'Nenhum tipo selecionado'); return; }
     try {
-        const response = await fetch('{% url "crm:crm_bulk_unarchive_tags" %}', {
+        const response = await fetch('{% url "crm:bulk_unarchive_activity_types" %}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-            body: JSON.stringify({ tag_ids: selectedIds })
+            body: JSON.stringify({ type_ids: selectedIds })
         });
         const data = await response.json();
         if (data.success) {
-            let message = data.message;
-            if (data.warning) {
-                message += ` (${data.warning})`;
-            }
-            showNotification('success', message);
+            showNotification('success', data.message + (data.warning ? ` (${data.warning})` : ''));
             setTimeout(() => window.location.reload(), 1500);
         } else {
-            if (data.error.code === 'ALREADY_ACTIVE') {
-                showNotification('error', data.error.message);
-            } else {
-                showNotification('error', data.error.message || 'Erro ao desarquivar tags');
-            }
+            showNotification('error', data.error.message || 'Erro ao desarquivar');
         }
     } catch (error) { showNotification('error', 'Erro de conexão. Por favor, tente novamente.'); }
 }
 
 async function deleteSelected() {
-    const selectedIds = window.getSelectedTags ? window.getSelectedTags() : [];
-    if (selectedIds.length === 0) { showNotification('error', 'Nenhuma tag selecionada'); return; }
-    
-    // Pre-check: quantos leads estão associados
-    let leadsInfo = null;
-    try {
-        const resp = await fetch('{% url "crm:crm_check_tags_leads" %}', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-            body: JSON.stringify({ tag_ids: selectedIds })
-        });
-        const result = await resp.json();
-        if (result.success && result.total_affected > 0) {
-            leadsInfo = result;
-        }
-    } catch (e) {
-        console.error('Error checking tag leads:', e);
-    }
-    
-    openDeleteConfirmationModal(selectedIds, leadsInfo);
+    const selectedIds = window.getSelectedTypes ? window.getSelectedTypes() : [];
+    if (selectedIds.length === 0) { showNotification('error', 'Nenhum tipo selecionado'); return; }
+    openDeleteConfirmationModal(selectedIds);
 }
 
-function openDeleteConfirmationModal(tagIds, leadsInfo) {
-    const count = tagIds.length;
-    
-    // Build leads warning HTML
-    let leadsWarningHtml = '';
-    if (leadsInfo && leadsInfo.total_affected > 0) {
-        const tagsList = leadsInfo.tags.map(t => 
-            `<li class="flex items-center justify-between py-1">
-                <span class="text-gray-300 text-xs">${t.name}</span>
-                <span class="text-amber-400 text-xs font-semibold">${t.lead_count} lead(s)</span>
-            </li>`
-        ).join('');
-        
-        leadsWarningHtml = `
-            <div class="bg-amber-950/40 border border-amber-700/50 rounded-lg p-3 mb-4">
-                <div class="flex items-start space-x-2 mb-2">
-                    <svg class="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    <p class="text-amber-300 text-sm font-semibold">
-                        ${leadsInfo.total_affected > 1 ? leadsInfo.total_affected + ' leads estão associados' : '1 lead está associado'} a estas tags!
-                    </p>
-                </div>
-                <ul class="space-y-0.5 ml-6 border-t border-amber-800/30 pt-2">
-                    ${tagsList}
-                </ul>
-                <p class="text-amber-400/70 text-xs mt-2 ml-6">
-                    Ao eliminar, a ligação entre os leads e estas tags será removida.
-                </p>
-            </div>
-        `;
-    }
-    
+function openDeleteConfirmationModal(typeIds) {
+    const count = typeIds.length;
+
     const modal = document.createElement('div');
     modal.id = 'delete-confirmation-modal';
     modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4';
-    modal.style.animation = 'fadeIn 0.2s ease-out';
-    
+
     modal.innerHTML = `
-        <div class="bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full border-2 border-red-600/50" style="animation: scaleIn 0.2s ease-out;">
-            <!-- Header -->
+        <div class="bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full border-2 border-red-600/50">
             <div class="bg-gradient-to-r from-red-900 to-red-800 px-6 py-4 rounded-t-2xl border-b border-red-700/50">
                 <div class="flex items-center space-x-3">
                     <div class="flex items-center justify-center w-10 h-10 rounded-full bg-red-600/30 border-2 border-red-500 flex-shrink-0">
@@ -436,44 +373,36 @@ function openDeleteConfirmationModal(tagIds, leadsInfo) {
                     </div>
                 </div>
             </div>
-            
-            <!-- Body -->
             <div class="px-6 py-5">
                 <div class="bg-red-950/40 border border-red-800/50 rounded-lg p-3 mb-4">
                     <p class="text-gray-200 text-sm leading-relaxed">
-                        Está prestes a <span class="font-bold text-red-400">ELIMINAR PERMANENTEMENTE</span> 
-                        <span class="font-bold text-white text-base">${count}</span> tag(s).
+                        Está prestes a <span class="font-bold text-red-400">ELIMINAR PERMANENTEMENTE</span>
+                        <span class="font-bold text-white text-base">${count}</span> tipo(s) de atividade.
                     </p>
                     <p class="text-gray-400 text-xs mt-2">
-                        Esta modificação é <span class="font-semibold text-red-400">IRREVERSÍVEL</span> 
+                        Esta modificação é <span class="font-semibold text-red-400">IRREVERSÍVEL</span>
                         e todos os dados serão perdidos para sempre.
                     </p>
                 </div>
-                
-                ${leadsWarningHtml}
-                
-                <!-- Confirmation Checkbox -->
                 <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-3 mb-4">
                     <label class="flex items-start space-x-2 cursor-pointer">
-                        <input type="checkbox" id="deleteConfirmCheckbox" 
+                        <input type="checkbox" id="deleteConfirmCheckbox"
                                class="mt-0.5 w-4 h-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500 focus:ring-2">
                         <span class="text-gray-300 text-xs leading-relaxed">
-                            Confirmo que compreendo que esta ação vai 
-                            <span class="font-semibold text-red-400">eliminar permanentemente</span> 
-                            as tags selecionadas e que 
-                            <span class="font-semibold text-red-400">não existe forma de recuperar</span> 
+                            Confirmo que compreendo que esta ação vai
+                            <span class="font-semibold text-red-400">eliminar permanentemente</span>
+                            os tipos selecionados e que
+                            <span class="font-semibold text-red-400">não existe forma de recuperar</span>
                             os dados.
                         </span>
                     </label>
                 </div>
-                
-                <!-- Actions -->
                 <div class="flex space-x-3">
-                    <button onclick="closeDeleteConfirmationModal()" 
+                    <button onclick="closeDeleteConfirmationModal()"
                             class="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors">
-                        <span>Cancelar</span>
+                        Cancelar
                     </button>
-                    <button id="confirmDeleteButton" disabled 
+                    <button id="confirmDeleteButton" disabled
                             class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600 shadow-lg shadow-red-900/30">
                         <div class="flex items-center justify-center space-x-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -486,66 +415,123 @@ function openDeleteConfirmationModal(tagIds, leadsInfo) {
             </div>
         </div>
     `;
-    
-    // Enable/disable confirm button based on checkbox
+
     const checkbox = modal.querySelector('#deleteConfirmCheckbox');
     const confirmButton = modal.querySelector('#confirmDeleteButton');
-    
+
     checkbox.addEventListener('change', function() {
         confirmButton.disabled = !this.checked;
     });
-    
-    // Confirm button action
+
     confirmButton.addEventListener('click', async function() {
         if (!checkbox.checked) return;
-        
         confirmButton.disabled = true;
-        confirmButton.innerHTML = `
-            <div class="flex items-center justify-center space-x-2">
-                <svg class="animate-spin h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </svg>
-                <span>A eliminar...</span>
-            </div>
-        `;
-        
+        confirmButton.innerHTML = '<div class="flex items-center justify-center space-x-2"><svg class="animate-spin h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg><span>A eliminar...</span></div>';
         try {
-            const response = await fetch('{% url "crm:crm_bulk_delete_tags" %}', {
+            const response = await fetch('{% url "crm:bulk_delete_activity_types" %}', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-                body: JSON.stringify({ tag_ids: tagIds })
+                body: JSON.stringify({ type_ids: typeIds })
             });
             const data = await response.json();
-            
             closeDeleteConfirmationModal();
-            
             if (data.success) {
                 showNotification('success', data.message);
                 setTimeout(() => window.location.reload(), 1500);
+            } else if (data.error && data.error.code === 'PROTECTED_BY_BLUEPRINTS') {
+                openBlockedByBlueprintsModal(data.error);
             } else {
-                showNotification('error', data.error.message);
+                showNotification('error', (data.error && data.error.message) || 'Erro ao eliminar');
             }
         } catch (error) {
             closeDeleteConfirmationModal();
-            console.error('Error:', error);
-            showNotification('error', 'Erro ao eliminar tags');
+            showNotification('error', 'Erro ao eliminar tipos de atividade');
         }
     });
-    
-    // Close on outside click
-    modal.onclick = (e) => {
-        if (e.target === modal) closeDeleteConfirmationModal();
-    };
-    
+
+    modal.onclick = (e) => { if (e.target === modal) closeDeleteConfirmationModal(); };
+    document.body.appendChild(modal);
+}
+
+function openBlockedByBlueprintsModal(error) {
+    const count = error.count || error.blocking_blueprints.length;
+    const blueprints = error.blocking_blueprints || [];
+
+    const blueprintRows = blueprints.map(bp => `
+        <tr class="border-b border-gray-700/50 last:border-0">
+            <td class="py-2 pr-3">
+                <a href="{% url 'crm:activities_list' %}" target="_blank"
+                   class="text-sm font-medium text-amber-400 hover:text-amber-300 hover:underline">${bp.label || bp.summary}</a>
+                <p class="text-xs text-gray-500">${bp.summary !== bp.label ? bp.summary : ''}</p>
+            </td>
+            <td class="py-2 text-sm text-gray-400">${bp.activity_type_name}</td>
+        </tr>
+    `).join('');
+
+    const modal = document.createElement('div');
+    modal.id = 'blocked-modal';
+    modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+
+    modal.innerHTML = `
+        <div class="bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full border-2 border-amber-600/50">
+            <div class="bg-gradient-to-r from-amber-900/80 to-amber-800/60 px-6 py-4 rounded-t-2xl border-b border-amber-700/50">
+                <div class="flex items-center space-x-3">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-600/30 border-2 border-amber-500 flex-shrink-0">
+                        <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">Não é possível eliminar</h3>
+                        <p class="text-amber-300 text-xs mt-0.5">Este tipo está em uso por blueprints existentes</p>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-5">
+                <div class="bg-amber-950/30 border border-amber-800/50 rounded-lg p-3 mb-4">
+                    <p class="text-gray-200 text-sm leading-relaxed">
+                        Este tipo de atividade está associado a
+                        <span class="font-bold text-amber-400">${count} blueprint(s)</span>.
+                        Para poder eliminá-lo, tem primeiro de eliminar ou reatribuir estes blueprints.
+                    </p>
+                </div>
+                <div class="bg-gray-800/60 border border-gray-700 rounded-lg overflow-hidden mb-5">
+                    <div class="px-4 py-2 bg-gray-800 border-b border-gray-700">
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Blueprints bloqueantes</p>
+                    </div>
+                    <div class="px-4 py-2 max-h-48 overflow-y-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-700">
+                                    <th class="text-left text-xs text-gray-500 pb-1 pr-3">Nome</th>
+                                    <th class="text-left text-xs text-gray-500 pb-1">Tipo</th>
+                                </tr>
+                            </thead>
+                            <tbody>${blueprintRows}</tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="flex space-x-3">
+                    <a href="{% url 'crm:activities_list' %}"
+                       class="flex-1 px-4 py-2 bg-amber-700 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors text-center">
+                        Ir para Blueprints
+                    </a>
+                    <button onclick="document.getElementById('blocked-modal').remove()"
+                            class="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
     document.body.appendChild(modal);
 }
 
 function closeDeleteConfirmationModal() {
     const modal = document.getElementById('delete-confirmation-modal');
-    if (modal) {
-        modal.style.animation = 'fadeOut 0.2s ease-out';
-        setTimeout(() => { modal.remove(); }, 200);
-    }
+    if (modal) modal.remove();
 }
 </script>
 {% endblock %}

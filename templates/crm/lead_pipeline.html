@@ -14,26 +14,6 @@
         overflow: hidden;
     }
     
-    /* Custom scrollbar - horizontal */
-    .pipeline-wrapper::-webkit-scrollbar {
-        height: 8px;
-        width: 8px;
-    }
-    
-    .pipeline-wrapper::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    
-    .pipeline-wrapper::-webkit-scrollbar-thumb {
-        background-color: #dbc693;
-        border-radius: 4px;
-    }
-    
-    .pipeline-wrapper {
-        scrollbar-width: thin;
-        scrollbar-color: #dbc693 transparent;
-    }
-    
     /* Colunas esticam para a altura total do wrapper */
     .kanban-column {
         display: flex;
@@ -65,7 +45,7 @@
 {% endblock %}
 
 {% block sub_navbar %}
-{% include 'components/crm_navbar.html' %}
+{% include 'components/crm_navbar_simple.html' %}
 {% endblock %}
 
 {% block content %}
@@ -102,6 +82,13 @@
                         </svg>
                         <span>Novo</span>
                     </a>
+                    
+                    <button type="button" class="px-4 py-2 bg-transparent border border-primary hover:bg-primary/10 text-white rounded-lg font-medium transition-colors flex items-center space-x-2">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                        <span>Criar Leads</span>
+                    </button>
                 </div>
                 
                 <!-- Center: Search Bar -->
@@ -173,13 +160,13 @@
                     <!-- View Toggle -->
                     <div class="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
                         <!-- Kanban View (active) -->
-                        <a href="{% url 'crm:crm_home' %}" class="px-3 py-1.5 bg-primary text-white transition-colors">
+                        <a href="{% url 'crm:lead_pipeline' %}" class="px-3 py-1.5 bg-primary text-white transition-colors">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
                             </svg>
                         </a>
                         <!-- List View -->
-                        <a href="#" class="px-3 py-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <a href="{% url 'crm:lead_list' %}" class="px-3 py-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                             </svg>
@@ -201,6 +188,13 @@
                     </svg>
                 </a>
                 
+                <!-- Create Leads Button -->
+                <button type="button" class="p-2 bg-transparent border border-primary hover:bg-primary/10 text-white rounded-lg transition-colors">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                    </svg>
+                </button>
+                
                 <!-- Search -->
                 <form method="GET" action="{% url 'crm:crm_home' %}" class="flex-1">
                     <div class="relative">
@@ -214,12 +208,12 @@
                 
                 <!-- View Toggle -->
                 <div class="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-                    <a href="{% url 'crm:crm_home' %}" class="px-2 py-1.5 bg-primary text-white">
+                    <a href="{% url 'crm:lead_pipeline' %}" class="px-2 py-1.5 bg-primary text-white">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
                         </svg>
                     </a>
-                    <a href="#" class="px-2 py-1.5 text-gray-600 dark:text-gray-400">
+                    <a href="{% url 'crm:lead_list' %}" class="px-2 py-1.5 text-gray-600 dark:text-gray-400">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                         </svg>
@@ -277,12 +271,16 @@
                         </button>
                         {% endif %}
                         
-                        <!-- Add Button -->
-                        <button class="p-0.5 text-gray-400 hover:text-white transition-colors" title="Nova oportunidade">
+                        <!-- Add Button (não mostrar em Won/Lost) -->
+                        {% if not stage_data.stage.is_won_stage and not stage_data.stage.is_lost_stage %}
+                        <a href="{% url 'crm:lead_create' %}?stage={{ stage_data.stage.id }}" 
+                           class="p-0.5 text-gray-400 hover:text-white transition-colors" 
+                           title="Nova oportunidade em {{ stage_data.stage.name }}">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                             </svg>
-                        </button>
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
                 

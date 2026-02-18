@@ -12,7 +12,7 @@
 - **Fase 2:** 0/6 features (0%) - Frontend - Website Institucional (HTML Copy)
 - **Fase 3:** 1/11 features (9%) - Backend - Estrutura Base Django
 - **Fase 4:** 1/23 features (4%) - App: Contactos
-- **Fase 5:** 0/7 features (0%) - App: CRM (Customer Relationship Management)
+- **Fase 5:** 5/7 features (71%) - App: CRM (Customer Relationship Management) 🔥 EM PROGRESSO
 - **Fase 6:** 0/12 features (0%) - App: Inventário (Produtos e Stock)
 - **Fase 7:** 0/10 features (0%) - App: Compras
 - **Fase 8:** 0/12 features (0%) - App: Vendas
@@ -27,7 +27,7 @@
 - **Fase 17:** 0/6 features (0%) - Integração Final e Deployment
 - **Fase 18:** 0/13 features (0%) - Testes Automatizados UI (Playwright)
 
-**TOTAL:** 10/162 features (6.2%)
+**TOTAL:** 15/162 features (9.3%)
 
 ---
 
@@ -2275,6 +2275,1016 @@ Criar dropdown de autocomplete quando digitar @ no textarea.
 
 ---
 
+## 3.13 Sistema de Activities Genérico (Scheduled Activities)
+
+**🎯 OBJETIVO:** Criar sistema genérico de activities agendadas (tasks/to-dos) que funciona com QUALQUER modelo (Lead, Sale, Purchase, Invoice, etc.) com automação de workflows e templates reutilizáveis.
+
+**🔑 CONCEITOS-CHAVE:**
+- **ScheduledActivity:** Tarefa agendada futura (CALL, EMAIL, MEETING, TODO, WHATSAPP)
+- **ActivityTemplate:** Template reutilizável de activity (ex: "Follow-up Call", "Send Quote")
+- **ActivityWorkflow:** Regras de automação (ex: "Se CALL marcada como SUCCESS → criar EMAIL em +1 dia")
+
+**📋 DIFERENÇA vs ChatterActivity:**
+- **ChatterActivity** = Audit log (histórico passado) - "João mudou stage de New para Qualified"
+- **ScheduledActivity** = Task agendada (futuro/to-do) - "Ligar ao cliente dia 20/02"
+
+---
+
+### 3.13.1 Modelo ScheduledActivity ✅
+
+Criar modelo genérico para activities agendadas com GenericForeignKey.
+
+- [x] **Criar modelo ScheduledActivity**
+  - [x] Criar em `apps/core/models.py`
+  - [x] **GenericForeignKey (funciona com QUALQUER modelo - Lead, Sale, Purchase, etc.):**
+    ```python
+    from django.contrib.contenttypes.fields import GenericForeignKey
+    from django.contrib.contenttypes.models import ContentType
+    
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.UUIDField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    ```
+  
+  - [x] **Campos principais:**
+    ```python
+    # Tipo de activity
+    ACTIVITY_TYPE_CHOICES = [
+        ('CALL', 'Phone Call'),
+        ('EMAIL', 'Email'),
+        ('MEETING', 'Meeting'),
+        ('TODO', 'To-Do'),
+        ('WHATSAPP', 'WhatsApp'),
+        ('DOCUMENT', 'Document'),
+        ('SIGNATURE', 'Signature'),
+    ]
+    activity_type = models.CharField(max_length=20, choices=ACTIVITY_TYPE_CHOICES)
+    
+    # Conteúdo
+    summary = models.CharField(max_length=255, verbose_name='Summary')
+    description = models.TextField(blank=True, verbose_name='Description')
+    
+    # Scheduling
+    due_date = models.DateField(verbose_name='Due Date')
+    due_time = models.TimeField(null=True, blank=True, verbose_name='Due Time')
+    
+    # Assignment
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='scheduled_activities',
+        verbose_name='Assigned To'
+    )
+    
+    # Status
+    is_done = models.BooleanField(default=False, verbose_name='Is Done')
+    done_date = models.DateTimeField(null=True, blank=True, verbose_name='Done Date')
+    
+    # Resultado (para workflows)
+    RESULT_CHOICES = [
+        ('SUCCESS', 'Success'),
+        ('FAILED', 'Failed'),
+        ('CALLBACK', 'Callback Later'),
+        ('NO_ANSWER', 'No Answer'),
+        ('NOT_INTERESTED', 'Not Interested'),
+    ]
+    result = models.CharField(
+        max_length=20,
+        choices=RESULT_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name='Result',
+        help_text='Resultado usado para workflows automáticos'
+    )
+    
+    # Feedback texto livre
+    feedback = models.TextField(
+        blank=True,
+        verbose_name='Feedback',
+        help_text='Notas quando marcar como concluída'
+    )
+    
+    # Template (opcional)
+    template = models.ForeignKey(
+        'ActivityTemplate',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='activities',
+        verbose_name='Template',
+        help_text='Template usado para criar esta activity (opcional)'
+    )
+    
+    # Multi-company
+    owner_company = models.ForeignKey(
+        'Company',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='scheduled_activities',
+        verbose_name='Owner Company'
+    )
+    ```
+
+  - [x] **Properties:**
+    ```python
+    @property
+    def is_overdue(self):
+        """Retorna True se passou do prazo e não está done"""
+        if self.is_done:
+            return False
+        from django.utils import timezone
+        today = timezone.now().date()
+        return self.due_date < today
+    
+    @property
+    def is_today(self):
+        """Retorna True se é para hoje"""
+        from django.utils import timezone
+        today = timezone.now().date()
+        return self.due_date == today and not self.is_done
+    
+    @property
+    def status_color(self):
+        """Retorna cor baseada em status"""
+        if self.is_done:
+            return 'green'
+        elif self.is_overdue:
+            return 'red'
+        elif self.is_today:
+            return 'yellow'
+        else:
+            return 'blue'
+    
+    @property
+    def icon(self):
+        """Retorna ícone baseado em activity_type"""
+        icons = {
+            'CALL': '📞',
+            'EMAIL': '📧',
+            'MEETING': '🤝',
+            'TODO': '✅',
+            'WHATSAPP': '💬',
+            'DOCUMENT': '📄',
+            'SIGNATURE': '✍️',
+        }
+        return icons.get(self.activity_type, '📋')
+    
+    def __str__(self):
+        return f"{self.get_activity_type_display()} - {self.summary}"
+    ```
+
+  - [x] **Meta:**
+    ```python
+    class Meta:
+        ordering = ['due_date', 'due_time', '-created_at']
+        indexes = [
+            models.Index(fields=['content_type', 'object_id']),
+            models.Index(fields=['assigned_to']),
+            models.Index(fields=['due_date']),
+            models.Index(fields=['is_done']),
+        ]
+        verbose_name = 'Scheduled Activity'
+        verbose_name_plural = 'Scheduled Activities'
+    ```
+
+  - [x] **Validações:**
+    ```python
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone
+        
+        # Validar: due_date não pode ser no passado (ao criar)
+        if not self.pk and self.due_date < timezone.now().date():
+            raise ValidationError({'due_date': 'Due date cannot be in the past'})
+        
+        # Validar: result ou feedback obrigatório ao marcar is_done=True
+        if self.is_done and not self.result and not self.feedback:
+            raise ValidationError(
+                'Must provide either result or feedback when marking as done'
+            )
+    
+    def save(self, *args, **kwargs):
+        from django.utils import timezone
+        
+        # Auto-preencher done_date quando is_done muda para True
+        if self.is_done and not self.done_date:
+            self.done_date = timezone.now()
+        
+        # Limpar done_date se is_done muda para False
+        if not self.is_done and self.done_date:
+            self.done_date = None
+        
+        super().save(*args, **kwargs)
+    ```
+
+---
+
+### 3.13.2 Modelo ActivityTemplate ✅
+
+Criar modelo para templates reutilizáveis de activities.
+
+- [x] **Criar modelo ActivityTemplate**
+  - [x] Criar em `apps/core/models.py`
+  - [x] **Campos:**
+    ```python
+    name = models.CharField(
+        max_length=100,
+        verbose_name='Template Name',
+        help_text='Ex: "Follow-up Call", "Send Quote Email"'
+    )
+    
+    activity_type = models.CharField(
+        max_length=20,
+        choices=ScheduledActivity.ACTIVITY_TYPE_CHOICES,
+        verbose_name='Activity Type'
+    )
+    
+    default_summary = models.CharField(
+        max_length=255,
+        verbose_name='Default Summary',
+        help_text='Pode usar variáveis: {{contact_name}}, {{company_name}}'
+    )
+    
+    default_description = models.TextField(
+        blank=True,
+        verbose_name='Default Description'
+    )
+    
+    # Offset de dias (ex: +3 dias a partir de hoje)
+    due_days_offset = models.IntegerField(
+        default=0,
+        verbose_name='Due Days Offset',
+        help_text='Dias a adicionar à data atual (ex: 3 = daqui a 3 dias)'
+    )
+    
+    # Campos opcionais
+    default_assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='activity_templates',
+        verbose_name='Default Assigned To',
+        help_text='Responsável padrão (opcional)'
+    )
+    
+    # Multi-company
+    owner_company = models.ForeignKey(
+        'Company',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='activity_templates',
+        verbose_name='Owner Company',
+        help_text='NULL=global template, with value=private to company'
+    )
+    
+    # Status
+    is_active = models.BooleanField(default=True, verbose_name='Is Active')
+    ```
+
+  - [x] **Methods:**
+    ```python
+    def __str__(self):
+        return f"{self.name} ({self.get_activity_type_display()})"
+    
+    def create_activity(self, content_object, assigned_to=None, **kwargs):
+        """
+        Criar ScheduledActivity a partir deste template.
+        
+        Args:
+            content_object: Objeto relacionado (Lead, Sale, etc.)
+            assigned_to: User (opcional, usa default se None)
+            **kwargs: Sobrescrever campos (summary, description, etc.)
+        
+        Returns:
+            ScheduledActivity instance
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Calcular due_date
+        due_date = timezone.now().date() + timedelta(days=self.due_days_offset)
+        
+        # Preparar dados
+        activity_data = {
+            'content_object': content_object,
+            'template': self,
+            'activity_type': self.activity_type,
+            'summary': self.default_summary,
+            'description': self.default_description,
+            'due_date': due_date,
+            'assigned_to': assigned_to or self.default_assigned_to,
+            'owner_company': self.owner_company,
+        }
+        
+        # Sobrescrever com kwargs
+        activity_data.update(kwargs)
+        
+        # Criar activity
+        from django.contrib.contenttypes.models import ContentType
+        ct = ContentType.objects.get_for_model(content_object)
+        
+        activity = ScheduledActivity.objects.create(
+            content_type=ct,
+            object_id=content_object.pk,
+            **{k: v for k, v in activity_data.items() if k not in ['content_object']}
+        )
+        
+        return activity
+    ```
+
+  - [x] **Meta:**
+    ```python
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Activity Template'
+        verbose_name_plural = 'Activity Templates'
+        unique_together = ['name', 'owner_company']
+    ```
+
+---
+
+### 3.13.3 Modelo ActivityWorkflow ✅
+
+Criar modelo para regras de automação de workflows.
+
+- [x] **Criar modelo ActivityWorkflow**
+  - [x] Criar em `apps/core/models.py`
+  - [x] **Campos:**
+    ```python
+    name = models.CharField(
+        max_length=100,
+        verbose_name='Workflow Name',
+        help_text='Ex: "Lead Nurturing - First Contact Success"'
+    )
+    
+    description = models.TextField(
+        blank=True,
+        verbose_name='Description',
+        help_text='Explicação do workflow'
+    )
+    
+    # Modelo que usa este workflow (Lead, Sale, etc.)
+    model = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        verbose_name='Model',
+        help_text='Modelo que dispara este workflow (Lead, Sale, Purchase, etc.)'
+    )
+    
+    # Trigger: qual tipo de activity dispara
+    trigger_activity_type = models.CharField(
+        max_length=20,
+        choices=ScheduledActivity.ACTIVITY_TYPE_CHOICES,
+        verbose_name='Trigger Activity Type',
+        help_text='Tipo de activity que dispara o workflow'
+    )
+    
+    # Condição: qual resultado deve ter
+    trigger_result = models.CharField(
+        max_length=20,
+        choices=ScheduledActivity.RESULT_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name='Trigger Result',
+        help_text='Resultado específico (ou None = qualquer resultado)'
+    )
+    
+    # Condição avançada (JSON) - OPCIONAL, para futuro
+    trigger_condition = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='Trigger Condition (Advanced)',
+        help_text='Condições avançadas em JSON (futuro)'
+    )
+    
+    # Ação: criar qual activity
+    next_activity_template = models.ForeignKey(
+        'ActivityTemplate',
+        on_delete=models.CASCADE,
+        related_name='workflows',
+        verbose_name='Next Activity Template',
+        help_text='Template da próxima activity a criar'
+    )
+    
+    # Delay
+    delay_days = models.IntegerField(
+        default=0,
+        verbose_name='Delay (days)',
+        help_text='Dias de espera antes de criar próxima activity'
+    )
+    
+    # Status
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Is Active',
+        help_text='Desativar para pausar workflow sem deletar'
+    )
+    
+    # Multi-company
+    owner_company = models.ForeignKey(
+        'Company',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='activity_workflows',
+        verbose_name='Owner Company',
+        help_text='NULL=global workflow, with value=private to company'
+    )
+    
+    # Ordem de execução (se houver múltiplos workflows)
+    sequence = models.IntegerField(
+        default=10,
+        verbose_name='Sequence',
+        help_text='Ordem de execução (menor = primeiro)'
+    )
+    ```
+
+  - [x] **Methods:**
+    ```python
+    def __str__(self):
+        result_str = f" ({self.get_trigger_result_display()})" if self.trigger_result else ""
+        return f"{self.name} - {self.get_trigger_activity_type_display()}{result_str}"
+    
+    def should_trigger(self, activity):
+        """
+        Verifica se este workflow deve disparar para a activity dada.
+        
+        Args:
+            activity: ScheduledActivity instance
+        
+        Returns:
+            bool
+        """
+        # Check: activity type match
+        if activity.activity_type != self.trigger_activity_type:
+            return False
+        
+        # Check: result match (se especificado)
+        if self.trigger_result and activity.result != self.trigger_result:
+            return False
+        
+        # Check: model match
+        from django.contrib.contenttypes.models import ContentType
+        activity_model_ct = activity.content_type
+        if activity_model_ct != self.model:
+            return False
+        
+        # Check: is_active
+        if not self.is_active:
+            return False
+        
+        # TODO: Check advanced conditions (trigger_condition JSON)
+        
+        return True
+    
+    def execute(self, activity, user=None):
+        """
+        Executa workflow: cria próxima activity baseada no template.
+        
+        Args:
+            activity: ScheduledActivity que disparou o workflow
+            user: User que marcou a activity como done (opcional)
+        
+        Returns:
+            ScheduledActivity criada OU None
+        """
+        from datetime import timedelta
+        from django.utils import timezone
+        
+        # Get content object
+        content_object = activity.content_object
+        if not content_object:
+            return None
+        
+        # Calcular due_date com delay
+        base_date = timezone.now().date()
+        due_date = base_date + timedelta(days=self.delay_days)
+        
+        # Criar activity usando template
+        next_activity = self.next_activity_template.create_activity(
+            content_object=content_object,
+            assigned_to=activity.assigned_to,  # Manter mesmo responsável
+            due_date=due_date,
+        )
+        
+        return next_activity
+    ```
+
+  - [x] **Meta:**
+    ```python
+    class Meta:
+        ordering = ['sequence', 'name']
+        verbose_name = 'Activity Workflow'
+        verbose_name_plural = 'Activity Workflows'
+    ```
+
+---
+
+### 3.13.4 Migrations ✅
+
+Criar migrations para os novos modelos.
+
+- [x] **Executar migrations**
+  - [x] `python manage.py makemigrations core`
+  - [x] `python manage.py migrate`
+  - [x] Verificar no DB: tabelas `core_scheduledactivity`, `core_activitytemplate`, `core_activityworkflow`
+
+**✅ MELHORIAS IMPLEMENTADAS (além do planejado):**
+
+#### **ActivityTemplate - Campos Extras:**
+- [x] `icon` - FontAwesome ou Emoji (ex: 'fa-phone' ou '📞')
+- [x] `decoration_type` - Cor visual (warning/danger/success/info)
+- [x] `keep_done_activities` - Se False, auto-deleta activities done
+- [x] `auto_delete_done_after_days` - Dias antes de deletar
+- [x] `action_code` - Código Python para automação avançada
+
+#### **ActivityWorkflow - Campos Extras (estilo Odoo):**
+- [x] `base_date_type` - DEADLINE (usar due_date) ou COMPLETION (usar done_date)
+- [x] `chaining_mode` - SUGGEST (modal) ou TRIGGER (automático)
+
+#### **Método Extra em ActivityWorkflow:**
+- [x] `get_suggested_activity_data()` - Retorna dados para modal de sugestão
+
+**📄 Documentação:** Ver `fuet_magico/activities_comparison.md` para comparação detalhada com Odoo.
+
+---
+
+### 3.13.5 Admin ✅
+
+Registrar modelos no Django Admin.
+
+- [x] **ScheduledActivityAdmin**
+  - [x] Criado em `apps/core/admin.py` com:
+    - List display com status_badge, content_object_link
+    - Filtros por activity_type, is_done, result, due_date, assigned_to
+    - Fieldsets organizados
+    - Status badge com emoji e cores
+    - Content object link com preview
+
+- [x] **ActivityTemplateAdmin**
+  - [x] Criado em `apps/core/admin.py` com:
+    - List display com icon_preview
+    - icon_rendered_preview (48px preview) no detail view
+    - Fieldsets organizados (Visual, Behavior, Advanced)
+    - Suporte para SVG + cores dinâmicas
+
+- [x] **ActivityWorkflowAdmin**
+  - [x] Criado em `apps/core/admin.py` com:
+    - List display com trigger_info, next_template_info
+    - Chaining mode com emoji (💡 Suggest / ⚡ Trigger)
+    - Filtros completos
+    - Fieldsets organizados
+
+**✅ IMPLEMENTADO:** Todos os 3 admins com funcionalidades avançadas (badges, icons preview, HTML formatting)
+
+---
+
+### 3.13.6 Signals - Automação de Workflows ✅
+
+Criar signals para disparar workflows automaticamente quando activity é marcada como done.
+
+- [x] **Criar signal post_save para ScheduledActivity**
+  - [x] Implementado em `apps/core/signals.py`:
+    - Signal `trigger_activity_workflows` em post_save de ScheduledActivity
+    - Verifica se activity foi marcada como done (is_done=True)
+    - Skip se criada já done (import de dados)
+    - Skip se sem resultado definido
+    - Busca workflows aplicáveis por content_type e is_active
+    - Filtra workflows usando `should_trigger(activity)`
+    - Executa workflows com chaining_mode='TRIGGER' automaticamente
+    - Loga workflows com chaining_mode='SUGGEST' (modal em 3.13.8)
+    - Usa transaction.atomic() para garantir consistência
+    - Logging detalhado: info, debug, warning, error com exc_info
+    - Conta sucessos (executed_count) e sugestões (suggested_count)
+
+  - [x] **Signal registrado em apps/core/apps.py:**
+    - CoreConfig.ready() já importa apps.core.signals
+    - Signal ativo automaticamente ao iniciar Django
+
+**Implementação:**
+- Sistema de cascata robusto: CALL SUCCESS → EMAIL → TODO
+- Suporte para múltiplos workflows por atividade
+- Modo TRIGGER (automático) vs SUGGEST (modal)
+- Logging completo para debugging
+- Error handling com transaction rollback
+- Ready para criar automações via Django Admin!
+
+---
+
+### 3.13.7 Forms - Activity Forms ✅
+
+Criar forms para CRUD de activities.
+
+- [x] **ScheduledActivityForm**
+  - [x] Implementado em `apps/core/forms.py`
+    - ModelForm para criar/editar atividades
+    - Campos: activity_type, summary, description, due_date, due_time, assigned_to
+    - Widgets customizados com CSS classes e placeholders
+    - Filtra assigned_to por company (se fornecida)
+    - Validação de campos obrigatórios
+    - Labels e help_texts traduzíveis (gettext_lazy)
+
+- [x] **ActivityMarkDoneForm**
+  - [x] Implementado em `apps/core/forms.py`
+    - ModelForm para marcar atividade como concluída
+    - Campos: result (obrigatório), feedback (obrigatório)
+    - Validação: feedback mínimo 10 caracteres
+    - Override save() para setar is_done=True e done_date
+    - Data attribute para JS selector de resultado
+    - Labels e help_texts com instruções claras
+
+- [x] **ActivityQuickCreateForm** (BONUS)
+  - [x] Implementado em `apps/core/forms.py`
+    - Form para criação rápida a partir de templates
+    - Campos: template, due_date, due_time, assigned_to, summary_override, description_override
+    - Método create_activity() que aplica template + overrides
+    - Filtragem por company e activity_type
+    - Útil para workflows SUGGEST e quick actions
+
+**Implementação:**
+- 3 forms completos com validação robusta
+- Suporte a multi-company (filtra users e templates)
+- I18n ready (gettext_lazy em todos os textos)
+- CSS classes consistentes (form-select, form-input, form-textarea)
+- Help texts e placeholders para UX
+- Clean methods para validação custom
+- Pronto para usar nas Views (Task 3.13.8)!
+
+---
+
+### 3.13.8 Views - CRUD de Activities
+
+Criar views para criar, editar e marcar activities como done.
+
+- [ ] **ActivityCreateView (Modal)**
+  - [ ] Criar em `apps/core/views.py`:
+    ```python
+    @login_required
+    def activity_create_view(request, content_type_id, object_id):
+        """
+        Criar scheduled activity para qualquer objeto.
+        
+        URL: /activities/create/<content_type_id>/<object_id>/
+        
+        Abre como modal HTMX ou página standalone.
+        """
+        from django.contrib.contenttypes.models import ContentType
+        from .forms import ScheduledActivityForm
+        
+        # Get content object
+        try:
+            ct = ContentType.objects.get(id=content_type_id)
+            model_class = ct.model_class()
+            content_object = model_class.objects.get(pk=object_id)
+        except Exception as e:
+            messages.error(request, f'Object not found: {e}')
+            return redirect('dashboard:home')
+        
+        if request.method == 'POST':
+            form = ScheduledActivityForm(request.POST)
+            if form.is_valid():
+                activity = form.save(commit=False)
+                activity.content_type = ct
+                activity.object_id = object_id
+                activity.owner_company = get_active_company(request)
+                activity.save()
+                
+                messages.success(request, 'Activity criada com sucesso!')
+                
+                # Se HTMX, retornar partial
+                if request.headers.get('HX-Request'):
+                    return HttpResponse(
+                        '<div class="alert alert-success">Activity criada!</div>',
+                        headers={'HX-Trigger': 'activityCreated'}
+                    )
+                
+                # Redirecionar para objeto
+                return redirect(content_object.get_absolute_url())
+        else:
+            # Initial data
+            form = ScheduledActivityForm(initial={
+                'assigned_to': request.user,
+                'due_date': timezone.now().date() + timedelta(days=1)
+            })
+        
+        context = {
+            'form': form,
+            'content_object': content_object,
+            'content_type': ct,
+        }
+        
+        return render(request, 'core/activity_create_modal.html', context)
+    ```
+
+- [ ] **ActivityMarkDoneView (Modal)**
+  - [ ] Criar em `apps/core/views.py`:
+    ```python
+    @login_required
+    def activity_mark_done_view(request, activity_id):
+        """
+        Marcar activity como done com modal para capturar result e feedback.
+        
+        URL: /activities/<uuid>/mark-done/
+        
+        Modal mostra:
+        - Dropdown de result (SUCCESS, FAILED, etc.)
+        - Textarea de feedback
+        - Botão "Criar próxima?" (se workflow disponível)
+        """
+        from .forms import ActivityMarkDoneForm
+        
+        activity = get_object_or_404(
+            ScheduledActivity,
+            id=activity_id,
+            owner_company=get_active_company(request)
+        )
+        
+        # Buscar workflows aplicáveis
+        potential_workflows = ActivityWorkflow.objects.filter(
+            model=activity.content_type,
+            trigger_activity_type=activity.activity_type,
+            is_active=True
+        )
+        
+        if request.method == 'POST':
+            form = ActivityMarkDoneForm(request.POST, instance=activity)
+            
+            if form.is_valid():
+                activity = form.save(commit=False)
+                activity.is_done = True
+                activity.save()  # Dispara signal que cria próxima activity
+                
+                messages.success(request, 'Activity marcada como concluída!')
+                
+                # Se HTMX
+                if request.headers.get('HX-Request'):
+                    return HttpResponse(
+                        '<div class="alert alert-success">Done!</div>',
+                        headers={'HX-Trigger': 'activityCompleted'}
+                    )
+                
+                return redirect(activity.content_object.get_absolute_url())
+        else:
+            form = ActivityMarkDoneForm(instance=activity)
+        
+        context = {
+            'form': form,
+            'activity': activity,
+            'potential_workflows': potential_workflows,
+        }
+        
+        return render(request, 'core/activity_mark_done_modal.html', context)
+    ```
+
+- [ ] **ActivityListView (Para user ver suas activities)**
+  - [ ] Criar em `apps/core/views.py`:
+    ```python
+    @login_required
+    def my_activities_view(request):
+        """
+        Lista de activities do user atual.
+        
+        URL: /activities/my/
+        
+        Filtros:
+        - Overdue (atrasadas)
+        - Today (para hoje)
+        - Upcoming (futuras)
+        - Done (concluídas)
+        """
+        from django.db.models import Q
+        
+        filter_type = request.GET.get('filter', 'pending')
+        
+        # Base queryset
+        activities = ScheduledActivity.objects.filter(
+            assigned_to=request.user,
+            owner_company=get_active_company(request)
+        ).select_related('content_type', 'assigned_to', 'template')
+        
+        # Apply filters
+        today = timezone.now().date()
+        
+        if filter_type == 'overdue':
+            activities = activities.filter(is_done=False, due_date__lt=today)
+        elif filter_type == 'today':
+            activities = activities.filter(is_done=False, due_date=today)
+        elif filter_type == 'upcoming':
+            activities = activities.filter(is_done=False, due_date__gt=today)
+        elif filter_type == 'done':
+            activities = activities.filter(is_done=True)
+        else:  # pending (default)
+            activities = activities.filter(is_done=False)
+        
+        # Paginate
+        paginator = Paginator(activities, 25)
+        page = request.GET.get('page', 1)
+        activities_page = paginator.get_page(page)
+        
+        # Stats
+        stats = {
+            'overdue': ScheduledActivity.objects.filter(
+                assigned_to=request.user,
+                is_done=False,
+                due_date__lt=today
+            ).count(),
+            'today': ScheduledActivity.objects.filter(
+                assigned_to=request.user,
+                is_done=False,
+                due_date=today
+            ).count(),
+            'upcoming': ScheduledActivity.objects.filter(
+                assigned_to=request.user,
+                is_done=False,
+                due_date__gt=today
+            ).count(),
+        }
+        
+        context = {
+            'activities': activities_page,
+            'filter_type': filter_type,
+            'stats': stats,
+        }
+        
+        return render(request, 'core/my_activities.html', context)
+    ```
+
+---
+
+### 3.13.9 Templates - Activity Modals e Lists
+
+Criar templates para activities.
+
+- [ ] **activity_create_modal.html**
+  - [ ] Criar em `templates/core/activity_create_modal.html`
+  - [ ] Modal com form para criar activity
+  - [ ] Campos: activity_type, summary, description, due_date, due_time, assigned_to
+  - [ ] Botão "Schedule Activity"
+
+- [ ] **activity_mark_done_modal.html**
+  - [ ] Criar em `templates/core/activity_mark_done_modal.html`
+  - [ ] Modal com form para marcar done
+  - [ ] Campos: result (dropdown), feedback (textarea)
+  - [ ] Lista de workflows que serão disparados (preview)
+  - [ ] Botão "Mark as Done"
+
+- [ ] **my_activities.html**
+  - [ ] Criar em `templates/core/my_activities.html`
+  - [ ] Tab filters: Overdue, Today, Upcoming, Done
+  - [ ] Tabela com: icon, summary, related_object, due_date, status
+  - [ ] Click row abre modal mark_done
+  - [ ] Stats cards no topo
+
+- [ ] **activity_timeline_item.html (Componente para Chatter)**
+  - [ ] Criar em `templates/components/activity_timeline_item.html`
+  - [ ] Renderizar activity na timeline do chatter
+  - [ ] Mostrar: icon, summary, due_date, assigned_to, status
+  - [ ] Botão "Mark Done" (se pending)
+  - [ ] Badge de status (overdue/today/upcoming)
+
+---
+
+### 3.13.10 URLs
+
+Configurar rotas para activities.
+
+- [ ] **Adicionar em config/urls.py:**
+  ```python
+  # Activities
+  path('activities/create/<int:content_type_id>/<uuid:object_id>/', 
+       activity_create_view, name='activity_create'),
+  path('activities/<uuid:activity_id>/mark-done/', 
+       activity_mark_done_view, name='activity_mark_done'),
+  path('activities/my/', 
+       my_activities_view, name='my_activities'),
+  ```
+
+---
+
+### 3.13.11 Integração com Chatter
+
+Atualizar componente Chatter para mostrar ScheduledActivities na timeline.
+
+- [ ] **Atualizar ChatterMixin em core/views.py**
+  - [ ] Adicionar ao context:
+    ```python
+    # Scheduled activities (pending)
+    scheduled_activities = ScheduledActivity.objects.filter(
+        content_type=ct,
+        object_id=obj.pk,
+        is_done=False
+    ).order_by('due_date', 'due_time')
+    
+    context['scheduled_activities'] = scheduled_activities
+    ```
+
+- [ ] **Atualizar templates/components/chatter.html**
+  - [ ] Adicionar seção "Scheduled Activities" antes da timeline
+  - [ ] Renderizar cada activity com componente `activity_timeline_item.html`
+  - [ ] Botão "Schedule Activity" que abre modal
+
+---
+
+### 3.13.12 Data Fixtures - Criar Templates e Workflows Padrão
+
+Criar templates e workflows iniciais via fixtures ou management command.
+
+- [ ] **Criar management command: setup_default_workflows.py**
+  - [ ] Criar em `apps/core/management/commands/setup_default_workflows.py`
+  - [ ] **Templates padrão:**
+    ```python
+    templates = [
+        {
+            'name': 'Follow-up Call',
+            'activity_type': 'CALL',
+            'default_summary': 'Follow-up call with {{contact_name}}',
+            'due_days_offset': 3,
+        },
+        {
+            'name': 'Send Info Email',
+            'activity_type': 'EMAIL',
+            'default_summary': 'Send product information to {{contact_name}}',
+            'due_days_offset': 1,
+        },
+        {
+            'name': 'Prepare Quote',
+            'activity_type': 'TODO',
+            'default_summary': 'Prepare quote for {{contact_name}}',
+            'due_days_offset': 1,
+        },
+        {
+            'name': 'Schedule Meeting',
+            'activity_type': 'MEETING',
+            'default_summary': 'Meeting with {{contact_name}}',
+            'due_days_offset': 2,
+        },
+    ]
+    ```
+  - [ ] **Workflows padrão para Lead:**
+    ```python
+    # ContentType para Lead
+    lead_ct = ContentType.objects.get(app_label='crm', model='lead')
+    
+    workflows = [
+        {
+            'name': 'Lead Nurturing - First Contact Success',
+            'model': lead_ct,
+            'trigger_activity_type': 'CALL',
+            'trigger_result': 'SUCCESS',
+            'next_activity_template': templates['Send Info Email'],
+            'delay_days': 1,
+        },
+        {
+            'name': 'Lead Nurturing - Info Sent',
+            'model': lead_ct,
+            'trigger_activity_type': 'EMAIL',
+            'trigger_result': 'SUCCESS',
+            'next_activity_template': templates['Follow-up Call'],
+            'delay_days': 3,
+        },
+    ]
+    ```
+  - [ ] Executar: `python manage.py setup_default_workflows`
+
+---
+
+### 3.13.13 Testing - Activities System
+
+Testes para activities genéricas.
+
+- [ ] **Test: ScheduledActivity model**
+  - [ ] Test: criar activity funciona
+  - [ ] Test: is_overdue funciona
+  - [ ] Test: status_color retorna cor correta
+  - [ ] Test: GenericForeignKey funciona com Lead, Sale, etc.
+
+- [ ] **Test: ActivityTemplate**
+  - [ ] Test: create_activity() funciona
+  - [ ] Test: due_days_offset é aplicado
+  - [ ] Test: variáveis em summary são substituídas (futuro)
+
+- [ ] **Test: ActivityWorkflow**
+  - [ ] Test: should_trigger() funciona
+  - [ ] Test: execute() cria próxima activity
+  - [ ] Test: workflows são disparados via signal
+
+- [ ] **Test: Workflow automation**
+  - [ ] Test: marcar CALL como SUCCESS cria EMAIL
+  - [ ] Test: delay_days é respeitado
+  - [ ] Test: múltiplos workflows executam em ordem
+
+- [ ] **Test: Views**
+  - [ ] Test: activity_create_view funciona
+  - [ ] Test: activity_mark_done_view funciona
+  - [ ] Test: my_activities_view mostra activities do user
+
+---
+
 ## 3.12.13 Testing Completo (Menções + Notificações)
 
 Testar todo o sistema de menções e notificações.
@@ -3015,7 +4025,7 @@ Adicionar funcionalidades extras ao editor de notas já existente (Quill.js est�
 
 ---
 
-## 5.1 Criação da App 'crm'
+## 5.1 Criação da App 'crm' ✅
 
 Criar app Django para gestão de CRM.
 
@@ -3029,9 +4039,14 @@ Criar app Django para gestão de CRM.
   - [x] Criar `apps/crm/forms.py`
   - [x] Criar `apps/crm/urls.py`
 
+- [x] **Componentes de Navegação**
+  - [x] Criar `templates/components/crm_navbar.html` (com smart buttons para forms)
+  - [x] Criar `templates/components/crm_navbar_simple.html` (sem smart buttons para views)
+  - [x] Atualizar todos templates CRM para usar navbar correto
+
 ---
 
-## 5.2 Modelo CRMStage (Estágios do Pipeline)
+## 5.2 Modelo CRMStage (Estágios do Pipeline) ✅
 
 Criar modelo para estágios personalizáveis do pipeline CRM (equivalente ao Odoo CRM stages).
 
@@ -3085,7 +4100,7 @@ Criar modelo para estágios personalizáveis do pipeline CRM (equivalente ao Odo
 
 ---
 
-## 5.3 Modelo Lead
+## 5.3 Modelo Lead ✅
 
 Criar modelo para leads/oportunidades de venda.
 
@@ -3135,7 +4150,7 @@ Criar modelo para leads/oportunidades de venda.
 
 ---
 
-## 5.4 Modelo Activity (Atividades/Tarefas)
+## 5.4 Modelo Activity (Atividades/Tarefas) ✅
 
 Criar modelo para atividades relacionadas com leads (To-Do, Email, Call, Meeting, etc.).
 
@@ -3193,110 +4208,107 @@ Criar modelo para atividades relacionadas com leads (To-Do, Email, Call, Meeting
 
 ---
 
-## 5.5 Views de Listagem de Leads
+## 5.5 Views de Listagem de Leads ✅
 
 Criar view para listar leads com filtros por estágio, responsável e período.
 
-- [ ] **Criar LeadListView**
-  - [ ] Implementar paginação (50 por página)
-  - [ ] Implementar busca por title/contact/description
-  - [ ] Implementar filtro por stage (NEW, QUALIFIED, PROPOSAL, etc.)
-  - [ ] Implementar filtro por assigned_to (ver só as minhas vs todas)
-  - [ ] Implementar filtro por período (created_at range)
-  - [ ] Ordenação por estimated_value, probability, expected_close_date
+- [x] **Criar LeadListView**
+  - [x] Implementar paginação (no topo, formato X-Y / Total)
+  - [x] Implementar busca multi-field (title, contact, email, phone, stage, source, assigned_to)
+  - [x] Implementar filtro por stage (Ativas [exclui Won/Lost], Won, Lost, Todas)
+  - [x] Nomes de stages dinâmicos do DB (multilíngue)
+  - [ ] Implementar filtro por assigned_to (ver só as minhas vs todas) - **FUTURO**
+  - [ ] Implementar filtro por período (created_at range) - **FUTURO**
+  - [ ] Ordenação customizável por estimated_value, probability, expected_close_date - **FUTURO**
 
-- [ ] **Criar template**
-  - [ ] Criar `templates/crm/lead_list.html`
-  - [ ] Tabela com: checkbox, title, contact, stage badge, value, probability bar, assigned_to, actions
-  - [ ] Filtros sidebar: Stage, Responsável, Período
-  - [ ] Botão "Nova Lead"
-  - [ ] Sistema de seleção múltipla com checkboxes
-  - [ ] Bulk actions: Mudar Stage, Atribuir Responsável, Arquivar
-  - [ ] Cards com KPIs: Total Leads, Valor Total Pipeline, Taxa de Conversão, Leads Este Mês
+- [x] **Criar template**
+  - [x] Criar `templates/crm/lead_list.html`
+  - [x] Tabela com: checkbox, Oportunidade, Contacto, Etapa, Valor, Responsável
+  - [x] Rows clicáveis (navegam para lead detail)
+  - [x] Filtro de stage no topo (dropdown com 4 opções)
+  - [x] Search bar profissional (formato "Search **Field** for: ...")
+  - [x] Sistema de seleção múltipla com checkboxes (Alpine.js)
+  - [x] Bulk actions: Won, Lost, Delete (sem modais, sem arquivar)
+  - [x] Navbar simples separado (sem smart buttons)
+  - [ ] Cards com KPIs: Total Leads, Valor Total Pipeline, Taxa de Conversão - **FUTURO**
 
-- [ ] **Configurar rota**
-  - [ ] `path('crm/leads/', LeadListView, name='lead_list')`
-  - [ ] Incluir urls no config/urls.py
+- [x] **Configurar rota**
+  - [x] `path('crm/list/', LeadListView, name='lead_list')`
+  - [x] `path('crm/leads/bulk-delete/', bulk_delete_leads)`
+  - [x] `path('crm/leads/bulk-mark-won/', bulk_mark_won)`
+  - [x] `path('crm/leads/bulk-mark-lost/', bulk_mark_lost)`
 
-- [ ] **Testing - Lead List**
+- [ ] **Testing - Lead List** - **NÃO IMPLEMENTADO**
   - [ ] Test: lista mostra leads do user
   - [ ] Test: filtros funcionam
   - [ ] Test: busca funciona
-  - [ ] Test: KPIs calculam corretamente
+  - [ ] Test: bulk actions funcionam
 
 ---
 
-## 5.6 Views de Criação de Lead
+## 5.6 Views de Criação de Lead 🔄
 
-Criar formulário para criar nova lead.
+Criar formulário para criar nova lead. **STATUS: Template funcional criado, botões contextuais serão implementados no futuro**
 
-- [ ] **Criar LeadForm**
-  - [ ] Campos: contact (select com autocomplete), title, description, estimated_value, stage, source, expected_close_date, assigned_to
-  - [ ] Validação: contact obrigatório
-  - [ ] Validação: estimated_value >= 0
-  - [ ] Option: criar novo contact inline (modal)
+- [x] **Criar template `lead_create.html`**
+  - [x] Form com todos os campos principais (title, contact, description, value, stage, etc.)
+  - [x] Layout com Tailwind CSS responsivo
+  - [x] Abas: Geral, Descrição, Marketing
+  - [x] Support para Quill editor (rich text)
+  - [x] Upload de imagens
+  - [x] Modal Lost (para marcar lead como perdida)
+  - [x] Navbar completo com form actions (Guardar/Descartar)
+  - [x] Rota configurada: `path('crm/create/', lead_create, name='lead_create')`
 
-- [ ] **Criar LeadCreateView**
-  - [ ] Form com todos os campos
-  - [ ] Auto-preencher assigned_to com user atual
-  - [ ] Auto-preencher stage com NEW
-  - [ ] Redirect para lead_detail após criar
+- [ ] **TAREFAS FUTURAS - NÃO IMPLEMENTAR AGORA** ⏳
+  - [ ] ⏳ Botão "Criar Leads" funcional nos pipelines/listas (atualmente link placeholder)
+  - [ ] ⏳ Smart buttons no navbar (Vendas Geradas, Receita Total) - conectados a dados reais
+  - [ ] ⏳ Botão "Novo Orçamento" no navbar
+  - [ ] ⏳ Auto-complete para contact field
+  - [ ] ⏳ Validações client-side avançadas (Alpine.js)
+  - [ ] ⏳ Option criar novo contact inline (modal)
+  - [ ] ⏳ Botão "Guardar e Criar Novo"
 
-- [ ] **Criar template**
-  - [ ] Criar `templates/crm/lead_create.html`
-  - [ ] Form layout com Tailwind
-  - [ ] Botão "Guardar" e "Guardar e Criar Novo"
-  - [ ] Botão "Cancelar" (volta para lista)
-  - [ ] Select de contact com search (Alpine.js)
-
-- [ ] **Configurar rota**
-  - [ ] `path('crm/leads/create/', LeadCreateView, name='lead_create')`
-
-- [ ] **Testing - Lead Create**
+- [ ] **Testing - Lead Create** - **NÃO IMPLEMENTADO**
   - [ ] Test: criar lead funciona
   - [ ] Test: validações funcionam
-  - [ ] Test: assigned_to default = user atual
+  - [ ] Test: upload de imagens funciona
 
 ---
 
-## 5.7 Views de Edição e Detalhes
+## 5.7 Views de Edição e Detalhes 🔄
 
-Criar views para editar e visualizar detalhes de lead.
+Criar views para editar e visualizar detalhes de lead. **STATUS: Template funcional reusa lead_create.html, features avançadas serão implementadas no futuro**
 
-- [ ] **Criar LeadDetailView**
-  - [ ] Mostrar todos os campos da lead
-  - [ ] Mostrar histórico de mudanças (via AuditLog)
-  - [ ] **Seção Activities/Chatter** (estilo Odoo):
-    - [ ] Botão "Schedule Activity" (abre modal ActivityCreateView)
-    - [ ] Timeline vertical com todas as activities ordenadas por due_date
-    - [ ] Cada activity mostra:
-      - [ ] Ícone por tipo (📧 EMAIL, 📞 CALL, ✅ TODO, 💬 WHATSAPP, 📄 DOCUMENT, ✍️ SIGNATURE)
-      - [ ] Summary (título da activity)
-      - [ ] Due date formatada (ex: "Feb 16" ou "Today" ou "Yesterday")
-      - [ ] Cor do border baseada em status (verde/amarelo/vermelho)
-      - [ ] Avatar do assigned_to
-      - [ ] Botões: "Mark Done" (abre modal feedback) | "Edit"
-    - [ ] Se activity is_done=True, mostrar com opacidade reduzida e ícone ✅
-    - [ ] Feedback da activity (se done) em texto cinza abaixo do summary
-  - [ ] Smart buttons: Vendas Geradas (se convertida), Documentos, Atividades Pendentes
-  - [ ] Timeline de eventos (AuditLog)
+- [x] **Template unificado create/edit**
+  - [x] `templates/crm/lead_create.html` serve para criação e edição
+  - [x] Form detecta se é create ou edit baseado em context
+  - [x] Navbar completo incluído (com smart buttons)
+  - [x] Rota configurada: `path('crm/<uuid:pk>/', lead_detail/edit)`
 
-- [ ] **Criar LeadUpdateView**
-  - [ ] Form igual ao create
-  - [ ] Permitir mudar stage (dropdown com stages do CRMStage)
-  - [ ] Se mudar para stage com is_won_stage=True, sugerir criar venda
-  - [ ] Se mudar para LOST, campo lost_reason obrigatório (modal)
+- [ ] **TAREFAS FUTURAS - NÃO IMPLEMENTAR AGORA** ⏳
+  - [ ] ⏳ Smart buttons conectados a dados reais:
+    - [ ] Vendas Geradas (count de SaleOrders relacionadas)
+    - [ ] Receita Total (soma de valores de vendas)
+    - [ ] Documentos anexados
+    - [ ] Atividades pendentes
+  - [ ] ⏳ Botão "Novo Orçamento" funcional (cria SaleOrder baseada na lead)
+  - [ ] ⏳ Seção Activities/Chatter (timeline de atividades):
+    - [ ] Botão "Schedule Activity" 
+    - [ ] Timeline vertical com activities
+    - [ ] Ícones por tipo de atividade
+    - [ ] Status colors (verde/amarelo/vermelho)
+    - [ ] Mark done functionality
+  - [ ] ⏳ LeadDetailView separado (view-only mode)
+  - [ ] ⏳ Histórico de mudanças (AuditLog integration)
+  - [ ] ⏳ Modal lost_reason ao mudar para stage Lost
+  - [ ] ⏳ Sugestão de criar venda ao mudar para Won
 
-- [ ] **Criar templates**
-  - [ ] `templates/crm/lead_detail.html` (view mode)
-    - [ ] Layout 2 colunas: Info principal (esquerda) + Activities/Chatter (direita)
-  - [ ] `templates/crm/lead_edit.html` (edit mode)
-  - [ ] `templates/crm/components/activity_timeline.html` (component reutilizável)
-  - [ ] Layout com tabs: Geral, Histórico, Atividades (mobile)
-
-- [ ] **Configurar rotas**
-  - [ ] `path('crm/leads/<uuid:pk>/', LeadDetailView, name='lead_detail')`
-  - [ ] `path('crm/leads/<uuid:pk>/edit/', LeadUpdateView, name='lead_edit')`
+- [ ] **Testing - Lead Detail/Edit** - **NÃO IMPLEMENTADO**
+  - [ ] Test: edição salva alterações
+  - [ ] Test: smart buttons mostram dados corretos
+  - [ ] Test: activities timeline renderiza
+  - [ ] Test: lost_reason obrigatório se Lost
 
 - [ ] **Testing - Lead Detail/Edit**
   - [ ] Test: detail mostra dados corretos
@@ -3372,13 +4384,10 @@ Criar vista Kanban "estilo Odoo" para visualizar pipeline de vendas por estágio
 - ✅ **Formatação K/M/B em JavaScript** sincronizada com Python
 - ✅ **Debug logs removidos** do código de produção
 - ✅ **Botão adicionar stage removido** do pipeline (só via Configurações)
+- ✅ **Botão "+" funcional para criar lead no stage** (oculto em Won/Lost)
+- ✅ **Lead detail view (click no card)** → Abre `/crm/leads/<uuid>/` com proteção anti-drag
 
 **⏳ PENDENTE:**
-- ⏳ Modal lost_reason para stage "Lost" (drag para Lost pede motivo)
-- ⏳ Botão "+" funcional para criar lead no stage
-- ⏳ Lead detail view (click no card)
-- ⏳ Filtros avançados (assigned_to, priority, date range, tags, source)
-- ⏳ Progress bar dividida em 3 cores (verde/amarelo/vermelho) no header
 - ⏳ Activity icons baseados em activities reais do banco
 - ⏳ Sistema de tags customizáveis (JSONField)
 - ⏳ Lead list view alternativa (`/crm/sales/`)
@@ -3410,7 +4419,8 @@ Criar vista Kanban "estilo Odoo" para visualizar pipeline de vendas por estágio
     - [x] **Linha 1:** Nome do stage (text-white, font-bold, text-lg) + Badge com contador "(X)"
     - [x] **Linha 2:** Total estimado com formatação K/M/B (ex: 137K, 204.3M)
     - [x] **Linha 3:** Progress bar horizontal (barra simples, não dividida em 3 cores)
-  - [x] Botão "+" no canto superior direito (existe, mas ainda não funcional - links to #)
+  - [x] Botão "+" no canto superior direito → redireciona para lead_create com query param `?stage=<uuid>`
+  - [x] Botão "+" oculto em stages is_won_stage=True e is_lost_stage=True
 
 - [x] **Container de Cards**
   - [x] Área scrollável verticalmente com altura dinâmica via JS
@@ -3450,7 +4460,7 @@ Progress bar baseada em `probability` média do stage (mais simples, menos espec
   - [x] Container: bg-gray-800 dark:bg-gray-800, rounded-lg, shadow-sm, p-3
   - [x] Border com cores baseadas em routing (amarelo/vermelho para warning/overdue)
   - [x] Hover: border-gray-600, cursor-pointer
-  - [ ] Click: abre lead_detail_view (modal ou página) - TODO
+  - [x] Click: abre lead_detail_view em `/crm/leads/<uuid>/` com proteção `if (!isDragging)`
 
 - [x] **Linha 1: Título da Lead**
   - [x] `lead.title` em font-medium, text-sm, text-white
@@ -4060,14 +5070,14 @@ Criar template base reutilizável para vistas de smart buttons que mostram rela�
 **ARQUITETURA:** Opção 3 (Foreign Keys Diretas) - cada tabela nova (Vendas, CRM, Compras) terá campo `contact_id` apontando para Contact.
 
 - [ ] **Relações FK Recebidas (outros módulos → Contact)**
-  - [ ] **CRM/Leads** (Fase futura):
-    - [ ] Modelo `Lead` terá campo `contact = ForeignKey(Contact, on_delete=CASCADE, related_name='leads')`
-    - [ ] Smart button: "CRM" no formulário de Contact (contador dinâmico)
-    - [ ] Vista: `contact_crm_list(contact_id)` usando template base (herda `smart_button_list_base.html`)
-    - [ ] Rota: `/contacts/<uuid:pk>/crm/`
-    - [ ] Colunas tabela: Referência, Estado, Valor Estimado, Data Criação
-    - [ ] Se 1 lead → redireciona para `lead_detail(pk)`
-    - [ ] Se múltiplas → mostra lista clicável
+  - [x] **CRM/Leads** (Fase futura):
+    - [x] Modelo `Lead` terá campo `contact = ForeignKey(Contact, on_delete=CASCADE, related_name='leads')`
+    - [x] Smart button: "CRM" no formulário de Contact (contador dinâmico) ✅ IMPLEMENTADO
+    - [x] Vista: `contact_crm_list(contact_id)` usando filtro na lead_list_view ✅ IMPLEMENTADO
+    - [x] Rota: `/crm/list/?contact=<uuid>` ✅ IMPLEMENTADO
+    - [x] Colunas tabela: Oportunidade, Contacto, Etapa, Valor, Responsável ✅ IMPLEMENTADO
+    - [x] Filtro mantido em paginação, stage filters e search ✅ IMPLEMENTADO
+    - [x] Banner "Leads de [Nome]" com botão remover filtro ✅ IMPLEMENTADO
   - [ ] **Vendas** (Fase 7):
     - [ ] Modelo `SaleOrder` terá campo `contact = ForeignKey(Contact, on_delete=PROTECT, related_name='sales')`
     - [ ] Smart button: "Vendas" no formulário de Contact
@@ -4132,6 +5142,206 @@ Criar template base reutilizável para vistas de smart buttons que mostram rela�
   - [ ] Test: smart button Compras só aparece se SUPPLIER/BOTH
   - [ ] Test: smart button Faturas mostra valor total, não contagem
   - [ ] Test: vistas usam template base corretamente
+
+---
+
+## 5.12 🎯 Funcionalidades Futuras - CRM UI/UX ⏳
+
+**IMPORTANTE:** Esta secção contém funcionalidades que serão implementadas no futuro. **NÃO IMPLEMENTAR AGORA.**
+
+Estas tarefas são placeholders para desenvolvimento futuro e incluem integrações com outros módulos (Vendas, Orçamentos) que ainda não existem.
+
+---
+
+### 5.12.1 Botão "Criar Leads" Contextual ⏳
+
+Implementar botões "Nova Lead" / "Criar Leads" funcionais em diversos contextos (pipeline, list view, navbar).
+
+- [ ] **Botão "+" nas colunas do Pipeline** ⏳
+  - [ ] Click no "+" de cada coluna do kanban abre modal/form de criação
+  - [ ] Stage pré-selecionado baseado na coluna clicada
+  - [ ] Form simplificado (title, contact, estimated_value)
+  - [ ] Após criar, card aparece automaticamente na coluna sem refresh
+
+- [ ] **Botão "Nova Lead" na List View** ⏳
+  - [ ] Botão no topo da lead_list.html (atualmente placeholder `href="#"`)
+  - [ ] Abre modal ou redireciona para `lead_create`
+  - [ ] Stage default = primeiro estágio (não Won/Lost)
+
+- [ ] **Botão "Nova Lead" no Navbar** ⏳
+  - [ ] Adicionar botão quick-create no navbar CRM
+  - [ ] Dropdown com opção "Nova Lead" e "Nova Atividade"
+  - [ ] Atalho de teclado (Ctrl+N)
+
+---
+
+### 5.12.2 Smart Buttons - Vendas e Receitas ⏳
+
+Conectar smart buttons do navbar de leads aos dados reais de vendas geradas.
+
+**CONTEXTO:** 
+- Navbar completo (`crm_navbar.html`) já inclui HTML para smart buttons "Vendas" e "Receita"
+- Atualmente não conectados a dados (só visual)
+- Dependem do módulo Vendas (Fase 8) estar implementado
+
+- [ ] **Backend - Calcular Vendas/Receita** ⏳
+  - [ ] No `lead_detail/edit` view, adicionar ao context:
+    ```python
+    # Contar vendas geradas desta lead
+    sales_count = SaleOrder.objects.filter(
+        lead=lead,
+        is_active=True
+    ).count()
+    
+    # Calcular receita total das vendas
+    revenue_total = SaleOrder.objects.filter(
+        lead=lead,
+        is_active=True,
+        state__in=['CONFIRMED', 'DONE']  # só vendas confirmadas
+    ).aggregate(
+        total=Sum('total_amount')
+    )['total'] or Decimal('0.00')
+    
+    context['sales_count'] = sales_count
+    context['revenue_total'] = revenue_total
+    ```
+
+- [ ] **Template - Ligar variáveis aos buttons** ⏳
+  - [ ] No `crm_navbar.html`, smart buttons já renderizam:
+    - [ ] `{{ sales_count }}` - contador de vendas
+    - [ ] `{{ revenue_total|floatformat:2 }}` - valor formatado
+  - [ ] Verificar que variáveis existem no context antes de renderizar
+  - [ ] Se `sales_count == 0`, mostrar botão disabled/cinza
+
+- [ ] **Click nos Smart Buttons** ⏳
+  - [ ] Button "Vendas" redireciona para: `/sales/?lead={{ lead.id }}`
+    - [ ] Mostra lista de SaleOrders filtrada por esta lead
+    - [ ] Se só 1 venda, redireciona direto para `sale_detail(pk)`
+  - [ ] Button "Receita" abre modal/tooltip com breakdown:
+    - [ ] Lista de vendas com valores
+    - [ ] Total confirmado vs pending
+    - [ ] Link para cada venda
+
+- [ ] **Ocultar Smart Buttons em Create Mode** ⏳
+  - [ ] Detectar se é `lead_create` (sem pk) ou `lead_edit` (com pk)
+  - [ ] Smart buttons só aparecem em edit mode (lead já existe)
+  - [ ] Em create mode, esconder seção de smart buttons
+
+---
+
+### 5.12.3 Botão "Novo Orçamento" ⏳
+
+Criar botão no navbar de leads para gerar novo orçamento (SaleOrder) baseado na lead.
+
+**CONTEXTO:** 
+- Similar a "Converter em Venda" mas cria orçamento draft (não marca lead como Won)
+- Permite múltiplos orçamentos para mesma lead
+- Depende do módulo Vendas (Fase 8) estar implementado
+
+- [ ] **Adicionar botão ao Navbar** ⏳
+  - [ ] No `crm_navbar.html`, adicionar botão "Novo Orçamento" ao lado de form actions
+  - [ ] Ícone: 📄 ou Heroicon `document-text`
+  - [ ] Texto: "Novo Orçamento"
+  - [ ] Posição: entre smart buttons e form actions
+  - [ ] Visível apenas em edit mode (lead existe)
+
+- [ ] **View - CreateQuoteFromLead** ⏳
+  - [ ] Criar view `crm/views.py`: `create_quote_from_lead(request, lead_pk)`
+  - [ ] Buscar lead por UUID
+  - [ ] Criar novo SaleOrder com:
+    ```python
+    from apps.sales.models import SaleOrder  # (Fase 8)
+    
+    sale = SaleOrder.objects.create(
+        contact=lead.contact,
+        lead=lead,  # FK para lead origem
+        state='DRAFT',  # orçamento draft
+        salesperson=lead.assigned_to,
+        expected_value=lead.estimated_value,
+        notes=f"Orçamento gerado da lead: {lead.title}\n\n{lead.description}",
+        owner_company=lead.owner_company,
+    )
+    ```
+  - [ ] Redirecionar para `sale_edit(pk)` para adicionar linhas de produtos
+
+- [ ] **Rota** ⏳
+  - [ ] `path('crm/<uuid:pk>/create-quote/', create_quote_from_lead, name='lead_create_quote')`
+
+- [ ] **Validações** ⏳
+  - [ ] Lead deve ter contact associado
+  - [ ] Lead não pode estar Lost
+  - [ ] Se lead já Won, perguntar se quer criar novo orçamento mesmo assim (modal confirmação)
+
+- [ ] **Feedback** ⏳
+  - [ ] Toast: "✅ Orçamento criado! Adicione produtos..."
+  - [ ] Atualizar smart button "Vendas" (+1 count)
+
+---
+
+### 5.12.4 Melhorias na Lead List View ⏳
+
+Funcionalidades adicionais para a vista de lista de leads (KPIs, filtros avançados, exportação).
+
+- [ ] **Cards com KPIs no Topo** ⏳
+  - [ ] Card 1: Total de Leads (count filtrado)
+  - [ ] Card 2: Valor Total do Pipeline (soma estimated_value)
+  - [ ] Card 3: Taxa de Conversão (Won / Total)
+  - [ ] Card 4: Leads Este Mês (created_at range)
+  - [ ] Responsive: 2 cards mobile, 4 desktop
+
+- [ ] **Filtros Avançados** ⏳
+  - [ ] Filtro por assigned_to (dropdown multi-select)
+  - [ ] Filtro por período (date range picker: created_at, expected_close_date)
+  - [ ] Filtro por priority (LOW, MEDIUM, HIGH)
+  - [ ] Filtro por source (WEBSITE, REFERRAL, etc.)
+  - [ ] Botão "Clear Filters"
+
+- [ ] **Ordenação Customizável** ⏳
+  - [ ] Click nos headers da tabela para ordenar
+  - [ ] Colunas orderáveis: Valor, Probabilidade, Data Criação, Data Fecho Prevista
+  - [ ] Indicador visual de ordenação (seta ↑↓)
+
+- [ ] **Exportação para Excel/CSV** ⏳
+  - [ ] Botão "Exportar" no topo
+  - [ ] Gera arquivo CSV com leads filtradas
+  - [ ] Colunas: Title, Contact, Stage, Value, Probability, Assigned To, Created At
+
+---
+
+### 5.12.5 Integração com Chatter (aba Activities) ⏳
+
+Implementar timeline de atividades dentro do formulário de lead (dependente da Fase 3 - Chatter).
+
+**NOTA:** Esta funcionalidade depende do sistema de Chatter (Fase 3, task 3.8) estar completo.
+
+- [ ] **Adicionar aba "Atividades" ao lead_create.html** ⏳
+  - [ ] Nova aba após "Marketing"
+  - [ ] Só visível em edit mode (lead existe)
+
+- [ ] **Incluir componente Chatter** ⏳
+  - [ ] `{% include 'components/chatter.html' with object=lead %}`
+  - [ ] Componente renderiza automaticamente:
+    - [ ] Timeline de mensagens/comments
+    - [ ] Timeline de activities
+    - [ ] Botão "Schedule Activity"
+    - [ ] Botão "Log Note"
+
+- [ ] **Botão Quick-Add Activity** ⏳
+  - [ ] Botão no topo da aba "Atividades"
+  - [ ] Modal simplificado para criar activity:
+    - [ ] Tipo (Call, Email, Todo, Meeting)
+    - [ ] Título
+    - [ ] Data limite
+    - [ ] Responsável (default= lead.assigned_to)
+  - [ ] Após criar, activity aparece no timeline
+
+- [ ] **Notificações de Activities Vencidas** ⏳
+  - [ ] Badge no ícone de sino (navbar) se há activities overdue
+  - [ ] Cor vermelha no card do pipeline se tem activities overdue
+
+---
+
+**FIM DAS TAREFAS FUTURAS**
 
 ---
 
