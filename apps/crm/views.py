@@ -15,7 +15,7 @@ from apps.core.multi_company import filter_by_company, get_active_company
 from apps.core.models import ActivityType, ScheduledActivity, ActivityChain, ActivityChainStep, ActivityChainInstance
 from apps.core.forms import ScheduledActivityForm
 from apps.contacts.models import Contact
-from .models import CRMTag, CRMStage, Lead, Activity
+from .models import CRMTag, CRMStage, Lead, Activity, LeadNote
 from .forms import CRMStageForm, CRMTagForm, ActivityForm
 import json
 import random
@@ -940,6 +940,31 @@ def _normalize_svg_colors(svg_code):
     return svg_code.strip()
 
 
+def _resolve_summary(summary, lead):
+    """
+    Substitui variáveis de template no resumo da atividade pelos valores reais da lead.
+
+    Variáveis suportadas:
+      {{contact_name}}  → nome do contacto da lead
+      {{company_name}}  → nome da empresa do contacto; fallback para nome do contacto
+    """
+    if not summary or ('{{' not in summary):
+        return summary
+
+    # Resolve contact name
+    if lead.contact:
+        contact_name = lead.contact.name
+        # company: contact.company is a FK to another Contact of type COMPANY
+        company_name = lead.contact.company.name if lead.contact.company_id else contact_name
+    else:
+        contact_name = lead.contact_name or ''
+        company_name = contact_name
+
+    summary = summary.replace('{{contact_name}}', contact_name)
+    summary = summary.replace('{{company_name}}', company_name)
+    return summary
+
+
 @require_http_methods(["POST"])
 @login_required
 def bulk_archive_activities(request):
@@ -1210,8 +1235,14 @@ def lead_detail_view(request, lead_id):
     
     active_company = get_active_company(request)
     
-    # Get lead
-    lead = get_object_or_404(Lead, id=lead_id, owner_company=active_company)
+    # Get lead (select_related so contact.company is available without extra queries)
+    try:
+        lead = Lead.objects.select_related('contact', 'contact__company').get(
+            id=lead_id, owner_company=active_company
+        )
+    except Lead.DoesNotExist:
+        from django.http import Http404
+        raise Http404
     
     # Handle POST (save changes)
     if request.method == 'POST':
@@ -1352,7 +1383,7 @@ def lead_detail_view(request, lead_id):
         'summary': sa.summary,
         'type_code': sa.activity_type.code if sa.activity_type else '',
         'type_name': sa.activity_type.name if sa.activity_type else '',
-        'icon_svg': sa.icon_svg or '',
+        'icon_svg': sa.icon_svg if sa.icon_svg else '',
         'icon_color': sa.icon_color or '#6366F1',
     } for sa in scheduled_activities])
 
@@ -1365,7 +1396,7 @@ def lead_detail_view(request, lead_id):
         'scheduled_activity_id': str(a.scheduled_activity.id) if a.scheduled_activity else '',
         'icon_svg': a.scheduled_activity.icon_svg if a.scheduled_activity and a.scheduled_activity.icon_svg else '',
         'icon_color': a.scheduled_activity.icon_color if a.scheduled_activity and a.scheduled_activity.icon_color else '#6366F1',
-        'summary': a.summary,
+        'summary': _resolve_summary(a.summary, lead),
         'due_date': a.due_date.strftime('%Y-%m-%d'),
         'due_date_display': a.due_date.strftime('%d/%m/%Y'),
         'assigned_to': a.assigned_to.get_full_name() or a.assigned_to.username if a.assigned_to else '',
@@ -2668,6 +2699,35 @@ def lead_activity_create(request, lead_id):
         owner_company=active_company,
     )
 
+    # ── Criar notificação para o utilizador atribuído ─────────────────────
+    try:
+        from apps.core.models import Notification as _Notification
+        import logging as _logging
+        _nlog = _logging.getLogger('apps.crm.notifications')
+        _today = date_type.today()
+        if activity.due_date < _today:
+            _notif_type = 'ACTIVITY_OVERDUE'
+        elif activity.due_date == _today:
+            _notif_type = 'ACTIVITY_TODAY'
+        else:
+            _notif_type = 'ACTIVITY_UPCOMING'
+        _lead_name = lead.title or (str(lead.contact) if lead.contact else 'Lead')
+        _Notification.objects.create(
+            user=activity.assigned_to,
+            notification_type=_notif_type,
+            title=activity.summary,
+            message=f'Lead: {_lead_name}',
+            link=f'/crm/leads/{str(lead.id)}/',
+            related_object_id=activity.id,  # para apagar quando a actividade for concluída
+        )
+    except Exception as _e:
+        import traceback as _tb
+        import logging as _logging
+        _logging.getLogger('apps.crm.notifications').error(
+            'Notification creation failed for activity %s: %s\n%s',
+            activity.id, _e, _tb.format_exc()
+        )
+
     today = date_type.today()
     return JsonResponse({
         'success': True,
@@ -2710,16 +2770,20 @@ def lead_activity_mark_done(request, lead_id, activity_id):
 
     feedback = data.get('feedback', '').strip()
 
-    if not feedback or len(feedback) < 1:
-        return JsonResponse({
-            'success': False,
-            'errors': {'feedback': 'Feedback é obrigatório.'}
-        }, status=400)
-
     activity.is_done = True
     activity.feedback = feedback
     activity.done_date = timezone.now()
     activity.save(update_fields=['is_done', 'feedback', 'done_date'])
+
+    # Remover notificação da actividade (está concluída — não deve continuar no sino)
+    try:
+        from apps.core.models import Notification as _N
+        _N.objects.filter(
+            related_object_id=activity.id,
+            notification_type__in=['ACTIVITY_OVERDUE', 'ACTIVITY_TODAY', 'ACTIVITY_UPCOMING'],
+        ).delete()
+    except Exception:
+        pass
 
     return JsonResponse({
         'success': True,
@@ -2745,6 +2809,18 @@ def lead_activity_delete(request, lead_id, activity_id):
     activity = get_object_or_404(Activity, id=activity_id, lead=lead)
 
     summary = activity.summary
+    activity_id = activity.id
+
+    # Remover notificação antes de apagar a actividade
+    try:
+        from apps.core.models import Notification as _N
+        _N.objects.filter(
+            related_object_id=activity_id,
+            notification_type__in=['ACTIVITY_OVERDUE', 'ACTIVITY_TODAY', 'ACTIVITY_UPCOMING'],
+        ).delete()
+    except Exception:
+        pass
+
     activity.delete()
 
     return JsonResponse({
@@ -2856,7 +2932,13 @@ def lead_chain_start(request, lead_id):
     from django.contrib.contenttypes.models import ContentType
 
     active_company = get_active_company(request)
-    lead = get_object_or_404(Lead, id=lead_id, owner_company=active_company)
+    try:
+        lead = Lead.objects.select_related('contact', 'contact__company').get(
+            id=lead_id, owner_company=active_company
+        )
+    except Lead.DoesNotExist:
+        from django.http import Http404
+        raise Http404
 
     try:
         data = json.loads(request.body)
@@ -2896,11 +2978,11 @@ def lead_chain_start(request, lead_id):
     # Create Activity records for each step in the chain
     created_activities = []
     today = date_type.today()
-    cumulative_delay = 0
+    cumulative_delay = 0  # accumulated in minutes (delay_days field stores minutes)
 
     for step in chain.steps.select_related('activity', 'activity__activity_type', 'default_assigned_to').order_by('order'):
         cumulative_delay += step.delay_days
-        due = today + td(days=cumulative_delay)
+        due = today + td(minutes=cumulative_delay)
         step_assigned = step.default_assigned_to or assigned_user
 
         # Use ActivityType.code from the blueprint's activity type
@@ -2925,14 +3007,41 @@ def lead_chain_start(request, lead_id):
             assigned_to=step_assigned,
             owner_company=active_company,
         )
+
+        # ── Criar notificação por passo da cadeia ─────────────────────────
+        try:
+            from apps.core.models import Notification as _Notification
+            if due < today:
+                _notif_type = 'ACTIVITY_OVERDUE'
+            elif due == today:
+                _notif_type = 'ACTIVITY_TODAY'
+            else:
+                _notif_type = 'ACTIVITY_UPCOMING'
+            _lead_name = lead.title or (str(lead.contact) if lead.contact else 'Lead')
+            _Notification.objects.create(
+                user=step_assigned,
+                notification_type=_notif_type,
+                title=f'[{chain.name}] {summary_text}',
+                message=f'Lead: {_lead_name}',
+                link=f'/crm/leads/{str(lead.id)}/',
+                related_object_id=activity.id,  # para apagar quando a actividade for concluída
+            )
+        except Exception as _ce:
+            import traceback as _tb
+            import logging as _logging
+            _logging.getLogger('apps.crm.notifications').error(
+                'Notification creation failed for chain step: %s\n%s',
+                _ce, _tb.format_exc()
+            )
+
         created_activities.append({
             'id': str(activity.id),
             'activity_type': activity.activity_type,
             'activity_type_display': activity.get_activity_type_display(),
             'scheduled_activity_id': str(bp.id),
-            'icon_svg': bp.icon_svg or '',
+            'icon_svg': bp.icon_svg if bp.icon_svg else '',
             'icon_color': bp.icon_color or '#6366F1',
-            'summary': activity.summary,
+            'summary': _resolve_summary(activity.summary, lead),
             'due_date': activity.due_date.strftime('%Y-%m-%d'),
             'due_date_display': activity.due_date.strftime('%d/%m/%Y'),
             'assigned_to': activity.assigned_to.get_full_name() or activity.assigned_to.username if activity.assigned_to else '',
@@ -2949,3 +3058,216 @@ def lead_chain_start(request, lead_id):
         'activities': created_activities,
         'chain_instance_id': str(instance.id),
     }, status=201)
+
+
+# ============================================================
+# LEAD NOTES (Notas internas do Chatter)
+# ============================================================
+
+@login_required
+@require_http_methods(['GET'])
+def lead_notes_list(request, lead_id):
+    """
+    GET /crm/leads/<lead_id>/notes/
+    Retorna as notas internas do chatter de um lead.
+    """
+    active_company = get_active_company(request)
+    lead = get_object_or_404(Lead, id=lead_id, owner_company=active_company)
+    notes = lead.chatter_notes.select_related('author').order_by('-created_at')[:100]
+    return JsonResponse({
+        'notes': [
+            {
+                'id': str(n.id),
+                'author': n.author.get_full_name() or n.author.username if n.author else 'Sistema',
+                'author_initials': ''.join(p[0].upper() for p in (n.author.get_full_name() or n.author.username).split()[:2]) if n.author else 'S',
+                'content': n.content,
+                'created_at': n.created_at.strftime('%d/%m/%Y %H:%M'),
+            }
+            for n in notes
+        ]
+    })
+
+
+@login_required
+@require_http_methods(['POST'])
+def lead_note_create(request, lead_id):
+    """
+    POST /crm/leads/<lead_id>/notes/create/
+    Cria nota interna e gera notificações MENTION para @utilizadores mencionados.
+    """
+    active_company = get_active_company(request)
+    lead = get_object_or_404(Lead, id=lead_id, owner_company=active_company)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+
+    content = data.get('content', '').strip()
+    if not content:
+        return JsonResponse({'success': False, 'error': 'Conteúdo não pode estar vazio.'}, status=400)
+
+    urgent = bool(data.get('urgent', False))
+
+    note = LeadNote.objects.create(lead=lead, author=request.user, content=content)
+
+    # Parsear @menções e criar notificações
+    import re
+    mentioned_usernames = list(set(re.findall(r'@(\w+)', content)))
+    if mentioned_usernames:
+        try:
+            from apps.core.models import Notification as _N
+            mentioned_users = User.objects.filter(username__in=mentioned_usernames, is_active=True)
+            author_display = request.user.get_full_name() or request.user.username
+            for mu in mentioned_users:
+                _N.objects.create(
+                    user=mu,
+                    notification_type='MENTION',
+                    title=f'{author_display} mencionou-te numa nota',
+                    message=f'Lead: {lead.title}',
+                    link=f'/crm/leads/{str(lead.id)}/',
+                    related_object_id=note.id,
+                    is_urgent=urgent,
+                )
+        except Exception:
+            pass
+
+    return JsonResponse({
+        'success': True,
+        'note': {
+            'id': str(note.id),
+            'author': note.author.get_full_name() or note.author.username if note.author else 'Sistema',
+            'author_initials': ''.join(p[0].upper() for p in (note.author.get_full_name() or note.author.username).split()[:2]) if note.author else 'S',
+            'content': note.content,
+            'created_at': note.created_at.strftime('%d/%m/%Y %H:%M'),
+        }
+    }, status=201)
+
+
+@login_required
+@require_http_methods(['GET'])
+def users_search_api(request):
+    """
+    GET /crm/api/users/search/?q=<query>
+    Devolve utilizadores activos para o @mention dropdown (máx. 10).
+    """
+    q = request.GET.get('q', '').strip()
+    qs = User.objects.filter(is_active=True)
+    if q:
+        qs = qs.filter(
+            Q(username__icontains=q) | Q(first_name__icontains=q) | Q(last_name__icontains=q)
+        )
+    qs = qs.order_by('first_name', 'username')[:10]
+    return JsonResponse({
+        'users': [
+            {
+                'id': str(u.id),
+                'username': u.username,
+                'display': u.get_full_name() or u.username,
+                'initials': ''.join(p[0].upper() for p in (u.get_full_name() or u.username).split()[:2]),
+            }
+            for u in qs
+        ]
+    })
+
+
+# ---------------------------------------------------------------------------
+# Lead Email (chatter — aba "Enviar Mensagem")
+# ---------------------------------------------------------------------------
+
+@login_required
+@require_http_methods(['POST'])
+def lead_send_email(request, lead_id):
+    """
+    Envia um email ao contacto da lead e regista-o no chatter via ChatterMessage.
+
+    POST JSON:
+      { "to_email": "...", "subject": "...", "body": "..." }
+
+    O `to_email` pode ser enviado pelo frontend (pré-preenchido do contacto)
+    ou ignorado — nesse caso usa-se lead.email_from.
+
+    Resposta:
+      { "success": true } ou { "success": false, "error": "..." }
+    """
+    import json as _json
+    from apps.core.email_utils import send_email_for_record
+
+    lead = get_object_or_404(Lead, id=lead_id)
+
+    try:
+        data = _json.loads(request.body)
+    except (ValueError, KeyError):
+        return JsonResponse({'success': False, 'error': 'JSON inválido.'}, status=400)
+
+    to_email = (data.get('to_email') or '').strip()
+    subject = (data.get('subject') or '').strip()
+    body = (data.get('body') or '').strip()
+
+    if not to_email:
+        # Fallback: usar email da lead
+        to_email = lead.email_from or ''
+    if not to_email:
+        return JsonResponse({'success': False, 'error': 'Endereço de email do destinatário não encontrado.'})
+    if not subject:
+        return JsonResponse({'success': False, 'error': 'O assunto é obrigatório.'})
+    if not body:
+        return JsonResponse({'success': False, 'error': 'O corpo do email é obrigatório.'})
+
+    # Nome do destinatário — usa contact_name ou nome do contacto associado
+    to_name = lead.contact_name or ''
+    if not to_name and lead.contact:
+        to_name = lead.contact.get_full_name() if hasattr(lead.contact, 'get_full_name') else ''
+
+    result = send_email_for_record(
+        user=request.user,
+        record=lead,
+        to_email=to_email,
+        subject=subject,
+        body=body,
+        to_name=to_name,
+    )
+    return JsonResponse(result)
+
+
+@login_required
+@require_http_methods(['GET'])
+def lead_emails_list(request, lead_id):
+    """
+    Lista os emails (ChatterMessage type=EMAIL) de uma lead.
+
+    Resposta JSON:
+      { "emails": [ { id, direction, from_email, to_email, subject, body,
+                      sent_by, sent_at, created_at } ] }
+    """
+    from django.contrib.contenttypes.models import ContentType
+    from apps.core.models import ChatterMessage
+
+    lead = get_object_or_404(Lead, id=lead_id)
+    ct = ContentType.objects.get_for_model(Lead)
+
+    qs = ChatterMessage.objects.filter(
+        content_type=ct,
+        object_id=lead.id,
+        message_type='EMAIL',
+    ).select_related('author').order_by('created_at')
+
+    emails = []
+    for em in qs:
+        author = em.author
+        emails.append({
+            'id': str(em.id),
+            'direction': em.direction,
+            'from_email': em.from_email,
+            'to_email': em.to_email,
+            'subject': em.subject,
+            'body': em.body,
+            'sent_by': author.get_full_name() or author.username if author else None,
+            'sent_by_initials': ''.join(
+                p[0].upper() for p in ((author.get_full_name() or author.username).split()[:2])
+            ) if author else '?',
+            'sent_at': em.sent_at.isoformat() if em.sent_at else em.created_at.isoformat(),
+            'created_at': em.created_at.isoformat(),
+        })
+
+    return JsonResponse({'emails': emails})

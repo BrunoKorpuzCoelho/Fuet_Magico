@@ -24,4 +24,9 @@ urlpatterns = [
     path('api/chatter/planned-activity/<uuid:pk>/done/', views.planned_activity_done, name='planned_activity_done'),
     path('api/chatter/planned-activity/<uuid:pk>/cancel/', views.planned_activity_cancel, name='planned_activity_cancel'),
     path('api/chatter/planned-activity/<uuid:pk>/edit/', views.planned_activity_edit, name='planned_activity_edit'),
+
+    # Notifications API
+    path('api/notifications/', views.notifications_list_api, name='notifications_list'),
+    path('api/notifications/mark-all-read/', views.notifications_mark_all_read, name='notifications_mark_all_read'),
+    path('api/notifications/<uuid:notification_id>/mark-read/', views.notification_mark_read, name='notification_mark_read'),
 ]

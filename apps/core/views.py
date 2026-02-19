@@ -1,10 +1,12 @@
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.core.paginator import Paginator
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
+from django.contrib.auth.decorators import login_required
 from django.db import models
+from django.utils import timezone
 from apps.accounts.decorators import role_required
-from .models import AuditLog, ErrorLog
+from .models import AuditLog, ErrorLog, Notification
 from datetime import datetime
 
 
@@ -569,3 +571,101 @@ def planned_activity_edit(request, pk):
         return JsonResponse({'success': False, 'error': 'Não encontrada'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NOTIFICATIONS API
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required
+@require_http_methods(['GET'])
+def notifications_list_api(request):
+    """
+    GET /api/notifications/
+    Query params:
+      unread_only=true|false  (default false)
+      limit=N                 (default 50)
+    """
+    unread_only = request.GET.get('unread_only', 'false').lower() == 'true'
+    limit = min(int(request.GET.get('limit', 50)), 100)
+
+    qs = Notification.objects.filter(user=request.user)
+    if unread_only:
+        qs = qs.filter(is_read=False)
+
+    qs = qs.order_by('priority', '-created_at')[:limit]
+
+    def _serialize(n):
+        return {
+            'id':       str(n.id),
+            'type':     n.notification_type,
+            'title':    n.title,
+            'message':  n.message,
+            'link':     n.link,
+            'is_read':  n.is_read,
+            'is_urgent': n.is_urgent,
+            'priority':  n.priority,
+            'created_at': n.created_at.strftime('%d/%m/%Y %H:%M'),
+        }
+
+    unread_qs    = Notification.objects.filter(user=request.user, is_read=False)
+    unread_count = unread_qs.count()
+    has_overdue  = unread_qs.filter(notification_type='ACTIVITY_OVERDUE').exists()
+    has_today    = unread_qs.filter(notification_type='ACTIVITY_TODAY').exists()
+
+    if has_overdue:
+        badge_color = 'red'
+    elif has_today:
+        badge_color = 'yellow'
+    else:
+        badge_color = 'default'
+
+    return JsonResponse({
+        'unread_count': unread_count,
+        'badge_color':  badge_color,
+        'has_overdue':  has_overdue,
+        'has_today':    has_today,
+        'notifications': [_serialize(n) for n in qs],
+    })
+
+
+# Tipos de notificação que NÃO devem ser marcadas como lidas (persistem até actividade concluída)
+_ACTIVITY_NOTIF_TYPES = ('ACTIVITY_OVERDUE', 'ACTIVITY_TODAY', 'ACTIVITY_UPCOMING')
+
+
+@login_required
+@require_POST
+def notification_mark_read(request, notification_id):
+    """POST /api/notifications/<uuid>/mark-read/"""
+    try:
+        n = Notification.objects.get(id=notification_id, user=request.user)
+        # Notificações de actividade persistem até a actividade ser concluída — nunca marcar como lidas
+        if n.notification_type not in _ACTIVITY_NOTIF_TYPES:
+            n.mark_as_read()
+        unread_qs    = Notification.objects.filter(user=request.user, is_read=False)
+        unread_count = unread_qs.count()
+        has_overdue  = unread_qs.filter(notification_type='ACTIVITY_OVERDUE').exists()
+        has_today    = unread_qs.filter(notification_type='ACTIVITY_TODAY').exists()
+        badge_color  = 'red' if has_overdue else ('yellow' if has_today else 'default')
+        return JsonResponse({'success': True, 'unread_count': unread_count, 'badge_color': badge_color})
+    except Notification.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Não encontrada'}, status=404)
+
+
+@login_required
+@require_POST
+def notifications_mark_all_read(request):
+    """POST /api/notifications/mark-all-read/"""
+    # Não marcar actividades como lidas — elas persistem até serem concluídas
+    Notification.objects.filter(user=request.user, is_read=False).exclude(
+        notification_type__in=_ACTIVITY_NOTIF_TYPES
+    ).update(
+        is_read=True,
+        read_at=timezone.now(),
+    )
+    unread_qs    = Notification.objects.filter(user=request.user, is_read=False)
+    unread_count = unread_qs.count()
+    has_overdue  = unread_qs.filter(notification_type='ACTIVITY_OVERDUE').exists()
+    has_today    = unread_qs.filter(notification_type='ACTIVITY_TODAY').exists()
+    badge_color  = 'red' if has_overdue else ('yellow' if has_today else 'default')
+    return JsonResponse({'success': True, 'unread_count': unread_count, 'badge_color': badge_color})

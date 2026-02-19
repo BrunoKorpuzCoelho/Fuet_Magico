@@ -1470,14 +1470,101 @@
                 </div>
                 
                 <!-- Tab: Nota -->
-                <div x-show="activeTab === 'note'" class="p-4">
-                    <div class="text-center py-8">
-                        <svg class="w-12 h-12 mx-auto text-gray-600 mb-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
-                        </svg>
-                        <p class="text-sm text-gray-400">Notas em desenvolvimento</p>
+                <div x-show="activeTab === 'note'" class="flex flex-col h-full"
+                     x-data="leadNotesPanel('{{ lead.id }}')"
+                     x-effect="if (activeTab === 'note' && notes.length === 0 && !loading) load()">
+
+                    <!-- Input area -->
+                    <div class="p-3 border-b border-gray-700 flex-shrink-0">
+                        <div class="relative">
+                            <textarea
+                                x-model="newContent"
+                                x-ref="noteTextarea"
+                                @input="handleInput($event)"
+                                @keydown.escape="closeMentions()"
+                                @keydown.arrow-down.prevent="mentionHighlight = Math.min(mentionHighlight + 1, mentionUsers.length - 1)"
+                                @keydown.arrow-up.prevent="mentionHighlight = Math.max(mentionHighlight - 1, 0)"
+                                @keydown.enter.prevent="showMentions && mentionUsers.length ? selectMention(mentionUsers[mentionHighlight]) : null"
+                                rows="3"
+                                placeholder="Nota interna… Use @utilizador para mencionar"
+                                class="w-full rounded-lg bg-gray-800 border border-gray-600 text-sm text-gray-200 px-3 py-2 resize-none focus:outline-none focus:border-primary placeholder-gray-600"
+                            ></textarea>
+
+                            <!-- @mention dropdown -->
+                            <div x-show="showMentions && mentionUsers.length > 0"
+                                 class="absolute left-0 right-0 bg-[#0f1923] border border-gray-600 rounded-lg shadow-2xl z-50 overflow-hidden"
+                                 style="top:100%; margin-top:3px;">
+                                <template x-for="(u, idx) in mentionUsers" :key="u.id">
+                                    <div @click="selectMention(u)"
+                                         :class="idx === mentionHighlight ? 'bg-gray-700' : 'hover:bg-gray-800'"
+                                         class="flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors">
+                                        <div class="w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0"
+                                             x-text="u.initials"></div>
+                                        <div class="min-w-0">
+                                            <span class="text-sm text-white" x-text="u.display"></span>
+                                            <span class="text-xs text-gray-500 ml-1" x-text="'@' + u.username"></span>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between mt-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] text-gray-600">&#128274; Visível apenas internamente</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <!-- Botão urgente -->
+                                <button type="button" @click="urgent = !urgent"
+                                        :title="urgent ? 'Menções marcadas como urgentes' : 'Marcar menções como urgentes'"
+                                        :class="urgent ? 'border-red-500 text-red-500 bg-red-500/10' : 'border-gray-600 text-gray-500 hover:border-red-500/60 hover:text-red-500/60'"
+                                        class="w-7 h-7 rounded border flex items-center justify-center transition-colors flex-shrink-0">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                                    </svg>
+                                </button>
+                                <button type="button" @click="submitNote()"
+                                        :disabled="!newContent.trim() || saving"
+                                        class="px-3 py-1.5 bg-primary hover:bg-primary/80 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium rounded-lg transition-colors">
+                                    <span x-show="!saving">Adicionar</span>
+                                    <span x-show="saving">A guardar…</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                </div>
+
+                    <!-- Notes list -->
+                    <div class="flex-1 overflow-y-auto p-3 space-y-3">
+                        <div x-show="loading" class="flex items-center justify-center py-8">
+                            <svg class="animate-spin h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                            </svg>
+                        </div>
+                        <template x-if="!loading && notes.length === 0">
+                            <div class="text-center py-10">
+                                <svg class="w-10 h-10 mx-auto text-gray-700 mb-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                                </svg>
+                                <p class="text-xs text-gray-600">Sem notas ainda</p>
+                            </div>
+                        </template>
+                        <template x-for="note in notes" :key="note.id">
+                            <div class="flex gap-2.5">
+                                <div class="w-7 h-7 rounded-full bg-indigo-600/30 text-indigo-400 text-xs font-bold flex items-center justify-center flex-shrink-0 uppercase"
+                                     x-text="note.author_initials"></div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-baseline gap-2 flex-wrap mb-1">
+                                        <span class="text-xs font-semibold text-gray-300" x-text="note.author"></span>
+                                        <span class="text-[10px] text-gray-600" x-text="note.created_at"></span>
+                                    </div>
+                                    <div class="text-xs text-gray-300 bg-gray-800/60 rounded-lg px-3 py-2 leading-relaxed whitespace-pre-wrap break-all"
+                                         x-html="renderMentions(note.content)"></div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div><!-- /Tab Nota -->
+
                 
                 <!-- Tab: Atividade -->
                 <div x-show="activeTab === 'activity'" class="flex flex-col h-full">
@@ -1562,7 +1649,9 @@
                                 </div>
                                 <!-- Blueprint preview: selected icon + description -->
                                 <div x-show="selectedBlueprint" class="flex items-center gap-2 mt-1.5 bg-gray-700/50 rounded-lg px-2 py-1.5">
-                                    <span :style="'color: ' + (selectedBlueprint?.icon_color || '#6366f1')" class="flex-shrink-0 w-5 h-5 [&>svg]:w-5 [&>svg]:h-5" x-html="selectedBlueprint?.icon_svg || ''"></span>
+                                    <span class="flex-shrink-0 w-5 h-5 [&>svg]:w-5 [&>svg]:h-5"
+                                          :style="selectedBlueprint?.icon_color ? 'color: ' + selectedBlueprint.icon_color : 'color: #6366F1'"
+                                          x-html="selectedBlueprint?.icon_svg || ''"></span>
                                     <span class="text-xs text-gray-300" x-text="selectedBlueprint?.summary || selectedBlueprint?.name || ''"></span>
                                 </div>
                             </div>
@@ -1683,33 +1772,32 @@
                             <template x-for="activity in activitiesPending" :key="activity.id">
                                 <div class="mb-3">
                                     <div class="flex items-start gap-2.5">
-                                        <!-- Status Circle Icon: DB icon_svg if set, else type-based fallback -->
+                                        <!-- Status Icon: DB icon_svg if set, else type-based fallback -->
                                         <button type="button"
-                                                class="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center mt-0.5 transition-opacity hover:opacity-80"
-                                                :class="{'bg-red-500/20': activity.is_overdue, 'bg-yellow-500/20': !activity.is_overdue && activity.is_today, 'bg-green-600/20': !activity.is_overdue && !activity.is_today}"
+                                                class="flex-shrink-0 flex items-center justify-center mt-0.5 transition-opacity hover:opacity-80"
                                                 @click="openDonePopover(activity)"
                                                 title="Marcar como concluído">
                                             <!-- Dynamic SVG from DB blueprint -->
                                             <template x-if="activity.icon_svg">
-                                                <span :style="'color: ' + (activity.is_overdue ? '#f87171' : activity.is_today ? '#facc15' : (activity.icon_color || '#4ade80'))"
-                                                      class="w-4 h-4 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4"
+                                                <span class="w-5 h-5 flex items-center justify-center [&>svg]:w-5 [&>svg]:h-5"
+                                                      :style="'color: ' + (activity.icon_color || '#6366F1')"
                                                       x-html="activity.icon_svg"></span>
                                             </template>
                                             <!-- Fallback: type-based generic icons when no DB icon -->
                                             <template x-if="!activity.icon_svg && activity.activity_type === 'CALL'">
-                                                <svg class="w-4 h-4" :class="activity.is_overdue ? 'text-red-400' : activity.is_today ? 'text-yellow-400' : 'text-green-400'" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
+                                                <svg class="w-5 h-5" :class="activity.is_overdue ? 'text-red-400' : activity.is_today ? 'text-yellow-400' : 'text-green-400'" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
                                             </template>
                                             <template x-if="!activity.icon_svg && activity.activity_type === 'EMAIL'">
-                                                <svg class="w-4 h-4" :class="activity.is_overdue ? 'text-red-400' : activity.is_today ? 'text-yellow-400' : 'text-green-400'" fill="currentColor" viewBox="0 0 20 20"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
+                                                <svg class="w-5 h-5" :class="activity.is_overdue ? 'text-red-400' : activity.is_today ? 'text-yellow-400' : 'text-green-400'" fill="currentColor" viewBox="0 0 20 20"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
                                             </template>
                                             <template x-if="!activity.icon_svg && activity.activity_type === 'WHATSAPP'">
-                                                <svg class="w-4 h-4" :class="activity.is_overdue ? 'text-red-400' : 'text-green-400'" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                                                <svg class="w-5 h-5" :class="activity.is_overdue ? 'text-red-400' : 'text-green-400'" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
                                             </template>
                                             <template x-if="!activity.icon_svg && (activity.activity_type === 'DOCUMENT' || activity.activity_type === 'SIGNATURE')">
-                                                <svg class="w-4 h-4" :class="activity.is_overdue ? 'text-red-400' : activity.is_today ? 'text-yellow-400' : 'text-green-400'" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/></svg>
+                                                <svg class="w-5 h-5" :class="activity.is_overdue ? 'text-red-400' : activity.is_today ? 'text-yellow-400' : 'text-green-400'" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/></svg>
                                             </template>
                                             <template x-if="!activity.icon_svg && activity.activity_type === 'TODO'">
-                                                <svg class="w-4 h-4" :class="activity.is_overdue ? 'text-red-400' : activity.is_today ? 'text-yellow-400' : 'text-green-400'" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                                <svg class="w-5 h-5" :class="activity.is_overdue ? 'text-red-400' : activity.is_today ? 'text-yellow-400' : 'text-green-400'" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                                             </template>
                                         </button>
 
@@ -1755,7 +1843,7 @@
                                                     Editar
                                                 </button>
                                                 <span class="text-gray-600 text-xs select-none">|</span>
-                                                <button type="button" @click="deleteActivity(activity.id)"
+                                                <button type="button" @click="confirmModal = { open: true, activityId: activity.id }"
                                                         class="text-xs text-red-400 hover:text-red-300 hover:underline transition-colors">
                                                     Cancelar
                                                 </button>
@@ -1766,7 +1854,7 @@
                                                  class="mt-2 bg-gray-800 border border-gray-600/70 rounded-xl p-3 shadow-xl">
                                                 <p class="text-xs font-semibold text-gray-300 mb-1.5">Marcar Concluído</p>
                                                 <textarea x-model="donePopover.feedback" rows="3"
-                                                          placeholder="Escrever feedback..."
+                                                          placeholder="Feedback (opcional)..."
                                                           class="w-full rounded-lg border-gray-600 bg-gray-700 px-2.5 py-1.5 text-xs text-gray-200 placeholder-gray-500 focus:border-primary focus:ring-primary resize-none"></textarea>
                                                 <p x-show="donePopover.error" x-text="donePopover.error" class="text-red-400 text-xs mt-1"></p>
                                                 <div class="flex gap-1 mt-2">
@@ -1816,6 +1904,47 @@
                             </div>
                         </div>
                     </div>
+                <!-- Modal de Confirmação - Cancelar Atividade -->
+                <div x-show="confirmModal.open"
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0"
+                     x-transition:enter-end="opacity-100"
+                     x-transition:leave="transition ease-in duration-150"
+                     x-transition:leave-start="opacity-100"
+                     x-transition:leave-end="opacity-0"
+                     class="fixed inset-0 z-50 flex items-center justify-center"
+                     style="display: none;">
+                    <!-- Backdrop -->
+                    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="confirmModal.open = false"></div>
+                    <!-- Modal -->
+                    <div x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 scale-95"
+                         x-transition:enter-end="opacity-100 scale-100"
+                         class="relative bg-[#1e2d3d] border border-gray-600 rounded-xl shadow-2xl p-6 w-80 mx-4">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-white">Cancelar Atividade</h3>
+                                <p class="text-xs text-gray-400 mt-0.5">Esta ação não pode ser desfeita.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 justify-end">
+                            <button type="button" @click="confirmModal.open = false"
+                                    class="px-4 py-2 text-xs font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
+                                Manter
+                            </button>
+                            <button type="button" @click="deleteActivity(confirmModal.activityId)"
+                                    class="px-4 py-2 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors">
+                                Cancelar Atividade
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 </div>
                 </div>
             </div>
@@ -2434,6 +2563,7 @@ function leadActivities(leadId) {
         editingActivityId: null,
         expandedInfoId: null,
         donePopover: { activityId: null, feedback: '', error: '', saving: false },
+        confirmModal: { open: false, activityId: null },
 
         get activitiesPending() {
             return [...this.activities]
@@ -2733,10 +2863,7 @@ function leadActivities(leadId) {
 
         async confirmDone(activity) {
             this.donePopover.error = '';
-            if (!this.donePopover.feedback || this.donePopover.feedback.trim().length < 3) {
-                this.donePopover.error = 'Feedback deve ter pelo menos 3 caracteres.';
-                return;
-            }
+            // feedback é opcional
             this.donePopover.saving = true;
             try {
                 const data = await this._markDone(activity, this.donePopover.feedback);
@@ -2794,7 +2921,7 @@ function leadActivities(leadId) {
         },
 
         async deleteActivity(activityId) {
-            if (!confirm('Eliminar esta atividade?')) return;
+            this.confirmModal = { open: false, activityId: null };
             try {
                 const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
                 const resp = await fetch(`/crm/leads/${leadId}/activities/${activityId}/delete/`, {
@@ -2813,6 +2940,108 @@ function leadActivities(leadId) {
     };
 }
 {% endif %}
+
+function leadNotesPanel(leadId) {
+    return {
+        notes: [],
+        newContent: '',
+        loading: false,
+        saving: false,
+        urgent: false,
+        showMentions: false,
+        mentionUsers: [],
+        mentionHighlight: 0,
+        _mentionStart: -1,
+        _mentionCursorPos: -1,
+
+        async load() {
+            this.loading = true;
+            try {
+                const res = await fetch(`/crm/leads/${leadId}/notes/`);
+                const data = await res.json();
+                this.notes = data.notes || [];
+            } catch (e) {
+                console.warn('Notes load error:', e);
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async handleInput(e) {
+            const cursorPos = e.target.selectionStart;
+            const before = this.newContent.slice(0, cursorPos);
+            const atIdx = before.search(/@(\w*)$/);
+            if (atIdx !== -1 && (atIdx === 0 || /[\s\n]/.test(before[atIdx - 1] || ''))) {
+                const query = before.slice(atIdx + 1);
+                this._mentionStart = atIdx;
+                this._mentionCursorPos = cursorPos;
+                this.mentionHighlight = 0;
+                await this.fetchUsers(query);
+            } else {
+                this.closeMentions();
+            }
+        },
+
+        async fetchUsers(q) {
+            try {
+                const res = await fetch(`/crm/api/users/search/?q=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                this.mentionUsers = (data.users || []).slice(0, 5);
+                this.showMentions = this.mentionUsers.length > 0;
+            } catch (e) {
+                this.closeMentions();
+            }
+        },
+
+        selectMention(user) {
+            const before = this.newContent.slice(0, this._mentionStart);
+            const after  = this.newContent.slice(this._mentionCursorPos);
+            this.newContent = before + '@' + user.username + ' ' + after;
+            this.closeMentions();
+            this.$nextTick(() => { if (this.$refs.noteTextarea) this.$refs.noteTextarea.focus(); });
+        },
+
+        closeMentions() {
+            this.showMentions = false;
+            this.mentionUsers = [];
+        },
+
+        async submitNote() {
+            const content = this.newContent.trim();
+            if (!content || this.saving) return;
+            this.saving = true;
+            try {
+                const res = await fetch(`/crm/leads/${leadId}/notes/create/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.csrfToken(),
+                    },
+                    body: JSON.stringify({ content, urgent: this.urgent }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    this.notes.unshift(data.note);
+                    this.newContent = '';
+                    this.urgent = false;
+                }
+            } catch (e) {
+                console.warn('Note create error:', e);
+            } finally {
+                this.saving = false;
+            }
+        },
+
+        renderMentions(text) {
+            return (text || '').replace(/@(\w+)/g, '<span class="text-indigo-400 font-semibold">@$1</span>');
+        },
+
+        csrfToken() {
+            return document.cookie.split(';').map(c => c.trim())
+                .find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
+        },
+    };
+}
 
 </script>
 {% endblock %}

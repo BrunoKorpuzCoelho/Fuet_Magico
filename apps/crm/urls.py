@@ -82,4 +82,15 @@ urlpatterns = [
 
     # Lead Chain Start
     path('leads/<uuid:lead_id>/chains/start/', views.lead_chain_start, name='lead_chain_start'),
+
+    # Lead Notes (Chatter)
+    path('leads/<uuid:lead_id>/notes/', views.lead_notes_list, name='lead_notes_list'),
+    path('leads/<uuid:lead_id>/notes/create/', views.lead_note_create, name='lead_note_create'),
+
+    # Lead Emails (Chatter)
+    path('leads/<uuid:lead_id>/emails/', views.lead_emails_list, name='lead_emails_list'),
+    path('leads/<uuid:lead_id>/emails/send/', views.lead_send_email, name='lead_send_email'),
+
+    # Users search (para @mention dropdown)
+    path('api/users/search/', views.users_search_api, name='users_search_api'),
 ]

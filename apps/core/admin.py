@@ -3,7 +3,8 @@ from django.utils.html import format_html
 from .models import (
     AuditLog, ErrorLog, Company, ChatterMessage, ChatterActivity,
     ActivityType, ScheduledActivity, ActivityWorkflow,
-    ActivityChain, ActivityChainStep, ActivityChainInstance, ActivityLog
+    ActivityChain, ActivityChainStep, ActivityChainInstance, ActivityLog,
+    Notification,
 )
 
 
@@ -357,3 +358,32 @@ class ActivityWorkflowAdmin(admin.ModelAdmin):
             obj.get_chaining_mode_display()
         )
     chaining_mode.short_description = 'Mode'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NOTIFICATIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'notification_type', 'title', 'priority', 'is_read', 'created_at']
+    list_filter  = ['notification_type', 'is_read', 'priority', 'created_at']
+    search_fields = ['title', 'message', 'user__first_name', 'user__last_name', 'user__username']
+    readonly_fields = ['id', 'priority', 'related_content_type', 'related_object_id', 'read_at', 'created_at', 'updated_at']
+    ordering = ['priority', '-created_at']
+
+    actions = ['mark_as_read', 'mark_as_unread']
+
+    def mark_as_read(self, request, queryset):
+        count = 0
+        for n in queryset:
+            n.mark_as_read()
+            count += 1
+        self.message_user(request, f'{count} notificação(ões) marcada(s) como lida(s).')
+    mark_as_read.short_description = 'Marcar como lida'
+
+    def mark_as_unread(self, request, queryset):
+        from django.utils import timezone
+        queryset.update(is_read=False, read_at=None)
+        self.message_user(request, f'{queryset.count()} notificação(ões) marcada(s) como não lida(s).')
+    mark_as_unread.short_description = 'Marcar como não lida'

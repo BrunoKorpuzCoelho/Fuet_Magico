@@ -204,7 +204,39 @@ class ChatterMessage(AbstractBaseModel):
         verbose_name='Sent At',
         help_text='When the email was sent'
     )
-    
+
+    # --- Email threading fields (used when message_type='EMAIL') ---
+    DIRECTION_OUTBOUND = 'outbound'
+    DIRECTION_INBOUND = 'inbound'
+    DIRECTION_CHOICES = [
+        (DIRECTION_OUTBOUND, 'Enviado'),
+        (DIRECTION_INBOUND, 'Recebido'),
+    ]
+    direction = models.CharField(
+        max_length=8,
+        choices=DIRECTION_CHOICES,
+        default=DIRECTION_OUTBOUND,
+        verbose_name='Direção',
+        help_text='outbound = enviado pelo utilizador; inbound = recebido do cliente (IMAP futuro)',
+    )
+    from_email = models.EmailField(
+        blank=True,
+        verbose_name='De (email)',
+        help_text='Remetente real do email — preenchido para outbound e inbound.',
+    )
+    message_id = models.CharField(
+        max_length=998,
+        blank=True,
+        verbose_name='Message-ID',
+        help_text='Header Message-ID SMTP. Utilizado para fazer match de respostas (IMAP futuro).',
+    )
+    in_reply_to = models.CharField(
+        max_length=998,
+        blank=True,
+        verbose_name='In-Reply-To',
+        help_text='Header In-Reply-To do email recebido. Permite ligar respostas à thread.',
+    )
+
     class Meta:
         ordering = ['-created_at']
         indexes = [
@@ -1189,3 +1221,108 @@ class PlannedActivity(AbstractBaseModel):
         if days > 0:
             return f'Em {days} dia{"s" if days != 1 else ""}'
         return f'Atrasada {abs(days)} dia{"s" if abs(days) != 1 else ""}'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NOTIFICATIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+class Notification(AbstractBaseModel):
+    """
+    Notificações internas do sistema.
+
+    Exemplos:
+    - João mencionou-te numa nota do Lead X
+    - Lead Y foi atribuída a ti
+    - Atividade Z está em atraso
+    - Resposta de WhatsApp do Contacto W
+    """
+
+    NOTIFICATION_TYPES = [
+        ('ACTIVITY_OVERDUE', 'Atividade em Atraso'),
+        ('ACTIVITY_TODAY',   'Atividade para Hoje'),
+        ('ACTIVITY_UPCOMING','Atividade Futura'),
+        ('MENTION',          'Menção'),
+        ('ASSIGNMENT',       'Atribuição'),
+        ('WHATSAPP',         'WhatsApp'),
+        ('EMAIL',            'Email'),
+        ('STAGE_CHANGE',     'Mudança de Etapa'),
+        ('COMMENT',          'Comentário'),
+        ('SYSTEM',           'Sistema'),
+    ]
+
+    # Prioridade numérica para ordenação (menor = mais urgente)
+    PRIORITY_MAP = {
+        'ACTIVITY_OVERDUE': 1,
+        'MENTION':          2,
+        'ACTIVITY_TODAY':   3,
+        'ASSIGNMENT':       4,
+        'WHATSAPP':         5,
+        'EMAIL':            5,
+        'STAGE_CHANGE':     6,
+        'COMMENT':          6,
+        'ACTIVITY_UPCOMING':7,
+        'SYSTEM':           8,
+    }
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='notifications',
+        verbose_name='Destinatário',
+    )
+
+    notification_type = models.CharField(
+        max_length=30,
+        choices=NOTIFICATION_TYPES,
+        verbose_name='Tipo',
+    )
+
+    title   = models.CharField(max_length=255, verbose_name='Título')
+    message = models.TextField(blank=True, verbose_name='Mensagem')
+    link    = models.CharField(max_length=500, blank=True, verbose_name='Link')
+
+    # Objeto relacionado (GenericFK opcional)
+    related_content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+    )
+    related_object_id = models.UUIDField(null=True, blank=True)
+    related_object    = GenericForeignKey('related_content_type', 'related_object_id')
+
+    # Estado
+    is_read = models.BooleanField(default=False, verbose_name='Lida')
+    read_at = models.DateTimeField(null=True, blank=True, verbose_name='Lida a')
+
+    # Prioridade calculada (preenchida no save)
+    priority = models.PositiveSmallIntegerField(default=99, verbose_name='Prioridade')
+
+    # Urgente: True apenas para ACTIVITY_OVERDUE ou quando marcado explicitamente (e.g. menção urgente)
+    is_urgent = models.BooleanField(default=False, verbose_name='Urgente')
+
+    class Meta:
+        ordering = ['priority', '-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_read']),
+            models.Index(fields=['user', 'priority', '-created_at']),
+        ]
+        verbose_name = 'Notificação'
+        verbose_name_plural = 'Notificações'
+
+    def __str__(self):
+        return f"{self.user} — {self.title}"
+
+    def save(self, *args, **kwargs):
+        self.priority = self.PRIORITY_MAP.get(self.notification_type, 99)
+        # Atividades em atraso são sempre urgentes
+        if self.notification_type == 'ACTIVITY_OVERDUE':
+            self.is_urgent = True
+        super().save(*args, **kwargs)
+
+    def mark_as_read(self):
+        from django.utils import timezone
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save(update_fields=['is_read', 'read_at'])

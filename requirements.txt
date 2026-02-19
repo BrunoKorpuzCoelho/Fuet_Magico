@@ -11,6 +11,9 @@ celery==5.4.0
 # Environment Variables
 python-dotenv==1.0.1
 
+# Encryption (Fernet for SMTP app passwords)
+cryptography==46.0.5
+
 # Image Processing (para upload de imagens)
 # Pillow==11.0.0
 

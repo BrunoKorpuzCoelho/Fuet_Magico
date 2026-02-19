@@ -5341,6 +5341,45 @@ Implementar timeline de atividades dentro do formulário de lead (dependente da 
 
 ---
 
+### 5.12.6 Sistema de Email por Utilizador (Chatter) 🔄
+
+Envio de emails a clientes directamente a partir do chatter de qualquer registo (Lead, futuramente Compras, Vendas, etc.). Cada utilizador configura as suas próprias credenciais SMTP no perfil.
+
+**Arquitectura:**
+- `UserEmailConfig` (accounts) — credenciais por utilizador (email, App Password Fernet-encriptada, provedor Gmail/Outlook)
+- `ChatterMessage` (core) com `message_type='EMAIL'` + `GenericForeignKey` — registo central de todos os emails, reutilizável em qualquer módulo
+- `apps/core/email_utils.py` — lógica de envio + encriptação Fernet
+- `send_email_for_record(user, record, ...)` — API pública de envio
+
+**Backend — ✅ COMPLETO:**
+- [x] Instalar `cryptography` (Fernet encryption)
+- [x] `FERNET_KEY` em `settings.py` (via `.env`)
+- [x] `apps/core/email_utils.py` — `encrypt_password`, `decrypt_password`, `send_email_for_record`
+- [x] `UserEmailConfig` model em `apps/accounts/models.py` (migration 0004 aplicada)
+- [x] Campos de threading em `ChatterMessage`: `direction`, `from_email`, `message_id`, `in_reply_to` (migration 0015 aplicada)
+- [x] `lead_send_email` view (`POST /crm/leads/<uuid>/emails/send/`)
+- [x] `lead_emails_list` view (`GET /crm/leads/<uuid>/emails/`)
+- [x] URLs adicionadas em `apps/crm/urls.py`
+- [x] `profile_settings` view — guarda `UserEmailConfig` via POST
+- [x] `test_smtp` view — envia email de teste para verificar credenciais
+- [x] URLs em `apps/accounts/urls.py`: `/accounts/perfil/`, `/accounts/perfil/testar-smtp/`
+- [x] `UserEmailConfig` registado no admin
+- [x] Link "Meu Perfil" no navbar aponta para `/accounts/perfil/`
+
+**Frontend — ⏳ PENDENTE:**
+- [ ] ⏳ Template `accounts/profile_settings.html` — form de configuração de email SMTP
+- [ ] ⏳ Aba "Enviar Mensagem" no chatter da lead (`lead_create.html`) — formulário de envio
+- [ ] ⏳ Lista de emails enviados/recebidos no chatter (Alpine.js, chamada a `lead_emails_list`)
+- [ ] ⏳ Aviso no chatter se utilizador não tem SMTP configurado (com link para perfil)
+
+**IMAP Polling (inbound) — 🔴 NÃO IMPLEMENTADO (tarefa futura):**
+- [ ] 🔴 Celery task periódica — polling IMAP por utilizador
+- [ ] 🔴 Match por `In-Reply-To` / `References` → thread existente
+- [ ] 🔴 Match por remetente = email de contacto conhecido → vincula lead
+- [ ] 🔴 Criar `ChatterMessage` com `direction='inbound'` + notificação
+
+---
+
 **FIM DAS TAREFAS FUTURAS**
 
 ---

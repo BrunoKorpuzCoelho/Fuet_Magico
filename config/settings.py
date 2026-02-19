@@ -7,6 +7,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-development-key-change-in-production')
+
+# Fernet key for encrypting SMTP app passwords. Generate with:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# and store in .env as FERNET_KEY=<value>
+FERNET_KEY = os.getenv('FERNET_KEY', '')
+
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,cubixtest.pt,www.cubixtest.pt').split(',')
 
@@ -54,6 +60,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'apps.accounts.context_processors.company_context',
+                'apps.core.context_processors.notifications_context',
             ],
         },
     },

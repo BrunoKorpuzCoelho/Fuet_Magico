@@ -365,3 +365,45 @@ class Activity(AbstractBaseModel):
             self.done_date = timezone.now()
         super().save(*args, **kwargs)
 
+
+class LeadNote(AbstractBaseModel):
+    """
+    Nota interna no chatter de um Lead.
+    Visível apenas pelos utilizadores do ERP — não é enviada ao cliente.
+    Suporta menções via @username que geram notificações MENTION.
+    """
+    lead = models.ForeignKey(
+        Lead,
+        on_delete=models.CASCADE,
+        related_name='chatter_notes',
+        verbose_name='Lead',
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='lead_notes',
+        verbose_name='Autor',
+    )
+    content = models.TextField(verbose_name='Conteúdo')
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Nota do Lead'
+        verbose_name_plural = 'Notas do Lead'
+
+    def __str__(self):
+        return f'{self.author} — {self.lead} ({self.created_at:%d/%m/%Y})'
+
+
+# Os emails enviados/recebidos no contexto de uma lead são guardados em
+# apps.core.models.ChatterMessage (message_type='EMAIL') com GenericForeignKey
+# a apontar para o registo em questão (Lead, futuramente Compra, Venda, etc.).
+#
+# Para consultar emails de uma lead:
+#   from django.contrib.contenttypes.models import ContentType
+#   from apps.core.models import ChatterMessage
+#   ct = ContentType.objects.get_for_model(Lead)
+#   emails = ChatterMessage.objects.filter(
+#       content_type=ct, object_id=lead.id, message_type='EMAIL'
+#   )
