@@ -482,13 +482,12 @@ class ActivityChain(AbstractBaseModel):
     
     Define a sequência de atividades que deve ser executada.
     Pode ser aplicada a qualquer Lead, Contact, etc.
-    
-    Usage:
-        chain = ActivityChain.objects.create(
-            name='Follow-up pós-reunião',
-            description='Fluxo padrão após meeting com cliente'
-        )
     """
+    APPLICABLE_MODEL_CHOICES = [
+        ('lead', 'Lead'),
+        ('contact', 'Contacto'),
+    ]
+
     name = models.CharField(
         max_length=255,
         verbose_name='Chain Name',
@@ -497,6 +496,13 @@ class ActivityChain(AbstractBaseModel):
     description = models.TextField(
         blank=True,
         verbose_name='Description'
+    )
+    applicable_model = models.CharField(
+        max_length=50,
+        choices=APPLICABLE_MODEL_CHOICES,
+        default='lead',
+        verbose_name='Modelo',
+        help_text='Qual o modelo a que esta cadeia se aplica (Lead, Contacto...)'
     )
     
     # Multi-company
@@ -567,6 +573,21 @@ class ActivityChainStep(AbstractBaseModel):
         blank=True,
         related_name='chain_step_assignments',
         verbose_name='Default Assigned To'
+    )
+    # Em caso de insucesso: blueprint alternativo a executar antes de re-tentar este passo
+    on_failure_activity = models.ForeignKey(
+        ScheduledActivity,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='chain_steps_on_failure',
+        verbose_name='Atividade se Insucesso',
+        help_text='Blueprint a executar quando este passo falha (ex: "Não Atendeu"). Vazio = avança igualmente.'
+    )
+    on_failure_delay_days = models.IntegerField(
+        default=1,
+        verbose_name='Delay Insucesso (dias)',
+        help_text='Dias de espera antes de executar a atividade de insucesso'
     )
     
     class Meta:
@@ -1034,3 +1055,137 @@ class ActivityWorkflow(AbstractBaseModel):
             'description': self.next_activity_template.default_description,
         }
 
+
+class PlannedActivity(AbstractBaseModel):
+    """
+    Atividade planeada associada a qualquer modelo (Lead, Contacto, etc.).
+    Exibida no chatter, estilo Odoo — permanece visível mesmo após concluída (log histórico).
+
+    Usage:
+        PlannedActivity.objects.create(
+            content_object=lead,
+            activity_type=ActivityType.objects.get(code='CALL'),
+            summary='Ligar ao cliente',
+            due_date=date.today() + timedelta(days=3),
+            assigned_to=request.user,
+            created_by=request.user,
+        )
+    """
+    # GenericForeignKey — funciona com qualquer modelo
+    content_type = models.ForeignKey(
+        'contenttypes.ContentType',
+        on_delete=models.CASCADE,
+        verbose_name='Content Type'
+    )
+    object_id = models.UUIDField(verbose_name='Object ID')
+    content_object = GenericForeignKey('content_type', 'object_id')
+
+    # Tipo de atividade
+    activity_type = models.ForeignKey(
+        'ActivityType',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='planned_activities',
+        verbose_name='Activity Type'
+    )
+
+    # Conteúdo
+    summary = models.CharField(
+        max_length=255,
+        verbose_name='Summary',
+        help_text='Título curto da atividade'
+    )
+    note = models.TextField(
+        blank=True,
+        verbose_name='Note',
+        help_text='Nota opcional'
+    )
+
+    # Datas
+    due_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name='Due Date'
+    )
+
+    # Utilizadores
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='planned_activities_assigned',
+        verbose_name='Assigned To'
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='planned_activities_created',
+        verbose_name='Created By'
+    )
+
+    # Estado
+    STATUS_CHOICES = [
+        ('PLANNED', 'Planeada'),
+        ('DONE', 'Concluída'),
+        ('CANCELLED', 'Cancelada'),
+    ]
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='PLANNED',
+        verbose_name='Status'
+    )
+    done_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Done At'
+    )
+    done_note = models.TextField(
+        blank=True,
+        verbose_name='Done Note',
+        help_text='Nota adicionada ao marcar como concluída'
+    )
+
+    class Meta:
+        ordering = ['due_date', '-created_at']
+        indexes = [
+            models.Index(fields=['content_type', 'object_id']),
+            models.Index(fields=['status']),
+            models.Index(fields=['assigned_to']),
+            models.Index(fields=['due_date']),
+        ]
+        verbose_name = 'Planned Activity'
+        verbose_name_plural = 'Planned Activities'
+
+    def __str__(self):
+        return f"{self.summary} — {self.get_status_display()}"
+
+    @property
+    def days_until_due(self):
+        """Retorna o número de dias até à data limite (negativo se atrasada)."""
+        if not self.due_date:
+            return None
+        from django.utils import timezone
+        delta = self.due_date - timezone.now().date()
+        return delta.days
+
+    @property
+    def is_overdue(self):
+        days = self.days_until_due
+        return days is not None and days < 0 and self.status == 'PLANNED'
+
+    @property
+    def due_label(self):
+        """Texto legível para o prazo (ex: 'Due in 3 days', 'Today', 'Overdue 2 days')."""
+        days = self.days_until_due
+        if days is None:
+            return 'Sem prazo'
+        if days == 0:
+            return 'Hoje'
+        if days > 0:
+            return f'Em {days} dia{"s" if days != 1 else ""}'
+        return f'Atrasada {abs(days)} dia{"s" if abs(days) != 1 else ""}'

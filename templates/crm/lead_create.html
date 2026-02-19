@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load static l10n %}
 
 {% block extra_css %}
@@ -1480,13 +1480,343 @@
                 </div>
                 
                 <!-- Tab: Atividade -->
-                <div x-show="activeTab === 'activity'" class="p-4">
-                    <div class="text-center py-8">
-                        <svg class="w-12 h-12 mx-auto text-gray-600 mb-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
-                        </svg>
-                        <p class="text-sm text-gray-400">Atividades em desenvolvimento</p>
+                <div x-show="activeTab === 'activity'" class="flex flex-col h-full">
+                <div x-data="leadActivities('{{ lead.id }}')" class="flex flex-col h-full">
+
+                    <!-- Header (Agendar Atividade button) -->
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-700 flex-shrink-0">
+                        <span class="text-xs font-semibold text-gray-300">
+                            Atividades
+                            <span class="ml-1 px-1.5 py-0.5 rounded-full bg-gray-700 text-gray-400 text-xs"
+                                  x-text="activities.filter(a => !a.is_done).length"></span>
+                        </span>
+                        <button type="button" @click="showForm = !showForm"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 bg-primary hover:bg-primary/80 text-white text-xs font-medium rounded-lg transition-colors">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Agendar
+                        </button>
                     </div>
+
+                    <!-- Inline Create Form -->
+                    <div x-show="showForm" x-transition class="border-b border-gray-700 bg-gray-800/50 flex-shrink-0">
+
+                        <!-- Mode Selector Tabs -->
+                        <div class="flex border-b border-gray-700/60">
+                            <button type="button"
+                                    @click="activityMode = 'task'; resetForm()"
+                                    :class="activityMode === 'task' ? 'bg-gray-700 text-white border-b-2 border-primary' : 'text-gray-400 hover:text-gray-200'"
+                                    class="flex-1 px-3 py-2 text-xs font-medium transition-all">
+                                <svg class="inline w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                Tarefa
+                            </button>
+                            <button type="button"
+                                    @click="activityMode = 'chain'; resetForm()"
+                                    :class="activityMode === 'chain' ? 'bg-gray-700 text-white border-b-2 border-primary' : 'text-gray-400 hover:text-gray-200'"
+                                    class="flex-1 px-3 py-2 text-xs font-medium transition-all">
+                                <svg class="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                                </svg>
+                                Cadeia de Tarefas
+                            </button>
+                        </div>
+
+                        <!-- TASK FORM -->
+                        <div x-show="activityMode === 'task'" class="p-4 space-y-3">
+                            <!-- Step 1: Activity Type Category -->
+                            <div>
+                                <label class="block text-xs font-medium text-gray-400 mb-1">Categoria *</label>
+                                <select x-model="newActivity.activity_type"
+                                        @change="newActivity.scheduled_activity_id = ''; newActivity.summary = ''"
+                                        class="w-full rounded-lg border-gray-600 bg-gray-700 px-3 py-2 text-xs text-gray-200 focus:border-primary focus:ring-primary">
+                                    <option value="">Selecionar categoria...</option>
+                                    {% for val, label in activity_type_choices %}
+                                    <option value="{{ val }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                <p x-show="formErrors.activity_type" x-text="formErrors.activity_type" class="text-red-400 text-xs mt-1"></p>
+                            </div>
+                            <!-- Step 2: Specific Activity Blueprint (filtered by type) -->
+                            <div x-show="newActivity.activity_type">
+                                <label class="block text-xs font-medium text-gray-400 mb-1">Atividade *</label>
+                                <div class="relative">
+                                    <!-- Blueprint selector -->
+                                    <select x-show="filteredBlueprints.length > 0"
+                                            x-model="newActivity.scheduled_activity_id"
+                                            @change="applyBlueprint()"
+                                            class="w-full rounded-lg border-gray-600 bg-gray-700 px-3 py-2 text-xs text-gray-200 focus:border-primary focus:ring-primary">
+                                        <option value="">Selecionar atividade...</option>
+                                        <template x-for="bp in filteredBlueprints" :key="bp.id">
+                                            <option :value="bp.id" x-text="bp.name"></option>
+                                        </template>
+                                    </select>
+                                    <!-- No blueprints message -->
+                                    <p x-show="filteredBlueprints.length === 0"
+                                       class="text-xs text-gray-500 italic py-1">
+                                        Sem atividades configuradas para este tipo.
+                                        <a href="/core/scheduled-activities/new/" target="_blank" class="text-primary hover:underline">Criar</a>
+                                    </p>
+                                </div>
+                                <!-- Blueprint preview: selected icon + description -->
+                                <div x-show="selectedBlueprint" class="flex items-center gap-2 mt-1.5 bg-gray-700/50 rounded-lg px-2 py-1.5">
+                                    <span :style="'color: ' + (selectedBlueprint?.icon_color || '#6366f1')" class="flex-shrink-0 w-5 h-5 [&>svg]:w-5 [&>svg]:h-5" x-html="selectedBlueprint?.icon_svg || ''"></span>
+                                    <span class="text-xs text-gray-300" x-text="selectedBlueprint?.summary || selectedBlueprint?.name || ''"></span>
+                                </div>
+                            </div>
+                            <!-- Summary (editable, pre-filled from blueprint) -->
+                            <div>
+                                <label class="block text-xs font-medium text-gray-400 mb-1">Notas / Resumo</label>
+                                <input type="text" x-model="newActivity.summary" placeholder="Ex: Ligar para discutir proposta..."
+                                       class="w-full rounded-lg border-gray-600 bg-gray-700 px-3 py-2 text-xs text-gray-200 placeholder-gray-500 focus:border-primary focus:ring-primary">
+                                <p x-show="formErrors.summary" x-text="formErrors.summary" class="text-red-400 text-xs mt-1"></p>
+                            </div>
+                            <!-- Due Date (Air Datepicker) -->
+                            <div>
+                                <label class="block text-xs font-medium text-gray-400 mb-1">Data Limite *</label>
+                                <input type="text"
+                                       id="activity-due-date-display"
+                                       placeholder="Selecionar data..."
+                                       autocomplete="off"
+                                       readonly
+                                       class="w-full rounded-lg border-gray-600 bg-gray-700 px-3 py-2 text-xs text-gray-200 placeholder-gray-500 focus:border-primary focus:ring-primary cursor-pointer">
+                                <!-- Hidden ISO input read by Alpine -->
+                                <input type="hidden" id="activity-due-date-iso" x-model="newActivity.due_date">
+                                <p x-show="formErrors.due_date" x-text="formErrors.due_date" class="text-red-400 text-xs mt-1"></p>
+                            </div>
+                            <!-- Responsável -->
+                            <div>
+                                <label class="block text-xs font-medium text-gray-400 mb-1">Responsável</label>
+                                <select x-model="newActivity.assigned_to_id"
+                                        class="w-full rounded-lg border-gray-600 bg-gray-700 px-3 py-2 text-xs text-gray-200 focus:border-primary focus:ring-primary">
+                                    {% for u in users_for_activity %}
+                                    <option value="{{ u.id }}" {% if u.id|stringformat:"s" == current_user_id %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <!-- Buttons -->
+                            <div class="flex gap-2 pt-1">
+                                <button type="button" @click="createActivity()"
+                                        :disabled="saving"
+                                        class="flex-1 px-3 py-2 bg-primary hover:bg-primary/80 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors">
+                                    <span x-show="!saving" x-text="editingActivityId ? 'Guardar Alterações' : 'Guardar Atividade'"></span>
+                                    <span x-show="saving">A guardar...</span>
+                                </button>
+                                <button type="button" @click="showForm = false; resetForm()"
+                                        class="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded-lg transition-colors">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- CHAIN FORM -->
+                        <div x-show="activityMode === 'chain'" class="p-4 space-y-3">
+                            <!-- Chain selector -->
+                            <div>
+                                <label class="block text-xs font-medium text-gray-400 mb-1">Cadeia de Tarefas *</label>
+                                <select x-model="newChain.chain_id"
+                                        class="w-full rounded-lg border-gray-600 bg-gray-700 px-3 py-2 text-xs text-gray-200 focus:border-primary focus:ring-primary">
+                                    <option value="">Selecionar cadeia...</option>
+                                    <template x-for="chain in availableChains" :key="chain.id">
+                                        <option :value="chain.id" x-text="chain.name + ' (' + chain.total_steps + ' passos)'"></option>
+                                    </template>
+                                </select>
+                                <p x-show="chainErrors.chain_id" x-text="chainErrors.chain_id" class="text-red-400 text-xs mt-1"></p>
+                                <!-- Chain description preview -->
+                                <template x-if="selectedChainDescription">
+                                    <p class="text-xs text-gray-500 mt-1 italic" x-text="selectedChainDescription"></p>
+                                </template>
+                            </div>
+                            <!-- Responsável -->
+                            <div>
+                                <label class="block text-xs font-medium text-gray-400 mb-1">Responsável</label>
+                                <select x-model="newChain.assigned_to_id"
+                                        class="w-full rounded-lg border-gray-600 bg-gray-700 px-3 py-2 text-xs text-gray-200 focus:border-primary focus:ring-primary">
+                                    {% for u in users_for_activity %}
+                                    <option value="{{ u.id }}" {% if u.id|stringformat:"s" == current_user_id %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <!-- Empty chains warning -->
+                            <template x-if="availableChains.length === 0">
+                                <p class="text-xs text-yellow-400 py-2">
+                                    Não existem cadeias de tarefas configuradas para leads.
+                                    <a href="/crm/activity-chains/new/" target="_blank" class="underline">Criar cadeia</a>
+                                </p>
+                            </template>
+                            <!-- Buttons -->
+                            <div class="flex gap-2 pt-1">
+                                <button type="button" @click="startChain()"
+                                        :disabled="chainSaving || availableChains.length === 0"
+                                        class="flex-1 px-3 py-2 bg-primary hover:bg-primary/80 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors">
+                                    <span x-show="!chainSaving">Iniciar Cadeia</span>
+                                    <span x-show="chainSaving">A iniciar...</span>
+                                </button>
+                                <button type="button" @click="showForm = false; resetForm()"
+                                        class="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded-lg transition-colors">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activities List (Odoo-style) -->
+                    <div class="flex-1 overflow-y-auto">
+
+                        <!-- Empty State -->
+                        <div x-show="activities.length === 0" class="text-center py-8 px-4">
+                            <svg class="w-10 h-10 mx-auto text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            </svg>
+                            <p class="text-xs text-gray-500">Sem atividades agendadas</p>
+                            <button type="button" @click="showForm = true" class="mt-2 text-xs text-primary hover:underline">Agendar agora</button>
+                        </div>
+
+                        <!-- Planned Activities Section -->
+                        <div x-show="activitiesPending.length > 0" class="px-3 pt-3">
+                            <div class="flex items-center gap-1 mb-2">
+                                <svg class="w-3 h-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                                <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Atividades Planeadas</span>
+                            </div>
+                            <template x-for="activity in activitiesPending" :key="activity.id">
+                                <div class="mb-3">
+                                    <div class="flex items-start gap-2.5">
+                                        <!-- Status Circle Icon: DB icon_svg if set, else type-based fallback -->
+                                        <button type="button"
+                                                class="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center mt-0.5 transition-opacity hover:opacity-80"
+                                                :class="{'bg-red-500/20': activity.is_overdue, 'bg-yellow-500/20': !activity.is_overdue && activity.is_today, 'bg-green-600/20': !activity.is_overdue && !activity.is_today}"
+                                                @click="openDonePopover(activity)"
+                                                title="Marcar como concluído">
+                                            <!-- Dynamic SVG from DB blueprint -->
+                                            <template x-if="activity.icon_svg">
+                                                <span :style="'color: ' + (activity.is_overdue ? '#f87171' : activity.is_today ? '#facc15' : (activity.icon_color || '#4ade80'))"
+                                                      class="w-4 h-4 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4"
+                                                      x-html="activity.icon_svg"></span>
+                                            </template>
+                                            <!-- Fallback: type-based generic icons when no DB icon -->
+                                            <template x-if="!activity.icon_svg && activity.activity_type === 'CALL'">
+                                                <svg class="w-4 h-4" :class="activity.is_overdue ? 'text-red-400' : activity.is_today ? 'text-yellow-400' : 'text-green-400'" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
+                                            </template>
+                                            <template x-if="!activity.icon_svg && activity.activity_type === 'EMAIL'">
+                                                <svg class="w-4 h-4" :class="activity.is_overdue ? 'text-red-400' : activity.is_today ? 'text-yellow-400' : 'text-green-400'" fill="currentColor" viewBox="0 0 20 20"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
+                                            </template>
+                                            <template x-if="!activity.icon_svg && activity.activity_type === 'WHATSAPP'">
+                                                <svg class="w-4 h-4" :class="activity.is_overdue ? 'text-red-400' : 'text-green-400'" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                                            </template>
+                                            <template x-if="!activity.icon_svg && (activity.activity_type === 'DOCUMENT' || activity.activity_type === 'SIGNATURE')">
+                                                <svg class="w-4 h-4" :class="activity.is_overdue ? 'text-red-400' : activity.is_today ? 'text-yellow-400' : 'text-green-400'" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/></svg>
+                                            </template>
+                                            <template x-if="!activity.icon_svg && activity.activity_type === 'TODO'">
+                                                <svg class="w-4 h-4" :class="activity.is_overdue ? 'text-red-400' : activity.is_today ? 'text-yellow-400' : 'text-green-400'" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                            </template>
+                                        </button>
+
+                                        <!-- Content -->
+                                        <div class="flex-1 min-w-0">
+                                            <!-- Due label + summary + assigned to + info button -->
+                                            <div class="flex items-center flex-wrap gap-x-1 gap-y-0 leading-snug">
+                                                <span class="text-xs font-semibold"
+                                                      :class="{'text-red-400': activity.is_overdue, 'text-yellow-400': !activity.is_overdue && activity.is_today, 'text-green-400': !activity.is_overdue && !activity.is_today}"
+                                                      x-text="dueDateLabel(activity)"></span>
+                                                <span class="text-xs text-gray-400">:</span>
+                                                <span class="text-xs font-medium text-gray-200 italic" x-text="'«' + activity.summary + '»'"></span>
+                                                <span class="text-xs text-gray-500">para</span>
+                                                <span class="text-xs text-gray-300" x-text="activity.assigned_to || '—'"></span>
+                                                <!-- Info toggle -->
+                                                <button type="button" @click="toggleInfo(activity.id)"
+                                                        class="ml-0.5 text-gray-600 hover:text-gray-300 transition-colors" title="Ver detalhes">
+                                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+                                                </button>
+                                            </div>
+
+                                            <!-- Expandable info panel -->
+                                            <div x-show="expandedInfoId === activity.id" x-transition
+                                                 class="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-0.5 bg-gray-700/40 rounded-lg p-2 text-xs">
+                                                <span class="text-gray-400">Tipo de atividade</span>
+                                                <span class="text-gray-200" x-text="activity.activity_type_display"></span>
+                                                <span class="text-gray-400">Responsável</span>
+                                                <span class="text-gray-200" x-text="activity.assigned_to || '—'"></span>
+                                                <span class="text-gray-400">Vence em</span>
+                                                <span class="text-gray-200" x-text="activity.due_date_display"></span>
+                                            </div>
+
+                                            <!-- Action links -->
+                                            <div class="flex items-center gap-2 mt-0.5">
+                                                <button type="button" @click="openDonePopover(activity)"
+                                                        class="text-xs text-green-400 hover:text-green-300 hover:underline flex items-center gap-0.5 transition-colors">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                                    Marcar Concluído
+                                                </button>
+                                                <span class="text-gray-600 text-xs select-none">|</span>
+                                                <button type="button" @click="editActivity(activity)"
+                                                        class="text-xs text-gray-400 hover:text-gray-200 hover:underline transition-colors">
+                                                    Editar
+                                                </button>
+                                                <span class="text-gray-600 text-xs select-none">|</span>
+                                                <button type="button" @click="deleteActivity(activity.id)"
+                                                        class="text-xs text-red-400 hover:text-red-300 hover:underline transition-colors">
+                                                    Cancelar
+                                                </button>
+                                            </div>
+
+                                            <!-- Inline Done Popover -->
+                                            <div x-show="donePopover.activityId === activity.id" x-transition
+                                                 class="mt-2 bg-gray-800 border border-gray-600/70 rounded-xl p-3 shadow-xl">
+                                                <p class="text-xs font-semibold text-gray-300 mb-1.5">Marcar Concluído</p>
+                                                <textarea x-model="donePopover.feedback" rows="3"
+                                                          placeholder="Escrever feedback..."
+                                                          class="w-full rounded-lg border-gray-600 bg-gray-700 px-2.5 py-1.5 text-xs text-gray-200 placeholder-gray-500 focus:border-primary focus:ring-primary resize-none"></textarea>
+                                                <p x-show="donePopover.error" x-text="donePopover.error" class="text-red-400 text-xs mt-1"></p>
+                                                <div class="flex gap-1 mt-2">
+                                                    <button type="button" @click="confirmDoneAndNext(activity)"
+                                                            :disabled="donePopover.saving"
+                                                            class="flex-1 text-xs bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-lg px-2 py-1.5 font-medium transition-colors leading-tight">
+                                                        <span x-show="!donePopover.saving">Concluído &amp; Agendar Próximo</span>
+                                                        <span x-show="donePopover.saving">...</span>
+                                                    </button>
+                                                    <button type="button" @click="confirmDone(activity)"
+                                                            :disabled="donePopover.saving"
+                                                            class="text-xs bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white rounded-lg px-2.5 py-1.5 font-medium transition-colors">
+                                                        Concluído
+                                                    </button>
+                                                    <button type="button" @click="donePopover.activityId = null; donePopover.feedback = ''; donePopover.error = ''"
+                                                            class="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg px-2.5 py-1.5 transition-colors">
+                                                        Descartar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Done Activities Section -->
+                        <div x-show="activitiesDone.length > 0" class="px-3 pb-3">
+                            <div class="border-t border-gray-700/40 pt-2 mt-1">
+                                <p class="text-xs text-gray-500 font-semibold mb-2">Concluídas (<span x-text="activitiesDone.length"></span>)</p>
+                                <template x-for="activity in activitiesDone" :key="activity.id">
+                                    <div class="flex items-start gap-2 py-1 opacity-55">
+                                        <div class="flex-shrink-0 w-6 h-6 rounded-full bg-green-600/20 flex items-center justify-center mt-0.5">
+                                            <svg class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-xs text-gray-500 line-through truncate" x-text="activity.summary"></p>
+                                            <p class="text-xs text-gray-600 truncate" x-text="activity.activity_type_display + ' · ' + activity.due_date_display"></p>
+                                            <p x-show="activity.feedback" class="text-xs text-gray-600 italic mt-0.5 truncate" x-text="activity.feedback"></p>
+                                        </div>
+                                        <button type="button" @click="deleteActivity(activity.id)"
+                                                title="Remover" class="flex-shrink-0 p-0.5 text-gray-600 hover:text-red-400 transition-colors">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 </div>
             </div>
             {% endif %}
@@ -2051,5 +2381,438 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 300);
 });
 {% endif %}
+
+{% if is_edit %}
+// Lead Activities Alpine.js Component
+function leadActivities(leadId) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+
+    const currentUserId = '{{ current_user_id }}';
+
+    // Pre-load from Django context
+    const initialActivities = {{ lead_activities_json|safe }};
+    const chains = {{ activity_chains_json|safe }};
+    const scheduledActivities = {{ scheduled_activities_json|safe }};
+
+    // Portuguese locale for Air Datepicker
+    const ptLocale = {
+        days: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'],
+        daysShort: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+        daysMin: ['Do', 'Se', 'Te', 'Qu', 'Qi', 'Sx', 'Sá'],
+        months: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
+        monthsShort: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+        today: 'Hoje', clear: 'Limpar',
+        dateFormat: 'dd/MM/yyyy', timeFormat: 'HH:mm', firstDay: 1
+    };
+
+    function formatDatePT(d) {
+        const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+        return `${d.getDate()} de ${meses[d.getMonth()]} de ${d.getFullYear()}`;
+    }
+    function formatDateISO(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    return {
+        activities: initialActivities,
+        availableChains: chains,
+        availableBlueprints: scheduledActivities,
+        showForm: false,
+        activityMode: 'task',
+        saving: false,
+        newActivity: { activity_type: '', scheduled_activity_id: '', summary: '', due_date: '', assigned_to_id: currentUserId },
+        formErrors: {},
+        newChain: { chain_id: '', assigned_to_id: currentUserId },
+        chainErrors: {},
+        chainSaving: false,
+        _dpInstance: null,
+        editingActivityId: null,
+        expandedInfoId: null,
+        donePopover: { activityId: null, feedback: '', error: '', saving: false },
+
+        get activitiesPending() {
+            return [...this.activities]
+                .filter(a => !a.is_done)
+                .sort((a, b) => a.due_date.localeCompare(b.due_date));
+        },
+
+        get activitiesDone() {
+            return [...this.activities]
+                .filter(a => a.is_done)
+                .sort((a, b) => b.due_date.localeCompare(a.due_date));
+        },
+
+        get selectedChainDescription() {
+            if (!this.newChain.chain_id) return '';
+            const c = this.availableChains.find(c => c.id === this.newChain.chain_id);
+            return c ? c.description : '';
+        },
+
+        get filteredBlueprints() {
+            if (!this.newActivity.activity_type) return [];
+            return this.availableBlueprints.filter(bp => bp.type_code === this.newActivity.activity_type);
+        },
+
+        get selectedBlueprint() {
+            if (!this.newActivity.scheduled_activity_id) return null;
+            return this.availableBlueprints.find(bp => bp.id === this.newActivity.scheduled_activity_id) || null;
+        },
+
+        applyBlueprint() {
+            const bp = this.selectedBlueprint;
+            if (bp) {
+                // Pre-fill summary from blueprint if the user hasn't typed anything custom
+                this.newActivity.summary = bp.summary || bp.name || '';
+            } else {
+                this.newActivity.summary = '';
+            }
+        },
+
+        init() {
+            this.$watch('showForm', (val) => {
+                if (val && this.activityMode === 'task') {
+                    this.$nextTick(() => this._initDatePicker());
+                }
+            });
+            this.$watch('activityMode', (val) => {
+                if (val === 'task' && this.showForm) {
+                    this.$nextTick(() => this._initDatePicker());
+                }
+            });
+        },
+
+        _initDatePicker() {
+            const displayEl = document.getElementById('activity-due-date-display');
+            const hiddenEl  = document.getElementById('activity-due-date-iso');
+            if (!displayEl || !hiddenEl || !window.AirDatepicker) return;
+            if (this._dpInstance) { this._dpInstance.destroy(); this._dpInstance = null; }
+
+            this._dpInstance = new AirDatepicker(displayEl, {
+                locale: ptLocale,
+                autoClose: true,
+                position: 'top left',
+                buttons: ['today', 'clear'],
+                navTitles: {
+                    days: 'MMMM yyyy',
+                    months: 'yyyy',
+                    years: 'yyyy1 - yyyy2'
+                },
+                onSelect({ date }) {
+                    if (date) {
+                        hiddenEl.value = formatDateISO(date);
+                        displayEl.value = formatDatePT(date);
+                        hiddenEl.dispatchEvent(new Event('input'));
+                    } else {
+                        hiddenEl.value = '';
+                        displayEl.value = '';
+                        hiddenEl.dispatchEvent(new Event('input'));
+                    }
+                }
+            });
+        },
+
+        dueDateLabel(activity) {
+            if (!activity.due_date) return '';
+            const due = new Date(activity.due_date + 'T00:00:00');
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+            const diff = Math.round((due - now) / 86400000);
+            if (diff === 0) return 'Hoje';
+            if (diff === 1) return 'Amanhã';
+            if (diff === -1) return 'Ontem';
+            if (diff > 0) return `Daqui a ${diff} dias`;
+            return `Há ${Math.abs(diff)} dias`;
+        },
+
+        toggleInfo(id) {
+            this.expandedInfoId = (this.expandedInfoId === id) ? null : id;
+        },
+
+        openDonePopover(activity) {
+            if (this.donePopover.activityId === activity.id) {
+                this.donePopover.activityId = null;
+                return;
+            }
+            this.donePopover = { activityId: activity.id, feedback: '', error: '', saving: false };
+        },
+
+        editActivity(activity) {
+            this.editingActivityId = activity.id;
+            this.activityMode = 'task';
+            this.newActivity = {
+                activity_type: activity.activity_type,
+                scheduled_activity_id: activity.scheduled_activity_id || '',
+                summary: activity.summary,
+                due_date: activity.due_date,
+                assigned_to_id: activity.assigned_to_id || currentUserId,
+            };
+            this.formErrors = {};
+            this.showForm = true;
+            this.$nextTick(() => {
+                const displayEl = document.getElementById('activity-due-date-display');
+                if (displayEl && activity.due_date_display) {
+                    displayEl.value = activity.due_date_display;
+                }
+            });
+        },
+
+        resetForm() {
+            this.newActivity = { activity_type: '', scheduled_activity_id: '', summary: '', due_date: '', assigned_to_id: currentUserId };
+            this.formErrors = {};
+            this.newChain = { chain_id: '', assigned_to_id: currentUserId };
+            this.chainErrors = {};
+            this.editingActivityId = null;
+            const displayEl = document.getElementById('activity-due-date-display');
+            if (displayEl) displayEl.value = '';
+            if (this._dpInstance) { this._dpInstance.clear(); }
+        },
+
+        async createActivity() {
+            if (this.editingActivityId) { await this.updateActivity(); return; }
+            this.formErrors = {};
+            if (!this.newActivity.activity_type) this.formErrors.activity_type = 'Campo obrigatório';
+            if (!this.newActivity.scheduled_activity_id && filteredBlueprints.length > 0) this.formErrors.activity_type = this.formErrors.activity_type || 'Selecione uma atividade';
+            if (!this.newActivity.due_date) this.formErrors.due_date = 'Campo obrigatório';
+            if (Object.keys(this.formErrors).length > 0) return;
+
+            this.saving = true;
+            try {
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                const resp = await fetch(`/crm/leads/${leadId}/activities/create/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({
+                        activity_type: this.newActivity.activity_type,
+                        scheduled_activity_id: this.newActivity.scheduled_activity_id,
+                        summary: this.newActivity.summary || (this.selectedBlueprint?.summary || this.selectedBlueprint?.name || '?'),
+                        due_date: this.newActivity.due_date,
+                        assigned_to_id: this.newActivity.assigned_to_id,
+                    }),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    const a = data.activity;
+                    this.activities.push({
+                        id: a.id,
+                        activity_type: a.activity_type,
+                        activity_type_display: a.activity_type_display,
+                        scheduled_activity_id: a.scheduled_activity_id || '',
+                        icon_svg: a.icon_svg || '',
+                        icon_color: a.icon_color || '#6366F1',
+                        summary: a.summary,
+                        due_date: a.due_date,
+                        due_date_display: a.due_date_display,
+                        assigned_to: a.assigned_to,
+                        assigned_to_id: a.assigned_to_id || '',
+                        is_done: false,
+                        feedback: '',
+                        is_overdue: a.is_overdue,
+                        is_today: a.is_today,
+                    });
+                    this.showForm = false;
+                    this.resetForm();
+                } else {
+                    if (data.errors) this.formErrors = data.errors;
+                }
+            } catch (e) {
+                console.error('Error creating activity:', e);
+            } finally {
+                this.saving = false;
+            }
+        },
+
+        async updateActivity() {
+            this.formErrors = {};
+            if (!this.newActivity.activity_type) this.formErrors.activity_type = 'Campo obrigatório';
+            if (!this.newActivity.due_date) this.formErrors.due_date = 'Campo obrigatório';
+            if (Object.keys(this.formErrors).length > 0) return;
+
+            this.saving = true;
+            try {
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                const resp = await fetch(`/crm/leads/${leadId}/activities/${this.editingActivityId}/update/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({
+                        activity_type: this.newActivity.activity_type,
+                        scheduled_activity_id: this.newActivity.scheduled_activity_id,
+                        summary: this.newActivity.summary || (this.selectedBlueprint?.summary || this.selectedBlueprint?.name || '?'),
+                        due_date: this.newActivity.due_date,
+                        assigned_to_id: this.newActivity.assigned_to_id,
+                    }),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    const a = data.activity;
+                    const idx = this.activities.findIndex(x => x.id === this.editingActivityId);
+                    if (idx !== -1) {
+                        this.activities[idx] = {
+                            ...this.activities[idx],
+                            activity_type: a.activity_type,
+                            activity_type_display: a.activity_type_display,
+                            scheduled_activity_id: a.scheduled_activity_id || '',
+                            icon_svg: a.icon_svg || '',
+                            icon_color: a.icon_color || '#6366F1',
+                            summary: a.summary,
+                            due_date: a.due_date,
+                            due_date_display: a.due_date_display,
+                            assigned_to: a.assigned_to,
+                            assigned_to_id: a.assigned_to_id || '',
+                            is_overdue: a.is_overdue,
+                            is_today: a.is_today,
+                        };
+                    }
+                    this.showForm = false;
+                    this.resetForm();
+                } else {
+                    if (data.errors) this.formErrors = data.errors;
+                }
+            } catch (e) {
+                console.error('Error updating activity:', e);
+            } finally {
+                this.saving = false;
+            }
+        },
+
+        async startChain() {
+            this.chainErrors = {};
+            if (!this.newChain.chain_id) { this.chainErrors.chain_id = 'Selecione uma cadeia.'; return; }
+
+            this.chainSaving = true;
+            try {
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                const resp = await fetch(`/crm/leads/${leadId}/chains/start/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify(this.newChain),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    data.activities.forEach(a => {
+                        this.activities.push({
+                            id: a.id,
+                            activity_type: a.activity_type,
+                            activity_type_display: a.activity_type_display,
+                            summary: a.summary,
+                            due_date: a.due_date,
+                            due_date_display: a.due_date_display,
+                            assigned_to: a.assigned_to,
+                            assigned_to_id: a.assigned_to_id || '',
+                            is_done: false,
+                            feedback: '',
+                            is_overdue: a.is_overdue,
+                            is_today: a.is_today,
+                        });
+                    });
+                    this.showForm = false;
+                    this.resetForm();
+                } else {
+                    if (data.errors) this.chainErrors = data.errors;
+                }
+            } catch (e) {
+                console.error('Error starting chain:', e);
+            } finally {
+                this.chainSaving = false;
+            }
+        },
+
+        async _markDone(activity, feedback) {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            const resp = await fetch(`/crm/leads/${leadId}/activities/${activity.id}/done/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ feedback }),
+            });
+            return await resp.json();
+        },
+
+        async confirmDone(activity) {
+            this.donePopover.error = '';
+            if (!this.donePopover.feedback || this.donePopover.feedback.trim().length < 3) {
+                this.donePopover.error = 'Feedback deve ter pelo menos 3 caracteres.';
+                return;
+            }
+            this.donePopover.saving = true;
+            try {
+                const data = await this._markDone(activity, this.donePopover.feedback);
+                if (data.success) {
+                    const act = this.activities.find(a => a.id === activity.id);
+                    if (act) {
+                        act.is_done = true;
+                        act.feedback = this.donePopover.feedback;
+                        act.is_overdue = false;
+                        act.is_today = false;
+                    }
+                    this.donePopover.activityId = null;
+                    this.donePopover.feedback = '';
+                } else {
+                    if (data.errors) this.donePopover.error = data.errors.feedback || 'Erro ao marcar como concluída.';
+                }
+            } catch (e) {
+                console.error('Error marking done:', e);
+            } finally {
+                this.donePopover.saving = false;
+            }
+        },
+
+        async confirmDoneAndNext(activity) {
+            this.donePopover.error = '';
+            if (!this.donePopover.feedback || this.donePopover.feedback.trim().length < 3) {
+                this.donePopover.error = 'Feedback deve ter pelo menos 3 caracteres.';
+                return;
+            }
+            this.donePopover.saving = true;
+            try {
+                const data = await this._markDone(activity, this.donePopover.feedback);
+                if (data.success) {
+                    const act = this.activities.find(a => a.id === activity.id);
+                    if (act) {
+                        act.is_done = true;
+                        act.feedback = this.donePopover.feedback;
+                        act.is_overdue = false;
+                        act.is_today = false;
+                    }
+                    this.donePopover.activityId = null;
+                    this.donePopover.feedback = '';
+                    // Open form to schedule next activity
+                    this.activityMode = 'task';
+                    this.resetForm();
+                    this.showForm = true;
+                } else {
+                    if (data.errors) this.donePopover.error = data.errors.feedback || 'Erro ao marcar como concluída.';
+                }
+            } catch (e) {
+                console.error('Error:', e);
+            } finally {
+                this.donePopover.saving = false;
+            }
+        },
+
+        async deleteActivity(activityId) {
+            if (!confirm('Eliminar esta atividade?')) return;
+            try {
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                const resp = await fetch(`/crm/leads/${leadId}/activities/${activityId}/delete/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({}),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    this.activities = this.activities.filter(a => a.id !== activityId);
+                }
+            } catch (e) {
+                console.error('Error deleting activity:', e);
+            }
+        },
+    };
+}
+{% endif %}
+
 </script>
 {% endblock %}

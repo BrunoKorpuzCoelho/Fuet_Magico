@@ -12,11 +12,11 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.contrib.contenttypes.models import ContentType
 from apps.accounts.decorators import admin_required
 from apps.core.multi_company import filter_by_company, get_active_company
-from apps.core.models import ActivityType, ScheduledActivity
+from apps.core.models import ActivityType, ScheduledActivity, ActivityChain, ActivityChainStep, ActivityChainInstance
 from apps.core.forms import ScheduledActivityForm
 from apps.contacts.models import Contact
-from .models import CRMTag, CRMStage, Lead
-from .forms import CRMStageForm, CRMTagForm
+from .models import CRMTag, CRMStage, Lead, Activity
+from .forms import CRMStageForm, CRMTagForm, ActivityForm
 import json
 import random
 
@@ -1316,7 +1316,66 @@ def lead_detail_view(request, lead_id):
         'is_won_stage': stage.is_won_stage,
         'is_lost_stage': stage.is_lost_stage
     } for stage in all_stages])
-    
+
+    # Load activities linked to this lead, ordered by due_date
+    lead_activities = Activity.objects.filter(
+        lead=lead
+    ).select_related(
+        'assigned_to', 'scheduled_activity', 'scheduled_activity__activity_type'
+    ).order_by('is_done', 'due_date', '-created_at')
+
+    # Users list for "assign activity" dropdown
+    users_for_activity = User.objects.filter(is_active=True).order_by('username')
+
+    # Activity chains applicable to leads (filter by company)
+    activity_chains = ActivityChain.objects.filter(
+        is_active=True, applicable_model='lead'
+    ).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).order_by('name')
+    activity_chains_json = json.dumps([{
+        'id': str(c.id),
+        'name': c.name,
+        'description': c.description,
+        'total_steps': c.total_steps,
+    } for c in activity_chains])
+
+    # ScheduledActivity blueprints available for this company (for activity picker)
+    scheduled_activities = ScheduledActivity.objects.filter(
+        is_active=True
+    ).select_related('activity_type').filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).order_by('activity_type__code', 'name')
+    scheduled_activities_json = json.dumps([{
+        'id': str(sa.id),
+        'name': sa.name or sa.summary,
+        'summary': sa.summary,
+        'type_code': sa.activity_type.code if sa.activity_type else '',
+        'type_name': sa.activity_type.name if sa.activity_type else '',
+        'icon_svg': sa.icon_svg or '',
+        'icon_color': sa.icon_color or '#6366F1',
+    } for sa in scheduled_activities])
+
+    # Pre-serialize activities to JSON for Alpine.js initialization
+    from datetime import date as date_type
+    lead_activities_json = json.dumps([{
+        'id': str(a.id),
+        'activity_type': a.activity_type,
+        'activity_type_display': a.get_activity_type_display(),
+        'scheduled_activity_id': str(a.scheduled_activity.id) if a.scheduled_activity else '',
+        'icon_svg': a.scheduled_activity.icon_svg if a.scheduled_activity and a.scheduled_activity.icon_svg else '',
+        'icon_color': a.scheduled_activity.icon_color if a.scheduled_activity and a.scheduled_activity.icon_color else '#6366F1',
+        'summary': a.summary,
+        'due_date': a.due_date.strftime('%Y-%m-%d'),
+        'due_date_display': a.due_date.strftime('%d/%m/%Y'),
+        'assigned_to': a.assigned_to.get_full_name() or a.assigned_to.username if a.assigned_to else '',
+        'assigned_to_id': str(a.assigned_to.id) if a.assigned_to else '',
+        'is_done': a.is_done,
+        'feedback': a.feedback or '',
+        'is_overdue': (not a.is_done) and (a.due_date < date_type.today()),
+        'is_today': (not a.is_done) and (a.due_date == date_type.today()),
+    } for a in lead_activities])
+
     context = {
         'lead': lead,
         'form': form,
@@ -1331,6 +1390,14 @@ def lead_detail_view(request, lead_id):
         'won_stage': won_stage,
         'lost_stage': lost_stage,
         'new_stage': new_stage,
+        'lead_activities': lead_activities,
+        'users_for_activity': users_for_activity,
+        'activity_type_choices': Activity.ACTIVITY_TYPE_CHOICES,
+        'lead_activities_json': lead_activities_json,
+        'activity_chains_json': activity_chains_json,
+        'scheduled_activities_json': scheduled_activities_json,
+        'current_user_id': str(request.user.id),
+        'current_user_display': request.user.get_full_name() or request.user.username,
     }
     
     return render(request, 'crm/lead_create.html', context)
@@ -2240,3 +2307,645 @@ def bulk_delete_activity_types(request):
         return JsonResponse({'success': False, 'error': {'code': 'INVALID_JSON', 'message': 'JSON inválido'}}, status=400)
     except Exception as e:
         return JsonResponse({'success': False, 'error': {'code': 'UNKNOWN_ERROR', 'message': str(e)}}, status=500)
+
+
+# ─────────────────────────────────────────────
+# Activity Chains (Cadeias de Atividade)
+# ─────────────────────────────────────────────
+
+@login_required
+def activity_chain_list_view(request):
+    """Lista as Cadeias de Atividade com paginação, busca e filtros"""
+    search_query = request.GET.get('search', '')
+    search_field = request.GET.get('field', 'name')
+    page_number = request.GET.get('page', 1)
+    page_size = request.GET.get('page_size', 50)
+    status_filter = request.GET.get('status', 'active')
+
+    try:
+        page_size = int(page_size)
+        if page_size < 1:
+            page_size = 50
+    except (ValueError, TypeError):
+        page_size = 50
+
+    if status_filter == 'archived':
+        qs = ActivityChain.objects.filter(is_active=False)
+    else:
+        qs = ActivityChain.objects.filter(is_active=True)
+
+    qs = qs.annotate(step_count=Count('steps')).order_by('name')
+
+    if search_query:
+        field_mapping = {
+            'name': Q(name__icontains=search_query),
+            'description': Q(description__icontains=search_query),
+        }
+        if search_field in field_mapping:
+            qs = qs.filter(field_mapping[search_field])
+        else:
+            qs = qs.filter(Q(name__icontains=search_query) | Q(description__icontains=search_query))
+
+    paginator = Paginator(qs, page_size)
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'chains': page_obj,
+        'search_query': search_query,
+        'search_field': search_field,
+        'total_count': paginator.count,
+        'page_size': page_size,
+        'status_filter': status_filter,
+    }
+    return render(request, 'crm/activity_chain_list.html', context)
+
+
+@login_required
+def activity_chain_create_view(request):
+    """Cria uma nova Cadeia de Atividade com passos embutidos"""
+    from django.db import transaction
+    from apps.core.models import Company
+
+    def _to_minutes(value, unit):
+        if unit == 'horas': return int(value) * 60
+        if unit == 'dias':  return int(value) * 1440
+        return int(value)  # minutos
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        applicable_model = request.POST.get('applicable_model', 'lead')
+        owner_company_id = request.POST.get('owner_company_id') or None
+        steps_json_raw = request.POST.get('steps_json', '[]')
+
+        if not name:
+            messages.error(request, 'O nome da cadeia é obrigatório.')
+        else:
+            try:
+                steps_data = json.loads(steps_json_raw)
+                owner_company = Company.objects.filter(id=owner_company_id).first() if owner_company_id else None
+                with transaction.atomic():
+                    chain = ActivityChain.objects.create(
+                        name=name,
+                        description=description,
+                        applicable_model=applicable_model,
+                        owner_company=owner_company,
+                    )
+                    for idx, step in enumerate(steps_data, start=1):
+                        activity_id = step.get('activity_id')
+                        if not activity_id:
+                            continue
+                        ActivityChainStep.objects.create(
+                            chain=chain,
+                            activity_id=activity_id,
+                            order=idx,
+                            delay_days=_to_minutes(step.get('delay_days', 0), step.get('delay_unit', 'dias')),
+                            on_failure_activity_id=step.get('on_failure_activity_id') or None,
+                            on_failure_delay_days=_to_minutes(step.get('on_failure_delay_days', 0), step.get('on_failure_delay_unit', 'dias')),
+                        )
+                messages.success(request, f'Cadeia "{chain.name}" criada com sucesso!')
+                return redirect('crm:activity_chain_edit', chain_id=chain.id)
+            except Exception as e:
+                messages.error(request, f'Erro ao criar cadeia: {e}')
+
+    blueprints = ScheduledActivity.objects.filter(is_active=True).select_related('activity_type').order_by('activity_type__name', 'name', 'summary')
+    companies = Company.objects.filter(is_active=True).order_by('name')
+
+    context = {
+        'is_edit': False,
+        'chain': None,
+        'steps_json': '[]',
+        'blueprints': blueprints,
+        'companies': companies,
+    }
+    return render(request, 'crm/activity_chain_form.html', context)
+
+
+@login_required
+def activity_chain_edit_view(request, chain_id):
+    """Edita uma Cadeia de Atividade existente com passos embutidos"""
+    from django.db import transaction
+    from apps.core.models import Company
+
+    def _to_minutes(value, unit):
+        if unit == 'horas': return int(value) * 60
+        if unit == 'dias':  return int(value) * 1440
+        return int(value)
+
+    def _from_minutes(total):
+        """Devolve (valor, unidade) para exibir no frontend."""
+        if total and total % 1440 == 0:
+            return total // 1440, 'dias'
+        if total and total % 60 == 0:
+            return total // 60, 'horas'
+        return total or 0, 'minutos'
+
+    chain = get_object_or_404(ActivityChain, id=chain_id)
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        applicable_model = request.POST.get('applicable_model', 'lead')
+        owner_company_id = request.POST.get('owner_company_id') or None
+        steps_json_raw = request.POST.get('steps_json', '[]')
+
+        if not name:
+            messages.error(request, 'O nome da cadeia é obrigatório.')
+        else:
+            try:
+                steps_data = json.loads(steps_json_raw)
+                owner_company = Company.objects.filter(id=owner_company_id).first() if owner_company_id else None
+                with transaction.atomic():
+                    chain.name = name
+                    chain.description = description
+                    chain.applicable_model = applicable_model
+                    chain.owner_company = owner_company
+                    chain.save(update_fields=['name', 'description', 'applicable_model', 'owner_company'])
+                    chain.steps.all().delete()
+                    for idx, step in enumerate(steps_data, start=1):
+                        activity_id = step.get('activity_id')
+                        if not activity_id:
+                            continue
+                        ActivityChainStep.objects.create(
+                            chain=chain,
+                            activity_id=activity_id,
+                            order=idx,
+                            delay_days=_to_minutes(step.get('delay_days', 0), step.get('delay_unit', 'dias')),
+                            on_failure_activity_id=step.get('on_failure_activity_id') or None,
+                            on_failure_delay_days=_to_minutes(step.get('on_failure_delay_days', 0), step.get('on_failure_delay_unit', 'dias')),
+                        )
+                messages.success(request, f'Cadeia "{chain.name}" guardada com sucesso!')
+                return redirect('crm:activity_chain_edit', chain_id=chain.id)
+            except Exception as e:
+                messages.error(request, f'Erro ao guardar cadeia: {e}')
+
+    existing_steps = list(
+        chain.steps
+        .select_related('activity', 'activity__activity_type', 'on_failure_activity')
+        .order_by('order')
+        .values(
+            'activity_id', 'delay_days',
+            'on_failure_activity_id', 'on_failure_delay_days',
+        )
+    )
+    steps_for_js = []
+    for s in existing_steps:
+        delay_val, delay_unit = _from_minutes(s['delay_days'])
+        fail_val, fail_unit = _from_minutes(s['on_failure_delay_days'])
+        steps_for_js.append({
+            'activity_id': str(s['activity_id']),
+            'delay_days': delay_val,
+            'delay_unit': delay_unit,
+            'on_failure_activity_id': str(s['on_failure_activity_id']) if s['on_failure_activity_id'] else '',
+            'on_failure_delay_days': fail_val,
+            'on_failure_delay_unit': fail_unit,
+        })
+
+    blueprints = ScheduledActivity.objects.filter(is_active=True).select_related('activity_type').order_by('activity_type__name', 'name', 'summary')
+    companies = Company.objects.filter(is_active=True).order_by('name')
+
+    context = {
+        'is_edit': True,
+        'chain': chain,
+        'steps_json': json.dumps(steps_for_js),
+        'blueprints': blueprints,
+        'companies': companies,
+    }
+    return render(request, 'crm/activity_chain_form.html', context)
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_archive_chains(request):
+    """Arquiva múltiplas Cadeias de Atividade sem confirmação"""
+    from django.db import transaction
+    try:
+        data = json.loads(request.body)
+        ids = data.get('chain_ids', [])
+        if not isinstance(ids, list) or not ids:
+            return JsonResponse({'success': False, 'error': {'code': 'EMPTY_SELECTION', 'message': 'Nenhuma cadeia selecionada'}}, status=400)
+        qs = ActivityChain.objects.filter(id__in=ids)
+        if not qs.exists():
+            return JsonResponse({'success': False, 'error': {'code': 'NOT_FOUND', 'message': 'Nenhuma cadeia encontrada'}}, status=404)
+        already = list(qs.filter(is_active=False).values_list('name', flat=True))
+        to_archive = list(qs.filter(is_active=True))
+        if already and not to_archive:
+            return JsonResponse({'success': False, 'error': {'code': 'ALREADY_ARCHIVED', 'message': 'As cadeias selecionadas já estão arquivadas.', 'items': already}}, status=409)
+        with transaction.atomic():
+            for obj in to_archive:
+                obj.is_active = False
+                obj.save(update_fields=['is_active'])
+        msg = f'{len(to_archive)} cadeia(s) arquivada(s) com sucesso.'
+        warning = f'{len(already)} já estava(m) arquivada(s).' if already else None
+        return JsonResponse({'success': True, 'message': msg, 'warning': warning})
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_unarchive_chains(request):
+    """Desarquiva múltiplas Cadeias de Atividade"""
+    from django.db import transaction
+    try:
+        data = json.loads(request.body)
+        ids = data.get('chain_ids', [])
+        if not isinstance(ids, list) or not ids:
+            return JsonResponse({'success': False, 'error': {'code': 'EMPTY_SELECTION', 'message': 'Nenhuma cadeia selecionada'}}, status=400)
+        qs = ActivityChain.objects.filter(id__in=ids)
+        if not qs.exists():
+            return JsonResponse({'success': False, 'error': {'code': 'NOT_FOUND', 'message': 'Nenhuma cadeia encontrada'}}, status=404)
+        already = list(qs.filter(is_active=True).values_list('name', flat=True))
+        to_unarchive = list(qs.filter(is_active=False))
+        if already and not to_unarchive:
+            return JsonResponse({'success': False, 'error': {'code': 'ALREADY_ACTIVE', 'message': 'As cadeias selecionadas já estão ativas.', 'items': already}}, status=409)
+        with transaction.atomic():
+            for obj in to_unarchive:
+                obj.is_active = True
+                obj.save(update_fields=['is_active'])
+        msg = f'{len(to_unarchive)} cadeia(s) reativada(s) com sucesso.'
+        warning = f'{len(already)} já estava(m) ativa(s).' if already else None
+        return JsonResponse({'success': True, 'message': msg, 'warning': warning})
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_delete_chains(request):
+    """Elimina múltiplas Cadeias de Atividade em massa"""
+    from django.db import transaction
+    try:
+        data = json.loads(request.body)
+        ids = data.get('chain_ids', [])
+        if not isinstance(ids, list) or not ids:
+            return JsonResponse({'success': False, 'error': {'code': 'EMPTY_SELECTION', 'message': 'Nenhuma cadeia selecionada'}}, status=400)
+        with transaction.atomic():
+            deleted_count, _ = ActivityChain.objects.filter(id__in=ids).delete()
+        return JsonResponse({'success': True, 'deleted_count': deleted_count, 'message': f'{deleted_count} cadeia(s) eliminada(s) com sucesso!'})
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': {'code': 'INVALID_JSON', 'message': 'JSON inválido'}}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': {'code': 'UNKNOWN_ERROR', 'message': str(e)}}, status=500)
+
+
+# ============================================================
+# LEAD ACTIVITIES (Atividades de uma Lead específica)
+# ============================================================
+
+@require_http_methods(["POST"])
+@login_required
+def lead_activity_create(request, lead_id):
+    """
+    Cria uma nova atividade vinculada a uma lead específica.
+    Endpoint AJAX: POST /crm/leads/<lead_id>/activities/create/
+    """
+    active_company = get_active_company(request)
+    lead = get_object_or_404(Lead, id=lead_id, owner_company=active_company)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+
+    activity_type = data.get('activity_type', '').strip()
+    summary = data.get('summary', '').strip()
+    due_date_str = data.get('due_date', '').strip()
+    assigned_to_id = data.get('assigned_to_id')
+    scheduled_activity_id = data.get('scheduled_activity_id', '').strip()
+
+    # Resolve ScheduledActivity blueprint (optional)
+    sa_obj = None
+    if scheduled_activity_id:
+        try:
+            sa_obj = ScheduledActivity.objects.select_related('activity_type').get(id=scheduled_activity_id)
+            # Derive activity_type from blueprint if not explicitly provided
+            if not activity_type and sa_obj.activity_type:
+                activity_type = sa_obj.activity_type.code
+        except ScheduledActivity.DoesNotExist:
+            pass
+
+    errors = {}
+    if not activity_type:
+        errors['activity_type'] = 'Tipo de atividade é obrigatório.'
+    elif activity_type not in dict(Activity.ACTIVITY_TYPE_CHOICES):
+        errors['activity_type'] = 'Tipo de atividade inválido.'
+    if not summary:
+        errors['summary'] = 'Resumo é obrigatório.'
+    if not due_date_str:
+        errors['due_date'] = 'Data limite é obrigatória.'
+    else:
+        from datetime import date as date_type
+        try:
+            from datetime import datetime
+            due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+            if due_date < date_type.today():
+                errors['due_date'] = 'Data limite não pode ser no passado.'
+        except ValueError:
+            errors['due_date'] = 'Formato de data inválido (use YYYY-MM-DD).'
+
+    if errors:
+        return JsonResponse({'success': False, 'errors': errors}, status=400)
+
+    assigned_to = None
+    if assigned_to_id:
+        try:
+            assigned_to = User.objects.get(id=assigned_to_id, is_active=True)
+        except User.DoesNotExist:
+            pass
+
+    activity = Activity.objects.create(
+        lead=lead,
+        activity_type=activity_type,
+        scheduled_activity=sa_obj,
+        summary=summary,
+        due_date=due_date,
+        assigned_to=assigned_to or request.user,
+        owner_company=active_company,
+    )
+
+    today = date_type.today()
+    return JsonResponse({
+        'success': True,
+        'message': f'Atividade "{activity.summary}" criada com sucesso!',
+        'activity': {
+            'id': str(activity.id),
+            'activity_type': activity.activity_type,
+            'activity_type_display': activity.get_activity_type_display(),
+            'scheduled_activity_id': str(activity.scheduled_activity.id) if activity.scheduled_activity else '',
+            'icon_svg': activity.scheduled_activity.icon_svg if activity.scheduled_activity and activity.scheduled_activity.icon_svg else '',
+            'icon_color': activity.scheduled_activity.icon_color if activity.scheduled_activity and activity.scheduled_activity.icon_color else '#6366F1',
+            'summary': activity.summary,
+            'due_date': activity.due_date.strftime('%Y-%m-%d'),
+            'due_date_display': activity.due_date.strftime('%d/%m/%Y'),
+            'assigned_to': activity.assigned_to.get_full_name() or activity.assigned_to.username if activity.assigned_to else None,
+            'assigned_to_id': str(activity.assigned_to.id) if activity.assigned_to else '',
+            'is_done': activity.is_done,
+            'is_overdue': activity.is_overdue,
+            'is_today': activity.due_date == today,
+            'feedback': '',
+        }
+    }, status=201)
+
+
+@require_http_methods(["POST"])
+@login_required
+def lead_activity_mark_done(request, lead_id, activity_id):
+    """
+    Marca uma atividade como concluída com feedback.
+    Endpoint AJAX: POST /crm/leads/<lead_id>/activities/<activity_id>/done/
+    """
+    active_company = get_active_company(request)
+    lead = get_object_or_404(Lead, id=lead_id, owner_company=active_company)
+    activity = get_object_or_404(Activity, id=activity_id, lead=lead)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+
+    feedback = data.get('feedback', '').strip()
+
+    if not feedback or len(feedback) < 1:
+        return JsonResponse({
+            'success': False,
+            'errors': {'feedback': 'Feedback é obrigatório.'}
+        }, status=400)
+
+    activity.is_done = True
+    activity.feedback = feedback
+    activity.done_date = timezone.now()
+    activity.save(update_fields=['is_done', 'feedback', 'done_date'])
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Atividade "{activity.summary}" marcada como concluída!',
+        'activity': {
+            'id': str(activity.id),
+            'is_done': activity.is_done,
+            'done_date': activity.done_date.strftime('%d/%m/%Y %H:%M'),
+            'feedback': activity.feedback,
+        }
+    })
+
+
+@require_http_methods(["POST"])
+@login_required
+def lead_activity_delete(request, lead_id, activity_id):
+    """
+    Elimina uma atividade de uma lead.
+    Endpoint AJAX: POST /crm/leads/<lead_id>/activities/<activity_id>/delete/
+    """
+    active_company = get_active_company(request)
+    lead = get_object_or_404(Lead, id=lead_id, owner_company=active_company)
+    activity = get_object_or_404(Activity, id=activity_id, lead=lead)
+
+    summary = activity.summary
+    activity.delete()
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Atividade "{summary}" eliminada com sucesso!',
+    })
+
+
+@require_http_methods(["POST"])
+@login_required
+def lead_activity_update(request, lead_id, activity_id):
+    """
+    Atualiza uma atividade existente de uma lead (apenas atividades pendentes).
+    Endpoint AJAX: POST /crm/leads/<lead_id>/activities/<activity_id>/update/
+    """
+    from datetime import date as date_type, datetime
+
+    active_company = get_active_company(request)
+    lead = get_object_or_404(Lead, id=lead_id, owner_company=active_company)
+    activity = get_object_or_404(Activity, id=activity_id, lead=lead, is_done=False)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+
+    activity_type = data.get('activity_type', '').strip()
+    summary = data.get('summary', '').strip()
+    due_date_str = data.get('due_date', '').strip()
+    assigned_to_id = data.get('assigned_to_id')
+    scheduled_activity_id = data.get('scheduled_activity_id', '').strip()
+
+    # Resolve ScheduledActivity blueprint (optional)
+    sa_obj = None
+    if scheduled_activity_id:
+        try:
+            sa_obj = ScheduledActivity.objects.select_related('activity_type').get(id=scheduled_activity_id)
+            if not activity_type and sa_obj.activity_type:
+                activity_type = sa_obj.activity_type.code
+        except ScheduledActivity.DoesNotExist:
+            pass
+
+    errors = {}
+    if not activity_type:
+        errors['activity_type'] = 'Tipo de atividade é obrigatório.'
+    elif activity_type not in dict(Activity.ACTIVITY_TYPE_CHOICES):
+        errors['activity_type'] = 'Tipo de atividade inválido.'
+    if not summary:
+        errors['summary'] = 'Resumo é obrigatório.'
+    due_date = None
+    if not due_date_str:
+        errors['due_date'] = 'Data limite é obrigatória.'
+    else:
+        try:
+            due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            errors['due_date'] = 'Formato de data inválido (use YYYY-MM-DD).'
+
+    if errors:
+        return JsonResponse({'success': False, 'errors': errors}, status=400)
+
+    assigned_to = None
+    if assigned_to_id:
+        try:
+            assigned_to = User.objects.get(id=assigned_to_id, is_active=True)
+        except User.DoesNotExist:
+            pass
+
+    activity.activity_type = activity_type
+    activity.scheduled_activity = sa_obj
+    activity.summary = summary
+    activity.due_date = due_date
+    activity.assigned_to = assigned_to or request.user
+    activity.save(update_fields=['activity_type', 'scheduled_activity', 'summary', 'due_date', 'assigned_to'])
+
+    today = date_type.today()
+    return JsonResponse({
+        'success': True,
+        'message': f'Atividade "{activity.summary}" atualizada com sucesso!',
+        'activity': {
+            'id': str(activity.id),
+            'activity_type': activity.activity_type,
+            'activity_type_display': activity.get_activity_type_display(),
+            'scheduled_activity_id': str(activity.scheduled_activity.id) if activity.scheduled_activity else '',
+            'icon_svg': activity.scheduled_activity.icon_svg if activity.scheduled_activity and activity.scheduled_activity.icon_svg else '',
+            'icon_color': activity.scheduled_activity.icon_color if activity.scheduled_activity and activity.scheduled_activity.icon_color else '#6366F1',
+            'summary': activity.summary,
+            'due_date': activity.due_date.strftime('%Y-%m-%d'),
+            'due_date_display': activity.due_date.strftime('%d/%m/%Y'),
+            'assigned_to': activity.assigned_to.get_full_name() or activity.assigned_to.username if activity.assigned_to else None,
+            'assigned_to_id': str(activity.assigned_to.id) if activity.assigned_to else '',
+            'is_done': False,
+            'is_overdue': activity.due_date < today,
+            'is_today': activity.due_date == today,
+            'feedback': '',
+        }
+    })
+
+
+@require_http_methods(["POST"])
+@login_required
+def lead_chain_start(request, lead_id):
+    """
+    Inicia uma cadeia de atividades para uma lead.
+    Cria ActivityChainInstance + Activity records para cada step.
+    Endpoint AJAX: POST /crm/leads/<lead_id>/chains/start/
+    """
+    from datetime import date as date_type, timedelta as td
+    from django.contrib.contenttypes.models import ContentType
+
+    active_company = get_active_company(request)
+    lead = get_object_or_404(Lead, id=lead_id, owner_company=active_company)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+
+    chain_id = data.get('chain_id', '').strip()
+    assigned_to_id = data.get('assigned_to_id')
+
+    if not chain_id:
+        return JsonResponse({'success': False, 'errors': {'chain_id': 'Cadeia é obrigatória.'}}, status=400)
+
+    chain = get_object_or_404(ActivityChain, id=chain_id, is_active=True)
+
+    # Validate chain belongs to company
+    if chain.owner_company and chain.owner_company != active_company:
+        return JsonResponse({'success': False, 'error': 'Acesso negado à cadeia selecionada.'}, status=403)
+
+    assigned_user = request.user
+    if assigned_to_id:
+        try:
+            assigned_user = User.objects.get(id=assigned_to_id, is_active=True)
+        except User.DoesNotExist:
+            pass
+
+    # Create ActivityChainInstance
+    lead_ct = ContentType.objects.get_for_model(Lead)
+    instance = ActivityChainInstance.objects.create(
+        chain=chain,
+        content_type=lead_ct,
+        object_id=lead.id,
+        assigned_to=assigned_user,
+        owner_company=active_company,
+        status='IN_PROGRESS',
+    )
+
+    # Create Activity records for each step in the chain
+    created_activities = []
+    today = date_type.today()
+    cumulative_delay = 0
+
+    for step in chain.steps.select_related('activity', 'activity__activity_type', 'default_assigned_to').order_by('order'):
+        cumulative_delay += step.delay_days
+        due = today + td(days=cumulative_delay)
+        step_assigned = step.default_assigned_to or assigned_user
+
+        # Use ActivityType.code from the blueprint's activity type
+        bp = step.activity
+        if bp.activity_type:
+            act_type = bp.activity_type.code
+            # Ensure the code is a valid ACTIVITY_TYPE_CHOICES key
+            valid_types = dict(Activity.ACTIVITY_TYPE_CHOICES)
+            if act_type not in valid_types:
+                act_type = 'TODO'
+        else:
+            act_type = 'TODO'
+
+        summary_text = bp.summary if bp.summary else (bp.name or 'Atividade')
+
+        activity = Activity.objects.create(
+            lead=lead,
+            activity_type=act_type,
+            scheduled_activity=bp,
+            summary=f"[{chain.name}] {summary_text}",
+            due_date=due,
+            assigned_to=step_assigned,
+            owner_company=active_company,
+        )
+        created_activities.append({
+            'id': str(activity.id),
+            'activity_type': activity.activity_type,
+            'activity_type_display': activity.get_activity_type_display(),
+            'scheduled_activity_id': str(bp.id),
+            'icon_svg': bp.icon_svg or '',
+            'icon_color': bp.icon_color or '#6366F1',
+            'summary': activity.summary,
+            'due_date': activity.due_date.strftime('%Y-%m-%d'),
+            'due_date_display': activity.due_date.strftime('%d/%m/%Y'),
+            'assigned_to': activity.assigned_to.get_full_name() or activity.assigned_to.username if activity.assigned_to else '',
+            'assigned_to_id': str(activity.assigned_to.id) if activity.assigned_to else '',
+            'is_done': False,
+            'feedback': '',
+            'is_overdue': False,
+            'is_today': activity.due_date == today,
+        })
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Cadeia "{chain.name}" iniciada com {len(created_activities)} atividade(s)!',
+        'activities': created_activities,
+        'chain_instance_id': str(instance.id),
+    }, status=201)

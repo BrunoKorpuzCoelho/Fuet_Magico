@@ -185,7 +185,7 @@ from django.views.generic import DetailView
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from .models import ChatterMessage, ChatterActivity
+from .models import ChatterMessage, ChatterActivity, PlannedActivity, ActivityType
 import json
 
 
@@ -233,7 +233,16 @@ class ChatterMixin:
             content_type=content_type,
             object_id=obj.id
         ).select_related('user').order_by('-created_at')[:100]  # Last 100
-        
+
+        # Planned activities (agendamentos estilo Odoo)
+        context['planned_activities'] = PlannedActivity.objects.filter(
+            content_type=content_type,
+            object_id=obj.id
+        ).select_related('activity_type', 'assigned_to', 'created_by').order_by('due_date')
+
+        # Tipos de atividade disponíveis (para os tabs do formulário)
+        context['activity_types'] = ActivityType.objects.all().order_by('name')
+
         return context
 
 
@@ -430,3 +439,133 @@ def users_search_api(request):
     } for user in users]
     
     return JsonResponse(results, safe=False)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PLANNED ACTIVITIES API
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _parse_content_type(object_type):
+    """Helper: parse 'crm.lead' → ContentType"""
+    app_label, model = object_type.split('.')
+    return ContentType.objects.get(app_label=app_label, model=model)
+
+
+@login_required
+@require_POST
+def planned_activity_create(request):
+    """
+    POST /api/chatter/planned-activity/create/
+    Body JSON: { object_type, object_id, activity_type_id, summary, due_date, assigned_to_id, note }
+    """
+    try:
+        data = json.loads(request.body)
+        object_type = data.get('object_type')
+        object_id   = data.get('object_id')
+        summary     = data.get('summary', '').strip()
+
+        if not object_type or not object_id or not summary:
+            return JsonResponse({'success': False, 'error': 'object_type, object_id e summary são obrigatórios'}, status=400)
+
+        content_type = _parse_content_type(object_type)
+
+        activity_type = None
+        if data.get('activity_type_id'):
+            activity_type = ActivityType.objects.filter(id=data['activity_type_id']).first()
+
+        assigned_to = request.user
+        if data.get('assigned_to_id'):
+            from apps.accounts.models import CustomUser
+            assigned_to = CustomUser.objects.filter(id=data['assigned_to_id']).first() or request.user
+
+        due_date = None
+        if data.get('due_date'):
+            from datetime import date
+            due_date = date.fromisoformat(data['due_date'])
+
+        pa = PlannedActivity.objects.create(
+            content_type=content_type,
+            object_id=object_id,
+            activity_type=activity_type,
+            summary=summary,
+            note=data.get('note', ''),
+            due_date=due_date,
+            assigned_to=assigned_to,
+            created_by=request.user,
+        )
+
+        return JsonResponse({'success': True, 'id': str(pa.id)})
+
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_POST
+def planned_activity_done(request, pk):
+    """
+    POST /api/chatter/planned-activity/<pk>/done/
+    Body JSON: { done_note: '' }
+    """
+    try:
+        pa = PlannedActivity.objects.get(pk=pk)
+        data = json.loads(request.body) if request.body else {}
+        from django.utils import timezone
+        pa.status   = 'DONE'
+        pa.done_at  = timezone.now()
+        pa.done_note = data.get('done_note', '')
+        pa.save()
+        return JsonResponse({'success': True})
+    except PlannedActivity.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Não encontrada'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_POST
+def planned_activity_cancel(request, pk):
+    """
+    POST /api/chatter/planned-activity/<pk>/cancel/
+    """
+    try:
+        pa = PlannedActivity.objects.get(pk=pk)
+        pa.status = 'CANCELLED'
+        pa.save()
+        return JsonResponse({'success': True})
+    except PlannedActivity.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Não encontrada'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_POST
+def planned_activity_edit(request, pk):
+    """
+    POST /api/chatter/planned-activity/<pk>/edit/
+    Body JSON: { summary, due_date, assigned_to_id, note, activity_type_id }
+    """
+    try:
+        pa   = PlannedActivity.objects.get(pk=pk)
+        data = json.loads(request.body)
+
+        if data.get('summary'):
+            pa.summary = data['summary'].strip()
+        if data.get('note') is not None:
+            pa.note = data['note']
+        if data.get('due_date'):
+            from datetime import date
+            pa.due_date = date.fromisoformat(data['due_date'])
+        if data.get('activity_type_id'):
+            pa.activity_type = ActivityType.objects.filter(id=data['activity_type_id']).first()
+        if data.get('assigned_to_id'):
+            from apps.accounts.models import CustomUser
+            pa.assigned_to = CustomUser.objects.filter(id=data['assigned_to_id']).first() or pa.assigned_to
+        pa.save()
+        return JsonResponse({'success': True})
+    except PlannedActivity.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Não encontrada'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

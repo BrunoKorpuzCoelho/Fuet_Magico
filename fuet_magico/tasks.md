@@ -4184,20 +4184,20 @@ Criar modelo para atividades relacionadas com leads (To-Do, Email, Call, Meeting
   - [x] list_filter: activity_type, is_done, due_date, assigned_to
   - [x] search_fields: summary, feedback, lead__title
 
-- [ ] **CRUD Views para Activity**
-  - [ ] ActivityCreateView (modal dentro de lead_detail)
-  - [ ] ActivityUpdateView (modal)
-  - [ ] ActivityMarkDoneView (abre modal para pedir feedback)
-  - [ ] Templates: `templates/crm/activity_form_modal.html`, `activity_done_modal.html`
-  - [ ] Rotas: `/crm/activities/create/`, `/crm/activities/<pk>/done/`, etc.
+- [x] **CRUD Views para Activity**
+  - [x] ActivityCreateView (inline form no chatter do lead_detail, via AJAX)
+  - [ ] ActivityUpdateView (modal) - **FUTURO**
+  - [x] ActivityMarkDoneView (modal inline com feedback, via AJAX)
+  - [x] Templates: atividades implementadas no `lead_create.html` (aba "Atividade" no chatter)
+  - [x] Rotas: `/crm/leads/<lead_id>/activities/create/`, `.../<activity_id>/done/`, `.../delete/`
 
-- [ ] **Timeline de Activities dentro de Lead**
-  - [ ] Adicionar seção "Activities" no lead_detail.html
-  - [ ] Mostrar activities ordenadas por due_date
-  - [ ] Ícones diferentes por activity_type (📧 email, 📞 call, ✅ todo, 💬 whatsapp)
-  - [ ] Cores baseadas em status (verde/amarelo/vermelho)
-  - [ ] Botão "Schedule Activity" abre modal
-  - [ ] Checkbox para marcar como done (abre modal de feedback)
+- [x] **Timeline de Activities dentro de Lead**
+  - [x] Adicionar seção "Activities" no lead_detail.html (aba "Atividade" no chatter)
+  - [x] Mostrar activities ordenadas por due_date (pending primeiro, concluídas depois)
+  - [x] Ícones diferentes por activity_type (TODO ✓, CALL 📞, EMAIL ✉, WHATSAPP 💬, DOCUMENT/SIGNATURE 📄)
+  - [x] Cores baseadas em status (verde=ok, amarelo=vence hoje, vermelho=atrasado)
+  - [x] Botão "Agendar" abre inline form no topo do chatter
+  - [x] Botão check (✓) por actividade abre modal de feedback (mark done)
 
 - [x] **Testing - Activity Model**
   - [x] Test: criar activity funciona

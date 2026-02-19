@@ -280,6 +280,16 @@ class Activity(AbstractBaseModel):
         related_name='activities',
         verbose_name='Lead'
     )
+    # Blueprint referenciado (nullable — atividades ad-hoc não têm blueprint)
+    scheduled_activity = models.ForeignKey(
+        'core.ScheduledActivity',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='crm_activities',
+        verbose_name='Atividade Programada',
+        help_text='Blueprint que originou esta atividade (opcional)'
+    )
     activity_type = models.CharField(
         max_length=20,
         choices=ACTIVITY_TYPE_CHOICES,
