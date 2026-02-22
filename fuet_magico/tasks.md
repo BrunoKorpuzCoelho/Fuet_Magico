@@ -12,7 +12,7 @@
 - **Fase 2:** 0/6 features (0%) - Frontend - Website Institucional (HTML Copy)
 - **Fase 3:** 1/11 features (9%) - Backend - Estrutura Base Django
 - **Fase 4:** 1/23 features (4%) - App: Contactos
-- **Fase 5:** 5/7 features (71%) - App: CRM (Customer Relationship Management) 🔥 EM PROGRESSO
+- **Fase 5:** 7/7 features (100%) - App: CRM (Customer Relationship Management) ✅ COMPLETA!
 - **Fase 6:** 0/12 features (0%) - App: Inventário (Produtos e Stock)
 - **Fase 7:** 0/10 features (0%) - App: Compras
 - **Fase 8:** 0/12 features (0%) - App: Vendas
@@ -27,7 +27,7 @@
 - **Fase 17:** 0/6 features (0%) - Integração Final e Deployment
 - **Fase 18:** 0/13 features (0%) - Testes Automatizados UI (Playwright)
 
-**TOTAL:** 15/162 features (9.3%)
+**TOTAL:** 17/162 features (10.5%)
 
 ---
 
@@ -1686,11 +1686,17 @@ Permitir mencionar outros utilizadores em notas e criar notificações automáti
 
 ---
 
-## 3.12.9 Modelo de Notificações
+## 3.12.9 Modelo de Notificações ✅ COMPLETO
 
 Criar modelo para notificações internas do sistema.
 
-- [ ] **Criar modelo Notification**
+- [x] **Criar modelo Notification** em `apps/core/models.py` com tipos: ACTIVITY_OVERDUE, ACTIVITY_TODAY, ACTIVITY_UPCOMING, MENTION, ASSIGNMENT, WHATSAPP, EMAIL, STAGE_CHANGE, COMMENT, SYSTEM
+- [x] `PRIORITY_MAP` para ordenação (menor = mais urgente)
+- [x] `is_urgent` flag (auto-set para ACTIVITY_OVERDUE)
+- [x] GenericForeignKey (`related_content_type` + `related_object_id`)
+- [x] `mark_as_read()` method
+- [x] Migration aplicada
+- [x] `NotificationAdmin` registado com actions `mark_as_read` / `mark_as_unread`
   - [ ] Criar em `apps/core/models.py`:
     ```python
     class Notification(AbstractBaseModel):
@@ -5396,15 +5402,195 @@ Envio de emails a clientes directamente a partir do chatter de qualquer registo 
 - [x] Alpine.js `leadEmailPanel(leadId, leadEmail, leadTitle, hasSMTP)` — `load()`, `send()`, `openDetail()`, `closeDetail()`, `addFiles()`, `removeFile()`, `fileIcon()`, `fileSize()`, `fmtDate()`
 - [x] Teste real com utilizador `cubix` → email enviado com sucesso (Message-ID confirmado)
 
-**IMAP Polling (inbound) — 🔴 NÃO IMPLEMENTADO (tarefa futura):**
-- [ ] 🔴 Celery task periódica — polling IMAP por utilizador
-- [ ] 🔴 Match por `In-Reply-To` / `References` → thread existente
-- [ ] 🔴 Match por remetente = email de contacto conhecido → vincula lead
-- [ ] 🔴 Criar `ChatterMessage` com `direction='inbound'` + notificação
+**IMAP Polling (inbound) — ✅ COMPLETO:**
+- [x] ✅ Celery task periódica `poll_imap_replies_for_user` em `config/tasks.py`
+- [x] ✅ `poll_imap_replies_for_user(config, known_message_ids)` em `email_utils.py` — liga via IMAP SSL, itera INBOX com SINCE 30 dias, match por `In-Reply-To`/`References`
+- [x] ✅ View `lead_poll_inbox` em `crm/views.py` — endpoint manual de polling para uma lead específica
+- [x] ✅ URL `/crm/leads/<uuid>/emails/poll/`
+- [x] ✅ Botão "↻ Verificar respostas" no chatter que chama o endpoint e append
+- [x] ✅ Cria `ChatterMessage` com `direction='inbound'` para cada email novo encontrado
+- [x] ✅ De-duplicação por `message_id` — evita duplicados em polls consecutivos
+- [x] ✅ Validação: só aceita emails cujo `In-Reply-To`/`References` bate com os Message-IDs outbound da lead
+- [x] ✅ Thread headers `In-Reply-To` + `References` adicionados ao envio SMTP (`_send_via_smtp`)
+- [x] ✅ `lead_send_email` constrói thread refs a partir de mensagens anteriores da lead
 
 ---
 
 ### 5.12.7 Email Templates (Chatter) 🔴 NÃO IMPLEMENTADO
+
+Permitir que os utilizadores criem e reutilizem templates de email directamente no chatter. Os templates são filtrados por módulo (Lead, Contacto, Compra, etc.) para que só apareçam os relevantes no contexto atual.
+
+**Conceito:**
+- Um template define: nome, assunto (com variáveis), corpo (com variáveis), módulo alvo
+- No chatter, existe um botão "📋 Template" que abre um picker de templates filtrados pelo módulo do registo atual
+- Ao selecionar um template, o assunto e o corpo são pré-preenchidos na área de composição, com as variáveis já substituídas (ex: `{{contact_name}}`, `{{lead_title}}`, `{{company_name}}`)
+- O utilizador pode editar antes de enviar
+
+**Variáveis de template (Jinja2-style / Django template):**
+- `{{contact_name}}` — nome do contacto da lead
+- `{{lead_title}}` — título da lead
+- `{{company_name}}` — nome da empresa do contacto
+- `{{sender_name}}` — nome do utilizador que envia
+- `{{sender_email}}` — email do utilizador remetente
+- Futuro: `{{product_name}}`, `{{invoice_total}}`, etc.
+
+---
+
+**Backend:**
+
+- [ ] **Modelo `EmailTemplate`** em `apps/core/models.py`
+  - [ ] Campo `name` (CharField) — nome apresentado no picker
+  - [ ] Campo `subject` (CharField) — assunto com variáveis `{{...}}`
+  - [ ] Campo `body` (TextField) — corpo com variáveis `{{...}}`
+  - [ ] Campo `module` (CharField, choices) — módulo alvo: `lead`, `contact`, `purchase`, `sale`, `global`
+  - [ ] Campo `is_active` (BooleanField, default=True)
+  - [ ] Campo `company` (FK para Company, null=True) — NULL = global/todos
+  - [ ] Campo `created_by` (FK para User, null=True)
+  - [ ] `__str__` → `f"[{module}] {name}"`
+  - [ ] Migration + `makemigrations` e `migrate`
+
+- [ ] **Admin** — registar `EmailTemplate`
+  - [ ] `list_display = ['name', 'module', 'is_active', 'created_by']`
+  - [ ] `list_filter = ['module', 'is_active']`
+  - [ ] `search_fields = ['name', 'subject']`
+
+- [ ] **View `email_templates_list`** — `GET /core/email-templates/?module=lead`
+  - [ ] Filtra por `module` + `module='global'` sempre incluído
+  - [ ] Filtra por `is_active=True` e `company` do utilizador
+  - [ ] Devolve JSON: `[{id, name, subject, body, module}]`
+
+- [ ] **View `email_template_render`** — `POST /core/email-templates/<id>/render/`
+  - [ ] Recebe `record_type` e `record_id`
+  - [ ] Substitui variáveis com dados reais do registo
+  - [ ] Devolve `{subject: "...", body: "..."}`
+
+- [ ] **URLs** em `apps/core/urls.py`
+  - [ ] `path('email-templates/', views.email_templates_list)`
+  - [ ] `path('email-templates/<int:pk>/render/', views.email_template_render)`
+
+- [ ] **Seeds** — criar templates de exemplo
+  - [ ] "Primeiro Contacto" (módulo: lead)
+  - [ ] "Follow-up" (módulo: lead)
+  - [ ] "Proposta Enviada" (módulo: lead)
+  - [ ] "Boas-vindas" (módulo: global)
+
+---
+
+**Frontend (aba "Enviar Mensagem" no chatter):**
+
+- [ ] **Botão "📋 Template"** na área de composição (ao lado do paperclip)
+  - [ ] Abre dropdown com lista de templates para o módulo atual
+  - [ ] Campo de pesquisa no picker para filtrar por nome
+
+- [ ] **`loadTemplates()` / `renderTemplate(id)`** (Alpine.js)
+  - [ ] Fetch lazy `GET /core/email-templates/?module=lead`
+  - [ ] Fetch `POST /core/email-templates/<id>/render/` para substituir variáveis
+  - [ ] Pré-preenche Quill / textarea com conteúdo renderizado
+
+---
+
+**Testes:**
+- [ ] Test: `EmailTemplate` com variáveis funciona
+- [ ] Test: `email_templates_list` filtra por módulo corretamente
+- [ ] Test: `email_template_render` substitui variáveis com dados reais
+- [ ] Test: template `global` aparece em todos os módulos
+- [ ] Test: template inativo não aparece no picker
+
+---
+
+### 5.12.8 Email Threading (In-Reply-To / References) ✅ COMPLETO
+
+Assegurar que todos os emails enviados a partir do chatter fazem parte do mesmo thread, para que o cliente veja uma só conversão no Gmail/Outlook.
+
+- [x] Campo `in_reply_to` em `ChatterMessage` (migration 0015)
+- [x] `_send_via_smtp` adiciona headers `In-Reply-To` e `References` ao MIME
+- [x] `send_email_for_record` aceita `in_reply_to` e `references` como parâmetros opcionais
+- [x] `lead_send_email` constrói thread refs lendo os `message_id` de todos os emails anteriores da lead
+- [x] Thread testado em produção — replies aparecem agrupados no Gmail
+
+---
+
+### 5.12.9 IMAP Polling — Emails Inbound do Cliente ✅ COMPLETO
+
+Detalhes no final de 5.12.6 acima. Resumo de pontos-chave:
+
+- [x] `poll_imap_replies_for_user` — IMAP via SSL (port 993), auth com App Password encriptada
+- [x] Celery beat task `poll_all_imap_inboxes` (corre a cada 5 minutos)
+- [x] Endpoint manual `lead_poll_inbox` para polling on-demand
+- [x] Botão "↻ Verificar respostas" no chatter, atualiza bubbles em tempo real
+- [x] Validação de threading por `In-Reply-To`/`References` antes de aceitar mensagem
+
+---
+
+### 5.12.10 HTML Email — Editor Quill + Renderização de Bubbles ✅ COMPLETO
+
+Permite compor emails formatados (negrito, itálico, listas, links, imagens) e renderizar HTML inbound nas bubbles do chatter.
+
+**Backend:**
+- [x] Campo `body_html` (`TextField`, blank, default='') em `ChatterMessage` (migration 0017)
+- [x] `_parse_email_html(msg)` em `email_utils.py` — extrai parte `text/html` de MIME multipart
+- [x] `_strip_quoted_html(html)` — remove blocos `div.gmail_quote`, `div.gmail_attr`, `blockquote[type=cite]`, Outlook `divRplyFwdMsg`, etc.
+- [x] `poll_imap_replies_for_user` retorna `body_html` já limpo de quotes
+- [x] `send_email_for_record` guarda `body_html` em `ChatterMessage`
+- [x] `lead_send_email` aceita `body_html` via POST e devolve no response
+- [x] `lead_emails_list` devolve `body_html` em cada registo
+- [x] `lead_poll_inbox` guarda e devolve `body_html`
+
+**Frontend:**
+- [x] CSS dark-theme para `#quill-email-editor` (toolbar, editor, pickers, placeholders)
+- [x] CSS `.email-body` — imagens, links, parágrafos, listas, bold/italic
+- [x] Botão ⛶ (expand) no canto inferior direito da textarea — abre modal Quill
+- [x] Modal Quill Gmail-style: cobre toda a área do chatter, campos To/CC/BCC, editor Quill, footer com anexos + Descartar + Enviar
+- [x] Bubbles: `x-text` → `x-html` com `renderBody(em)` — usa `body_html` se existir, fallback para plain text escapado
+- [x] `renderBody(em)` sanitiza `<script>` tags antes de renderizar
+- [x] `openCompose()` — inicializa Quill lazy, pré-preenche com `this.body`
+- [x] `sendFromModal()` — lê `quillModal.root.innerHTML`, chama `send(bodyHtml)`
+- [x] Fix: reset do Quill via `root.innerHTML` antes de esconder (evita crash `null offset`)
+
+---
+
+### 5.12.11 Strip de Quotes em Emails Inbound ✅ COMPLETO
+
+Remover o historial da thread (texto quotado) dos emails inbound, guardando apenas a nova mensagem do cliente.
+
+- [x] `_strip_quoted_reply(body)` — plain text: corta em `escreveu (data):`, `On ... wrote:`, `---Original Message---`, `___`, `> `
+- [x] `_strip_quoted_html(html)` — HTML: corta em `div.gmail_quote`, `div.gmail_attr`, `blockquote[type=cite]`, `divRplyFwdMsg`, `hr#stopSpelling`
+- [x] Aplicado automaticamente em `_parse_email_html()` e `_parse_email_body()`
+- [x] Script de retrocompat.: `_strip_quoted_html` reaplicado a mensagens já guardadas na DB
+
+---
+
+### 5.12.12 ChatterFollower — Sistema de Seguidores Genérico ✅ COMPLETO
+
+Qualquer utilizador pode seguir qualquer registo do sistema (Lead, futuramente Venda, Compra, etc.). Ao chegar um email inbound, todos os seguidores recebem uma notificação interna.
+
+**Arquitectura:**
+- `ChatterFollower` (core.models) — `content_type` + `object_id` (ContentType genérico) + `user` FK
+- `unique_together` impede duplicados
+- `notify_followers(obj, type, title, message, link)` — helper que cria `Notification` em bulk para todos os seguidores
+- Para usar noutro módulo: `ChatterFollower.objects.get_or_create(content_type=..., object_id=sale.id, user=user)`
+
+**Backend:**
+- [x] Modelo `ChatterFollower` em `apps/core/models.py` (migration 0018)
+- [x] `notify_followers()` helper — `bulk_create` para performance
+- [x] `lead_followers_api` (GET/POST) — lista seguidores + adiciona
+- [x] `lead_follower_remove_api` (DELETE) — remove seguidor
+- [x] URLs `/crm/leads/<uuid>/followers/` e `/crm/leads/<uuid>/followers/<uuid>/remove/`
+- [x] Auto-follow no GET de followers: `lead.assigned_to` + utilizador atual são subscritos automaticamente
+- [x] `lead_poll_inbox` — após guardar email inbound, chama `notify_followers()` com preview do corpo
+- [x] `ChatterFollowerAdmin` registado no Django admin
+
+**Frontend:**
+- [x] Widget de seguidores no header das tabs do chatter (direita)
+- [x] Stack de avatares (iniciais) dos seguidores atuais
+- [x] Botão `+` — abre dropdown com lista de seguidores + input de pesquisa
+- [x] Input de pesquisa com debounce 250ms — usa endpoint `/crm/api/users/search/` existente
+- [x] Adicionar seguidor: click no resultado — POST + append ao stack
+- [x] Remover seguidor: botão ✗ na lista — DELETE + remove do stack
+- [x] `leadFollowersWidget(leadId)` Alpine.js function isolada (não acoplada ao `leadEmailPanel`)
+- [x] Ao abrir a lead, vendedor e utilizador atual são auto-subscritos (sem intervenção manual)
+
+---
 
 Permitir que os utilizadores criem e reutilizem templates de email directamente no chatter. Os templates são filtrados por módulo (Lead, Contacto, Compra, etc.) para que só apareçam os relevantes no contexto atual.
 
