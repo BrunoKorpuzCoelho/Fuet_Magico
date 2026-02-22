@@ -947,7 +947,7 @@ Criar modelos para mensagens, notas e atividades com GenericForeignKey.
     ```
 
 - [ ] **Testing - Modelos**
-  - [ ] Test: criar ChatterMessage EMAIL funciona
+  - [x] Test: criar ChatterMessage EMAIL funciona *(testado — email real enviado com sucesso)*
   - [ ] Test: criar ChatterMessage NOTE funciona
   - [ ] Test: GenericForeignKey funciona com Lead
   - [ ] Test: GenericForeignKey funciona com Contact
@@ -1470,12 +1470,13 @@ Criar documentação para lembrar o que falta implementar.
   - [ ] Usar PROMPT do VS Code para componentizar
   - [ ] Substituir templates/components/chatter.html
   
-  ### 2. Implementar Lógica de Emails (Tarefa 3.9)
-  - [ ] Configurar SMTP
-  - [ ] Implementar função real em chatter_create_message()
-  - [ ] Criar ChatterMessage na BD
-  - [ ] Enviar email via Django send_mail()
-  - [ ] Criar ChatterActivity automaticamente
+  ### 2. Implementar Lógica de Emails (Tarefa 3.9) ✅ COMPLETO — ver secção 5.12.6
+  - [x] Configurar SMTP — `UserEmailConfig` por utilizador, Fernet-encriptado
+  - [x] Implementar `send_email_for_record()` em `apps/core/email_utils.py`
+  - [x] Criar `ChatterMessage` na BD (via `GenericForeignKey`, universal)
+  - [x] Enviar email via SMTP (Gmail / Outlook STARTTLS)
+  - [x] Suporte a CC, BCC, múltiplos destinatários (vírgula), anexos
+  - [x] Criar `ChatterActivity` automaticamente *(registo via ChatterMessage)*
   
   ### 3. Implementar WhatsApp (Fase 12)
   - [ ] Setup Meta WhatsApp API
@@ -1489,10 +1490,12 @@ Criar documentação para lembrar o que falta implementar.
   - [ ] Criar ChatterActivity automaticamente
   - [ ] Middleware para capturar user atual
   
-  ### 5. Anexos
-  - [ ] Upload de ficheiros
-  - [ ] Guardar em media/
-  - [ ] Adicionar URL ao attachments JSON
+  ### 5. Anexos ✅ COMPLETO
+  - [x] Upload de ficheiros (multipart/form-data)
+  - [x] Guardar em `media/chatter/<lead_id>/` via `default_storage`
+  - [x] Adicionar URL ao `attachments` JSONField
+  - [x] Chips de ficheiros clicáveis na bubble do chat
+  - [x] Preview de mime type (imagem, PDF, Word, Excel, etc.)
   ```
 
 - [ ] **Adicionar comentários no código**
@@ -1510,7 +1513,7 @@ Criar documentação para lembrar o que falta implementar.
 Testar tudo o que foi implementado.
 
 - [ ] **Testes de Modelos**
-  - [ ] Test: criar ChatterMessage tipo EMAIL
+  - [x] Test: criar ChatterMessage tipo EMAIL *(testado em produção — Message-ID confirmado)*
   - [ ] Test: criar ChatterMessage tipo NOTE
   - [ ] Test: GenericForeignKey funciona com Lead
   - [ ] Test: GenericForeignKey funciona com Contact
@@ -5341,7 +5344,7 @@ Implementar timeline de atividades dentro do formulário de lead (dependente da 
 
 ---
 
-### 5.12.6 Sistema de Email por Utilizador (Chatter) 🔄
+### 5.12.6 Sistema de Email por Utilizador (Chatter) ✅ COMPLETO
 
 Envio de emails a clientes directamente a partir do chatter de qualquer registo (Lead, futuramente Compras, Vendas, etc.). Cada utilizador configura as suas próprias credenciais SMTP no perfil.
 
@@ -5354,29 +5357,148 @@ Envio de emails a clientes directamente a partir do chatter de qualquer registo 
 **Backend — ✅ COMPLETO:**
 - [x] Instalar `cryptography` (Fernet encryption)
 - [x] `FERNET_KEY` em `settings.py` (via `.env`)
-- [x] `apps/core/email_utils.py` — `encrypt_password`, `decrypt_password`, `send_email_for_record`
-- [x] `UserEmailConfig` model em `apps/accounts/models.py` (migration 0004 aplicada)
-- [x] Campos de threading em `ChatterMessage`: `direction`, `from_email`, `message_id`, `in_reply_to` (migration 0015 aplicada)
-- [x] `lead_send_email` view (`POST /crm/leads/<uuid>/emails/send/`)
-- [x] `lead_emails_list` view (`GET /crm/leads/<uuid>/emails/`)
-- [x] URLs adicionadas em `apps/crm/urls.py`
-- [x] `profile_settings` view — guarda `UserEmailConfig` via POST
+- [x] `apps/core/email_utils.py` — `encrypt_password`, `decrypt_password`, `_send_via_smtp`, `send_email_for_record`
+- [x] `_send_via_smtp` suporta anexos (`MIMEMultipart('mixed')` + `MIMEBase` + `encode_base64`)
+- [x] `_send_via_smtp` suporta CC, BCC (header `Cc:` + RCPT list completo)
+- [x] `_send_via_smtp` suporta múltiplos destinatários no "Para:" (vírgula-separados)
+- [x] `send_email_for_record` aceita `cc=''` e `bcc=''`
+- [x] `UserEmailConfig` model em `apps/accounts/models.py` (migration accounts 0004 aplicada)
+- [x] Campos de threading em `ChatterMessage`: `direction`, `from_email`, `message_id`, `in_reply_to` (migration core 0015 aplicada)
+- [x] Campo `cc_emails` em `ChatterMessage` (já existia)
+- [x] Campo `bcc_emails` em `ChatterMessage` (migration core 0016 aplicada)
+- [x] `lead_send_email` view — aceita `multipart/form-data`: `body`, `to_email` (vírgulas OK), `cc`, `bcc`, `attachments` (múltiplos ficheiros)
+- [x] `lead_send_email` — grava ficheiros em `media/chatter/<lead_id>/` via `default_storage`
+- [x] `lead_send_email` — devolve registo completo (`cc_emails`, `bcc_emails`, `attachments`) para atualizar UI
+- [x] `lead_emails_list` view — devolve `cc_emails` e `bcc_emails` em cada registo
+- [x] URLs em `apps/crm/urls.py`: `/crm/leads/<uuid>/emails/send/`, `/crm/leads/<uuid>/emails/`
+- [x] `profile_settings` view — GET/POST, `get_or_create UserEmailConfig`, encripta password na gravação
 - [x] `test_smtp` view — envia email de teste para verificar credenciais
 - [x] URLs em `apps/accounts/urls.py`: `/accounts/perfil/`, `/accounts/perfil/testar-smtp/`
-- [x] `UserEmailConfig` registado no admin
+- [x] `UserEmailConfig` registado no admin com `has_smtp_configured` boolean
 - [x] Link "Meu Perfil" no navbar aponta para `/accounts/perfil/`
+- [x] `has_smtp` passado no contexto da view de detalhe de lead
 
-**Frontend — ⏳ PENDENTE:**
-- [ ] ⏳ Template `accounts/profile_settings.html` — form de configuração de email SMTP
-- [ ] ⏳ Aba "Enviar Mensagem" no chatter da lead (`lead_create.html`) — formulário de envio
-- [ ] ⏳ Lista de emails enviados/recebidos no chatter (Alpine.js, chamada a `lead_emails_list`)
-- [ ] ⏳ Aviso no chatter se utilizador não tem SMTP configurado (com link para perfil)
+**Frontend — ✅ COMPLETO:**
+- [x] Template `accounts/profile_settings.html` — form de configuração SMTP por utilizador
+- [x] Aba "Enviar Mensagem" no chatter da lead (`lead_create.html`) — chat estilo WhatsApp
+- [x] Bubbles: outbound alinhadas à direita, cor dourada primária semi-transparente (`rgba(219,198,147,0.22)`) com borda dourada e texto branco
+- [x] Bubbles: inbound alinhadas à esquerda, fundo `bg-gray-700`
+- [x] Cada bubble mostra: corpo da mensagem, chips de anexos (clicáveis), ⓘ botão info + "Para/De: email • hora"
+- [x] Modal de detalhes do email (ⓘ) — mostra Assunto, De, Para, CC, BCC, Data, Enviado por, Anexos
+- [x] Campo "Para:" editável, pré-preenchido com `lead.email_from`, suporta múltiplos emails (vírgula)
+- [x] Botões CC / BCC — expandem campos adicionais com suporte a múltiplos emails (vírgula)
+- [x] Botão de anexar ficheiros (paperclip) — chips removíveis antes de enviar
+- [x] Textarea com Ctrl+Enter para enviar
+- [x] Botão enviar dourado (cor primária), desativado sem SMTP ou sem conteúdo
+- [x] Scroll automático para a última mensagem
+- [x] Aviso amarelo no chatter se utilizador não tem SMTP configurado (com link para perfil)
+- [x] Estado vazio e spinner de loading
+- [x] Alpine.js `leadEmailPanel(leadId, leadEmail, leadTitle, hasSMTP)` — `load()`, `send()`, `openDetail()`, `closeDetail()`, `addFiles()`, `removeFile()`, `fileIcon()`, `fileSize()`, `fmtDate()`
+- [x] Teste real com utilizador `cubix` → email enviado com sucesso (Message-ID confirmado)
 
 **IMAP Polling (inbound) — 🔴 NÃO IMPLEMENTADO (tarefa futura):**
 - [ ] 🔴 Celery task periódica — polling IMAP por utilizador
 - [ ] 🔴 Match por `In-Reply-To` / `References` → thread existente
 - [ ] 🔴 Match por remetente = email de contacto conhecido → vincula lead
 - [ ] 🔴 Criar `ChatterMessage` com `direction='inbound'` + notificação
+
+---
+
+### 5.12.7 Email Templates (Chatter) 🔴 NÃO IMPLEMENTADO
+
+Permitir que os utilizadores criem e reutilizem templates de email directamente no chatter. Os templates são filtrados por módulo (Lead, Contacto, Compra, etc.) para que só apareçam os relevantes no contexto atual.
+
+**Conceito:**
+- Um template define: nome, assunto (com variáveis), corpo (com variáveis), módulo alvo
+- No chatter, existe um botão "📋 Template" que abre um picker de templates filtrados pelo módulo do registo atual
+- Ao selecionar um template, o assunto e o corpo são pré-preenchidos na área de composição, com as variáveis já substituídas (ex: `{{contact_name}}`, `{{lead_title}}`, `{{company_name}}`)
+- O utilizador pode editar antes de enviar
+
+**Variáveis de template (Jinja2-style / Django template):**
+- `{{contact_name}}` — nome do contacto da lead
+- `{{lead_title}}` — título da lead
+- `{{company_name}}` — nome da empresa do contacto
+- `{{sender_name}}` — nome do utilizador que envia
+- `{{sender_email}}` — email do utilizador remetente
+- Futuro: `{{product_name}}`, `{{invoice_total}}`, etc.
+
+---
+
+**Backend:**
+
+- [ ] **Modelo `EmailTemplate`** em `apps/core/models.py` (ou `apps/core/email_templates.py`)
+  - [ ] Campo `name` (CharField) — nome apresentado no picker
+  - [ ] Campo `subject` (CharField) — assunto com variáveis `{{...}}`
+  - [ ] Campo `body` (TextField) — corpo com variáveis `{{...}}`
+  - [ ] Campo `module` (CharField, choices) — módulo alvo: `lead`, `contact`, `purchase`, `sale`, `global`
+    - `global` = visível em todos os módulos
+  - [ ] Campo `is_active` (BooleanField, default=True)
+  - [ ] Campo `company` (FK para Company, null=True, blank=True) — NULL = global/todos
+  - [ ] Campo `created_by` (FK para User, null=True)
+  - [ ] `__str__` → `f"[{module}] {name}"`
+  - [ ] Migration + `makemigrations` e `migrate`
+
+- [ ] **Admin** — registar `EmailTemplate`
+  - [ ] `list_display = ['name', 'module', 'is_active', 'created_by']`
+  - [ ] `list_filter = ['module', 'is_active']`
+  - [ ] `search_fields = ['name', 'subject']`
+
+- [ ] **View: `email_templates_list`** — `GET /core/email-templates/?module=lead`
+  - [ ] Requer autenticação (`@login_required`)
+  - [ ] Filtra por `module` (query param) + `module='global'` sempre incluído
+  - [ ] Filtra por `is_active=True`
+  - [ ] Filtra por `company` do utilizador (ou global)
+  - [ ] Devolve JSON: `[{id, name, subject, body, module}]`
+
+- [ ] **View: `email_template_render`** — `POST /core/email-templates/<id>/render/`
+  - [ ] Recebe `record_type` e `record_id` no body JSON
+  - [ ] Carrega o registo e constrói contexto de variáveis
+  - [ ] Substitui variáveis no subject e body usando `string.format_map()` ou `Template.safe_substitute()`
+  - [ ] Devolve `{subject: "...", body: "..."}` já com as variáveis substituídas
+
+- [ ] **URLs** em `config/urls.py` ou `apps/core/urls.py`
+  - [ ] `path('core/email-templates/', views.email_templates_list, name='email_templates_list')`
+  - [ ] `path('core/email-templates/<int:pk>/render/', views.email_template_render, name='email_template_render')`
+
+- [ ] **Seeds / fixtures** — criar alguns templates de exemplo
+  - [ ] Template "Primeiro Contacto" (módulo: lead)
+  - [ ] Template "Follow-up" (módulo: lead)
+  - [ ] Template "Proposta Enviada" (módulo: lead)
+  - [ ] Template "Boas-vindas" (módulo: global)
+
+---
+
+**Frontend (aba "Enviar Mensagem" no chatter):**
+
+- [ ] **Botão "📋 Template"** na área de composição (ao lado do paperclip)
+  - [ ] Ao clicar, abre dropdown/popover com lista de templates disponíveis para o módulo atual
+  - [ ] Templates listados mostram: nome + pré-visualização do assunto
+
+- [ ] **Picker de templates** (Alpine.js)
+  - [ ] Estado: `showTemplatePicker`, `templates`, `loadingTemplates`
+  - [ ] `loadTemplates()` — fetch `GET /core/email-templates/?module=lead` quando picker abre (lazy)
+  - [ ] Campo de pesquisa no picker para filtrar por nome
+  - [ ] Ao selecionar template: fecha picker, chama `renderTemplate(id)`
+
+- [ ] **`renderTemplate(id)`** (Alpine.js)
+  - [ ] fetch `POST /core/email-templates/<id>/render/` com `{record_type: 'lead', record_id: leadId}`
+  - [ ] Pré-preenche `this.body` com `body` renderizado
+  - [ ] Foca na textarea automaticamente
+
+- [ ] **Integração com `leadEmailPanel`** em `lead_create.html`
+  - [ ] Passar `module='lead'` ao `leadEmailPanel`
+  - [ ] Adicionar estado e métodos do picker ao Alpine component existente
+
+---
+
+**Testes:**
+
+- [ ] Test: criar `EmailTemplate` com variáveis funciona
+- [ ] Test: `email_templates_list` filtra por módulo corretamente
+- [ ] Test: `email_template_render` substitui variáveis com dados reais da lead
+- [ ] Test: template `global` aparece em todos os módulos
+- [ ] Test: template inativo não aparece no picker
+- [ ] Test: picker no frontend carrega e filtra templates
 
 ---
 
@@ -9541,3 +9663,110 @@ Criar interface centralizada para executar todos os testes.
 
 
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process; .\venv\Scripts\Activate.ps1; python manage.py runserver 0.0.0.0:8000
+
+---
+
+## 3.14 Command Palette (Navegação Rápida) ✅
+
+Barra de comandos estilo Odoo/VS Code para navegar entre rotas sem usar o menu.
+
+- [x] **Implementação base**
+  - [x] Overlay full-screen com `z-[99999]` e backdrop blur
+  - [x] Input de pesquisa com ícone de lupa dourado
+  - [x] Rodapé com hints de teclado (↑↓ navegar, ↵ abrir, Esc fechar)
+
+- [x] **Mapa de rotas com palavras-chave em PT**
+  - [x] Dashboard (`dashboard`, `início`, `painel`, `home`)
+  - [x] CRM Pipeline (`crm`, `pipeline`, `kanban`, `leads`, `funil`)
+  - [x] CRM Lista, Nova Lead, Configuração (Etapas, Tags, Motivos de Perda)
+  - [x] CRM Atividades, Tipos de Atividade, Cadeias de Atividade
+  - [x] Contactos (`contactos`, `clientes`, `empresas`)
+  - [x] Perfil / Definições (`perfil`, `smtp`, `password`)
+  - [x] Rotas Admin apenas para ADMIN/superuser (Admin Django, DevTools Logs)
+
+- [x] **Comportamento de abertura**
+  - [x] Qualquer tecla printável (fora de inputs) → abre e começa a filtrar
+  - [x] `Ctrl+K` → abre/fecha a qualquer momento (inclusive dentro de inputs)
+  - [x] `Esc` ou clique no backdrop → fecha
+
+- [x] **Navegação por teclado**
+  - [x] `↑` / `↓` → mover entre resultados (scroll automático)
+  - [x] `Enter` → ir para rota selecionada (ou primeiro resultado)
+  - [x] Clique num item → ir para a rota
+
+- [x] **Pesquisa e resultados**
+  - [x] Scoring: label > keywords/category > words
+  - [x] Agrupamento por categoria com cabeçalho
+  - [x] Highlight do termo pesquisado em `<mark>` com cor dourada
+  - [x] Breadcrumb em cinzento (`CRM / Configuração / Etapas`)
+  - [x] URL da rota mostrada à direita de cada resultado
+  - [x] Mensagem "Nenhum resultado para X" quando sem matches
+
+- [ ] **Melhorias futuras**
+  - [x] Adicionar rotas de Gestão de Utilizadores quando implementado (ver 3.15)
+  - [ ] Suporte a ações rápidas (ex: "Nova Lead", "Novo Contacto") sem navegar
+  - [ ] Histórico de pesquisas recentes (localStorage)
+  - [ ] Shortcut hint visível na navbar (`Ctrl+K`)
+
+---
+
+## 3.15 Gestão de Utilizadores (ADMIN only) ✅
+
+Módulo para ADMIN criar, editar, desativar e gerir utilizadores do sistema.
+Acessível via `/accounts/users/` — **apenas para role ADMIN ou superuser**.
+
+- [x] **Model / URLs**
+  - [x] Adicionar rotas em `apps/accounts/urls.py`:E outra coisa que eu quero fazer falta tipo esperar aqui uma coisa é no front-end já não alteraste nada ainda, né? Ou seja, continua com não está atualizado esta nova parte de que tu acabaste de fazer agora, não é? Se não tiver, podes atualizar, ok, para funcionar bem.
+    ```python
+    path('users/', views.user_list_view, name='user_list'),
+    path('users/new/', views.user_create_view, name='user_create'),
+    path('users/<uuid:user_id>/edit/', views.user_edit_view, name='user_edit'),
+    path('users/<uuid:user_id>/toggle-active/', views.user_toggle_active, name='user_toggle_active'),
+    path('users/<uuid:user_id>/send-reset/', views.user_send_reset_email, name='user_send_reset'),
+    path('reset/<uidb64>/<token>/', views.password_reset_confirm, name='password_reset_confirm'),
+    ```
+
+- [x] **Views (`apps/accounts/views.py`)**
+  - [x] `user_list_view` — lista todos os utilizadores da(s) empresa(s) do admin
+    - [x] Filtros: role, ativo/inativo, empresa
+    - [x] Pesquisa por nome/email
+  - [x] `user_create_view` — criar novo utilizador
+    - [x] Campos: nome, email, username, password, role, empresa(s), avatar, telemóvel
+  - [x] `user_edit_view` — editar utilizador
+    - [x] Campos editáveis: nome, email, role, empresas, avatar
+    - [x] ADMIN não pode editar o próprio role/is_active (protecção)
+  - [x] `user_toggle_active` — ativar/desativar utilizador (soft disable, AJAX)
+  - [x] `user_send_reset_email` — envia link de reset por email (token seguro, 3 dias, uso único)
+  - [x] `password_reset_confirm` — página pública para definir nova password via token
+
+- [x] **Decorators / Permissões**
+  - [x] Proteger todas as views com `@admin_required`
+  - [x] Superuser tem acesso total independentemente do role
+
+- [x] **Forms (`apps/accounts/forms.py`)**
+  - [x] `UserCreateForm` — ModelForm com todos os campos + password1/password2
+  - [x] `UserEditForm` — ModelForm sem username/password + is_active
+  - [x] `SetNewPasswordForm` — Form simples para reset de password (mínimo 8 chars)
+
+- [x] **Templates**
+  - [x] `templates/accounts/user_list.html` — tabela com avatar, nome, email, role, estado
+  - [x] `templates/accounts/user_create.html` — form de criação
+  - [x] `templates/accounts/user_edit.html` — form de edição + card de reset de password
+  - [x] `templates/accounts/password_reset_confirm.html` — página pública standalone
+  - [x] `templates/accounts/password_reset_invalid.html` — página de erro de token inválido
+  - [x] Badge colorido por role: ADMIN (dourado), MANAGER (azul), EMPLOYEE (cinzento)
+
+- [x] **Avatar Dropdown (`base.html`)**
+  - [x] Secção "Administração" visível para ADMIN/superuser
+  - [x] Links: Utilizadores ✅, Empresas (em breve), Grupos (em breve)
+
+- [x] **Command Palette**
+  - [x] Rotas de utilizadores adicionadas ao mapa em `base.html` (Utilizadores + Novo Utilizador)
+  - [x] Apenas visível para ADMIN/superuser (filtrado por `isAdmin`)
+
+- [ ] **Testing**
+  - [ ] Não-admin redireciona para 403/dashboard
+  - [ ] ADMIN cria utilizador → aparece na lista
+  - [ ] Desativar utilizador → não consegue fazer login
+  - [ ] Editar role → reflete imediatamente na navbar do utilizador
+  - [ ] Reset email: token expira após 3 dias / uso único

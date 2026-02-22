@@ -101,3 +101,58 @@ def can_delete(user):
 def can_edit(user):
     """Check if user can edit records (MANAGER and ADMIN)"""
     return is_staff(user)
+
+
+# ---------------------------------------------------------------------------
+# App-level role helpers
+# ---------------------------------------------------------------------------
+
+def get_app_role(user, app, company_id):
+    """
+    Devolve o level ('readonly','user','manager','admin') do utilizador
+    para uma aplicação+empresa, ou None se não tiver acesso.
+    """
+    from .models import AppRole
+    try:
+        return AppRole.objects.get(user=user, app=app, company_id=company_id).level
+    except AppRole.DoesNotExist:
+        return None
+
+
+def has_app_access(user, app, company_id, min_level='user'):
+    """True se o utilizador tiver pelo menos min_level para esta app+empresa."""
+    LEVELS = {'readonly': 0, 'user': 1, 'manager': 2, 'admin': 3}
+    level = get_app_role(user, app, company_id)
+    if level is None:
+        return False
+    return LEVELS.get(level, -1) >= LEVELS.get(min_level, 0)
+
+
+def require_app_role(app, min_level='user'):
+    """
+    Decorator que garante que o utilizador tem pelo menos min_level
+    para a app especificada na empresa ativa da sessão.
+
+    Uso::
+
+        @login_required
+        @require_app_role('crm', min_level='manager')
+        def crm_settings(request):
+            ...
+    """
+    LEVELS = {'readonly': 0, 'user': 1, 'manager': 2, 'admin': 3}
+
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped(request, *args, **kwargs):
+            if not request.user.is_authenticated:
+                return redirect(reverse('accounts:login'))
+            company_id = request.session.get('active_company_id')
+            if not company_id:
+                raise PermissionDenied
+            level = get_app_role(request.user, app, company_id)
+            if level is None or LEVELS.get(level, -1) < LEVELS.get(min_level, 0):
+                raise PermissionDenied
+            return view_func(request, *args, **kwargs)
+        return _wrapped
+    return decorator

@@ -16,7 +16,9 @@ import smtplib
 import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
 from email.utils import formataddr, make_msgid
+from email import encoders
 
 from django.conf import settings
 
@@ -36,6 +38,17 @@ SMTP_PROVIDERS = {
         'host': 'smtp.office365.com',
         'port': 587,
         'label': 'Outlook / Microsoft 365',
+    },
+}
+
+IMAP_PROVIDERS = {
+    'gmail': {
+        'host': 'imap.gmail.com',
+        'port': 993,
+    },
+    'outlook': {
+        'host': 'imap.office365.com',
+        'port': 993,
     },
 }
 
@@ -79,10 +92,14 @@ def decrypt_password(encrypted_password: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _send_via_smtp(config, to_email: str, subject: str, body: str,
-                   body_html, to_name: str, sender_name: str):
+                   body_html, to_name: str, sender_name: str, attachments=None,
+                   cc: str = '', bcc: str = '',
+                   in_reply_to: str = '', references: str = ''):
     """
     Envia o email e devolve (success: bool, error: str, message_id: str).
     Não escreve nada na BD.
+
+    attachments: lista de dicts [{"filename": "...", "content": <bytes>, "mime_type": "image/jpeg"}]
     """
     provider = SMTP_PROVIDERS.get(config.provider, SMTP_PROVIDERS['gmail'])
     smtp_host = provider['host']
@@ -95,7 +112,22 @@ def _send_via_smtp(config, to_email: str, subject: str, body: str,
 
     msg_id = make_msgid(domain=config.email_address.split('@')[-1])
 
-    if body_html:
+    # Estrutura da mensagem
+    if attachments:
+        # com anexos: mixed → alternative + ficheiros
+        msg = MIMEMultipart('mixed')
+        alt = MIMEMultipart('alternative')
+        alt.attach(MIMEText(body, 'plain', 'utf-8'))
+        if body_html:
+            alt.attach(MIMEText(body_html, 'html', 'utf-8'))
+        msg.attach(alt)
+        for att in attachments:
+            part = MIMEBase(*att['mime_type'].split('/', 1))
+            part.set_payload(att['content'])
+            encoders.encode_base64(part)
+            part.add_header('Content-Disposition', 'attachment', filename=att['filename'])
+            msg.attach(part)
+    elif body_html:
         msg = MIMEMultipart('alternative')
         msg.attach(MIMEText(body, 'plain', 'utf-8'))
         msg.attach(MIMEText(body_html, 'html', 'utf-8'))
@@ -104,9 +136,31 @@ def _send_via_smtp(config, to_email: str, subject: str, body: str,
         msg.attach(MIMEText(body, 'plain', 'utf-8'))
 
     msg['From'] = formataddr((sender_name, config.email_address))
-    msg['To'] = formataddr((to_name, to_email)) if to_name else to_email
+
+    # Support comma-separated primary recipients in to_email
+    to_addresses = [a.strip() for a in to_email.split(',') if a.strip()]
+    if len(to_addresses) == 1:
+        msg['To'] = formataddr((to_name, to_addresses[0])) if to_name else to_addresses[0]
+    else:
+        # Multiple To: recipients — to_name only applies to first
+        msg['To'] = ', '.join(to_addresses)
+
     msg['Subject'] = subject
     msg['Message-ID'] = msg_id
+    if in_reply_to:
+        msg['In-Reply-To'] = in_reply_to
+    if references:
+        msg['References'] = references
+    if cc:
+        msg['Cc'] = cc
+    # BCC is intentionally NOT added as a header — recipients added to RCPT only
+
+    # Build full recipients list: To + CC + BCC
+    all_recipients = list(to_addresses)
+    if cc:
+        all_recipients += [a.strip() for a in cc.split(',') if a.strip()]
+    if bcc:
+        all_recipients += [a.strip() for a in bcc.split(',') if a.strip()]
 
     try:
         with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
@@ -114,7 +168,7 @@ def _send_via_smtp(config, to_email: str, subject: str, body: str,
             server.starttls()
             server.ehlo()
             server.login(config.email_address, app_password)
-            server.sendmail(config.email_address, [to_email], msg.as_string())
+            server.sendmail(config.email_address, all_recipients, msg.as_string())
         return True, '', msg_id
     except smtplib.SMTPAuthenticationError:
         return False, 'Autenticação SMTP falhou. Verifica o endereço e a App Password.', ''
@@ -140,6 +194,11 @@ def send_email_for_record(
     body: str,
     body_html=None,
     to_name: str = '',
+    attachments=None,
+    cc: str = '',
+    bcc: str = '',
+    in_reply_to: str = '',
+    references: str = '',
 ) -> dict:
     """
     Envia um email em nome de `user` para `to_email` e regista-o como
@@ -185,12 +244,25 @@ def send_email_for_record(
         body_html=body_html,
         to_name=to_name,
         sender_name=sender_name,
+        attachments=attachments or [],
+        cc=cc,
+        bcc=bcc,
+        in_reply_to=in_reply_to,
+        references=references,
     )
 
     if not success:
         return {'success': False, 'error': error}
 
-    # Guardar no chatter (funciona com qualquer modelo via GenericForeignKey)
+    # Primary recipient for DB (EmailField accepts one address)
+    primary_to = to_email.split(',')[0].strip()
+
+    # Metadados para BD (sem os bytes de conteúdo)
+    att_meta = [
+        {k: v for k, v in att.items() if k != 'content'}
+        for att in (attachments or [])
+    ]
+
     from django.contrib.contenttypes.models import ContentType
     from apps.core.models import ChatterMessage
     from django.utils import timezone
@@ -203,16 +275,306 @@ def send_email_for_record(
         message_type='EMAIL',
         subject=subject,
         body=body,
+        body_html=body_html or '',
         from_email=config.email_address,
-        to_email=to_email,
+        to_email=primary_to,
+        cc_emails=cc,
+        bcc_emails=bcc,
         direction=ChatterMessage.DIRECTION_OUTBOUND,
         message_id=msg_id,
+        in_reply_to=in_reply_to,
         sent_at=timezone.now(),
         is_internal=False,
+        attachments=att_meta,
     )
 
     logger.info(
-        'Email sent by %s to %s (record=%s pk=%s subject=%s)',
+        'Email sent by %s to %s (record=%s pk=%s subject=%s attachments=%d)',
         user.username, to_email, record.__class__.__name__, record.pk, subject,
+        len(attachments or []),
     )
     return {'success': True, 'message_id': msg_id}
+
+
+# ---------------------------------------------------------------------------
+# IMAP — polling de respostas inbound
+# ---------------------------------------------------------------------------
+
+def _decode_header_value(value: str) -> str:
+    """Descodifica um header MIME (pode estar encoded como =?utf-8?...?)."""
+    import email.header
+    if not value:
+        return ''
+    decoded_parts = email.header.decode_header(value)
+    result = []
+    for part, charset in decoded_parts:
+        if isinstance(part, bytes):
+            result.append(part.decode(charset or 'utf-8', errors='replace'))
+        else:
+            result.append(part)
+    return ' '.join(result)
+
+
+def _parse_email_body(msg) -> str:
+    """Extrai o corpo em texto simples de uma mensagem email.message.Message."""
+    body_parts = []
+    if msg.is_multipart():
+        for part in msg.walk():
+            ct = part.get_content_type()
+            cd = str(part.get('Content-Disposition', ''))
+            if ct == 'text/plain' and 'attachment' not in cd:
+                charset = part.get_content_charset() or 'utf-8'
+                try:
+                    body_parts.append(
+                        part.get_payload(decode=True).decode(charset, errors='replace')
+                    )
+                except Exception:
+                    body_parts.append(
+                        part.get_payload(decode=True).decode('utf-8', errors='replace')
+                    )
+    else:
+        charset = msg.get_content_charset() or 'utf-8'
+        try:
+            payload = msg.get_payload(decode=True)
+            if payload:
+                body_parts.append(payload.decode(charset, errors='replace'))
+        except Exception:
+            pass
+    return '\n'.join(body_parts).strip()
+
+
+def _parse_email_html(msg) -> str:
+    """Extrai o corpo HTML de uma mensagem email.message.Message."""
+    html_parts = []
+    if msg.is_multipart():
+        for part in msg.walk():
+            ct = part.get_content_type()
+            cd = str(part.get('Content-Disposition', ''))
+            if ct == 'text/html' and 'attachment' not in cd:
+                charset = part.get_content_charset() or 'utf-8'
+                try:
+                    html_parts.append(
+                        part.get_payload(decode=True).decode(charset, errors='replace')
+                    )
+                except Exception:
+                    html_parts.append(
+                        part.get_payload(decode=True).decode('utf-8', errors='replace')
+                    )
+    else:
+        if msg.get_content_type() == 'text/html':
+            charset = msg.get_content_charset() or 'utf-8'
+            try:
+                payload = msg.get_payload(decode=True)
+                if payload:
+                    html_parts.append(payload.decode(charset, errors='replace'))
+            except Exception:
+                pass
+    return _strip_quoted_html('\n'.join(html_parts).strip())
+
+
+def _strip_quoted_html(html: str) -> str:
+    """
+    Remove blocos de citação/thread do corpo HTML de um email de resposta.
+    Corta tudo a partir do primeiro marcador de quote reconhecido
+    (Gmail, Outlook, Apple Mail), que é sempre no fim da mensagem.
+    """
+    import re
+
+    QUOTE_START_PATTERNS = [
+        r'<div\s[^>]*class="[^"]*gmail_quote[^"]*"',   # Gmail quote block
+        r'<div\s[^>]*class="[^"]*gmail_attr[^"]*"',    # Gmail "X wrote:" header
+        r'<div\s[^>]*id=["\']divRplyFwdMsg["\']',       # Outlook reply header
+        r'<div\s[^>]*id=["\']divTaggedContent["\']',    # Outlook tagged content
+        r'<blockquote\s[^>]*type=["\']cite["\']',       # Apple Mail
+        r'<hr\s[^>]*id=["\']stopSpelling["\']',         # Outlook HR separator
+        r'<!--\s*---->.*?$',                             # Outlook comment separator
+    ]
+
+    for pattern in QUOTE_START_PATTERNS:
+        m = re.search(pattern, html, re.IGNORECASE | re.DOTALL)
+        if m:
+            html = html[:m.start()].rstrip()
+
+    return html.strip()
+
+
+def _strip_quoted_reply(body: str) -> str:
+    """
+    Remove o texto quotado de uma resposta de email.
+
+    Suporta os formatos mais comuns:
+      - Gmail PT: "cubix <...> escreveu (data àS hora):"
+      - Gmail EN: "On Mon, dd MMM yyyy at hh:mm, ... wrote:"
+      - Outlook:  "-----Original Message-----" / "________________________________"
+      - Linhas prefixadas com ">" (resposta standard RFC)
+    """
+    import re
+
+    # Padrões que marcam o início do texto quotado (numa linha ou em duas)
+    QUOTE_PATTERNS = [
+        # Gmail PT: "Nome <email> escreveu (data):"
+        r'^\s*.+<.+>\s+escreveu\s*\(',
+        # Gmail EN: "On ..., ... wrote:"
+        r'^\s*On\s.+wrote\s*:',
+        # Outlook PT/EN: separador de linha
+        r'^\s*-{3,}\s*(Original Message|Mensagem Original)\s*-{3,}',
+        r'^\s*_{10,}\s*$',
+        # Apple Mail / outros
+        r'^\s*>{1,}\s*From\s*:',
+    ]
+    quote_re = re.compile('|'.join(QUOTE_PATTERNS), re.IGNORECASE)
+
+    lines = body.splitlines()
+    cutoff = None
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        # Linha `>` sozinha ou precedida de espaço — início de bloco quotado
+        if re.match(r'^\s*>\s*', line):
+            # Só corta se TODOS os restantes forem quotados ou vazios
+            rest = lines[i:]
+            if all(re.match(r'^\s*>\s*', l) or l.strip() == '' for l in rest):
+                cutoff = i
+                break
+        # Padrão de cabeçalho de resposta
+        if quote_re.match(line):
+            cutoff = i
+            break
+        # Gmail divide "Name wrote:" em duas linhas às vezes
+        if i + 1 < len(lines):
+            two_lines = line + ' ' + lines[i + 1]
+            if quote_re.match(two_lines):
+                cutoff = i
+                break
+        i += 1
+
+    if cutoff is not None:
+        trimmed = '\n'.join(lines[:cutoff]).rstrip()
+    else:
+        trimmed = body.rstrip()
+
+    return trimmed
+
+
+def poll_imap_replies_for_user(config, known_message_ids=None) -> list:
+    """
+    Liga-se ao IMAP do utilizador e procura respostas a emails que enviámos.
+
+    Args:
+        config:             UserEmailConfig (credenciais SMTP/IMAP).
+        known_message_ids:  set de Message-IDs dos nossos emails outbound.
+                            Se None, devolve todas as mensagens recentes
+                            (útil para diagnóstico; normalmente passa-se sempre o set).
+
+    Returns:
+        Lista de dicts — cada um é um email inbound encontrado:
+        {
+            'imap_message_id': str,
+            'in_reply_to':     str,
+            'references':      str,
+            'from_email':      str,
+            'subject':         str,
+            'body':            str,
+            'date':            datetime,
+        }
+    """
+    import imaplib
+    import email as email_lib
+    import re
+    from datetime import datetime, timedelta
+    from email.utils import parseaddr, parsedate_to_datetime
+    from django.utils import timezone
+
+    imap_cfg = IMAP_PROVIDERS.get(config.provider, IMAP_PROVIDERS['gmail'])
+
+    try:
+        app_password = decrypt_password(config.app_password)
+    except ValueError as e:
+        logger.error('IMAP: falha ao desencriptar password para %s: %s', config.email_address, e)
+        return []
+
+    results = []
+    try:
+        with imaplib.IMAP4_SSL(imap_cfg['host'], imap_cfg['port']) as imap:
+            imap.login(config.email_address, app_password)
+            imap.select('INBOX', readonly=True)
+
+            # Pesquisar mensagens dos últimos 30 dias
+            since = (datetime.utcnow() - timedelta(days=30)).strftime('%d-%b-%Y')
+            status, data = imap.search(None, f'SINCE {since}')
+            if status != 'OK' or not data or not data[0]:
+                return []
+
+            msg_nums = data[0].split()
+            # Limitar a 200 mensagens mais recentes para não sobrecarregar
+            for num in msg_nums[-200:]:
+                # Buscar apenas os headers relevantes primeiro (PEEK = não marca como lido)
+                status, header_data = imap.fetch(
+                    num,
+                    '(BODY.PEEK[HEADER.FIELDS (MESSAGE-ID IN-REPLY-TO REFERENCES FROM SUBJECT DATE)])'
+                )
+                if status != 'OK' or not header_data or not isinstance(header_data[0], tuple):
+                    continue
+
+                parsed = email_lib.message_from_bytes(header_data[0][1])
+                imap_mid    = (parsed.get('Message-ID')  or '').strip()
+                in_reply_to = (parsed.get('In-Reply-To') or '').strip()
+                references  = (parsed.get('References')  or '').strip()
+
+                # Filtrar: apenas respostas aos nossos emails
+                if known_message_ids is not None:
+                    reply_ids = set(re.findall(r'<[^>]+>', in_reply_to))
+                    reply_ids.update(re.findall(r'<[^>]+>', references))
+                    if not reply_ids.intersection(known_message_ids):
+                        continue
+
+                # Buscar a mensagem completa para extrair o body
+                status, body_data = imap.fetch(num, '(RFC822)')
+                if status != 'OK' or not body_data or not isinstance(body_data[0], tuple):
+                    continue
+
+                full_msg = email_lib.message_from_bytes(body_data[0][1])
+
+                from_header = _decode_header_value(full_msg.get('From', ''))
+                _, from_addr = parseaddr(from_header)
+
+                # Ignorar emails que foram enviados pelo próprio utilizador
+                # (ex: enviou para si próprio em teste, ou email saiu para Sent/Inbox)
+                if from_addr.lower() == config.email_address.lower():
+                    continue
+
+                subject = _decode_header_value(full_msg.get('Subject', ''))
+
+                try:
+                    date = parsedate_to_datetime(full_msg.get('Date', ''))
+                    # Tornar timezone-aware se necessário (stdlib, sem pytz)
+                    if date.tzinfo is None:
+                        from datetime import timezone as _utc
+                        date = date.replace(tzinfo=_utc.utc)
+                except Exception:
+                    date = timezone.now()
+
+                raw_body = _parse_email_body(full_msg)
+                body = _strip_quoted_reply(raw_body)
+                body_html = _parse_email_html(full_msg)
+
+                results.append({
+                    'imap_message_id': imap_mid,
+                    'in_reply_to'    : in_reply_to,
+                    'references'     : references,
+                    'from_email'     : from_addr,
+                    'subject'        : subject,
+                    'body'           : body,
+                    'body_html'      : body_html,
+                    'date'           : date,
+                })
+
+    except imaplib.IMAP4.error as e:
+        logger.error('IMAP error para %s: %s', config.email_address, e)
+    except OSError as e:
+        logger.error('IMAP network error para %s: %s', config.email_address, e)
+    except Exception as e:
+        logger.exception('IMAP erro inesperado para %s: %s', config.email_address, e)
+
+    return results

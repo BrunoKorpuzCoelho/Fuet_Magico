@@ -1,4 +1,9 @@
-﻿from django.shortcuts import render, redirect, get_object_or_404
+﻿import json
+import logging
+import random
+import re
+
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
@@ -12,13 +17,13 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.contrib.contenttypes.models import ContentType
 from apps.accounts.decorators import admin_required
 from apps.core.multi_company import filter_by_company, get_active_company
-from apps.core.models import ActivityType, ScheduledActivity, ActivityChain, ActivityChainStep, ActivityChainInstance
+from apps.core.models import ActivityType, ScheduledActivity, ActivityChain, ActivityChainStep, ActivityChainInstance, ChatterFollower, notify_followers
 from apps.core.forms import ScheduledActivityForm
 from apps.contacts.models import Contact
 from .models import CRMTag, CRMStage, Lead, Activity, LeadNote
 from .forms import CRMStageForm, CRMTagForm, ActivityForm
-import json
-import random
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -1429,6 +1434,7 @@ def lead_detail_view(request, lead_id):
         'scheduled_activities_json': scheduled_activities_json,
         'current_user_id': str(request.user.id),
         'current_user_display': request.user.get_full_name() or request.user.username,
+        'has_smtp': getattr(getattr(request.user, 'email_config', None), 'has_smtp_configured', False),
     }
     
     return render(request, 'crm/lead_create.html', context)
@@ -3181,43 +3187,78 @@ def lead_send_email(request, lead_id):
     """
     Envia um email ao contacto da lead e regista-o no chatter via ChatterMessage.
 
-    POST JSON:
-      { "to_email": "...", "subject": "...", "body": "..." }
+    Aceita multipart/form-data:
+      - body       (str)   texto da mensagem
+      - to_email   (str)   destinatário (opcional — fallback: lead.email_from)
+      - attachments (files) um ou mais ficheiros
 
-    O `to_email` pode ser enviado pelo frontend (pré-preenchido do contacto)
-    ou ignorado — nesse caso usa-se lead.email_from.
-
-    Resposta:
-      { "success": true } ou { "success": false, "error": "..." }
+    Resposta: { "success": true, "email": {...} } ou { "success": false, "error": "..." }
     """
-    import json as _json
+    import os, mimetypes
+    from django.core.files.storage import default_storage
+    from django.core.files.base import ContentFile
     from apps.core.email_utils import send_email_for_record
 
     lead = get_object_or_404(Lead, id=lead_id)
 
-    try:
-        data = _json.loads(request.body)
-    except (ValueError, KeyError):
-        return JsonResponse({'success': False, 'error': 'JSON inválido.'}, status=400)
-
-    to_email = (data.get('to_email') or '').strip()
-    subject = (data.get('subject') or '').strip()
-    body = (data.get('body') or '').strip()
+    to_email = (request.POST.get('to_email') or '').strip() or (lead.email_from or '')
+    body     = (request.POST.get('body') or '').strip()
+    body_html = (request.POST.get('body_html') or '').strip()
+    cc       = (request.POST.get('cc') or '').strip()
+    bcc      = (request.POST.get('bcc') or '').strip()
 
     if not to_email:
-        # Fallback: usar email da lead
-        to_email = lead.email_from or ''
-    if not to_email:
-        return JsonResponse({'success': False, 'error': 'Endereço de email do destinatário não encontrado.'})
-    if not subject:
-        return JsonResponse({'success': False, 'error': 'O assunto é obrigatório.'})
-    if not body:
-        return JsonResponse({'success': False, 'error': 'O corpo do email é obrigatório.'})
+        return JsonResponse({'success': False, 'error': 'A lead não tem email. Preenche o campo Email na lead.'})
+    if not body and not request.FILES.getlist('attachments'):
+        return JsonResponse({'success': False, 'error': 'Escreve uma mensagem ou adiciona um ficheiro antes de enviar.'})
 
-    # Nome do destinatário — usa contact_name ou nome do contacto associado
-    to_name = lead.contact_name or ''
-    if not to_name and lead.contact:
-        to_name = lead.contact.get_full_name() if hasattr(lead.contact, 'get_full_name') else ''
+    subject = lead.title or 'Mensagem'
+
+    # Gravar ficheiros em media/chatter/<lead_id>/
+    attachments = []
+    for f in request.FILES.getlist('attachments'):
+        ext  = os.path.splitext(f.name)[1]
+        rel  = f'chatter/{lead_id}/{f.name}'
+        path = default_storage.save(rel, ContentFile(f.read()))
+        url  = default_storage.url(path)
+        mime = mimetypes.guess_type(f.name)[0] or 'application/octet-stream'
+        # Relê o conteúdo do disco para o envio SMTP
+        with default_storage.open(path, 'rb') as fp:
+            content = fp.read()
+        attachments.append({
+            'filename' : f.name,
+            'url'      : url,
+            'size'     : f.size,
+            'mime_type': mime,
+            'content'  : content,
+        })
+
+    to_name = lead.contact_name or (
+        lead.contact.get_full_name() if lead.contact and hasattr(lead.contact, 'get_full_name') else ''
+    )
+
+    # --- Threading: ligar ao fio de conversa existente desta lead ---
+    # Busca todos os emails (outbound + inbound) ordenados por data
+    from apps.core.models import ChatterMessage as _CM
+    _ct = ContentType.objects.get_for_model(Lead)
+    thread_msgs = (
+        _CM.objects
+        .filter(content_type=_ct, object_id=lead.id, message_type='EMAIL')
+        .exclude(message_id='')
+        .order_by('created_at')
+        .values_list('message_id', flat=True)
+    )
+    thread_ids = list(thread_msgs)  # ex: ['<id1>', '<id2>', '<id3>']
+
+    # In-Reply-To = o último message_id do fio
+    # References  = todos os message_ids do fio, separados por espaço
+    in_reply_to = thread_ids[-1] if thread_ids else ''
+    references  = ' '.join(thread_ids) if thread_ids else ''
+
+    # Se houver resposta anterior, prefixar o assunto com "Re:" se ainda não tiver
+    if thread_ids and not subject.startswith('Re:'):
+        subject = f'Re: {subject}'
+    # ------------------------------------------------------------------
 
     result = send_email_for_record(
         user=request.user,
@@ -3225,9 +3266,48 @@ def lead_send_email(request, lead_id):
         to_email=to_email,
         subject=subject,
         body=body,
+        body_html=body_html or None,
         to_name=to_name,
+        attachments=attachments,
+        cc=cc,
+        bcc=bcc,
+        in_reply_to=in_reply_to,
+        references=references,
     )
-    return JsonResponse(result)
+
+    if not result['success']:
+        return JsonResponse(result)
+
+    # Devolver o email recém-criado para atualizar o chat no frontend
+    from apps.core.models import ChatterMessage
+    ct = ContentType.objects.get_for_model(Lead)
+    em = ChatterMessage.objects.filter(
+        content_type=ct, object_id=lead.id, message_type='EMAIL',
+        message_id=result['message_id'],
+    ).select_related('author').first()
+
+    email_data = None
+    if em:
+        author = em.author
+        email_data = {
+            'id'          : str(em.id),
+            'direction'   : em.direction,
+            'from_email'  : em.from_email,
+            'to_email'    : em.to_email,
+            'cc_emails'   : em.cc_emails or '',
+            'bcc_emails'  : em.bcc_emails or '',
+            'subject'     : em.subject,
+            'body'        : em.body,
+            'body_html'   : em.body_html or '',
+            'attachments' : em.attachments or [],
+            'sent_by'     : author.get_full_name() or author.username if author else None,
+            'sent_by_initials': ''.join(
+                p[0].upper() for p in ((author.get_full_name() or author.username).split()[:2])
+            ) if author else '?',
+            'sent_at'     : em.sent_at.isoformat() if em.sent_at else em.created_at.isoformat(),
+        }
+
+    return JsonResponse({'success': True, 'email': email_data})
 
 
 @login_required
@@ -3260,8 +3340,12 @@ def lead_emails_list(request, lead_id):
             'direction': em.direction,
             'from_email': em.from_email,
             'to_email': em.to_email,
+            'cc_emails': em.cc_emails or '',
+            'bcc_emails': em.bcc_emails or '',
             'subject': em.subject,
             'body': em.body,
+            'body_html': em.body_html or '',
+            'attachments': em.attachments or [],
             'sent_by': author.get_full_name() or author.username if author else None,
             'sent_by_initials': ''.join(
                 p[0].upper() for p in ((author.get_full_name() or author.username).split()[:2])
@@ -3271,3 +3355,232 @@ def lead_emails_list(request, lead_id):
         })
 
     return JsonResponse({'emails': emails})
+
+
+# ---------------------------------------------------------------------------
+# Lead Email — polling IMAP (manual "Verificar respostas")
+# ---------------------------------------------------------------------------
+
+@login_required
+@require_http_methods(['POST'])
+def lead_poll_inbox(request, lead_id):
+    """
+    Endpoint manual: verifica agora o IMAP do utilizador em sessão e guarda
+    quaisquer respostas inbound encontradas para esta lead.
+
+    Resposta: { "success": true, "new_emails": [...], "count": N }
+    """
+    from apps.core.models import ChatterMessage
+    from apps.core.email_utils import poll_imap_replies_for_user
+
+    lead = get_object_or_404(Lead, id=lead_id)
+
+    # Validar configuração SMTP/IMAP do utilizador
+    try:
+        config = request.user.email_config
+    except Exception:
+        return JsonResponse({
+            'success': False,
+            'error'  : 'Sem configuração de email. Configura o SMTP no teu perfil.',
+        })
+
+    if not config.is_active or not config.has_smtp_configured:
+        return JsonResponse({
+            'success': False,
+            'error'  : 'Configuração de email inativa ou incompleta.',
+        })
+
+    ct = ContentType.objects.get_for_model(Lead)
+
+    # Message-IDs dos emails outbound já enviados para esta lead
+    known_ids = set(
+        ChatterMessage.objects
+        .filter(
+            content_type=ct,
+            object_id=lead.id,
+            message_type='EMAIL',
+            direction=ChatterMessage.DIRECTION_OUTBOUND,
+        )
+        .exclude(message_id='')
+        .values_list('message_id', flat=True)
+    )
+
+    if not known_ids:
+        return JsonResponse({
+            'success'   : True,
+            'new_emails': [],
+            'count'     : 0,
+            'message'   : 'Ainda não enviaste nenhum email para esta lead.',
+        })
+
+    # Polling IMAP
+    try:
+        inbound = poll_imap_replies_for_user(config, known_message_ids=known_ids)
+    except Exception as e:
+        logger.error('lead_poll_inbox: erro IMAP para lead %s: %s', lead_id, e)
+        return JsonResponse({
+            'success': False,
+            'error'  : f'Erro ao ligar ao servidor IMAP: {e}',
+        })
+
+    # Auto-follow: garante que o vendedor da lead está sempre subscrito
+    if lead.assigned_to:
+        ChatterFollower.objects.get_or_create(
+            content_type=ct,
+            object_id=lead.id,
+            user=lead.assigned_to,
+            defaults={'added_by': None},
+        )
+
+    new_emails = []
+    for em in inbound:
+        imap_mid = em['imap_message_id']
+
+        # Evitar duplicados
+        if imap_mid and ChatterMessage.objects.filter(
+            message_id=imap_mid,
+            direction=ChatterMessage.DIRECTION_INBOUND,
+        ).exists():
+            continue
+
+        # Confirmar que a resposta é mesmo para esta lead
+        reply_ids = set(re.findall(r'<[^>]+>', em['in_reply_to']))
+        reply_ids.update(re.findall(r'<[^>]+>', em['references']))
+        if not reply_ids.intersection(known_ids):
+            continue
+
+        try:
+            msg = ChatterMessage.objects.create(
+                content_type=ct,
+                object_id=lead.id,
+                author=None,                        # inbound — sem autor interno
+                message_type='EMAIL',
+                direction=ChatterMessage.DIRECTION_INBOUND,
+                from_email=em['from_email'],
+                to_email=config.email_address,      # nós recebemos
+                subject=em['subject'],
+                body=em['body'],
+                body_html=em.get('body_html', ''),
+                message_id=imap_mid,
+                in_reply_to=em['in_reply_to'],
+                sent_at=em['date'],
+                is_internal=False,
+            )
+            new_emails.append({
+                'id'              : str(msg.id),
+                'direction'       : msg.direction,
+                'from_email'      : msg.from_email,
+                'to_email'        : msg.to_email or '',
+                'cc_emails'       : msg.cc_emails or '',
+                'bcc_emails'      : msg.bcc_emails or '',
+                'subject'         : msg.subject,
+                'body'            : msg.body,
+                'body_html'       : msg.body_html or '',
+                'attachments'     : msg.attachments or [],
+                'sent_by'         : None,
+                'sent_by_initials': '?',
+                'sent_at'         : msg.sent_at.isoformat() if msg.sent_at else msg.created_at.isoformat(),
+            })
+            # Notificar todos os seguidores desta lead
+            preview = (msg.body or '')[:120].rstrip()
+            if len(msg.body or '') > 120:
+                preview += '…'
+            notify_followers(
+                lead,
+                'EMAIL',
+                f'{lead.title} — Novo email de {msg.from_email}',
+                message=preview,
+                link=f'/crm/leads/{lead.id}/',
+            )
+        except Exception as e:
+            logger.error('lead_poll_inbox: erro ao guardar inbound: %s', e)
+
+    logger.info(
+        'lead_poll_inbox: lead=%s encontrou %d novos emails inbound', lead_id, len(new_emails)
+    )
+    return JsonResponse({'success': True, 'new_emails': new_emails, 'count': len(new_emails)})
+
+
+# ---------------------------------------------------------------------------
+# Lead Followers (Chatter)
+# ---------------------------------------------------------------------------
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def lead_followers_api(request, lead_id):
+    """
+    GET  /crm/leads/<id>/followers/        → lista seguidores
+    POST /crm/leads/<id>/followers/        → adiciona seguidor  { user_id }
+    """
+    lead = get_object_or_404(Lead, id=lead_id)
+    ct   = ContentType.objects.get_for_model(Lead)
+
+    if request.method == 'GET':
+        # Auto-follow: vendedor da lead + utilizador atual são sempre subscritos
+        auto_users = [u for u in [lead.assigned_to, request.user] if u]
+        for u in auto_users:
+            ChatterFollower.objects.get_or_create(
+                content_type=ct,
+                object_id=lead.id,
+                user=u,
+                defaults={'added_by': None},
+            )
+
+        followers = (
+            ChatterFollower.objects
+            .filter(content_type=ct, object_id=lead.id)
+            .select_related('user')
+            .order_by('created_at')
+        )
+        return JsonResponse({
+            'followers': [
+                {
+                    'user_id' : str(f.user.id),
+                    'display' : f.user.get_full_name() or f.user.username,
+                    'initials': ''.join(
+                        p[0].upper()
+                        for p in (f.user.get_full_name() or f.user.username).split()[:2]
+                    ),
+                }
+                for f in followers
+            ]
+        })
+
+    # POST — adicionar
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+
+    user_id = data.get('user_id', '').strip()
+    if not user_id:
+        return JsonResponse({'success': False, 'error': 'user_id obrigatório'}, status=400)
+
+    try:
+        target_user = User.objects.get(id=user_id, is_active=True)
+    except (User.DoesNotExist, Exception):
+        return JsonResponse({'success': False, 'error': 'Utilizador não encontrado'}, status=404)
+
+    ChatterFollower.objects.get_or_create(
+        content_type=ct,
+        object_id=lead.id,
+        user=target_user,
+        defaults={'added_by': request.user},
+    )
+    display  = target_user.get_full_name() or target_user.username
+    initials = ''.join(p[0].upper() for p in display.split()[:2])
+    return JsonResponse({'success': True, 'user_id': str(target_user.id), 'display': display, 'initials': initials})
+
+
+@login_required
+@require_http_methods(['DELETE'])
+def lead_follower_remove_api(request, lead_id, user_id):
+    """
+    DELETE /crm/leads/<lead_id>/followers/<user_id>/remove/
+    """
+    lead = get_object_or_404(Lead, id=lead_id)
+    ct   = ContentType.objects.get_for_model(Lead)
+    ChatterFollower.objects.filter(
+        content_type=ct, object_id=lead.id, user_id=user_id,
+    ).delete()
+    return JsonResponse({'success': True})

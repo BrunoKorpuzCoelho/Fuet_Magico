@@ -225,6 +225,25 @@
         height: 14px;
         color: #9ca3af;
     }
+    /* Quill email compose — dark theme */
+    #quill-email-editor { background: #151e2b; color: #e5e7eb; font-family: inherit; display: flex; flex-direction: column; }
+    #quill-email-editor .ql-toolbar { background: #0f1923; border: none !important; border-bottom: 1px solid #374151 !important; padding: 6px 8px; flex-shrink: 0; }
+    #quill-email-editor .ql-container { border: none !important; flex: 1; overflow-y: auto; }
+    #quill-email-editor .ql-editor { color: #e5e7eb; font-size: 0.875rem; min-height: 80px; }
+    #quill-email-editor .ql-editor.ql-blank::before { color: #6b7280; font-style: normal; }
+    #quill-email-editor .ql-toolbar .ql-stroke { stroke: #9ca3af; }
+    #quill-email-editor .ql-toolbar .ql-fill { fill: #9ca3af; }
+    #quill-email-editor .ql-toolbar button:hover .ql-stroke, #quill-email-editor .ql-toolbar button.ql-active .ql-stroke { stroke: #dbc693; }
+    #quill-email-editor .ql-toolbar button:hover .ql-fill, #quill-email-editor .ql-toolbar button.ql-active .ql-fill { fill: #dbc693; }
+    #quill-email-editor .ql-toolbar .ql-picker-label { color: #9ca3af; }
+    #quill-email-editor .ql-toolbar .ql-picker-options { background: #1f2937; border-color: #374151; color: #e5e7eb; }
+    /* Email bubble HTML rendering */
+    .email-body img { max-width: 100%; border-radius: 4px; }
+    .email-body a { color: #dbc693; text-decoration: underline; }
+    .email-body p { margin: 0 0 2px; }
+    .email-body ul, .email-body ol { padding-left: 1.25em; margin: 2px 0; }
+    .email-body strong, .email-body b { font-weight: 700; }
+    .email-body em, .email-body i { font-style: italic; }
 </style>
 {% endblock %}
 
@@ -1257,7 +1276,8 @@
              style="margin-right: 10px;"
              x-data="{ activeTab: 'log' }">
             <!-- Tabs Header - HORIZONTAL -->
-            <div class="flex border-b border-gray-700 overflow-x-auto flex-shrink-0">
+            <div class="flex border-b border-gray-700 flex-shrink-0 items-stretch">
+                <div class="flex overflow-x-auto flex-1">
                 <button type="button"
                         @click="activeTab = 'whatsapp'"
                         :class="activeTab === 'whatsapp' ? 'bg-[#2d3748] text-white border-b-2 border-primary' : 'text-gray-400 hover:bg-[#1f2937] hover:text-white'"
@@ -1292,7 +1312,70 @@
                         class="px-4 py-3 font-medium text-xs transition-all whitespace-nowrap {% if not is_edit %}opacity-50 cursor-not-allowed{% endif %}">
                     Atividade
                 </button>
-            </div>
+                </div><!-- /tabs-scroll -->
+                {% if is_edit %}
+                <div class="flex-shrink-0 border-l border-gray-700/50 flex items-center px-2"
+                     x-data="leadFollowersWidget('{{ lead.id }}')">
+                    <!-- Avatar stack -->
+                    <div class="flex items-center -space-x-1 mr-1.5">
+                        <template x-for="f in followers" :key="f.user_id">
+                            <div class="w-5 h-5 rounded-full bg-primary/30 flex items-center justify-center text-[8px] font-bold text-primary ring-1 ring-[#1a2332]"
+                                 :title="f.display" x-text="f.initials"></div>
+                        </template>
+                    </div>
+                    <!-- + / toggle dropdown -->
+                    <div class="relative">
+                        <button type="button" @click="open = !open; if(open) $nextTick(() => $refs.searchInput && $refs.searchInput.focus())"
+                                class="w-5 h-5 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+                                title="Gerir seguidores">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                        </button>
+                        <div x-show="open" x-cloak @click.outside="open = false"
+                             class="absolute right-0 top-7 z-50 w-64 bg-[#1f2937] border border-gray-700 rounded-lg shadow-xl" style="display:none;">
+                            <div class="px-3 py-2 border-b border-gray-700">
+                                <span class="text-xs font-semibold text-gray-300">Seguidores</span>
+                            </div>
+                            <!-- List -->
+                            <div class="max-h-36 overflow-y-auto divide-y divide-gray-700/30">
+                                <template x-for="f in followers" :key="f.user_id">
+                                    <div class="flex items-center justify-between px-3 py-1.5 hover:bg-gray-700/40">
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-bold text-primary"
+                                                 x-text="f.initials"></div>
+                                            <span class="text-xs text-gray-300" x-text="f.display"></span>
+                                        </div>
+                                        <button type="button" @click="removeFollower(f.user_id)"
+                                                class="p-0.5 text-gray-500 hover:text-red-400 transition-colors">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </template>
+                                <div x-show="followers.length === 0" class="px-3 py-3 text-xs text-gray-500 italic text-center">Sem seguidores ainda</div>
+                            </div>
+                            <!-- Search / add -->
+                            <div class="px-3 py-2 border-t border-gray-700 space-y-1">
+                                <input type="text" x-model="search" @input="debounceSearch()" x-ref="searchInput"
+                                       placeholder="Adicionar seguidor…"
+                                       class="w-full bg-gray-800 text-xs text-gray-200 rounded px-2 py-1.5 border border-gray-600 focus:border-primary focus:outline-none">
+                                <div x-show="results.length > 0" class="max-h-28 overflow-y-auto bg-gray-800 rounded border border-gray-700">
+                                    <template x-for="u in results" :key="u.id">
+                                        <button type="button" @click="addFollower(u)"
+                                                class="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-gray-300 hover:bg-gray-700 text-left">
+                                            <div class="w-5 h-5 rounded-full bg-gray-600 flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0" x-text="u.initials"></div>
+                                            <span x-text="u.display"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div><!-- /tabs-header -->
             
             {% if not is_edit %}
             <!-- Preview Message - Chatter Disabled (só em modo criação) -->
@@ -1459,13 +1542,333 @@
                 </div>
                 
                 <!-- Tab: Enviar Mensagem -->
-                <div x-show="activeTab === 'message'" class="p-4">
-                    <div class="text-center py-8">
-                        <svg class="w-12 h-12 mx-auto text-gray-600 mb-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
-                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                <div x-show="activeTab === 'message'"
+                     class="flex flex-col h-full relative"
+                     x-data="leadEmailPanel('{{ lead.id }}', '{{ lead.email_from|default:'' }}', '{{ lead.title|escapejs }}', {{ has_smtp|yesno:'true,false' }})"
+                     x-effect="if (activeTab === 'message' && emails.length === 0 && !loading) load()">
+
+                    <!-- Warning: no SMTP configured -->
+                    <div x-show="!hasSMTP" class="m-3 p-3 bg-yellow-900/40 border border-yellow-600/50 rounded-lg flex items-start gap-2 text-sm text-yellow-300">
+                        <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                         </svg>
-                        <p class="text-sm text-gray-400">Email em desenvolvimento</p>
+                        <span>Email não configurado. <a href="{% url 'accounts:profile_settings' %}" class="underline font-medium hover:text-yellow-100">Configure o seu email</a> para enviar mensagens.</span>
+                    </div>
+
+                    <!-- Barra de polling (só visível quando há SMTP) -->
+                    <div x-show="hasSMTP" class="flex items-center gap-2 px-3 py-1.5 border-b border-gray-700/60 flex-shrink-0">
+                        <button type="button" @click="poll()"
+                                :disabled="polling"
+                                class="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg :class="polling ? 'animate-spin' : ''" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            <span x-text="polling ? 'A verificar...' : 'Verificar respostas'"></span>
+                        </button>
+                        <!-- Feedback da última verificação -->
+                        <span x-show="pollMsg" x-text="pollMsg"
+                              :class="pollMsg.startsWith('\u2713') ? 'text-green-400' : 'text-gray-400'"
+                              class="text-[10px] ml-auto transition-opacity"></span>
+                    </div>
+
+                    <!-- Messages bubble area -->
+                    <div class="flex-1 overflow-y-auto p-3 space-y-3 min-h-0" x-ref="bubbleArea">
+
+                        <!-- Loading -->
+                        <div x-show="loading" class="flex justify-center py-4">
+                            <svg class="animate-spin w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                            </svg>
+                        </div>
+
+                        <!-- Empty state -->
+                        <div x-show="!loading && emails.length === 0" class="flex flex-col items-center justify-center py-10 text-gray-500">
+                            <svg class="w-10 h-10 mb-2 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+                                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                            </svg>
+                            <p class="text-sm">Nenhuma mensagem enviada ainda.</p>
+                        </div>
+
+                        <!-- Bubbles -->
+                        <template x-for="em in emails" :key="em.id">
+                            <div class="flex flex-col" :class="em.direction === 'outbound' ? 'items-end' : 'items-start'">
+                                <div class="max-w-[85%] rounded-2xl px-3 py-2 text-sm shadow"
+                                     :class="em.direction === 'outbound' ? 'rounded-br-sm text-white' : 'bg-gray-700 text-gray-100 rounded-bl-sm'"
+                                     :style="em.direction === 'outbound' ? 'background-color:rgba(219,198,147,0.22);border:1px solid rgba(219,198,147,0.45)' : ''">
+
+                                    <!-- Body -->
+                                    <div class="email-body break-words" x-html="renderBody(em)"></div>
+
+                                    <!-- Attachments chips -->
+                                    <div x-show="em.attachments && em.attachments.length > 0" class="mt-2 flex flex-wrap gap-1">
+                                        <template x-for="att in em.attachments" :key="att.url">
+                                            <a :href="att.url" target="_blank"
+                                               class="flex items-center gap-1 px-2 py-1 bg-black/20 rounded-lg text-xs hover:bg-black/30 transition-colors">
+                                                <span x-text="fileIcon(att.mime_type || att.type || '')"></span>
+                                                <span class="max-w-[120px] truncate" x-text="att.filename || att.name"></span>
+                                                <span class="opacity-60" x-text="fileSize(att.size)"></span>
+                                            </a>
+                                        </template>
+                                    </div>
+
+                                    <!-- Meta row: info + timestamp -->
+                                    <div class="mt-1 flex items-center gap-1 text-[10px]"
+                                         :class="em.direction === 'outbound' ? 'justify-end text-gray-300' : 'justify-start opacity-60'">
+                                        <!-- ⓘ info button -->
+                                        <button type="button" @click.stop="openDetail(em)"
+                                                class="rounded-full hover:opacity-80 transition-opacity flex-shrink-0"
+                                                :title="'Ver detalhes do email'">
+                                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                            </svg>
+                                        </button>
+                                        <span x-text="em.direction === 'outbound' ? 'Para: ' + em.to_email : 'De: ' + em.from_email"></span>
+                                        <span>•</span>
+                                        <span x-text="fmtDate(em.sent_at)"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Email detail modal -->
+                    <div x-show="showEmailDetail" x-cloak
+                         class="absolute inset-0 z-50 flex items-center justify-center p-4"
+                         style="background:rgba(0,0,0,0.6);"
+                         @click.self="closeDetail()">
+                        <div class="bg-gray-800 border border-gray-600 rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-3"
+                             @click.stop>
+                            <!-- Header -->
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-semibold text-white">Detalhes do Email</h3>
+                                <button @click="closeDetail()" class="text-gray-400 hover:text-white transition-colors">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <!-- Fields -->
+                            <template x-if="selectedEmail">
+                                <dl class="space-y-2 text-xs">
+                                    <div class="flex gap-2">
+                                        <dt class="text-gray-400 w-16 flex-shrink-0">Assunto</dt>
+                                        <dd class="text-gray-100 break-all" x-text="selectedEmail.subject || '—'"></dd>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <dt class="text-gray-400 w-16 flex-shrink-0">De</dt>
+                                        <dd class="text-gray-100 break-all" x-text="selectedEmail.from_email || '—'"></dd>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <dt class="text-gray-400 w-16 flex-shrink-0">Para</dt>
+                                        <dd class="text-gray-100 break-all" x-text="selectedEmail.to_email || '—'"></dd>
+                                    </div>
+                                    <div x-show="selectedEmail.cc_emails" class="flex gap-2">
+                                        <dt class="text-gray-400 w-16 flex-shrink-0">CC</dt>
+                                        <dd class="text-gray-100 break-all" x-text="selectedEmail.cc_emails"></dd>
+                                    </div>
+                                    <div x-show="selectedEmail.bcc_emails" class="flex gap-2">
+                                        <dt class="text-gray-400 w-16 flex-shrink-0">BCC</dt>
+                                        <dd class="text-gray-100 break-all" x-text="selectedEmail.bcc_emails"></dd>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <dt class="text-gray-400 w-16 flex-shrink-0">Data</dt>
+                                        <dd class="text-gray-100" x-text="selectedEmail.sent_at ? new Date(selectedEmail.sent_at).toLocaleString() : '—'"></dd>
+                                    </div>
+                                    <div x-show="selectedEmail.sent_by" class="flex gap-2">
+                                        <dt class="text-gray-400 w-16 flex-shrink-0">Enviado por</dt>
+                                        <dd class="text-gray-100" x-text="selectedEmail.sent_by"></dd>
+                                    </div>
+                                    <div x-show="selectedEmail.attachments && selectedEmail.attachments.length > 0" class="flex gap-2">
+                                        <dt class="text-gray-400 w-16 flex-shrink-0">Anexos</dt>
+                                        <dd class="text-gray-100">
+                                            <div class="flex flex-col gap-1">
+                                                <template x-for="att in selectedEmail.attachments" :key="att.url">
+                                                    <a :href="att.url" target="_blank"
+                                                       class="flex items-center gap-1 text-primary hover:underline">
+                                                        <span x-text="fileIcon(att.mime_type || '')"></span>
+                                                        <span x-text="att.filename"></span>
+                                                    </a>
+                                                </template>
+                                            </div>
+                                        </dd>
+                                    </div>
+                                </dl>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Quill Compose Modal (overlay dentro do chatter) -->
+                    <div x-show="showCompose" x-cloak
+                         class="absolute inset-0 z-50 flex flex-col bg-[#151e2b]"
+                         style="display:none;">
+                        <!-- Header -->
+                        <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-700 flex-shrink-0">
+                            <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Compor mensagem</h3>
+                            <button @click="closeCompose()" class="p-1 text-gray-500 hover:text-white transition-colors rounded">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <!-- Campos -->
+                        <div class="flex-shrink-0 border-b border-gray-700 divide-y divide-gray-700/50">
+                            <div class="flex items-center gap-2 px-4 py-2">
+                                <span class="text-xs text-gray-500 w-12 flex-shrink-0">Para:</span>
+                                <input type="text" x-model="toEmail" class="flex-1 bg-transparent text-xs text-gray-200 focus:outline-none" placeholder="email@dest.com">
+                                <div class="flex gap-1 flex-shrink-0">
+                                    <button type="button" @click="showCC = !showCC" :class="showCC ? 'text-primary' : 'text-gray-500'" class="text-[10px] font-medium px-1.5 hover:text-primary transition-colors">CC</button>
+                                    <button type="button" @click="showBCC = !showBCC" :class="showBCC ? 'text-primary' : 'text-gray-500'" class="text-[10px] font-medium px-1.5 hover:text-primary transition-colors">BCC</button>
+                                </div>
+                            </div>
+                            <div x-show="showCC" class="flex items-center gap-2 px-4 py-2">
+                                <span class="text-xs text-gray-500 w-12 flex-shrink-0">CC:</span>
+                                <input type="text" x-model="cc" class="flex-1 bg-transparent text-xs text-gray-200 focus:outline-none" placeholder="email@x.com">
+                            </div>
+                            <div x-show="showBCC" class="flex items-center gap-2 px-4 py-2">
+                                <span class="text-xs text-gray-500 w-12 flex-shrink-0">BCC:</span>
+                                <input type="text" x-model="bcc" class="flex-1 bg-transparent text-xs text-gray-200 focus:outline-none" placeholder="email@x.com">
+                            </div>
+                        </div>
+                        <!-- Editor Quill -->
+                        <div class="flex-1 overflow-hidden min-h-0">
+                            <div id="quill-email-editor" style="height:100%;"></div>
+                        </div>
+                        <!-- Footer -->
+                        <div class="flex items-center justify-between px-3 py-2.5 border-t border-gray-700 flex-shrink-0">
+                            <div class="flex items-center gap-2">
+                                <button @click="$refs.fileInputModal.click()" type="button"
+                                        class="p-1.5 text-gray-400 hover:text-gray-200 transition-colors" title="Anexar ficheiro">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                                    </svg>
+                                </button>
+                                <input type="file" multiple x-ref="fileInputModal" class="hidden" @change="addFiles($event)">
+                                <template x-for="(f, i) in files" :key="i">
+                                    <div class="flex items-center gap-1 px-2 py-0.5 bg-gray-700 rounded text-xs text-gray-300">
+                                        <span x-text="f.name" class="max-w-[80px] truncate"></span>
+                                        <button @click="removeFile(i)" class="text-gray-400 hover:text-red-400 ml-1">&times;</button>
+                                    </div>
+                                </template>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button @click="closeCompose()" type="button"
+                                        class="px-3 py-1.5 text-xs rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors">
+                                    Descartar
+                                </button>
+                                <button @click="sendFromModal()" type="button"
+                                        :disabled="sending || !hasSMTP"
+                                        class="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-lg text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                        style="background-color:#dbc693">
+                                    <svg x-show="!sending" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/>
+                                    </svg>
+                                    <svg x-show="sending" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                                    </svg>
+                                    Enviar
+                                </button>
+                            </div>
+                        </div>
+                    </div><!-- /quill compose modal -->
+
+                    <!-- Compose area -->
+                    <div class="border-t border-gray-700 flex-shrink-0 p-2 space-y-1.5">
+
+                        <!-- To field -->
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs text-gray-400 w-7 flex-shrink-0 text-right">Para:</label>
+                            <input type="text" x-model="toEmail"
+                                   class="flex-1 bg-gray-700 text-gray-100 text-xs rounded px-2 py-1 border border-gray-600 focus:border-primary focus:outline-none"
+                                   placeholder="email@dest.com, outro@dest.com">
+                            <!-- CC / BCC toggles -->
+                            <div class="flex gap-1 flex-shrink-0">
+                                <button type="button" @click="showCC = !showCC"
+                                        :class="showCC ? 'text-primary border-primary' : 'text-gray-400 border-gray-600'"
+                                        class="text-[10px] border rounded px-1.5 py-0.5 hover:border-primary hover:text-primary transition-colors font-medium">CC</button>
+                                <button type="button" @click="showBCC = !showBCC"
+                                        :class="showBCC ? 'text-primary border-primary' : 'text-gray-400 border-gray-600'"
+                                        class="text-[10px] border rounded px-1.5 py-0.5 hover:border-primary hover:text-primary transition-colors font-medium">BCC</button>
+                            </div>
+                        </div>
+
+                        <!-- CC field -->
+                        <div x-show="showCC" x-transition class="flex items-center gap-2">
+                            <label class="text-xs text-gray-400 w-7 flex-shrink-0 text-right">CC:</label>
+                            <input type="text" x-model="cc"
+                                   class="flex-1 bg-gray-700 text-gray-100 text-xs rounded px-2 py-1 border border-gray-600 focus:border-primary focus:outline-none"
+                                   placeholder="email1@x.com, email2@x.com">
+                        </div>
+
+                        <!-- BCC field -->
+                        <div x-show="showBCC" x-transition class="flex items-center gap-2">
+                            <label class="text-xs text-gray-400 w-7 flex-shrink-0 text-right">BCC:</label>
+                            <input type="text" x-model="bcc"
+                                   class="flex-1 bg-gray-700 text-gray-100 text-xs rounded px-2 py-1 border border-gray-600 focus:border-primary focus:outline-none"
+                                   placeholder="email1@x.com, email2@x.com">
+                        </div>
+
+                        <!-- Staged files -->
+                        <div x-show="files.length > 0" class="flex flex-wrap gap-1 pt-0.5">
+                            <template x-for="(f, i) in files" :key="i">
+                                <div class="flex items-center gap-1 px-2 py-1 bg-gray-700 rounded-lg text-xs text-gray-200 border border-gray-600">
+                                    <span x-text="fileIcon(f.type)"></span>
+                                    <span class="max-w-[100px] truncate" x-text="f.name"></span>
+                                    <span class="opacity-60" x-text="fileSize(f.size)"></span>
+                                    <button @click="removeFile(i)" class="ml-1 text-gray-400 hover:text-red-400 leading-none">&times;</button>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Textarea + buttons row -->
+                        <div class="flex items-end gap-2">
+                            <!-- Attachment button -->
+                            <button @click="$refs.fileInput.click()" type="button"
+                                    class="flex-shrink-0 p-2 text-gray-400 hover:text-gray-200 transition-colors"
+                                    title="Anexar ficheiro">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                                </svg>
+                            </button>
+                            <input type="file" multiple x-ref="fileInput" class="hidden" @change="addFiles($event)">
+
+                            <!-- Textarea -->
+                            <div class="relative flex-1">
+                                <textarea x-model="body"
+                                          @keydown.enter.ctrl.prevent="send()"
+                                          rows="2"
+                                          class="w-full bg-gray-700 text-gray-100 text-sm rounded-xl px-3 py-2 pr-8 border border-gray-600 focus:border-primary focus:outline-none resize-none placeholder-gray-500"
+                                          placeholder="Escreve uma mensagem… (Ctrl+Enter para enviar)"></textarea>
+                                <!-- Expand to Quill modal -->
+                                <button type="button" @click="openCompose()"
+                                        class="absolute bottom-2 right-2 p-0.5 text-gray-500 hover:text-primary transition-colors"
+                                        title="Abrir editor completo">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                              d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <!-- Send button -->
+                            <button @click="send()" type="button"
+                                    :disabled="sending || (!body.trim() && files.length === 0) || !hasSMTP"
+                                    class="flex-shrink-0 p-2 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition-colors text-gray-900"
+                                    style="background-color:#dbc693"
+                                    :style="(!sending && (body.trim() || files.length > 0) && hasSMTP) ? 'background-color:#dbc693' : 'background-color:#dbc69399'">
+                                <svg x-show="!sending" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/>
+                                </svg>
+                                <svg x-show="sending" class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
@@ -3039,6 +3442,290 @@ function leadNotesPanel(leadId) {
         csrfToken() {
             return document.cookie.split(';').map(c => c.trim())
                 .find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
+        },
+    };
+}
+
+function leadEmailPanel(leadId, leadEmail, leadTitle, hasSMTP) {
+    return {
+        emails: [],
+        toEmail: leadEmail,
+        body: '',
+        cc: '',
+        bcc: '',
+        showCC: false,
+        showBCC: false,
+        files: [],
+        loading: false,
+        sending: false,
+        polling: false,
+        pollMsg: '',
+        hasSMTP: hasSMTP,
+        selectedEmail: null,
+        showEmailDetail: false,
+        showCompose: false,
+        quillModal: null,
+
+        async load() {
+            this.loading = true;
+            try {
+                const res = await fetch(`/crm/leads/${leadId}/emails/`);
+                const data = await res.json();
+                this.emails = data.emails || [];
+                this.$nextTick(() => this.scrollBottom());
+            } catch (e) {
+                console.warn('Email load error:', e);
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async poll() {
+            if (this.polling || !this.hasSMTP) return;
+            this.polling = true;
+            this.pollMsg = '';
+            try {
+                const res = await fetch(`/crm/leads/${leadId}/emails/poll/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': this.csrfToken() },
+                });
+                const data = await res.json();
+                if (data.success) {
+                    if (data.new_emails && data.new_emails.length > 0) {
+                        this.emails = this.emails.concat(data.new_emails);
+                        this.$nextTick(() => this.scrollBottom());
+                        const n = data.new_emails.length;
+                        this.pollMsg = `✓ ${n} resposta${n > 1 ? 's' : ''} recebida${n > 1 ? 's' : ''}`;
+                    } else {
+                        this.pollMsg = 'Sem novas respostas.';
+                    }
+                } else {
+                    this.pollMsg = data.error || 'Erro ao verificar respostas.';
+                }
+            } catch (e) {
+                this.pollMsg = 'Erro de rede.';
+            } finally {
+                this.polling = false;
+                setTimeout(() => { this.pollMsg = ''; }, 4000);
+            }
+        },
+
+        async send(bodyHtml = null) {
+            const body = this.body.trim();
+            if ((!body && this.files.length === 0) || this.sending || !this.hasSMTP) return;
+            this.sending = true;
+            try {
+                const fd = new FormData();
+                fd.append('body', body);
+                if (bodyHtml) fd.append('body_html', bodyHtml);
+                fd.append('to_email', this.toEmail);
+                fd.append('cc', this.cc.trim());
+                fd.append('bcc', this.bcc.trim());
+                this.files.forEach(f => fd.append('attachments', f));
+
+                const res = await fetch(`/crm/leads/${leadId}/emails/send/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': this.csrfToken() },
+                    body: fd,
+                });
+                const data = await res.json();
+                if (data.success) {
+                    this.emails.push(data.email);
+                    this.body = '';
+                    this.files = [];
+                    // Clear Quill via raw DOM before hiding (avoids null-selection crash on hidden editor)
+                    if (this.quillModal) {
+                        try { this.quillModal.root.innerHTML = '<p><br></p>'; } catch(e) {}
+                    }
+                    this.showCompose = false;
+                    this.$nextTick(() => this.scrollBottom());
+                } else {
+                    alert(data.error || 'Erro ao enviar email.');
+                }
+            } catch (e) {
+                console.warn('Email send error:', e);
+                alert('Erro de rede ao enviar email.');
+            } finally {
+                this.sending = false;
+            }
+        },
+
+        openDetail(em) {
+            this.selectedEmail = em;
+            this.showEmailDetail = true;
+        },
+
+        closeDetail() {
+            this.showEmailDetail = false;
+            this.selectedEmail = null;
+        },
+
+        openCompose() {
+            this.showCompose = true;
+            this.$nextTick(() => {
+                if (!this.quillModal) {
+                    this.quillModal = new Quill('#quill-email-editor', {
+                        theme: 'snow',
+                        placeholder: 'Escreve a tua mensagem…',
+                        modules: {
+                            toolbar: [
+                                [{ header: [1, 2, 3, false] }],
+                                ['bold', 'italic', 'underline', 'strike'],
+                                [{ color: [] }, { background: [] }],
+                                [{ list: 'ordered' }, { list: 'bullet' }],
+                                ['link', 'image'],
+                                ['clean'],
+                            ],
+                        },
+                    });
+                }
+                if (this.body.trim() && !this.quillModal.getText().trim()) {
+                    this.quillModal.setText(this.body);
+                }
+                this.quillModal.focus();
+            });
+        },
+
+        closeCompose() {
+            this.showCompose = false;
+        },
+
+        async sendFromModal() {
+            if (!this.quillModal || this.sending || !this.hasSMTP) return;
+            const bodyHtml = this.quillModal.root.innerHTML;
+            const bodyText = this.quillModal.getText().trim();
+            if (!bodyText && this.files.length === 0) return;
+            this.body = bodyText;
+            await this.send(bodyHtml);
+        },
+
+        renderBody(em) {
+            const html = (em.body_html || '').trim();
+            if (html && html !== '<p><br></p>' && html !== '<br>') {
+                return html.replace(/<script[\s\S]*?<\/script>/gi, '');
+            }
+            const plain = em.body || '';
+            return plain
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\n/g, '<br>');
+        },
+
+        addFiles(event) {
+            const newFiles = Array.from(event.target.files || []);
+            this.files = this.files.concat(newFiles);
+            event.target.value = '';
+        },
+
+        removeFile(index) {
+            this.files = this.files.filter((_, i) => i !== index);
+        },
+
+        scrollBottom() {
+            const el = this.$refs.bubbleArea;
+            if (el) el.scrollTop = el.scrollHeight;
+        },
+
+        fileIcon(mimeType) {
+            if (!mimeType) return '📎';
+            if (mimeType.startsWith('image/')) return '🖼️';
+            if (mimeType === 'application/pdf') return '📄';
+            if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
+            if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return '📊';
+            if (mimeType.startsWith('video/')) return '🎬';
+            if (mimeType.startsWith('audio/')) return '🎵';
+            if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('7z')) return '🗜️';
+            return '📎';
+        },
+
+        fileSize(bytes) {
+            if (!bytes || bytes === 0) return '';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+        },
+
+        fmtDate(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            const now = new Date();
+            const sameDay = d.toDateString() === now.toDateString();
+            if (sameDay) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return d.toLocaleDateString([], { day: '2-digit', month: '2-digit' })
+                + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        },
+
+        csrfToken() {
+            return document.cookie.split(';').map(c => c.trim())
+                .find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
+        },
+    };
+}
+
+function leadFollowersWidget(leadId) {
+    return {
+        leadId,
+        open: false,
+        followers: [],
+        search: '',
+        results: [],
+        _timer: null,
+
+        init() { this.load(); },
+
+        async load() {
+            try {
+                const r = await fetch(`/crm/leads/${this.leadId}/followers/`);
+                const d = await r.json();
+                this.followers = d.followers || [];
+            } catch(e) {}
+        },
+
+        debounceSearch() {
+            clearTimeout(this._timer);
+            if (!this.search.trim()) { this.results = []; return; }
+            this._timer = setTimeout(() => this.fetchUsers(), 250);
+        },
+
+        async fetchUsers() {
+            try {
+                const r = await fetch(`/crm/api/users/search/?q=${encodeURIComponent(this.search)}`);
+                const d = await r.json();
+                const existing = new Set(this.followers.map(f => f.user_id));
+                this.results = (d.users || []).filter(u => !existing.has(u.id));
+            } catch(e) { this.results = []; }
+        },
+
+        async addFollower(u) {
+            try {
+                const r = await fetch(`/crm/leads/${this.leadId}/followers/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrf() },
+                    body: JSON.stringify({ user_id: u.id }),
+                });
+                const d = await r.json();
+                if (d.success) {
+                    this.followers.push({ user_id: d.user_id, display: d.display, initials: d.initials });
+                    this.search = '';
+                    this.results = [];
+                }
+            } catch(e) {}
+        },
+
+        async removeFollower(userId) {
+            try {
+                await fetch(`/crm/leads/${this.leadId}/followers/${userId}/remove/`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRFToken': this.csrf() },
+                });
+                this.followers = this.followers.filter(f => f.user_id !== userId);
+            } catch(e) {}
+        },
+
+        csrf() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                   document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1] || '';
         },
     };
 }

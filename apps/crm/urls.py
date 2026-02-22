@@ -90,6 +90,11 @@ urlpatterns = [
     # Lead Emails (Chatter)
     path('leads/<uuid:lead_id>/emails/', views.lead_emails_list, name='lead_emails_list'),
     path('leads/<uuid:lead_id>/emails/send/', views.lead_send_email, name='lead_send_email'),
+    path('leads/<uuid:lead_id>/emails/poll/', views.lead_poll_inbox, name='lead_poll_inbox'),
+
+    # Lead Followers (Chatter)
+    path('leads/<uuid:lead_id>/followers/', views.lead_followers_api, name='lead_followers_api'),
+    path('leads/<uuid:lead_id>/followers/<uuid:user_id>/remove/', views.lead_follower_remove_api, name='lead_follower_remove_api'),
 
     # Users search (para @mention dropdown)
     path('api/users/search/', views.users_search_api, name='users_search_api'),

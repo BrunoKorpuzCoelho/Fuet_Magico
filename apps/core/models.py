@@ -175,6 +175,7 @@ class ChatterMessage(AbstractBaseModel):
         help_text='Only for emails'
     )
     body = models.TextField(verbose_name='Message Body')
+    body_html = models.TextField(blank=True, default='', verbose_name='Body HTML')
     
     # Email specific fields
     to_email = models.EmailField(blank=True, null=True, verbose_name='To')
@@ -183,7 +184,12 @@ class ChatterMessage(AbstractBaseModel):
         verbose_name='CC',
         help_text='Comma-separated email addresses'
     )
-    
+    bcc_emails = models.TextField(
+        blank=True,
+        verbose_name='BCC',
+        help_text='Comma-separated email addresses (blind carbon copy)',
+    )
+
     # Attachments
     attachments = models.JSONField(
         default=list,
@@ -1326,3 +1332,81 @@ class Notification(AbstractBaseModel):
             self.is_read = True
             self.read_at = timezone.now()
             self.save(update_fields=['is_read', 'read_at'])
+
+
+# ---------------------------------------------------------------------------
+# Chatter Followers — genérico via ContentType
+# ---------------------------------------------------------------------------
+
+class ChatterFollower(models.Model):
+    """
+    Subscritor de um objeto qualquer (Lead, Sale, etc.).
+
+    Guardar com content_type + object_id permite reutilizar o mesmo modelo
+    para qualquer entidade do sistema sem criar tabelas separadas.
+    """
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        verbose_name='Tipo de Objeto',
+    )
+    object_id = models.UUIDField(verbose_name='ID do Objeto')
+    content_object = GenericForeignKey('content_type', 'object_id')
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='chatter_follows',
+        verbose_name='Seguidor',
+    )
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='chatter_follows_added',
+        verbose_name='Adicionado por',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [('content_type', 'object_id', 'user')]
+        indexes = [
+            models.Index(fields=['content_type', 'object_id']),
+        ]
+        verbose_name = 'Seguidor do Chatter'
+        verbose_name_plural = 'Seguidores do Chatter'
+
+    def __str__(self):
+        return f"{self.user} → {self.content_type.model}:{self.object_id}"
+
+
+def notify_followers(obj, notification_type, title, message='', link='', exclude_user=None):
+    """
+    Cria notificações internas para todos os seguidores de `obj`.
+
+    Uso:
+        notify_followers(lead, 'EMAIL',
+                         f'{lead.title} — Novo email de alice@cliente.com',
+                         link=f'/crm/leads/{lead.id}/')
+    """
+    ct = ContentType.objects.get_for_model(obj)
+    followers = ChatterFollower.objects.filter(
+        content_type=ct,
+        object_id=obj.pk,
+    ).select_related('user')
+
+    to_create = []
+    for follower in followers:
+        if exclude_user and str(follower.user_id) == str(exclude_user.pk):
+            continue
+        to_create.append(Notification(
+            user=follower.user,
+            notification_type=notification_type,
+            title=title,
+            message=message,
+            link=link,
+            related_content_type=ct,
+            related_object_id=obj.pk,
+        ))
+    if to_create:
+        Notification.objects.bulk_create(to_create, ignore_conflicts=True)

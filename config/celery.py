@@ -9,6 +9,21 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 
 app.autodiscover_tasks()
 
+# ---------------------------------------------------------------------------
+# Beat schedule — tarefas periódicas
+# ---------------------------------------------------------------------------
+
+app.conf.beat_schedule = {
+    # Verifica o IMAP de todos os utilizadores ativos a cada 5 minutos
+    'poll-imap-every-5-min': {
+        'task'    : 'config.tasks.poll_imap_all_active_users',
+        'schedule': 300.0,  # segundos
+    },
+}
+app.conf.timezone = 'UTC'
+
+
 @app.task(bind=True, ignore_result=True)
 def debug_task(self):
     print(f'Request: {self.request!r}')
+

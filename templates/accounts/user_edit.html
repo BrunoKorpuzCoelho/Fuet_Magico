@@ -1,0 +1,971 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Editar Utilizador{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/accounts_navbar.html' with show_form_actions=True form_action_id='user-edit-form' %}
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#1f2937]" x-data="{ activeTab: 'access' }">
+    <form method="post" enctype="multipart/form-data" id="user-edit-form">
+        {% csrf_token %}
+
+        <div class="mx-auto max-w-7xl p-6">
+
+            {% if form.errors %}
+            <div class="mb-4 bg-red-900/30 border border-red-700 rounded-lg px-4 py-3 text-sm text-red-300 space-y-1">
+                {% for field in form %}{% for error in field.errors %}<p>{{ field.label }}: {{ error }}</p>{% endfor %}{% endfor %}
+                {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+            </div>
+            {% endif %}
+
+            {% if is_self %}
+            <div class="mb-4 bg-yellow-900/30 border border-yellow-700/50 rounded-lg px-4 py-3 text-xs text-yellow-300">
+                Estás a editar a tua própria conta. O Role e o Estado não são editáveis por razões de segurança.
+            </div>
+            {% endif %}
+
+            <!-- Avatar + Nome / Email / Telefone -->
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+
+                <!-- Avatar -->
+                <div class="lg:col-span-1 flex flex-col items-center gap-4">
+                    <div class="relative group cursor-pointer w-40 h-40 rounded-xl overflow-hidden border-2 border-gray-700 hover:border-primary transition-colors"
+                         onclick="document.getElementById('id_avatar_input').click()">
+                        {% if target_user.avatar %}
+                        <img id="avatar-preview" src="{{ target_user.avatar }}" alt="Avatar"
+                             class="w-full h-full object-cover">
+                        <div id="avatar-initials" style="display:none;"
+                             class="w-full h-full flex items-center justify-center bg-gray-700 text-3xl font-bold text-gray-300">
+                            {{ target_user.first_name|first|upper }}{{ target_user.last_name|first|upper }}
+                        </div>
+                        {% else %}
+                        <img id="avatar-preview" src="" alt="Avatar" class="w-full h-full object-cover hidden">
+                        <div id="avatar-initials"
+                             class="w-full h-full flex items-center justify-center bg-gray-700 text-3xl font-bold text-gray-300">
+                            {{ target_user.first_name|first|upper }}{{ target_user.last_name|first|upper }}
+                        </div>
+                        {% endif %}
+                        <!-- Hover overlay -->
+                        <div class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <span class="text-white text-xs font-medium">Alterar foto</span>
+                        </div>
+                    </div>
+                    <input type="file" id="id_avatar_input" accept="image/*" class="hidden"
+                           onchange="previewAvatar(this)">
+                    <input type="hidden" name="avatar_base64" id="avatar_base64_input" value="">
+
+                    <!-- Status badge -->
+                    <span class="px-3 py-1 rounded-full text-xs font-medium
+                                 {% if target_user.is_active %}bg-green-500/15 text-green-400 border border-green-500/30
+                                 {% else %}bg-red-500/15 text-red-400 border border-red-500/30{% endif %}">
+                        {% if target_user.is_active %}Ativo{% else %}Inativo{% endif %}
+                    </span>
+                </div>
+
+                <!-- Nome + Email + Telefone -->
+                <div class="lg:col-span-2">
+                    <div class="space-y-5">
+                        <!-- Primeiro Nome + Apelido em linha -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="sr-only">Primeiro Nome</label>
+                                <input class="flex w-full px-3 py-2 h-14 border-0 border-b-2 border-gray-600 bg-transparent text-3xl font-light text-gray-300 placeholder:text-gray-600 focus-visible:border-primary focus-visible:ring-0 rounded-none focus-visible:outline-none"
+                                       id="id_first_name" name="first_name" placeholder="Primeiro nome"
+                                       value="{{ form.first_name.value|default:'' }}">
+                            </div>
+                            <div>
+                                <label class="sr-only">Apelido</label>
+                                <input class="flex w-full px-3 py-2 h-14 border-0 border-b-2 border-gray-600 bg-transparent text-3xl font-light text-gray-300 placeholder:text-gray-600 focus-visible:border-primary focus-visible:ring-0 rounded-none focus-visible:outline-none"
+                                       id="id_last_name" name="last_name" placeholder="Apelido"
+                                       value="{{ form.last_name.value|default:'' }}">
+                            </div>
+                        </div>
+
+                        <!-- Role badges row -->
+                        <div class="flex items-center gap-2 flex-wrap">
+                            {% with roles=form.role.field.choices %}
+                            {% for val, label in roles %}
+                            <label class="relative flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-all
+                                          {% if form.role.value == val %}border-primary bg-primary text-white{% else %}border-gray-700 text-gray-400 hover:border-gray-500{% endif %}">
+                                <input type="radio" name="role" value="{{ val }}"
+                                       {% if form.role.value == val %}checked{% endif %}
+                                       {% if is_self %}disabled{% endif %}
+                                       class="sr-only">
+                                <span class="text-xs font-medium">{{ label }}</span>
+                            </label>
+                            {% endfor %}
+                            {% endwith %}
+                        </div>
+
+                        <!-- Username + Email + Telefone com ícones dourados -->
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                     stroke-linejoin="round" class="h-4 w-4 text-primary flex-shrink-0">
+                                    <circle cx="12" cy="8" r="4"/>
+                                    <path d="M20 21a8 8 0 1 0-16 0"/>
+                                </svg>
+                                <input class="flex w-full px-3 py-2 h-9 border-0 border-b border-gray-700 bg-transparent text-gray-400 placeholder:text-gray-600 focus-visible:border-primary focus-visible:ring-0 rounded-none focus-visible:outline-none"
+                                       id="id_username" name="username" type="text" placeholder="nome_utilizador"
+                                       value="{{ form.username.value|default:'' }}">
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                     stroke-linejoin="round" class="h-4 w-4 text-primary flex-shrink-0">
+                                    <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"></path>
+                                    <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                                </svg>
+                                <input class="flex w-full px-3 py-2 h-9 border-0 border-b border-gray-700 bg-transparent text-gray-400 placeholder:text-gray-600 focus-visible:border-primary focus-visible:ring-0 rounded-none focus-visible:outline-none"
+                                       id="id_email" name="email" type="email" placeholder="email@exemplo.com"
+                                       value="{{ form.email.value|default:'' }}">
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                     stroke-linejoin="round" class="h-4 w-4 text-primary flex-shrink-0">
+                                    <path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"></path>
+                                </svg>
+                                <input class="flex w-full px-3 py-2 h-9 border-0 border-b border-gray-700 bg-transparent text-gray-400 placeholder:text-gray-600 focus-visible:border-primary focus-visible:ring-0 rounded-none focus-visible:outline-none"
+                                       id="id_phone" name="phone" type="text" placeholder="+351 900 000 000"
+                                       value="{{ form.phone.value|default:'' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- /avatar+name grid -->
+
+            <!-- TABS -->
+            <div class="mt-8">
+                <!-- Tab nav -->
+                <div class="flex items-center gap-1 border-b border-gray-700 mb-6">
+                    <button type="button"
+                            @click="activeTab = 'access'"
+                            :class="activeTab === 'access' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:text-gray-300'"
+                            class="px-4 py-2.5 text-sm font-medium transition-colors -mb-px">
+                        Direitos de Acesso
+                    </button>
+                    <button type="button"
+                            @click="activeTab = 'security'"
+                            :class="activeTab === 'security' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:text-gray-300'"
+                            class="px-4 py-2.5 text-sm font-medium transition-colors -mb-px">
+                        Segurança
+                    </button>
+                    <button type="button"
+                            @click="activeTab = 'smtp'"
+                            :class="activeTab === 'smtp' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:text-gray-300'"
+                            class="px-4 py-2.5 text-sm font-medium transition-colors -mb-px">
+                        SMTP
+                    </button>
+                </div>
+
+                <!-- Tab: Direitos de Acesso -->
+                <div x-show="activeTab === 'access'" class="space-y-6" style="display:block;">
+                    {% if not is_self %}
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Estado da Conta</label>
+                        <label class="inline-flex items-center gap-3 cursor-pointer">
+                            {{ form.is_active }}
+                            <span class="text-sm text-gray-300">Conta Ativa</span>
+                            <span class="text-xs text-gray-500">(desativar impede o utilizador de fazer login)</span>
+                        </label>
+                    </div>
+                    {% endif %}
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Empresas</label>
+                        {{ existing_companies|json_script:"initial-companies" }}
+                        <div x-data="userCompanySelector(JSON.parse(document.getElementById('initial-companies').textContent))"
+                             @click.away="showDropdown = false"
+                             class="relative">
+                            <div class="flex flex-wrap gap-2 p-2 rounded-lg border-2 border-gray-600 bg-gray-800 focus-within:border-primary transition-colors min-h-[44px] cursor-text"
+                                 @click="$el.querySelector('input').focus()">
+                                <template x-for="c in selectedCompanies" :key="c.id">
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/20 border border-primary/30 text-primary">
+                                        <span x-text="c.name"></span>
+                                        <button type="button" @click.stop="remove(c.id)"
+                                                class="ml-0.5 hover:bg-primary/20 rounded-full p-0.5">
+                                            <svg class="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                    </span>
+                                </template>
+                                <input type="text"
+                                       x-model="searchQuery"
+                                       @input.debounce.300ms="search()"
+                                       @focus="if(searchQuery.length > 0) showDropdown = true"
+                                       @keydown.escape="showDropdown = false"
+                                       placeholder="Pesquisar empresa..."
+                                       class="flex-1 min-w-[140px] bg-transparent border-0 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-0 text-sm px-0 py-0.5">
+                            </div>
+                            <div x-show="showDropdown"
+                                 x-transition:enter="transition ease-out duration-100"
+                                 x-transition:enter-start="opacity-0 scale-95"
+                                 x-transition:enter-end="opacity-100 scale-100"
+                                 class="absolute z-50 mt-1 w-full bg-gray-800 border border-gray-700 rounded-lg shadow-xl max-h-52 overflow-y-auto"
+                                 style="display:none;">
+                                <div x-show="isLoading" class="p-3 text-sm text-gray-400 text-center">A pesquisar...</div>
+                                <template x-if="!isLoading && searchResults.length > 0">
+                                    <div>
+                                        <template x-for="c in searchResults" :key="c.id">
+                                            <button type="button" @click="select(c)"
+                                                    class="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                                                    x-text="c.name"></button>
+                                        </template>
+                                    </div>
+                                </template>
+                                <div x-show="!isLoading && searchResults.length === 0 && searchQuery.length > 0"
+                                     class="p-3 text-sm text-gray-500 text-center">Nenhuma empresa encontrada</div>
+                            </div>
+                            <template x-for="c in selectedCompanies" :key="c.id">
+                                <input type="hidden" name="companies" :value="c.id">
+                            </template>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Empresa Padrão</label>
+                        {{ form.default_company }}
+                    </div>
+
+                    <!-- Permissões de Aplicação -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Permissões de Aplicação</label>
+                        {% if app_roles %}
+                        <div class="rounded-xl border border-gray-700 overflow-hidden">
+                            <div class="divide-y divide-gray-700/40">
+                                {% for app_role in app_roles %}
+                                <!-- Each app row has its own Alpine scope for the modal -->
+                                <div x-data="{
+                                        modalOpen: false,
+                                        applyPreset(level) {
+                                            const map = {
+                                                none:    [],
+                                                readonly:['view'],
+                                                user:    ['view','add','change'],
+                                                manager: ['view','add','change','delete'],
+                                                admin:   ['view','add','change','delete'],
+                                            };
+                                            const allowed = new Set(map[level] || []);
+                                            this.$refs.modalBody.querySelectorAll('input[data-action]').forEach(cb => {
+                                                cb.checked = allowed.has(cb.dataset.action);
+                                            });
+                                            // Notify the form so the save button appears
+                                            this.$refs.modalBody.dispatchEvent(new Event('change', {bubbles: true}));
+                                        }
+                                     }" class="flex items-center justify-between px-4 py-3">
+                                    <span class="text-sm text-gray-300">{{ app_role.label }}</span>
+                                    <div class="flex items-center gap-2">
+                                        <select name="app_role_{{ app_role.app }}"
+                                                class="bg-gray-700 border border-gray-600 text-gray-300 text-xs rounded-lg px-3 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none cursor-pointer">
+                                            <option value="" {% if not app_role.level %}selected{% endif %}>— Sem acesso —</option>
+                                            {% for level_key, level_label in app_role_levels %}
+                                            <option value="{{ level_key }}" {% if app_role.level == level_key %}selected{% endif %}>{{ level_label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        {% if app_role.models %}
+                                        <!-- Botão de permissões detalhadas (chave) -->
+                                        <button type="button" @click.stop="modalOpen = true"
+                                                title="Permissões detalhadas de {{ app_role.label }}"
+                                                class="p-1.5 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-700/60 transition-colors">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                      d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-3 1 1-3a4 4 0 01.828-1.414z"/>
+                                            </svg>
+                                        </button>
+                                        <!-- Modal de permissões detalhadas -->
+                                        <div x-show="modalOpen" x-cloak
+                                             @keydown.escape.window="modalOpen = false"
+                                             @click.self="modalOpen = false"
+                                             class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                                             style="display:none;">
+                                            <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 border border-gray-700 flex flex-col max-h-[90vh]"
+                                                 @click.stop>
+                                                <!-- Cabeçalho do modal -->
+                                                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-700 flex-shrink-0">
+                                                    <div class="flex items-center gap-2.5">
+                                                        <svg class="h-4 w-4 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                                  d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-3 1 1-3a4 4 0 01.828-1.414z"/>
+                                                        </svg>
+                                                        <h3 class="text-sm font-semibold text-white">Permissões detalhadas — {{ app_role.label }}</h3>
+                                                    </div>
+                                                    <button type="button" @click="modalOpen = false"
+                                                            class="p-1 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-gray-700 transition-colors">
+                                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                                <!-- Botões de predefinir -->
+                                                <div class="px-6 pt-4 pb-3 flex items-center gap-2 flex-shrink-0 border-b border-gray-700/50">
+                                                    <span class="text-xs text-gray-500 mr-1">Predefinir:</span>
+                                                    <button type="button" @click="applyPreset('none')"
+                                                            class="px-2.5 py-1 text-xs rounded-lg bg-gray-700 hover:bg-red-900/50 hover:text-red-300 text-gray-400 transition-colors">Nenhum</button>
+                                                    <button type="button" @click="applyPreset('readonly')"
+                                                            class="px-2.5 py-1 text-xs rounded-lg bg-gray-700 hover:bg-blue-900/40 hover:text-blue-300 text-gray-400 transition-colors">Leitura</button>
+                                                    <button type="button" @click="applyPreset('user')"
+                                                            class="px-2.5 py-1 text-xs rounded-lg bg-gray-700 hover:bg-green-900/40 hover:text-green-300 text-gray-400 transition-colors">Utilizador</button>
+                                                    <button type="button" @click="applyPreset('manager')"
+                                                            class="px-2.5 py-1 text-xs rounded-lg bg-gray-700 hover:bg-primary/20 hover:text-primary text-gray-400 transition-colors">Manager</button>
+                                                </div>
+                                                <!-- Grid de permissões por modelo -->
+                                                <div x-ref="modalBody" class="overflow-y-auto flex-1">
+                                                    <!-- Cabeçalho de colunas -->
+                                                    <div class="grid items-center px-6 py-2.5 bg-gray-800/60 sticky top-0"
+                                                         style="grid-template-columns: 1fr 56px 56px 56px 56px">
+                                                        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tabela</span>
+                                                        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Ver</span>
+                                                        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Criar</span>
+                                                        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Editar</span>
+                                                        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Apagar</span>
+                                                    </div>
+                                                    <div class="divide-y divide-gray-700/40">
+                                                        {% for m in app_role.models %}
+                                                        <div class="grid items-center px-6 py-3"
+                                                             style="grid-template-columns: 1fr 56px 56px 56px 56px">
+                                                            <span class="text-sm text-gray-300">{{ m.display_name }}</span>
+                                                            <div class="flex justify-center">
+                                                                <input type="checkbox"
+                                                                       name="perm_{{ m.app_label }}_{{ m.model_name }}_view"
+                                                                       data-action="view"
+                                                                       {% if m.perm_view %}checked{% endif %}
+                                                                       class="h-4 w-4 rounded border-gray-600 bg-gray-700 text-primary focus:ring-primary cursor-pointer">
+                                                            </div>
+                                                            <div class="flex justify-center">
+                                                                <input type="checkbox"
+                                                                       name="perm_{{ m.app_label }}_{{ m.model_name }}_add"
+                                                                       data-action="add"
+                                                                       {% if m.perm_add %}checked{% endif %}
+                                                                       class="h-4 w-4 rounded border-gray-600 bg-gray-700 text-primary focus:ring-primary cursor-pointer">
+                                                            </div>
+                                                            <div class="flex justify-center">
+                                                                <input type="checkbox"
+                                                                       name="perm_{{ m.app_label }}_{{ m.model_name }}_change"
+                                                                       data-action="change"
+                                                                       {% if m.perm_change %}checked{% endif %}
+                                                                       class="h-4 w-4 rounded border-gray-600 bg-gray-700 text-primary focus:ring-primary cursor-pointer">
+                                                            </div>
+                                                            <div class="flex justify-center">
+                                                                <input type="checkbox"
+                                                                       name="perm_{{ m.app_label }}_{{ m.model_name }}_delete"
+                                                                       data-action="delete"
+                                                                       {% if m.perm_delete %}checked{% endif %}
+                                                                       class="h-4 w-4 rounded border-gray-600 bg-gray-700 text-primary focus:ring-primary cursor-pointer">
+                                                            </div>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                                <!-- Rodapé do modal -->
+                                                <div class="px-6 py-4 border-t border-gray-700 flex justify-end flex-shrink-0">
+                                                    <button type="button" @click="modalOpen = false"
+                                                            class="px-4 py-2 text-sm font-medium rounded-xl bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors">
+                                                        Fechar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <p class="text-sm text-gray-500 italic">Adiciona empresas ao utilizador e guarda para configurar permissões de aplicação.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Tab: Segurança -->
+                <div x-show="activeTab === 'security'" class="space-y-5" style="display:none;">
+
+                    {% if not is_self %}
+                    <!-- Reset de Password -->
+                    <div class="rounded-xl border border-gray-700 overflow-hidden">
+                        <div class="px-5 py-4 border-b border-gray-700 flex items-center gap-3">
+                            <svg class="h-5 w-5 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                            <div>
+                                <h3 class="text-sm font-semibold text-white">Reset de Password</h3>
+                                <p class="text-xs text-gray-400 mt-0.5">
+                                    {% if target_user.email %}Envia um email para <strong class="text-gray-300">{{ target_user.email }}</strong> com um link seguro. Válido 3 dias, uso único.
+                                    {% else %}Este utilizador não tem email configurado.{% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="px-5 py-4 flex items-center justify-between">
+                            <p class="text-xs text-gray-500">Requer SMTP em <a href="{% url 'accounts:profile_settings' %}" class="text-primary hover:underline">Meu Perfil</a>.</p>
+                            <button type="button" onclick="handleSendReset()"
+                                    class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                                Reset de Password
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Autenticação de Dois Fatores (2FA) -->
+                    <div x-data="{
+                            twofa_enabled: {{ target_user.totp_enabled|yesno:'true,false' }},
+                            /* Setup flow */
+                            setupOpen: false,
+                            qrData: '',
+                            secretDisplay: '',
+                            verifyCode: '',
+                            setupError: '',
+                            setupLoading: false,
+                            verifyLoading: false,
+                            /* Disable flow */
+                            disableOpen: false,
+                            disableCode: '',
+                            disableError: '',
+                            disableLoading: false,
+                            csrfToken: '{{ csrf_token }}',
+                            setupUrl:   '{% url "accounts:totp_setup"   target_user.id %}',
+                            verifyUrl:  '{% url "accounts:totp_verify"  target_user.id %}',
+                            disableUrl: '{% url "accounts:totp_disable" target_user.id %}',
+
+                            async startSetup() {
+                                this.setupLoading = true; this.setupError = '';
+                                try {
+                                    const r = await fetch(this.setupUrl, {
+                                        method: 'POST',
+                                        headers: {'X-CSRFToken': this.csrfToken},
+                                    });
+                                    const d = await r.json();
+                                    if (!r.ok) { this.setupError = d.error || 'Erro ao gerar QR code.'; this.setupLoading = false; return; }
+                                    this.qrData = d.qr;
+                                    this.secretDisplay = d.secret;
+                                    this.verifyCode = '';
+                                    this.setupOpen = true;
+                                } catch { this.setupError = 'Erro de rede.'; }
+                                this.setupLoading = false;
+                            },
+
+                            async confirmSetup() {
+                                if (!this.verifyCode) return;
+                                this.verifyLoading = true; this.setupError = '';
+                                const fd = new FormData();
+                                fd.append('code', this.verifyCode);
+                                try {
+                                    const r = await fetch(this.verifyUrl, {
+                                        method: 'POST',
+                                        headers: {'X-CSRFToken': this.csrfToken},
+                                        body: fd,
+                                    });
+                                    const d = await r.json();
+                                    if (!r.ok) { this.setupError = d.error || 'Código inválido.'; this.verifyLoading = false; return; }
+                                    this.twofa_enabled = true;
+                                    this.setupOpen = false;
+                                    showNotification('success', '2FA ativado com sucesso!');
+                                } catch { this.setupError = 'Erro de rede.'; }
+                                this.verifyLoading = false;
+                            },
+
+                            async confirmDisable() {
+                                this.disableLoading = true; this.disableError = '';
+                                const fd = new FormData();
+                                fd.append('code', this.disableCode);
+                                try {
+                                    const r = await fetch(this.disableUrl, {
+                                        method: 'POST',
+                                        headers: {'X-CSRFToken': this.csrfToken},
+                                        body: fd,
+                                    });
+                                    const d = await r.json();
+                                    if (!r.ok) { this.disableError = d.error || 'Erro ao desativar.'; this.disableLoading = false; return; }
+                                    this.twofa_enabled = false;
+                                    this.disableOpen = false;
+                                    showNotification('success', '2FA desativado.');
+                                } catch { this.disableError = 'Erro de rede.'; }
+                                this.disableLoading = false;
+                            },
+                        }" class="rounded-xl border border-gray-700 overflow-hidden">
+
+                        <!-- Header -->
+                        <div class="px-5 py-4 border-b border-gray-700 flex items-center gap-3">
+                            <svg class="h-5 w-5 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                            <div class="flex-1">
+                                <h3 class="text-sm font-semibold text-white">Autenticação de Dois Fatores (2FA)</h3>
+                                <p class="text-xs text-gray-400 mt-0.5">Usa o Google Authenticator ou qualquer app TOTP compatível.</p>
+                            </div>
+                            <!-- Status badge -->
+                            <span x-show="twofa_enabled"
+                                  class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-500/15 text-green-400 border border-green-500/30">
+                                Ativo
+                            </span>
+                            <span x-show="!twofa_enabled"
+                                  class="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-700 text-gray-400 border border-gray-600">
+                                Inativo
+                            </span>
+                        </div>
+
+                        <!-- Body -->
+                        <div class="px-5 py-4 flex items-center justify-between gap-4">
+                            <p class="text-xs text-gray-500" x-show="!twofa_enabled">Adiciona uma camada extra de segurança à conta. Será pedido um código de 6 dígitos em cada login.</p>
+                            <p class="text-xs text-gray-500" x-show="twofa_enabled">O 2FA está ativo. Os códigos são gerados pela app autenticadora.</p>
+
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                {% if is_self %}
+                                <!-- Self: setup or disable with code verification -->
+                                <button type="button"
+                                        x-show="!twofa_enabled"
+                                        @click="startSetup()"
+                                        :disabled="setupLoading"
+                                        class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                    <span x-text="setupLoading ? 'A gerar...' : 'Configurar 2FA'"></span>
+                                </button>
+                                <button type="button"
+                                        x-show="twofa_enabled"
+                                        @click="disableCode=''; disableError=''; disableOpen=true"
+                                        class="flex items-center gap-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-600/40 text-red-400 text-sm font-medium rounded-lg transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                                    </svg>
+                                    Desativar 2FA
+                                </button>
+                                {% else %}
+                                <!-- Admin editing another user: can only disable -->
+                                <button type="button"
+                                        x-show="twofa_enabled"
+                                        @click="disableCode='ADMIN'; disableError=''; confirmDisable()"
+                                        :disabled="disableLoading"
+                                        class="flex items-center gap-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-600/40 text-red-400 text-sm font-medium rounded-lg transition-colors disabled:opacity-60">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                                    </svg>
+                                    <span x-text="disableLoading ? 'A desativar...' : 'Desativar 2FA'"></span>
+                                </button>
+                                <p x-show="!twofa_enabled" class="text-xs text-gray-500 italic">O utilizador pode configurar o 2FA no seu próprio perfil.</p>
+                                {% endif %}
+                            </div>
+                            <p x-show="setupError && !setupOpen" class="text-xs text-red-400 mt-1" x-text="setupError"></p>
+                        </div>
+
+                        <!-- ── Modal: Setup 2FA ── -->
+                        <div x-show="setupOpen" x-cloak
+                             @keydown.escape.window="setupOpen = false"
+                             @click.self="setupOpen = false"
+                             class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                             style="display:none;">
+                            <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 border border-gray-700 flex flex-col max-h-[92vh]"
+                                 @click.stop>
+                                <!-- Header -->
+                                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-700 flex-shrink-0">
+                                    <div class="flex items-center gap-2.5">
+                                        <svg class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                        </svg>
+                                        <h3 class="text-sm font-semibold text-white">Configurar Autenticação 2FA</h3>
+                                    </div>
+                                    <button type="button" @click="setupOpen = false"
+                                            class="p-1 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-gray-700 transition-colors">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <!-- Body -->
+                                <div class="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+                                    <!-- Step 1 -->
+                                    <div class="flex items-start gap-3">
+                                        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 border border-primary/40 text-primary text-xs font-bold flex items-center justify-center">1</span>
+                                        <p class="text-sm text-gray-300 pt-0.5">Abre o <strong class="text-white">Google Authenticator</strong> (ou outra app TOTP) e lê o código QR:</p>
+                                    </div>
+                                    <!-- QR Code -->
+                                    <div class="flex justify-center">
+                                        <div class="p-3 bg-white rounded-xl inline-block">
+                                            <img :src="qrData" alt="QR Code 2FA" class="w-44 h-44 block">
+                                        </div>
+                                    </div>
+                                    <!-- Manual code -->
+                                    <div class="bg-gray-700/50 rounded-lg px-4 py-3">
+                                        <p class="text-xs text-gray-400 mb-1">Ou introduz o código manualmente na app:</p>
+                                        <p class="text-sm font-mono text-primary tracking-widest select-all" x-text="secretDisplay"></p>
+                                    </div>
+                                    <!-- Step 2 -->
+                                    <div class="flex items-start gap-3">
+                                        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 border border-primary/40 text-primary text-xs font-bold flex items-center justify-center">2</span>
+                                        <p class="text-sm text-gray-300 pt-0.5">Após adicionar a conta na app, introduz o código de 6 dígitos para confirmar:</p>
+                                    </div>
+                                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6"
+                                           x-model="verifyCode"
+                                           @keydown.enter="confirmSetup()"
+                                           placeholder="000 000"
+                                           class="w-full bg-gray-700 border border-gray-600 text-white text-center text-2xl font-mono tracking-[0.4em] rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none placeholder:text-gray-600">
+                                    <p x-show="setupError" x-text="setupError" class="text-xs text-red-400 text-center -mt-2"></p>
+                                </div>
+                                <!-- Footer -->
+                                <div class="px-6 py-4 border-t border-gray-700 flex items-center justify-between flex-shrink-0">
+                                    <button type="button" @click="setupOpen = false"
+                                            class="px-4 py-2 text-sm font-medium rounded-xl bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors">
+                                        Cancelar
+                                    </button>
+                                    <button type="button" @click="confirmSetup()"
+                                            :disabled="verifyCode.length < 6 || verifyLoading"
+                                            class="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl bg-primary hover:bg-primary-dark text-white transition-colors disabled:opacity-50">
+                                        <svg x-show="verifyLoading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                                        </svg>
+                                        <span x-text="verifyLoading ? 'A verificar...' : 'Ativar 2FA'"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ── Modal: Disable 2FA (self only — requires code) ── -->
+                        {% if is_self %}
+                        <div x-show="disableOpen" x-cloak
+                             @keydown.escape.window="disableOpen = false"
+                             @click.self="disableOpen = false"
+                             class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                             style="display:none;">
+                            <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm mx-4 border border-red-700/40 flex flex-col"
+                                 @click.stop>
+                                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+                                    <h3 class="text-sm font-semibold text-red-400">Desativar Autenticação 2FA</h3>
+                                    <button type="button" @click="disableOpen = false"
+                                            class="p-1 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-gray-700 transition-colors">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="px-6 py-5 space-y-4">
+                                    <p class="text-sm text-gray-300">Introduz o código de 6 dígitos da app autenticadora para confirmar a desativação:</p>
+                                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6"
+                                           x-model="disableCode"
+                                           @keydown.enter="confirmDisable()"
+                                           placeholder="000 000"
+                                           class="w-full bg-gray-700 border border-gray-600 text-white text-center text-2xl font-mono tracking-[0.4em] rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:outline-none placeholder:text-gray-600">
+                                    <p x-show="disableError" x-text="disableError" class="text-xs text-red-400 text-center"></p>
+                                </div>
+                                <div class="px-6 py-4 border-t border-gray-700 flex items-center justify-between">
+                                    <button type="button" @click="disableOpen = false"
+                                            class="px-4 py-2 text-sm font-medium rounded-xl bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors">
+                                        Cancelar
+                                    </button>
+                                    <button type="button" @click="confirmDisable()"
+                                            :disabled="disableCode.length < 6 || disableLoading"
+                                            class="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50">
+                                        <span x-text="disableLoading ? 'A desativar...' : 'Confirmar'"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                    </div><!-- /2FA card -->
+
+                </div><!-- /tab security -->
+
+                <!-- Tab: SMTP -->
+                <div x-show="activeTab === 'smtp'" class="space-y-5" style="display:none;">
+                    <div x-data="{
+                            smtpEmail: '{% if target_email_config %}{{ target_email_config.email_address|escapejs }}{% endif %}',
+                            smtpPassword: '',
+                            smtpProvider: '{% if target_email_config %}{{ target_email_config.provider|escapejs }}{% else %}gmail{% endif %}',
+                            hasSmtp: {% if target_email_config and target_email_config.has_smtp_configured %}true{% else %}false{% endif %},
+                            saving: false,
+                            testing: false,
+                            saveError: '',
+                            testResult: '',
+                            csrfToken: '{{ csrf_token }}',
+                            saveUrl:  '{% url "accounts:user_smtp_save" target_user.id %}',
+                            testUrl:  '{% url "accounts:user_smtp_test" target_user.id %}',
+
+                            get detectedProvider() {
+                                const domain = (this.smtpEmail.split('@')[1] || '').toLowerCase();
+                                if (['gmail.com','googlemail.com'].includes(domain)) return 'gmail';
+                                if (['outlook.com','hotmail.com','hotmail.co.uk','live.com','msn.com','microsoft.com'].includes(domain)) return 'outlook';
+                                return null;
+                            },
+                            get providerToUse() { return this.detectedProvider || this.smtpProvider; },
+
+                            onEmailChange() {
+                                const d = this.detectedProvider;
+                                if (d) this.smtpProvider = d;
+                            },
+
+                            async save() {
+                                this.saving = true; this.saveError = ''; this.testResult = '';
+                                const fd = new FormData();
+                                fd.append('email_address', this.smtpEmail);
+                                fd.append('app_password',  this.smtpPassword);
+                                fd.append('provider',      this.providerToUse);
+                                try {
+                                    const r = await fetch(this.saveUrl, { method: 'POST', headers: {'X-CSRFToken': this.csrfToken}, body: fd });
+                                    const d = await r.json();
+                                    if (!r.ok || !d.success) { this.saveError = d.error || 'Erro ao guardar.'; }
+                                    else { this.hasSmtp = d.has_smtp; this.smtpPassword = ''; showNotification('success', 'Configuração SMTP guardada.'); }
+                                } catch { this.saveError = 'Erro de rede.'; }
+                                this.saving = false;
+                            },
+
+                            async test() {
+                                this.testing = true; this.testResult = '';
+                                try {
+                                    const r = await fetch(this.testUrl, { method: 'POST', headers: {'X-CSRFToken': this.csrfToken} });
+                                    const d = await r.json();
+                                    this.testResult = d.success ? 'ok' : (d.error || 'Erro desconhecido.');
+                                } catch { this.testResult = 'Erro de rede.'; }
+                                this.testing = false;
+                            },
+                        }" class="rounded-xl border border-gray-700 overflow-hidden">
+
+                        <!-- Header -->
+                        <div class="px-5 py-4 border-b border-gray-700 flex items-center gap-3">
+                            <svg class="h-5 w-5 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                            <div class="flex-1">
+                                <h3 class="text-sm font-semibold text-white">Configuração de Email (SMTP)</h3>
+                                <p class="text-xs text-gray-400 mt-0.5">Permite enviar emails pelo chatter a partir desta conta.</p>
+                            </div>
+                            <span x-show="hasSmtp"
+                                  class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-500/15 text-green-400 border border-green-500/30">
+                                Configurado
+                            </span>
+                            <span x-show="!hasSmtp"
+                                  class="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-700 text-gray-400 border border-gray-600">
+                                Não configurado
+                            </span>
+                        </div>
+
+                        <!-- Body -->
+                        <div class="px-5 py-5 space-y-4">
+                            <!-- Email input -->
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Email de envio</label>
+                                <div class="relative">
+                                    <input type="email" x-model="smtpEmail" @input="onEmailChange()"
+                                           placeholder="exemplo@gmail.com"
+                                           class="w-full bg-gray-700 border border-gray-600 text-gray-200 text-sm rounded-lg px-3 py-2.5 pr-28 focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none placeholder:text-gray-500">
+                                    <div class="absolute right-2.5 top-1/2 -translate-y-1/2">
+                                        <span x-show="detectedProvider === 'gmail'"
+                                              class="px-2 py-0.5 text-xs rounded-full bg-red-900/40 text-red-300 border border-red-700/50 font-medium">Gmail</span>
+                                        <span x-show="detectedProvider === 'outlook'"
+                                              class="px-2 py-0.5 text-xs rounded-full bg-blue-900/40 text-blue-300 border border-blue-700/50 font-medium">Outlook</span>
+                                        <span x-show="smtpEmail.includes('@') && !detectedProvider"
+                                              class="px-2 py-0.5 text-xs rounded-full bg-yellow-900/40 text-yellow-300 border border-yellow-700/50 font-medium">Outro</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Provider picker: only when domain not auto-detected -->
+                            <div x-show="smtpEmail.includes('@') && !detectedProvider" class="space-y-2">
+                                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Servidor SMTP</label>
+                                <div class="flex items-center gap-3">
+                                    <label class="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-colors flex-1 justify-center"
+                                           :class="smtpProvider === 'gmail' ? 'border-red-500/60 bg-red-900/20 text-red-300' : 'border-gray-600 text-gray-400 hover:border-gray-500'">
+                                        <input type="radio" x-model="smtpProvider" value="gmail" class="sr-only">
+                                        <span class="text-xs font-medium">Gmail / Google</span>
+                                        <span class="text-xs text-gray-500 font-mono">smtp.gmail.com</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-colors flex-1 justify-center"
+                                           :class="smtpProvider === 'outlook' ? 'border-blue-500/60 bg-blue-900/20 text-blue-300' : 'border-gray-600 text-gray-400 hover:border-gray-500'">
+                                        <input type="radio" x-model="smtpProvider" value="outlook" class="sr-only">
+                                        <span class="text-xs font-medium">Outlook / Microsoft</span>
+                                        <span class="text-xs text-gray-500 font-mono">smtp.office365.com</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Server info (readonly) -->
+                            <div x-show="smtpEmail" class="bg-gray-700/40 rounded-lg px-4 py-2.5 text-xs text-gray-400">
+                                <span x-show="providerToUse === 'gmail'">
+                                    Servidor: <span class="text-gray-300 font-mono">smtp.gmail.com:587</span> (STARTTLS)
+                                </span>
+                                <span x-show="providerToUse === 'outlook'">
+                                    Servidor: <span class="text-gray-300 font-mono">smtp.office365.com:587</span> (STARTTLS)
+                                </span>
+                            </div>
+
+                            <!-- App Password -->
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
+                                    App Password
+                                    <span x-show="providerToUse === 'gmail'" class="normal-case font-normal text-gray-500 ml-1">
+                                        — gera em <a href="https://myaccount.google.com/apppasswords" target="_blank" class="text-primary hover:underline">myaccount.google.com/apppasswords</a>
+                                    </span>
+                                    <span x-show="providerToUse === 'outlook'" class="normal-case font-normal text-gray-500 ml-1">
+                                        — gera em <a href="https://account.microsoft.com/security" target="_blank" class="text-primary hover:underline">account.microsoft.com/security</a>
+                                    </span>
+                                </label>
+                                <input type="password" x-model="smtpPassword"
+                                       :placeholder="hasSmtp ? '••••••••••••  (deixa vazio para manter a atual)' : 'App Password de 16 caracteres'"
+                                       class="w-full bg-gray-700 border border-gray-600 text-gray-200 text-sm rounded-lg px-3 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none placeholder:text-gray-500">
+                            </div>
+
+                            <!-- Feedback -->
+                            <p x-show="saveError" x-text="saveError" class="text-xs text-red-400"></p>
+                            <p x-show="testResult === 'ok'" class="text-xs text-green-400">✓ Email de teste enviado com sucesso para <span x-text="smtpEmail"></span>.</p>
+                            <p x-show="testResult && testResult !== 'ok'" x-text="'Erro: ' + testResult" class="text-xs text-red-400"></p>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="px-5 py-4 border-t border-gray-700 flex items-center justify-end gap-3">
+                            <button type="button" @click="test()"
+                                    x-show="hasSmtp"
+                                    :disabled="testing"
+                                    class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 transition-colors disabled:opacity-50">
+                                <svg x-show="testing" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                                </svg>
+                                <span x-text="testing ? 'A testar...' : 'Testar SMTP'"></span>
+                            </button>
+                            <button type="button" @click="save()"
+                                    :disabled="saving || !smtpEmail"
+                                    class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50">
+                                <svg x-show="saving" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                                </svg>
+                                <span x-text="saving ? 'A guardar...' : 'Guardar SMTP'"></span>
+                            </button>
+                        </div>
+                    </div><!-- /smtp card -->
+                </div><!-- /tab smtp -->
+
+            </div><!-- /tabs -->
+
+
+
+        </div>
+    </form>
+</div>
+
+{% if not is_self %}
+<form method="post" action="{% url 'accounts:user_send_reset' target_user.id %}" id="resetPasswordForm" style="display:none;">
+    {% csrf_token %}
+</form>
+{% endif %}
+
+<script>
+function showNotification(type, message) {
+    const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+    const n = document.createElement('div');
+    n.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-4 rounded-lg shadow-lg z-50 transition-opacity duration-300`;
+    n.textContent = message;
+    document.body.appendChild(n);
+    setTimeout(() => { n.style.opacity = '0'; setTimeout(() => n.remove(), 300); }, 3000);
+}
+
+function previewAvatar(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const MAX = 256;
+            const srcImg = new Image();
+            srcImg.onload = () => {
+                const canvas = document.createElement('canvas');
+                let w = srcImg.width, h = srcImg.height;
+                if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+                else       { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(srcImg, 0, 0, w, h);
+                const b64 = canvas.toDataURL('image/jpeg', 0.8);
+                const img = document.getElementById('avatar-preview');
+                if (img) { img.src = b64; img.classList.remove('hidden'); }
+                const initials = document.getElementById('avatar-initials');
+                if (initials) initials.style.display = 'none';
+                const hidden = document.getElementById('avatar_base64_input');
+                if (hidden) hidden.value = b64;
+                document.getElementById('user-edit-form')
+                        .dispatchEvent(new Event('input', { bubbles: true }));
+            };
+            srcImg.src = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function userCompanySelector(initial) {
+    return {
+        selectedCompanies: initial || [],
+        searchQuery: '', searchResults: [], showDropdown: false, isLoading: false,
+        async search() {
+            if (!this.searchQuery.trim()) { this.searchResults = []; this.showDropdown = false; return; }
+            this.isLoading = true; this.showDropdown = true;
+            try {
+                const r = await fetch(`{% url 'accounts:company_search' %}?q=${encodeURIComponent(this.searchQuery)}`);
+                const d = await r.json();
+                this.searchResults = d.results.filter(c => !this.selectedCompanies.some(s => s.id === c.id));
+            } catch(e) { console.error(e); }
+            finally { this.isLoading = false; }
+        },
+        select(c) {
+            if (!this.selectedCompanies.some(s => s.id === c.id)) this.selectedCompanies.push(c);
+            this.searchQuery = ''; this.searchResults = []; this.showDropdown = false;
+        },
+        remove(id) { this.selectedCompanies = this.selectedCompanies.filter(c => c.id !== id); }
+    };
+}
+
+// Role radio visual toggle
+document.querySelectorAll('input[name="role"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+        document.querySelectorAll('input[name="role"]').forEach(r => {
+            const label = r.closest('label');
+            if (r.checked) {
+                label.classList.add('border-primary', 'bg-primary', 'text-white');
+                label.classList.remove('border-gray-700', 'text-gray-400');
+            } else {
+                label.classList.remove('border-primary', 'bg-primary', 'text-white');
+                label.classList.add('border-gray-700', 'text-gray-400');
+            }
+        });
+    });
+});
+
+// Detecção de alterações — mostra botões guardar/descartar na sub-navbar
+// Usa delegação no <form> para apanhar mudanças em qualquer elemento incluso
+// modais Alpine (os checkboxes estão dentro do form, os eventos fazem bubble).
+(function () {
+    const form = document.getElementById('user-edit-form');
+    const actionButtons = document.getElementById('form-action-buttons');
+    if (!form || !actionButtons) return;
+    function showSave() { actionButtons.style.display = 'flex'; }
+    form.addEventListener('change', showSave);
+    form.addEventListener('input',  showSave);
+})();
+
+{% if not is_self %}
+function handleSendReset() {
+    {% if target_user.email %}
+    document.getElementById('resetPasswordForm').submit();
+    {% else %}
+    showNotification('error', 'Este utilizador não tem email configurado. Adiciona um email primeiro.');
+    {% endif %}
+}
+
+{% endif %}
+</script>
+{% endblock %}

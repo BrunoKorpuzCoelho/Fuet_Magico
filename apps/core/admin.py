@@ -4,7 +4,7 @@ from .models import (
     AuditLog, ErrorLog, Company, ChatterMessage, ChatterActivity,
     ActivityType, ScheduledActivity, ActivityWorkflow,
     ActivityChain, ActivityChainStep, ActivityChainInstance, ActivityLog,
-    Notification,
+    Notification, ChatterFollower,
 )
 
 
@@ -387,3 +387,11 @@ class NotificationAdmin(admin.ModelAdmin):
         queryset.update(is_read=False, read_at=None)
         self.message_user(request, f'{queryset.count()} notificação(ões) marcada(s) como não lida(s).')
     mark_as_unread.short_description = 'Marcar como não lida'
+
+
+@admin.register(ChatterFollower)
+class ChatterFollowerAdmin(admin.ModelAdmin):
+    list_display  = ['user', 'content_type', 'object_id', 'added_by', 'created_at']
+    list_filter   = ['content_type']
+    search_fields = ['user__first_name', 'user__last_name', 'user__username']
+    readonly_fields = ['created_at']
