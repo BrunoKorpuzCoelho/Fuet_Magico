@@ -86,7 +86,6 @@ class Company(AbstractBaseModel):
     
     # Regional Settings
     currency = models.CharField(max_length=3, default='EUR', verbose_name='Default Currency')
-    language = models.CharField(max_length=10, default='pt_PT', verbose_name='Default Language')
     
     # Branding
     logo = models.ImageField(upload_to='companies/logos/', blank=True, null=True, verbose_name='Company Logo')
@@ -160,6 +159,7 @@ class ChatterMessage(AbstractBaseModel):
     MESSAGE_TYPE_CHOICES = [
         ('EMAIL', 'Email'),
         ('NOTE', 'Internal Note'),
+        ('WHATSAPP', 'WhatsApp'),
     ]
     message_type = models.CharField(
         max_length=10,
@@ -1410,3 +1410,63 @@ def notify_followers(obj, notification_type, title, message='', link='', exclude
         ))
     if to_create:
         Notification.objects.bulk_create(to_create, ignore_conflicts=True)
+
+
+# ============================================================
+# WHATSAPP CONFIGURATION
+# ============================================================
+
+class CompanyWhatsAppConfig(models.Model):
+    """
+    WhatsApp Business API configuration for a Company.
+    Stores Meta Cloud API credentials, encrypted with Fernet.
+    Each Company can have one WhatsApp number (OneToOne).
+    """
+    company = models.OneToOneField(
+        'Company',
+        on_delete=models.CASCADE,
+        related_name='whatsapp_config',
+        verbose_name='Empresa',
+    )
+    phone_number_id = models.CharField(
+        max_length=50,
+        verbose_name='Phone Number ID',
+        help_text='Meta Business Manager → WhatsApp → Phone Number ID',
+    )
+    business_account_id = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='Business Account ID (WABA)',
+    )
+    # Stored encrypted via Fernet (same pattern as UserEmailConfig.password)
+    access_token = models.TextField(
+        verbose_name='Access Token (encriptado)',
+        help_text='Permanent / System User token from Meta — stored encrypted',
+    )
+    webhook_verify_token = models.CharField(
+        max_length=100,
+        verbose_name='Webhook Verify Token',
+        help_text='Arbitrary secret string set in Meta App → Webhooks configuration',
+    )
+    is_active = models.BooleanField(default=True, verbose_name='Ativo')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Configuração WhatsApp'
+        verbose_name_plural = 'Configurações WhatsApp'
+
+    def __str__(self):
+        return f"WhatsApp — {self.company.name} ({self.phone_number_id})"
+
+    @property
+    def has_whatsapp_configured(self):
+        return bool(self.phone_number_id and self.access_token and self.is_active)
+
+    def get_decrypted_token(self):
+        from apps.core.email_utils import decrypt_password
+        return decrypt_password(self.access_token)
+
+    def set_encrypted_token(self, raw_token: str):
+        from apps.core.email_utils import encrypt_password
+        self.access_token = encrypt_password(raw_token)

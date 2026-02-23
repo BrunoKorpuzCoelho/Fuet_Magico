@@ -8,6 +8,15 @@ urlpatterns = [
     path('', views.lead_pipeline_view, name='crm_home'),  # /crm/ → Pipeline (DEFAULT)
     path('pipeline/', views.lead_pipeline_view, name='lead_pipeline'),  # Alias
     path('list/', views.lead_list_view, name='lead_list'),  # List View
+    path('reports/', views.crm_reports_view, name='crm_reports'),  # Reports
+    path('prospects/', views.prospects_list_view, name='prospects_list'),
+    path('prospects/<uuid:lead_id>/', views.prospect_detail_view, name='prospect_detail'),
+    path('prospects/<uuid:lead_id>/convert/', views.convert_prospect_to_lead, name='prospect_convert'),
+    path('prospects/bulk-archive/', views.bulk_archive_prospects, name='bulk_archive_prospects'),
+    path('prospects/bulk-unarchive/', views.bulk_unarchive_prospects, name='bulk_unarchive_prospects'),
+    path('prospects/bulk-qualify/', views.bulk_qualify_prospects, name='bulk_qualify_prospects'),
+    path('prospects/bulk-delete/', views.bulk_delete_prospects, name='bulk_delete_prospects'),
+    path('generate-leads/', views.generate_leads_action, name='generate_leads'),
     
     # Lead CRUD
     path('leads/new/', views.lead_create_view, name='lead_create'),
@@ -95,6 +104,10 @@ urlpatterns = [
     # Lead Followers (Chatter)
     path('leads/<uuid:lead_id>/followers/', views.lead_followers_api, name='lead_followers_api'),
     path('leads/<uuid:lead_id>/followers/<uuid:user_id>/remove/', views.lead_follower_remove_api, name='lead_follower_remove_api'),
+
+    # Lead WhatsApp (Chatter)
+    path('leads/<uuid:lead_id>/whatsapp/', views.lead_whatsapp_list, name='lead_whatsapp_list'),
+    path('leads/<uuid:lead_id>/whatsapp/send/', views.lead_send_whatsapp, name='lead_send_whatsapp'),
 
     # Users search (para @mention dropdown)
     path('api/users/search/', views.users_search_api, name='users_search_api'),

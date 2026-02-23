@@ -2,16 +2,17 @@
 import logging
 import random
 import re
+from collections import defaultdict
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
-from django.db.models import Q, F, Sum, Count
+from django.db.models import Q, F, Sum, Count, Avg
 from django.utils import timezone
 from datetime import timedelta
 from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.contrib.contenttypes.models import ContentType
@@ -26,6 +27,15 @@ from .forms import CRMStageForm, CRMTagForm, ActivityForm
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
+
+
+def _get_crm_config(request):
+    """Helper: retorna CRMConfig da empresa ativa (ou None)."""
+    from .models import CRMConfig
+    company = get_active_company(request)
+    if company:
+        return CRMConfig.for_company(company)
+    return None
 
 
 def generate_random_color():
@@ -581,17 +591,29 @@ def lead_pipeline_view(request):
     # Handle search
     search_query = request.GET.get('search', '').strip()
     search_field = request.GET.get('field', 'title')
-    
+
+    # Handle age filter (default: 1 year)
+    age_filter = request.GET.get('age', '1')
+    now = timezone.now()
+
+    age_days_map = {'1': 365, '2': 730, '3': 1095, '5': 1825, 'all': None}
+    age_days = age_days_map.get(age_filter, 365)
+    cutoff_date = now - timedelta(days=age_days) if age_days is not None else None
+
     # For each stage, get leads and calculate totals
     pipeline_data = []
     grand_total_value = 0
     grand_total_count = 0
     
     for stage in stages:
-        # Get leads for this stage
-        leads = Lead.objects.filter(stage=stage, is_active=True)
+        # Get leads for this stage (exclude prospects)
+        leads = Lead.objects.filter(stage=stage, is_active=True, is_prospect=False)
         leads = filter_by_company(leads, request)
-        
+
+        # Apply age filter
+        if cutoff_date:
+            leads = leads.filter(created_at__gte=cutoff_date)
+
         # Apply search filter
         if search_query:
             search_filters = {
@@ -609,7 +631,6 @@ def lead_pipeline_view(request):
         
         # Annotate overdue status (routing_in_days > 0 and lead stuck too long)
         leads_list = list(leads)
-        now = timezone.now()
         for lead in leads_list:
             if stage.routing_in_days > 0:
                 days_in_stage = (now - lead.stage_updated_at).days
@@ -652,6 +673,8 @@ def lead_pipeline_view(request):
         'grand_total_count': grand_total_count,
         'search_query': search_query,
         'search_field': search_field,
+        'age_filter': age_filter,
+        'crm_config': _get_crm_config(request),
     }
     
     return render(request, 'crm/lead_pipeline.html', context)
@@ -1128,6 +1151,7 @@ def lead_create_view(request):
     from .forms import LeadForm
     
     active_company = get_active_company(request)
+    is_prospect_mode = request.GET.get('prospect', '') == '1'
     
     if request.method == 'POST':
         form = LeadForm(request.POST, request.FILES)
@@ -1144,7 +1168,9 @@ def lead_create_view(request):
                 tags = CRMTag.objects.filter(id__in=tag_ids, is_active=True)
                 lead.tags.set(tags)
             
-            messages.success(request, f'Oportunidade "{lead.title}" criada com sucesso!')
+            messages.success(request, f'{"Prospecto" if lead.is_prospect else "Oportunidade"} "{lead.title}" criada com sucesso!')
+            if lead.is_prospect:
+                return redirect('crm:prospects_list')
             return redirect('crm:crm_home')
     else:
         # Check if a stage parameter was provided (from pipeline + button)
@@ -1175,6 +1201,7 @@ def lead_create_view(request):
             'stage': default_stage,
             'assigned_to': request.user,
             'probability': 10,
+            'is_prospect': is_prospect_mode,
         })
     
     # Filtrar contactos e stages da empresa
@@ -1220,11 +1247,12 @@ def lead_create_view(request):
 
     context = {
         'form': form,
-        'page_title': 'Nova Oportunidade',
+        'page_title': 'Novo Prospecto' if is_prospect_mode else 'Nova Oportunidade',
         'stages': stages,
         'won_stage': won_stage,
         'lost_stage': lost_stage,
         'new_stage': new_stage,
+        'is_prospect_mode': is_prospect_mode,
     }
     
     return render(request, 'crm/lead_create.html', context)
@@ -1426,6 +1454,7 @@ def lead_detail_view(request, lead_id):
         'won_stage': won_stage,
         'lost_stage': lost_stage,
         'new_stage': new_stage,
+        'crm_config': _get_crm_config(request),
         'lead_activities': lead_activities,
         'users_for_activity': users_for_activity,
         'activity_type_choices': Activity.ACTIVITY_TYPE_CHOICES,
@@ -1435,6 +1464,8 @@ def lead_detail_view(request, lead_id):
         'current_user_id': str(request.user.id),
         'current_user_display': request.user.get_full_name() or request.user.username,
         'has_smtp': getattr(getattr(request.user, 'email_config', None), 'has_smtp_configured', False),
+        'has_whatsapp': getattr(getattr(active_company, 'whatsapp_config', None), 'has_whatsapp_configured', False),
+        'lead_phone': lead.phone or '',
     }
     
     return render(request, 'crm/lead_create.html', context)
@@ -1885,47 +1916,35 @@ def lead_list_view(request):
     # Get active company
     active_company = get_active_company(request)
     
-    # Get leads based on stage filter
+    # Get leads based on stage filter (always exclude prospects)
     if stage_filter == 'won':
-        # Only Won stages
         leads = Lead.objects.filter(
-            is_active=True,
+            is_active=True, is_prospect=False,
             stage__is_won_stage=True
         ).select_related(
-            'contact', 
-            'assigned_to', 
-            'stage',
-            'owner_company'
+            'contact', 'assigned_to', 'stage', 'owner_company'
         ).prefetch_related('tags')
     elif stage_filter == 'lost':
-        # Only Lost stages
         leads = Lead.objects.filter(
-            is_active=True,
+            is_active=True, is_prospect=False,
             stage__is_lost_stage=True
         ).select_related(
-            'contact', 
-            'assigned_to', 
-            'stage',
-            'owner_company'
+            'contact', 'assigned_to', 'stage', 'owner_company'
         ).prefetch_related('tags')
     elif stage_filter == 'all':
-        # All stages (including Won and Lost)
         leads = Lead.objects.filter(
-            is_active=True
+            is_active=True, is_prospect=False
         ).select_related(
-            'contact', 
-            'assigned_to', 
-            'stage',
-            'owner_company'
+            'contact', 'assigned_to', 'stage', 'owner_company'
         ).prefetch_related('tags')
     else:
-        # Default: Active (EXCLUDE Won and Lost stages)
+        # Default: Active (EXCLUDE Won, Lost, and Prospects)
         leads = Lead.objects.filter(
-            is_active=True
+            is_active=True, is_prospect=False
         ).exclude(
             Q(stage__is_won_stage=True) | Q(stage__is_lost_stage=True)
         ).select_related(
-            'contact', 
+            'contact',
             'assigned_to', 
             'stage',
             'owner_company'
@@ -1988,10 +2007,328 @@ def lead_list_view(request):
         'page_size': page_size,
         'won_stage_name': won_stage.name if won_stage else 'Won',
         'lost_stage_name': lost_stage.name if lost_stage else 'Lost',
-        'filtered_contact': filtered_contact,  # Para exibir "Leads de [Nome do Contacto]"
+        'filtered_contact': filtered_contact,
+        'crm_config': _get_crm_config(request),
     }
     
     return render(request, 'crm/lead_list.html', context)
+
+
+@login_required
+def prospects_list_view(request):
+    """
+    Vista de Prospectos — leads marcadas como is_prospect=True.
+    Só acessível se prospects_enabled na CRMConfig da empresa.
+    """
+    crm_config = _get_crm_config(request)
+
+    search_query = request.GET.get('search', '').strip()
+    page_number = request.GET.get('page', 1)
+
+    active_company = get_active_company(request)
+
+    prospects = Lead.objects.filter(
+        is_active=True,
+        is_prospect=True,
+    ).select_related('contact', 'assigned_to', 'stage', 'owner_company').prefetch_related('tags')
+
+    prospects = filter_by_company(prospects, request)
+
+    if search_query:
+        prospects = prospects.filter(
+            Q(title__icontains=search_query) |
+            Q(contact__name__icontains=search_query) |
+            Q(contact_name__icontains=search_query) |
+            Q(email_from__icontains=search_query) |
+            Q(phone__icontains=search_query) |
+            Q(source__icontains=search_query) |
+            Q(assigned_to__first_name__icontains=search_query) |
+            Q(assigned_to__last_name__icontains=search_query) |
+            Q(assigned_to__username__icontains=search_query)
+        )
+
+    prospects = prospects.order_by('-created_at')
+
+    paginator = Paginator(prospects, 50)
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'prospects': page_obj,
+        'search_query': search_query,
+        'total_count': paginator.count,
+        'crm_config': crm_config,
+    }
+    return render(request, 'crm/prospects_list.html', context)
+
+
+@require_http_methods(["POST"])
+@login_required
+def convert_prospect_to_lead(request, lead_id):
+    """
+    Converte um prospecto em oportunidade (is_prospect=False).
+    """
+    lead = get_object_or_404(Lead, pk=lead_id, is_active=True, is_prospect=True)
+    lead.is_prospect = False
+    lead.save(update_fields=['is_prospect'])
+    messages.success(request, f'"{lead.title}" movido para o pipeline.')
+    return redirect('crm:lead_pipeline')
+
+
+@login_required
+def prospect_detail_view(request, lead_id):
+    """
+    Vista de detalhe / edição de um Prospecto.
+    Idêntica a lead_detail_view mas sem barra de stages, sem botões Ganho/Perdido/Orçamento.
+    Mostra botão "Qualificar" que abre modal de confirmação.
+    """
+    from .forms import LeadForm
+
+    active_company = get_active_company(request)
+
+    try:
+        lead = Lead.objects.select_related('contact', 'contact__company').get(
+            id=lead_id, owner_company=active_company, is_prospect=True
+        )
+    except Lead.DoesNotExist:
+        from django.http import Http404
+        raise Http404
+
+    if request.method == 'POST':
+        form = LeadForm(request.POST, request.FILES, instance=lead)
+        if form.is_valid():
+            lead = form.save(commit=False)
+            lead._current_user = request.user
+            lead.save()
+            tag_ids = request.POST.getlist('tags')
+            if tag_ids:
+                tags = CRMTag.objects.filter(id__in=tag_ids, is_active=True)
+                lead.tags.set(tags)
+            else:
+                lead.tags.clear()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'message': 'Prospecto actualizado'})
+            messages.success(request, f'Prospecto "{lead.title}" actualizado com sucesso!')
+            return redirect('crm:prospect_detail', lead_id=lead.id)
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+            messages.error(request, 'Erro ao guardar. Verifique os campos.')
+    else:
+        form = LeadForm(instance=lead)
+
+    form.fields['contact'].queryset = Contact.objects.filter(
+        is_active=True
+    ).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).order_by('name')
+    form.fields['stage'].queryset = CRMStage.objects.filter(is_active=True).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).order_by('sequence')
+    form.fields['assigned_to'].queryset = User.objects.filter(is_active=True).order_by('username')
+
+    from apps.core.models import AuditLog
+    audit_logs = AuditLog.objects.filter(
+        model_name='Lead', object_id=str(lead.id)
+    ).select_related('user').order_by('-timestamp')[:50]
+
+    lead_activities = Activity.objects.filter(lead=lead).select_related(
+        'assigned_to', 'scheduled_activity', 'scheduled_activity__activity_type'
+    ).order_by('is_done', 'due_date', '-created_at')
+
+    users_for_activity = User.objects.filter(is_active=True).order_by('username')
+
+    activity_chains = ActivityChain.objects.filter(
+        is_active=True, applicable_model='lead'
+    ).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).order_by('name')
+    activity_chains_json = json.dumps([{
+        'id': str(c.id), 'name': c.name,
+        'description': c.description, 'total_steps': c.total_steps,
+    } for c in activity_chains])
+
+    scheduled_activities = ScheduledActivity.objects.filter(is_active=True).select_related(
+        'activity_type'
+    ).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).order_by('activity_type__code', 'name')
+    scheduled_activities_json = json.dumps([{
+        'id': str(sa.id),
+        'name': sa.name or sa.summary,
+        'summary': sa.summary,
+        'type_code': sa.activity_type.code if sa.activity_type else '',
+        'type_name': sa.activity_type.name if sa.activity_type else '',
+        'icon_svg': sa.icon_svg if sa.icon_svg else '',
+        'icon_color': sa.icon_color or '#6366F1',
+    } for sa in scheduled_activities])
+
+    from datetime import date as date_type
+    lead_activities_json = json.dumps([{
+        'id': str(a.id),
+        'activity_type': a.activity_type,
+        'activity_type_display': a.get_activity_type_display(),
+        'scheduled_activity_id': str(a.scheduled_activity.id) if a.scheduled_activity else '',
+        'icon_svg': a.scheduled_activity.icon_svg if a.scheduled_activity and a.scheduled_activity.icon_svg else '',
+        'icon_color': a.scheduled_activity.icon_color if a.scheduled_activity and a.scheduled_activity.icon_color else '#6366F1',
+        'summary': _resolve_summary(a.summary, lead),
+        'due_date': a.due_date.strftime('%Y-%m-%d'),
+        'due_date_display': a.due_date.strftime('%d/%m/%Y'),
+        'assigned_to': a.assigned_to.get_full_name() or a.assigned_to.username if a.assigned_to else '',
+        'assigned_to_id': str(a.assigned_to.id) if a.assigned_to else '',
+        'is_done': a.is_done,
+        'feedback': a.feedback or '',
+        'is_overdue': (not a.is_done) and (a.due_date < date_type.today()),
+        'is_today': (not a.is_done) and (a.due_date == date_type.today()),
+    } for a in lead_activities])
+
+    all_stages = CRMStage.objects.filter(is_active=True).filter(
+        Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).exclude(is_lost_stage=True).order_by('sequence')
+    all_stages_json = json.dumps([{
+        'id': str(s.id), 'name': s.name,
+        'is_won_stage': s.is_won_stage, 'is_lost_stage': s.is_lost_stage,
+    } for s in all_stages])
+
+    context = {
+        'lead': lead,
+        'form': form,
+        'all_stages': all_stages,
+        'all_stages_json': all_stages_json,
+        'stages': all_stages,
+        'quotations_count': 0,
+        'revenue_total': 0,
+        'page_title': lead.title,
+        'is_edit': True,
+        'is_prospect_detail': True,  # ← flag used in template
+        'audit_logs': audit_logs,
+        'won_stage': None,
+        'lost_stage': None,
+        'new_stage': None,
+        'crm_config': _get_crm_config(request),
+        'lead_activities': lead_activities,
+        'users_for_activity': users_for_activity,
+        'activity_type_choices': Activity.ACTIVITY_TYPE_CHOICES,
+        'lead_activities_json': lead_activities_json,
+        'activity_chains_json': activity_chains_json,
+        'scheduled_activities_json': scheduled_activities_json,
+        'current_user_id': str(request.user.id),
+        'current_user_display': request.user.get_full_name() or request.user.username,
+        'has_smtp': getattr(getattr(request.user, 'email_config', None), 'has_smtp_configured', False),
+        'has_whatsapp': getattr(getattr(active_company, 'whatsapp_config', None), 'has_whatsapp_configured', False),
+        'lead_phone': lead.phone or '',
+    }
+    return render(request, 'crm/lead_create.html', context)
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_archive_prospects(request):
+    """Arquiva prospectos seleccionados (is_active=False)."""
+    try:
+        data = json.loads(request.body)
+        ids = data.get('ids', [])
+        if not ids:
+            return JsonResponse({'success': False, 'error': 'Nenhum prospecto seleccionado'}, status=400)
+        count = Lead.objects.filter(id__in=ids, is_prospect=True).update(is_active=False)
+        return JsonResponse({'success': True, 'count': count, 'message': f'{count} prospecto(s) arquivado(s)'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_unarchive_prospects(request):
+    """Desarquiva prospectos seleccionados (is_active=True)."""
+    try:
+        data = json.loads(request.body)
+        ids = data.get('ids', [])
+        if not ids:
+            return JsonResponse({'success': False, 'error': 'Nenhum prospecto seleccionado'}, status=400)
+        count = Lead.objects.filter(id__in=ids, is_prospect=True).update(is_active=True)
+        return JsonResponse({'success': True, 'count': count, 'message': f'{count} prospecto(s) desarquivado(s)'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_qualify_prospects(request):
+    """Qualifica prospectos seleccionados: is_prospect=False → entram no pipeline."""
+    try:
+        data = json.loads(request.body)
+        ids = data.get('ids', [])
+        if not ids:
+            return JsonResponse({'success': False, 'error': 'Nenhum prospecto seleccionado'}, status=400)
+        count = Lead.objects.filter(id__in=ids, is_prospect=True, is_active=True).update(is_prospect=False)
+        return JsonResponse({'success': True, 'count': count, 'message': f'{count} prospecto(s) qualificado(s) e adicionado(s) ao pipeline'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_delete_prospects(request):
+    """Elimina permanentemente prospectos seleccionados."""
+    try:
+        data = json.loads(request.body)
+        ids = data.get('ids', [])
+        if not ids:
+            return JsonResponse({'success': False, 'error': 'Nenhum prospecto seleccionado'}, status=400)
+        qs = Lead.objects.filter(id__in=ids, is_prospect=True)
+        count = qs.count()
+        qs.delete()
+        return JsonResponse({'success': True, 'count': count, 'message': f'{count} prospecto(s) eliminado(s) permanentemente'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def generate_leads_action(request):
+    """
+    Endpoint dedicado para geração de leads de seguimento a partir do CRM pipeline.
+
+    GET  ?action=preview&years=N  → JSON com número de elegíveis + janelas
+    POST                          → gera leads e redireciona para o pipeline
+    """
+    active_company = get_active_company(request)
+    crm_config = _get_crm_config(request)
+    years = crm_config.lead_generation_years if crm_config else 3
+
+    if request.method == 'GET' and request.GET.get('action') == 'preview':
+        from .services import get_eligible_contacts, _seasonal_windows
+        try:
+            years = max(1, min(10, int(request.GET.get('years', years))))
+        except (ValueError, TypeError):
+            pass
+        eligible = get_eligible_contacts(active_company, years) if active_company else []
+        windows = [
+            {'year': i + 1, 'start': str(s), 'end': str(e)}
+            for i, (s, e) in enumerate(_seasonal_windows(years))
+        ]
+        return JsonResponse({'eligible': len(eligible), 'years': years, 'windows': windows})
+
+    if request.method == 'POST' and active_company:
+        from .services import generate_leads_from_history
+        raw_limit = request.POST.get('lead_count', '')
+        limit = None
+        if raw_limit:
+            try:
+                limit = max(1, int(raw_limit))
+            except (ValueError, TypeError):
+                pass
+        count = generate_leads_from_history(
+            company=active_company,
+            years=years,
+            user=request.user,
+            limit=limit,
+        )
+        if count > 0:
+            messages.success(request, f'{count} lead{"s geradas" if count != 1 else " gerada"} e adicionadas aos Prospectos.')
+        else:
+            messages.info(request, 'Nenhuma lead nova gerada — todos os clientes elegíveis já têm prospectos ou oportunidades abertas.')
+        return redirect('crm:crm_home')
+
+    return redirect('crm:crm_home')
 
 
 @require_http_methods(["POST"])
@@ -2066,8 +2403,8 @@ def bulk_mark_won(request):
         leads = Lead.objects.filter(id__in=lead_ids)
         leads = filter_by_company(leads, request)
         
-        # Update leads to Won stage
-        updated_count = leads.update(stage=won_stage)
+        # Update leads to Won stage (set closed_at now)
+        updated_count = leads.update(stage=won_stage, closed_at=timezone.now(), stage_updated_at=timezone.now())
         
         return JsonResponse({
             'success': True,
@@ -2120,7 +2457,7 @@ def bulk_mark_lost(request):
         leads = filter_by_company(leads, request)
         
         # Update leads to Lost stage (no lost_reason required for bulk action)
-        updated_count = leads.update(stage=lost_stage)
+        updated_count = leads.update(stage=lost_stage, closed_at=timezone.now(), stage_updated_at=timezone.now())
         
         return JsonResponse({
             'success': True,
@@ -3584,3 +3921,314 @@ def lead_follower_remove_api(request, lead_id, user_id):
         content_type=ct, object_id=lead.id, user_id=user_id,
     ).delete()
     return JsonResponse({'success': True})
+
+
+# ============================================================
+# WHATSAPP CHATTER VIEWS
+# ============================================================
+
+@login_required
+@require_http_methods(['GET'])
+def lead_whatsapp_list(request, lead_id):
+    """
+    GET /crm/leads/<lead_id>/whatsapp/
+    Returns all WhatsApp messages for a Lead as JSON.
+    """
+    from apps.core.models import ChatterMessage
+    from django.contrib.contenttypes.models import ContentType
+
+    lead = get_object_or_404(Lead, id=lead_id)
+    ct   = ContentType.objects.get_for_model(Lead)
+
+    msgs = ChatterMessage.objects.filter(
+        content_type=ct,
+        object_id=lead.id,
+        message_type='WHATSAPP',
+    ).order_by('sent_at')
+
+    data = []
+    for m in msgs:
+        data.append({
+            'id':         str(m.id),
+            'direction':  m.direction,
+            'from_phone': m.from_email,
+            'to_phone':   m.to_email,
+            'body':       m.body,
+            'wamid':      m.message_id or '',
+            'sent_at':    m.sent_at.isoformat() if m.sent_at else None,
+            'sent_by':    (m.author.get_full_name() or m.author.username) if m.author_id else '',
+        })
+
+    return JsonResponse({'success': True, 'messages': data})
+
+
+@login_required
+@require_POST
+def lead_send_whatsapp(request, lead_id):
+    """
+    POST /crm/leads/<lead_id>/whatsapp/send/
+    Body JSON:
+    {
+        "message": "text here",
+        "to_phone": "+351912345678",       // optional override; defaults to lead.phone
+        "reply_to_wamid": "wamid.xxx"      // optional
+    }
+    """
+    from apps.core.models import ChatterMessage, CompanyWhatsAppConfig
+    from apps.core.whatsapp_utils import send_whatsapp_message
+    from django.contrib.contenttypes.models import ContentType
+    import json as _json
+
+    lead = get_object_or_404(Lead, id=lead_id)
+    active_company = get_active_company(request)
+
+    config = getattr(active_company, 'whatsapp_config', None)
+    if not config or not config.has_whatsapp_configured:
+        return JsonResponse({'success': False, 'error': 'WhatsApp n\u00e3o configurado para esta empresa'}, status=400)
+
+    try:
+        body_data   = _json.loads(request.body)
+    except ValueError:
+        return JsonResponse({'success': False, 'error': 'JSON inv\u00e1lido'}, status=400)
+
+    message_text = body_data.get('message', '').strip()
+    to_phone     = body_data.get('to_phone', '').strip() or (lead.phone or '').strip()
+    reply_to     = body_data.get('reply_to_wamid', '') or None
+
+    if not message_text:
+        return JsonResponse({'success': False, 'error': 'Mensagem n\u00e3o pode estar vazia'}, status=400)
+    if not to_phone:
+        return JsonResponse({'success': False, 'error': 'Número de telefone não encontrado na oportunidade'}, status=400)
+
+    result = send_whatsapp_message(config, to_phone, message_text, reply_to)
+
+    if not result['success']:
+        return JsonResponse({'success': False, 'error': result['error']}, status=500)
+
+    # Persist as ChatterMessage
+    ct = ContentType.objects.get_for_model(Lead)
+    from django.utils import timezone as tz
+    msg = ChatterMessage.objects.create(
+        content_type=ct,
+        object_id=lead.pk,
+        message_type='WHATSAPP',
+        direction='outbound',
+        from_email='',
+        to_email='',
+        subject='',
+        body=message_text,
+        body_html='',
+        message_id=result['wamid'],
+        author=request.user,
+        sent_at=tz.now(),
+    )
+
+    return JsonResponse({
+        'success': True,
+        'wamid': result['wamid'],
+        'message': {
+            'id':        str(msg.id),
+            'direction': 'outbound',
+            'body':      message_text,
+            'to_phone':  to_phone,
+            'sent_at':   msg.sent_at.isoformat() if msg.sent_at else None,
+            'sent_by':   request.user.get_full_name() or request.user.username,
+        },
+    })
+
+
+# =============================================
+# CRM REPORTS VIEW
+# =============================================
+
+@login_required
+def crm_reports_view(request):
+    """
+    Página de Relatórios CRM — 6 gráficos profissionais com Chart.js.
+    Funil | Ganhas vs Perdidas | Responsável | Previsão | Fonte | Motivos de Perda
+    """
+    from dateutil.relativedelta import relativedelta
+    import calendar as cal_module
+
+    active_company = get_active_company(request)
+
+    def base_qs():
+        qs = Lead.objects.filter(is_prospect=False)
+        if active_company:
+            qs = qs.filter(owner_company=active_company)
+        return qs
+
+    now = timezone.now()
+
+    # ── KPI Cards ──────────────────────────────────────────────
+    total_in_pipeline = base_qs().filter(is_active=True, stage__is_won_stage=False, stage__is_lost_stage=False).count()
+    total_won_month = base_qs().filter(
+        stage__is_won_stage=True,
+        closed_at__year=now.year, closed_at__month=now.month
+    ).count()
+    revenue_won_month = base_qs().filter(
+        stage__is_won_stage=True,
+        closed_at__year=now.year, closed_at__month=now.month
+    ).aggregate(v=Sum('estimated_value'))['v'] or 0
+    avg_probability = base_qs().filter(is_active=True, stage__is_won_stage=False, stage__is_lost_stage=False
+    ).aggregate(v=Avg('probability'))['v'] or 0
+
+    # ── 1. Funil de Conversão ───────────────────────────────────
+    stages = CRMStage.objects.filter(is_active=True)
+    if active_company:
+        stages = stages.filter(Q(owner_company__isnull=True) | Q(owner_company=active_company))
+    stages = stages.exclude(is_lost_stage=True).order_by('sequence')
+
+    funnel_labels = []
+    funnel_counts = []
+    funnel_values = []
+    for st in stages:
+        agg = base_qs().filter(stage=st).aggregate(cnt=Count('id'), val=Sum('estimated_value'))
+        funnel_labels.append(st.name)
+        funnel_counts.append(agg['cnt'] or 0)
+        funnel_values.append(float(agg['val'] or 0))
+
+    # ── 2. Ganhas vs. Perdidas (últimos 12 meses) ───────────────
+    monthly_labels = []
+    monthly_won = []
+    monthly_lost = []
+    monthly_revenue = []
+    for i in range(11, -1, -1):
+        d = now - relativedelta(months=i)
+        label = d.strftime('%b %Y')
+        monthly_labels.append(label)
+        won_cnt = base_qs().filter(
+            stage__is_won_stage=True,
+            closed_at__year=d.year, closed_at__month=d.month
+        ).count()
+        lost_cnt = base_qs().filter(
+            stage__is_lost_stage=True,
+            closed_at__year=d.year, closed_at__month=d.month
+        ).count()
+        won_rev = base_qs().filter(
+            stage__is_won_stage=True,
+            closed_at__year=d.year, closed_at__month=d.month
+        ).aggregate(v=Sum('estimated_value'))['v'] or 0
+        monthly_won.append(won_cnt)
+        monthly_lost.append(lost_cnt)
+        monthly_revenue.append(float(won_rev))
+
+    # ── 3. Performance por Responsável (top 8) ──────────────────
+    resp_data = (
+        base_qs()
+        .filter(assigned_to__isnull=False)
+        .values('assigned_to__username', 'assigned_to__first_name', 'assigned_to__last_name')
+        .annotate(
+            total=Count('id'),
+            won=Count('id', filter=Q(stage__is_won_stage=True)),
+            lost=Count('id', filter=Q(stage__is_lost_stage=True)),
+            revenue=Sum('estimated_value', filter=Q(stage__is_won_stage=True)),
+        )
+        .order_by('-won')[:8]
+    )
+    resp_labels = []
+    resp_total = []
+    resp_won = []
+    resp_lost = []
+    resp_revenue = []
+    for r in resp_data:
+        name = (f"{r['assigned_to__first_name']} {r['assigned_to__last_name']}".strip()
+                or r['assigned_to__username'])
+        resp_labels.append(name)
+        resp_total.append(r['total'])
+        resp_won.append(r['won'])
+        resp_lost.append(r['lost'])
+        resp_revenue.append(float(r['revenue'] or 0))
+
+    # ── 4. Previsão de Receita (Forecast) — próximos 6 meses ───
+    forecast_labels = []
+    forecast_expected = []
+    forecast_weighted = []
+    for i in range(0, 6):
+        d = now + relativedelta(months=i)
+        label = d.strftime('%b %Y')
+        forecast_labels.append(label)
+        agg = base_qs().filter(
+            is_active=True,
+            stage__is_won_stage=False,
+            stage__is_lost_stage=False,
+            expected_close_date__year=d.year,
+            expected_close_date__month=d.month,
+        ).aggregate(
+            expected=Sum('estimated_value'),
+            cnt=Count('id'),
+        )
+        # weighted = estimated_value * probability / 100  (Python-side because it's a computed field)
+        leads_month = base_qs().filter(
+            is_active=True,
+            stage__is_won_stage=False,
+            stage__is_lost_stage=False,
+            expected_close_date__year=d.year,
+            expected_close_date__month=d.month,
+        ).values_list('estimated_value', 'probability')
+        weighted = sum(float(v) * p / 100 for v, p in leads_month if v)
+        forecast_expected.append(float(agg['expected'] or 0))
+        forecast_weighted.append(round(weighted, 2))
+
+    # ── 5. Análise por Fonte ────────────────────────────────────
+    SOURCE_LABELS = dict(Lead.SOURCE_CHOICES)
+    source_data = (
+        base_qs()
+        .values('source')
+        .annotate(cnt=Count('id'), revenue=Sum('estimated_value', filter=Q(stage__is_won_stage=True)))
+        .order_by('-cnt')
+    )
+    source_labels = [SOURCE_LABELS.get(r['source'], r['source']) for r in source_data]
+    source_counts = [r['cnt'] for r in source_data]
+    source_revenue = [float(r['revenue'] or 0) for r in source_data]
+
+    # ── 6. Motivos de Perda ─────────────────────────────────────
+    LOST_CAT_LABELS = dict(Lead.LOST_REASON_CATEGORY_CHOICES)
+    lost_cat_data = (
+        base_qs()
+        .filter(stage__is_lost_stage=True)
+        .exclude(lost_reason_category='')
+        .values('lost_reason_category')
+        .annotate(cnt=Count('id'))
+        .order_by('-cnt')
+    )
+    # Also count uncategorised
+    uncategorised = base_qs().filter(stage__is_lost_stage=True, lost_reason_category='').count()
+    lost_cat_labels = [LOST_CAT_LABELS.get(r['lost_reason_category'], r['lost_reason_category'])
+                       for r in lost_cat_data]
+    lost_cat_counts = [r['cnt'] for r in lost_cat_data]
+    if uncategorised:
+        lost_cat_labels.append('Sem categoria')
+        lost_cat_counts.append(uncategorised)
+
+    context = {
+        'crm_config': _get_crm_config(request),
+        # KPIs
+        'kpi_pipeline': total_in_pipeline,
+        'kpi_won_month': total_won_month,
+        'kpi_revenue_month': revenue_won_month,
+        'kpi_avg_prob': round(avg_probability, 1),
+        # Chart data (JSON)
+        'funnel_labels_json': json.dumps(funnel_labels),
+        'funnel_counts_json': json.dumps(funnel_counts),
+        'funnel_values_json': json.dumps(funnel_values),
+        'monthly_labels_json': json.dumps(monthly_labels),
+        'monthly_won_json': json.dumps(monthly_won),
+        'monthly_lost_json': json.dumps(monthly_lost),
+        'monthly_revenue_json': json.dumps(monthly_revenue),
+        'resp_labels_json': json.dumps(resp_labels),
+        'resp_total_json': json.dumps(resp_total),
+        'resp_won_json': json.dumps(resp_won),
+        'resp_lost_json': json.dumps(resp_lost),
+        'resp_revenue_json': json.dumps(resp_revenue),
+        'forecast_labels_json': json.dumps(forecast_labels),
+        'forecast_expected_json': json.dumps(forecast_expected),
+        'forecast_weighted_json': json.dumps(forecast_weighted),
+        'source_labels_json': json.dumps(source_labels),
+        'source_counts_json': json.dumps(source_counts),
+        'source_revenue_json': json.dumps(source_revenue),
+        'lost_cat_labels_json': json.dumps(lost_cat_labels),
+        'lost_cat_counts_json': json.dumps(lost_cat_counts),
+    }
+
+    return render(request, 'crm/reports.html', context)

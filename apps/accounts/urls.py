@@ -7,6 +7,10 @@ from .views import (
     user_delete_single, company_search_api,
     totp_setup_view, totp_verify_view, totp_disable_view,
     user_smtp_save, user_smtp_test,
+    company_list_view,
+    company_bulk_archive, company_bulk_unarchive, company_bulk_delete,
+    company_create_view, company_edit_view,
+    company_user_add_view, company_user_remove_view, company_users_search_api,
 )
 
 app_name = 'accounts'
@@ -29,6 +33,17 @@ urlpatterns = [
     path('users/bulk-unarchive/', user_bulk_unarchive, name='user_bulk_unarchive'),
     path('users/bulk-delete/', user_bulk_delete, name='user_bulk_delete'),
     path('users/bulk-reset/', user_bulk_reset, name='user_bulk_reset'),
+
+    # ── Company Management (ADMIN only) ─────────────────────────────────
+    path('companies/', company_list_view, name='company_list'),
+    path('companies/new/', company_create_view, name='company_create'),
+    path('companies/<uuid:pk>/edit/', company_edit_view, name='company_edit'),
+    path('companies/<uuid:pk>/users/add/', company_user_add_view, name='company_user_add'),
+    path('companies/<uuid:pk>/users/<int:user_id>/remove/', company_user_remove_view, name='company_user_remove'),
+    path('companies/<uuid:pk>/users/search/', company_users_search_api, name='company_users_search'),
+    path('companies/bulk-archive/', company_bulk_archive, name='company_bulk_archive'),
+    path('companies/bulk-unarchive/', company_bulk_unarchive, name='company_bulk_unarchive'),
+    path('companies/bulk-delete/', company_bulk_delete, name='company_bulk_delete'),
 
     # ── API ────────────────────────────────────────────────────────────────
     path('api/companies/', company_search_api, name='company_search'),

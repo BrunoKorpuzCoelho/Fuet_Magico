@@ -70,7 +70,7 @@ class LeadAdmin(admin.ModelAdmin):
             'fields': ('estimated_value', 'probability', 'priority')
         }),
         ('Tracking', {
-            'fields': ('stage', 'source', 'expected_close_date', 'assigned_to', 'lost_reason')
+            'fields': ('stage', 'source', 'expected_close_date', 'assigned_to', 'lost_reason', 'lost_reason_category', 'closed_at')
         }),
         ('Tags', {
             'fields': ('tags',),

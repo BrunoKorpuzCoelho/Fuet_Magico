@@ -187,7 +187,8 @@ class LeadForm(forms.ModelForm):
             'contact', 'contact_name', 'email_from', 'phone',
             'title', 'description', 'estimated_value', 
             'probability', 'priority', 'stage', 'source', 
-            'expected_close_date', 'assigned_to', 'lost_reason', 'notes'
+            'expected_close_date', 'assigned_to', 'lost_reason', 'lost_reason_category', 'notes',
+            'is_prospect',
         ]
         widgets = {
             'contact': forms.HiddenInput(),
@@ -242,7 +243,9 @@ class LeadForm(forms.ModelForm):
                 'class': 'w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 focus:border-primary focus:ring-primary',
             }),
             'lost_reason': forms.HiddenInput(),  # Hidden - gerenciado via modal JS
+            'lost_reason_category': forms.HiddenInput(),  # Hidden - gerenciado via modal JS
             'notes': forms.HiddenInput(),
+            'is_prospect': forms.HiddenInput(),
         }
         labels = {
             'contact': 'Contacto',
@@ -259,6 +262,7 @@ class LeadForm(forms.ModelForm):
             'expected_close_date': 'Expected Closing',
             'assigned_to': 'Salesperson',
             'lost_reason': 'Motivo da Perda',
+            'lost_reason_category': 'Categoria do Motivo',
             'notes': 'Notas',
         }
         help_texts = {
@@ -273,6 +277,7 @@ class LeadForm(forms.ModelForm):
             'expected_close_date': '',
             'assigned_to': '',
             'lost_reason': 'Obrigatório se o estágio for marcado como perdido.',
+            'lost_reason_category': 'Categoria do motivo de perda (para relatórios).',
             'notes': '',
         }
     

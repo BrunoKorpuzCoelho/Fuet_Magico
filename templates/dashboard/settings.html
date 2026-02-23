@@ -1,0 +1,956 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Configurações{% endblock %}
+
+{% block extra_css %}
+<style>
+    html, body { overflow: hidden !important; }
+</style>
+{% endblock %}
+
+{% block sub_navbar %}
+<div class="bg-[#1a2332] border-b border-gray-700" x-data="settingsApp()" x-init="init()" id="settings-root">
+    <div class="max-w-full px-6">
+        <div class="flex items-center gap-3 h-12">
+
+            <!-- Left: Guardar + Descartar -->
+            <button type="submit" form="settings-form"
+                    class="flex items-center gap-1.5 px-4 h-8 rounded-lg text-sm font-semibold bg-primary text-white hover:opacity-90 transition-opacity">
+                <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Guardar
+            </button>
+
+            <a href="{% url 'dashboard:settings' %}"
+               class="flex items-center gap-1.5 px-3 h-8 rounded-lg text-sm font-medium text-red-400 border border-red-900/60 hover:bg-red-900/20 transition-colors">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+                Descartar
+            </a>
+
+            <!-- Center: Search -->
+            <div class="flex-1 flex justify-center">
+                <div class="relative w-80">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input type="text"
+                           x-model="searchQuery"
+                           @input.debounce.200ms="doSearch()"
+                           @keydown.escape="clearSearch()"
+                           placeholder="Pesquisar configurações..."
+                           class="w-full h-8 pl-9 pr-8 bg-gray-800/80 border border-gray-700 rounded-lg text-sm text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors">
+                    <button x-show="searchQuery" @click="clearSearch()"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300" style="display:none">
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+<!-- ===================== MAIN LAYOUT ===================== -->
+<div class="flex" style="height: calc(100vh - 108px); min-height:0;">
+
+    <!-- SIDEBAR -->
+    <aside class="w-64 flex-shrink-0 bg-[#141d27] border-r border-gray-800 overflow-y-auto">
+        <nav class="p-3 space-y-0.5">
+
+            {% include 'dashboard/_settings_nav_item.html' with slug='geral' label='Definições Gerais' icon='geral' %}
+
+            <div class="pt-3 pb-1 px-2">
+                <span class="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Aplicações</span>
+            </div>
+
+            {% include 'dashboard/_settings_nav_item.html' with slug='crm' label='CRM' icon='crm' %}
+            {% include 'dashboard/_settings_nav_item.html' with slug='contactos' label='Contactos' icon='contactos' %}
+            {% include 'dashboard/_settings_nav_item.html' with slug='inventario' label='Inventário' icon='inventario' %}
+            {% include 'dashboard/_settings_nav_item.html' with slug='compras' label='Compras' icon='compras' %}
+            {% include 'dashboard/_settings_nav_item.html' with slug='vendas' label='Vendas' icon='vendas' %}
+            {% include 'dashboard/_settings_nav_item.html' with slug='financeiro' label='Financeiro' icon='financeiro' %}
+            {% include 'dashboard/_settings_nav_item.html' with slug='marketing' label='Marketing' icon='marketing' %}
+
+            <div class="pt-3 pb-1 px-2">
+                <span class="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Sistema</span>
+            </div>
+
+            {% include 'dashboard/_settings_nav_item.html' with slug='utilizadores' label='Utilizadores & Empresas' icon='utilizadores' %}
+
+        </nav>
+    </aside>
+
+    <!-- CONTENT -->
+    <main class="flex-1 overflow-y-auto bg-[#1f2937]" id="settings-content">
+
+        <!-- Search results banner -->
+        <div x-show="searchQuery && searchMatches > 0" style="display:none"
+             class="sticky top-0 z-10 bg-primary/10 border-b border-primary/30 px-8 py-2 text-sm text-primary flex items-center gap-2">
+            <svg class="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-4.35-4.35"/>
+            </svg>
+            <span x-text="searchMatches + ' resultado' + (searchMatches !== 1 ? 's' : '') + ' para \'' + searchQuery + '\''"></span>
+        </div>
+        <div x-show="searchQuery && searchMatches === 0" style="display:none"
+             class="sticky top-0 z-10 bg-red-900/20 border-b border-red-900/40 px-8 py-2 text-sm text-red-400 flex items-center gap-2">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+            </svg>
+            <span>Sem resultados para "<span x-text="searchQuery"></span>"</span>
+        </div>
+
+        <form method="post" id="settings-form" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="section" x-bind:value="activeSection">
+            <input type="hidden" name="logo_base64" id="logo_base64_input">
+
+        <!-- ===== SECTION: GERAL ===== -->
+        <section class="settings-section" data-section="geral">
+
+            <!-- Empresa -->
+            <div class="settings-group" data-group="Empresa">
+                <div class="px-8 pt-8 pb-2">
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="h-6 w-0.5 bg-primary rounded-full"></div>
+                        <h2 class="text-base font-semibold text-gray-200">Empresa</h2>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-5 max-w-4xl">
+
+                        <!-- Logo -->
+                        <div class="lg:col-span-2 flex items-start gap-6">
+                            <div class="relative group cursor-pointer" onclick="document.getElementById('logo-upload-settings').click()">
+                                <div class="w-20 h-20 rounded-xl border-2 border-dashed border-gray-700 group-hover:border-primary transition-colors bg-gray-800 flex items-center justify-center overflow-hidden">
+                                    {% if company.logo %}
+                                    <img id="logo-preview-settings" src="{{ company.logo.url }}" class="w-full h-full object-cover">
+                                    {% else %}
+                                    <img id="logo-preview-settings" src="" class="w-full h-full object-cover hidden">
+                                    {% endif %}
+                                    <div id="logo-placeholder-settings" class="flex flex-col items-center gap-1 text-gray-600 group-hover:text-gray-400 transition-colors {% if company.logo %}hidden{% endif %}">
+                                        <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                        <span class="text-[10px]">Logo</span>
+                                    </div>
+                                </div>
+                                <input type="file" id="logo-upload-settings" accept="image/*" class="hidden" onchange="handleLogoUploadSettings(this)">
+                            </div>
+                            <div class="text-sm text-gray-500 mt-2">
+                                <p class="text-gray-400 font-medium mb-1">Logotipo da empresa</p>
+                                <p>PNG ou JPG. Recomendado: 400×400px.</p>
+                                <button type="button" onclick="document.getElementById('logo-upload-settings').click()"
+                                        class="mt-2 text-primary hover:text-primary/80 transition-colors">Alterar logo</button>
+                            </div>
+                        </div>
+
+                        <!-- Nome -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Nome da Empresa</label>
+                            <input type="text" name="name" value="{{ company.name|default:'' }}"
+                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+                        </div>
+
+                        <!-- Denominação Social -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Denominação Social</label>
+                            <input type="text" name="legal_name" value="{{ company.legal_name|default:'' }}"
+                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+                        </div>
+
+                        <!-- NIF -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">NIF / VAT</label>
+                            <input type="text" name="vat" value="{{ company.vat|default:'' }}"
+                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+                        </div>
+
+                        <!-- Email -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Email</label>
+                            <input type="email" name="email" value="{{ company.email|default:'' }}"
+                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+                        </div>
+
+                        <!-- Telefone -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Telefone</label>
+                            <input type="text" name="phone" value="{{ company.phone|default:'' }}"
+                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+                        </div>
+
+                        <!-- Website -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Website</label>
+                            <input type="text" name="website" value="{{ company.website|default:'' }}"
+                                   onblur="autoHttpsSettings(this)"
+                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="mx-8 border-t border-gray-800"></div>
+
+            <!-- Morada -->
+            <div class="settings-group" data-group="Morada">
+                <div class="px-8 pt-6 pb-2">
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="h-6 w-0.5 bg-primary rounded-full"></div>
+                        <h2 class="text-base font-semibold text-gray-200">Morada</h2>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-5 max-w-4xl">
+
+                        <div class="lg:col-span-2">
+                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Rua / Número / Andar</label>
+                            <input type="text" name="address" value="{{ company.address|default:'' }}"
+                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Cidade</label>
+                            <input type="text" name="city" value="{{ company.city|default:'' }}"
+                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Código Postal</label>
+                            <input type="text" name="postal_code" value="{{ company.postal_code|default:'' }}"
+                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">País</label>
+                            <input type="text" name="country" value="{{ company.country|default:'Portugal' }}"
+                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="mx-8 border-t border-gray-800"></div>
+
+            <!-- Moeda -->
+            <div class="settings-group" data-group="Moeda e Região">
+                <div class="px-8 pt-6 pb-8">
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="h-6 w-0.5 bg-primary rounded-full"></div>
+                        <h2 class="text-base font-semibold text-gray-200">Moeda e Região</h2>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-5 max-w-4xl">
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Moeda Padrão</label>
+                            <select name="currency"
+                                    class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+                                <option value="EUR" {% if company.currency == 'EUR' or not company.currency %}selected{% endif %}>EUR — Euro</option>
+                                <option value="USD" {% if company.currency == 'USD' %}selected{% endif %}>USD — Dólar Americano</option>
+                                <option value="GBP" {% if company.currency == 'GBP' %}selected{% endif %}>GBP — Libra Esterlina</option>
+                                <option value="CHF" {% if company.currency == 'CHF' %}selected{% endif %}>CHF — Franco Suíço</option>
+                                <option value="BRL" {% if company.currency == 'BRL' %}selected{% endif %}>BRL — Real Brasileiro</option>
+                            </select>
+                            <p class="mt-1.5 text-xs text-gray-600">Moeda usada em documentos e relatórios financeiros.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Fuso Horário</label>
+                            <select name="timezone" class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+                                <option value="Europe/Lisbon" selected>Europe/Lisbon (UTC+0/+1)</option>
+                                <option value="Europe/London">Europe/London</option>
+                                <option value="Europe/Paris">Europe/Paris (UTC+1/+2)</option>
+                                <option value="America/Sao_Paulo">America/São Paulo (UTC-3)</option>
+                            </select>
+                            <p class="mt-1.5 text-xs text-gray-600">Fuso horário para datas e horas no sistema.</p>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ===== SECTION: CRM ===== -->
+        <section class="settings-section" data-section="crm">
+            <div class="p-8">
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+
+                    <!-- ── COLUNA ESQUERDA: Pontuação Preditiva ── -->
+                    <div class="settings-group" data-group="Pontuação Preditiva de Leads">
+                        <div class="p-6 rounded-xl border border-gray-800 bg-gray-900/20 h-full">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="h-6 w-0.5 bg-primary rounded-full"></div>
+                                <h2 class="text-base font-semibold text-gray-200">Pontuação Preditiva de Leads</h2>
+                            </div>
+                            <p class="text-sm text-gray-500 mb-6">
+                                Calcula automaticamente a probabilidade de fecho de cada lead com base no histórico de ganhos/perdidos por estágio.
+                                Quando ativado, ao mover uma lead para um novo estágio, a sua probabilidade é atualizada automaticamente.
+                            </p>
+                            <div class="space-y-4">
+                                <label class="flex items-start gap-4 p-4 rounded-xl border border-gray-800 hover:border-gray-700 bg-gray-900/40 hover:bg-gray-900/70 transition-all cursor-pointer group">
+                                    <div class="relative flex-shrink-0 mt-0.5">
+                                        <input type="checkbox" name="predictive_scoring" value="1"
+                                               {% if crm_config and crm_config.predictive_scoring %}checked{% endif %}
+                                               class="peer sr-only">
+                                        <div class="w-10 h-5 bg-gray-700 rounded-full peer-checked:bg-primary transition-colors duration-200"></div>
+                                        <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 peer-checked:translate-x-5"></div>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="text-sm font-medium text-gray-300">Ativar Pontuação Preditiva</div>
+                                        <p class="mt-0.5 text-xs text-gray-600">A probabilidade de cada lead é calculada com base na taxa histórica de vitórias no seu estágio atual.</p>
+                                    </div>
+                                </label>
+                            </div>
+                            <!-- Recalcular probabilidades -->
+                            <div class="mt-6 p-4 rounded-xl border border-gray-800 bg-gray-900/30">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-300 mb-1">Recalcular Probabilidades</div>
+                                        <p class="text-xs text-gray-600">
+                                            Processa o histórico de todas as leads e atualiza a taxa de vitórias de cada estágio.
+                                            {% if crm_config and crm_config.last_probability_update %}
+                                            <br><span class="text-gray-700">Último cálculo: {{ crm_config.last_probability_update|date:"d/m/Y H:i" }}</span>
+                                            {% else %}
+                                            <br><span class="text-gray-700">Nunca calculado.</span>
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                    <button type="button"
+                                            onclick="submitCRMAction('crm_recalculate')"
+                                            class="flex-shrink-0 flex items-center gap-1.5 px-3 h-8 rounded-lg text-sm text-primary border border-primary/30 hover:bg-primary/10 transition-colors">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                        </svg>
+                                        Recalcular agora
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── COLUNA DIREITA: Prospectos + Geração de Leads ── -->
+                    <div class="flex flex-col gap-6">
+
+                        <!-- Prospectos -->
+                        <div class="settings-group" data-group="Prospectos">
+                            <div class="p-6 rounded-xl border border-gray-800 bg-gray-900/20">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <div class="h-6 w-0.5 bg-primary rounded-full"></div>
+                                    <h2 class="text-base font-semibold text-gray-200">Prospectos</h2>
+                                </div>
+                                <p class="text-sm text-gray-500 mb-6">
+                                    Ativa uma fase pré-pipeline para leads ainda não qualificadas.
+                                    Um <strong class="text-gray-400">Prospecto</strong> é alguém que mostrou interesse mas ainda não foi avaliado —
+                                    aparece numa lista separada do pipeline e só entra no funil após qualificação manual.
+                                </p>
+                                <div class="space-y-4">
+                                    <label class="flex items-start gap-4 p-4 rounded-xl border border-gray-800 hover:border-gray-700 bg-gray-900/40 hover:bg-gray-900/70 transition-all cursor-pointer group">
+                                        <div class="relative flex-shrink-0 mt-0.5">
+                                            <input type="checkbox" name="prospects_enabled" value="1"
+                                                   {% if crm_config and crm_config.prospects_enabled %}checked{% endif %}
+                                                   class="peer sr-only">
+                                            <div class="w-10 h-5 bg-gray-700 rounded-full peer-checked:bg-primary transition-colors duration-200"></div>
+                                            <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 peer-checked:translate-x-5"></div>
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="text-sm font-medium text-gray-300">Ativar fase de Prospectos</div>
+                                            <p class="mt-0.5 text-xs text-gray-600">Mostra uma aba "Prospectos" no CRM separada do pipeline principal.</p>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Geração de Leads -->
+                        <div class="settings-group" data-group="Geração Automática de Leads">
+                            <div class="p-6 rounded-xl border border-gray-800 bg-gray-900/20">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <div class="h-6 w-0.5 bg-primary rounded-full"></div>
+                                    <h2 class="text-base font-semibold text-gray-200">Geração Automática de Leads</h2>
+                                </div>
+                                <p class="text-sm text-gray-500 mb-6">
+                                    Analisa o histórico de vendas ganhas e gera automaticamente leads para clientes com padrões de compra recorrentes
+                                    (sazonalidade, aniversário de compra, etc.).
+                                </p>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Período histórico a analisar</label>
+                                    <div class="flex items-center gap-4">
+                                        <select name="lead_generation_years"
+                                                class="h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary">
+                                            <option value="1"  {% if crm_config and crm_config.lead_generation_years == 1  %}selected{% endif %}>1 ano</option>
+                                            <option value="2"  {% if crm_config and crm_config.lead_generation_years == 2  %}selected{% endif %}>2 anos</option>
+                                            <option value="3"  {% if not crm_config or crm_config.lead_generation_years == 3  %}selected{% endif %}>3 anos</option>
+                                            <option value="4"  {% if crm_config and crm_config.lead_generation_years == 4  %}selected{% endif %}>4 anos</option>
+                                            <option value="5"  {% if crm_config and crm_config.lead_generation_years == 5  %}selected{% endif %}>5 anos</option>
+                                            <option value="6"  {% if crm_config and crm_config.lead_generation_years == 6  %}selected{% endif %}>6 anos</option>
+                                            <option value="7"  {% if crm_config and crm_config.lead_generation_years == 7  %}selected{% endif %}>7 anos</option>
+                                            <option value="8"  {% if crm_config and crm_config.lead_generation_years == 8  %}selected{% endif %}>8 anos</option>
+                                            <option value="9"  {% if crm_config and crm_config.lead_generation_years == 9  %}selected{% endif %}>9 anos</option>
+                                            <option value="10" {% if crm_config and crm_config.lead_generation_years == 10 %}selected{% endif %}>10 anos</option>
+                                        </select>
+                                        <span class="text-xs text-gray-600">de histórico de vendas passadas</span>
+                                    </div>
+                                    <p class="mt-2 text-xs text-gray-700">Guarda primeiro para aplicar o período antes de gerar leads.</p>
+                                    <!-- Botão Gerar Leads → abre modal -->
+                                    <div class="mt-5 p-4 rounded-xl border border-gray-800 bg-gray-900/30">
+                                        <div class="flex items-start justify-between gap-4">
+                                            <div>
+                                                <div class="text-sm font-medium text-gray-300 mb-1">Gerar Leads de Seguimento</div>
+                                                <p class="text-xs text-gray-600 max-w-xs">
+                                                    Procura clientes com vendas ganhas nas janelas sazonais configuradas e cria prospectos para seguimento.
+                                                    Não duplica — contactos com prospecto activo são ignorados.
+                                                </p>
+                                            </div>
+                                            <button type="button"
+                                                    id="btn-open-generate-modal"
+                                                    onclick="openGenerateLeadsModal()"
+                                                    class="flex-shrink-0 flex items-center gap-1.5 px-3 h-8 rounded-lg text-sm text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10 transition-colors">
+                                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                                </svg>
+                                                Gerar Leads
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div><!-- /coluna direita -->
+
+                </div><!-- /grid -->
+            </div>
+        </section>
+
+        <!-- ===== MODAL: Gerar Leads de Seguimento ===== -->
+        <div id="modal-generate-leads"
+             class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden"
+             role="dialog" aria-modal="true" aria-labelledby="modal-title-gen">
+            <!-- Backdrop -->
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeGenerateLeadsModal()"></div>
+            <!-- Panel -->
+            <div class="relative z-10 w-full max-w-md bg-[#111827] border border-gray-700 rounded-2xl shadow-2xl overflow-hidden">
+                <!-- Header -->
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                            <svg class="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
+                        </div>
+                        <h3 id="modal-title-gen" class="text-base font-semibold text-gray-100">Gerar Leads de Seguimento</h3>
+                    </div>
+                    <button onclick="closeGenerateLeadsModal()" class="text-gray-500 hover:text-gray-300 transition-colors">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Body -->
+                <div class="px-6 py-5 space-y-5">
+
+                    <!-- Loading state -->
+                    <div id="modal-gen-loading" class="flex flex-col items-center py-6 gap-3">
+                        <svg class="animate-spin h-8 w-8 text-emerald-400" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        <span class="text-sm text-gray-500">A analisar histórico…</span>
+                    </div>
+
+                    <!-- Result state -->
+                    <div id="modal-gen-result" class="hidden space-y-4">
+
+                        <!-- Eligible count -->
+                        <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-800/60 border border-gray-700">
+                            <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                                <span id="modal-gen-count" class="text-lg font-bold text-emerald-400">—</span>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-200">contactos elegíveis encontrados</div>
+                                <div id="modal-gen-years-label" class="text-xs text-gray-500"></div>
+                            </div>
+                        </div>
+
+                        <!-- Windows -->
+                        <div>
+                            <div class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Janelas sazonais analisadas</div>
+                            <div id="modal-gen-windows" class="space-y-1 max-h-36 overflow-y-auto pr-1"></div>
+                        </div>
+
+                        <!-- How many input -->
+                        <div id="modal-gen-input-area">
+                            <label class="block text-xs font-medium text-gray-400 mb-2">
+                                Quantas leads pretende gerar?
+                                <span class="text-gray-600 font-normal">(máx. <span id="modal-gen-max">0</span>)</span>
+                            </label>
+                            <div class="flex items-center gap-3">
+                                <input type="number" id="modal-gen-count-input"
+                                       min="1" max="1" value="10"
+                                       class="w-28 h-9 px-3 rounded-lg border border-gray-700 bg-gray-800 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                <span class="text-xs text-gray-600">leads serão criadas como prospectos</span>
+                            </div>
+                        </div>
+
+                        <!-- Zero eligible -->
+                        <div id="modal-gen-empty" class="hidden text-center py-3">
+                            <p class="text-sm text-gray-500">
+                                Nenhum contacto elegível encontrado.<br>
+                                <span class="text-xs text-gray-600">Todos os clientes já têm prospectos ou oportunidades abertas.</span>
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <!-- Error state -->
+                    <div id="modal-gen-error" class="hidden text-center py-4">
+                        <p class="text-sm text-red-400">Erro ao carregar dados. Tenta novamente.</p>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-800 bg-gray-900/40">
+                    <button type="button" onclick="closeGenerateLeadsModal()"
+                            class="px-4 h-8 rounded-lg border border-gray-700 text-sm text-gray-400 hover:text-gray-200 hover:border-gray-600 transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="button" id="btn-confirm-generate"
+                            onclick="confirmGenerateLeads()"
+                            disabled
+                            class="px-4 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium text-white transition-colors">
+                        Gerar Leads
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== SECTION: CONTACTOS ===== -->
+        <section class="settings-section" data-section="contactos">
+            <div class="settings-group" data-group="Contactos">
+                <div class="px-8 pt-8 pb-8">
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="h-6 w-0.5 bg-primary rounded-full"></div>
+                        <h2 class="text-base font-semibold text-gray-200">Contactos</h2>
+                    </div>
+                    <div class="space-y-4 max-w-xl">
+                        {% include 'dashboard/_settings_toggle.html' with name='contacts_dedup' label='Detecção de Duplicados' desc='Alertar quando se cria um contacto com email ou NIF já existente' checked=True %}
+                        {% include 'dashboard/_settings_toggle.html' with name='contacts_gdpr' label='Modo RGPD' desc='Requerer base legal para processamento de dados pessoais' checked=False badge='Em breve' %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SECTION: INVENTÁRIO ===== -->
+        <section class="settings-section" data-section="inventario">
+            {% include 'dashboard/_settings_placeholder.html' with title='Inventário' desc='Configurações de inventário, stock e movimentos de armazém.' phase='Fase 6' %}
+        </section>
+
+        <!-- ===== SECTION: COMPRAS ===== -->
+        <section class="settings-section" data-section="compras">
+            {% include 'dashboard/_settings_placeholder.html' with title='Compras' desc='Configurações de ordens de compra, fornecedores e aprovações.' phase='Fase 7' %}
+        </section>
+
+        <!-- ===== SECTION: VENDAS ===== -->
+        <section class="settings-section" data-section="vendas">
+            {% include 'dashboard/_settings_placeholder.html' with title='Vendas' desc='Configurações de orçamentos, encomendas e preços.' phase='Fase 8' %}
+        </section>
+
+        <!-- ===== SECTION: FINANCEIRO ===== -->
+        <section class="settings-section" data-section="financeiro">
+            {% include 'dashboard/_settings_placeholder.html' with title='Financeiro' desc='Configurações de contabilidade, faturas e plano de contas.' phase='Fase 9' %}
+        </section>
+
+        <!-- ===== SECTION: MARKETING ===== -->
+        <section class="settings-section" data-section="marketing">
+            <div class="settings-group" data-group="WhatsApp Business API">
+                <div class="px-8 pt-8 pb-6">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="h-6 w-0.5 bg-primary rounded-full"></div>
+                        <h2 class="text-base font-semibold text-gray-200">WhatsApp Business API</h2>
+                    </div>
+                    <p class="text-sm text-gray-500 mb-4 max-w-xl">As credenciais WhatsApp são configuradas por empresa. Acede ao separador <strong class="text-gray-400">WhatsApp</strong> na edição da empresa.</p>
+                    <a href="{% url 'accounts:company_list' %}"
+                       class="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                        </svg>
+                        Ir para Empresas
+                    </a>
+                </div>
+            </div>
+            <div class="mx-8 border-t border-gray-800"></div>
+            <div class="settings-group" data-group="Email Marketing">
+                <div class="px-8 pt-6 pb-8">
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="h-6 w-0.5 bg-primary rounded-full"></div>
+                        <h2 class="text-base font-semibold text-gray-200">Email Marketing</h2>
+                    </div>
+                    <div class="space-y-4 max-w-xl">
+                        {% include 'dashboard/_settings_toggle.html' with name='mkt_unsub' label='Gestão de Cancelamentos' desc='Honrar automaticamente pedidos de cancelamento de subscrição' checked=True badge='Em breve' %}
+                        {% include 'dashboard/_settings_toggle.html' with name='mkt_tracking' label='Rastrear Abertura de Emails' desc='Saber quando um contacto abre um email enviado pelo sistema' checked=False badge='Em breve' %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SECTION: UTILIZADORES & EMPRESAS ===== -->
+        <section class="settings-section" data-section="utilizadores">
+            <div class="settings-group" data-group="Utilizadores">
+                <div class="px-8 pt-8 pb-6">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="h-6 w-0.5 bg-primary rounded-full"></div>
+                        <h2 class="text-base font-semibold text-gray-200">Utilizadores</h2>
+                    </div>
+                    <div class="flex items-start gap-8 max-w-2xl">
+                        <div class="flex-1">
+                            <p class="text-sm text-gray-400 mb-3">Gerir utilizadores, roles e permissões do sistema.</p>
+                            <a href="{% url 'accounts:user_list' %}"
+                               class="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                </svg>
+                                Gerir Utilizadores
+                            </a>
+                        </div>
+                        <div class="text-center px-6 py-4 bg-gray-800/60 rounded-xl border border-gray-700">
+                            <div class="text-2xl font-bold text-gray-200">{{ user_count|default:"—" }}</div>
+                            <div class="text-xs text-gray-500 mt-0.5">Utilizadores ativos</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mx-8 border-t border-gray-800"></div>
+            <div class="settings-group" data-group="Empresas">
+                <div class="px-8 pt-6 pb-8">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="h-6 w-0.5 bg-primary rounded-full"></div>
+                        <h2 class="text-base font-semibold text-gray-200">Empresas</h2>
+                    </div>
+                    <div class="flex items-start gap-8 max-w-2xl">
+                        <div class="flex-1">
+                            <p class="text-sm text-gray-400 mb-3">Gerir empresas, logos e configurações regionais.</p>
+                            <a href="{% url 'accounts:company_list' %}"
+                               class="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                </svg>
+                                Gerir Empresas
+                            </a>
+                        </div>
+                        <div class="text-center px-6 py-4 bg-gray-800/60 rounded-xl border border-gray-700">
+                            <div class="text-2xl font-bold text-gray-200">{{ company_count|default:"—" }}</div>
+                            <div class="text-xs text-gray-500 mt-0.5">Empresas no sistema</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+
+        </form>
+    </main>
+
+</div><!-- /layout -->
+</div><!-- /x-data -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ─── Alpine component ─────────────────────────────────────────
+function settingsApp() {
+    return {
+        activeSection: '{{ active_section }}',
+        searchQuery: '',
+        searchMatches: 0,
+        _originalHTML: {},
+
+        sections: [
+            { slug: 'geral',       label: 'Definições Gerais' },
+            { slug: 'crm',         label: 'CRM' },
+            { slug: 'contactos',   label: 'Contactos' },
+            { slug: 'inventario',  label: 'Inventário' },
+            { slug: 'compras',     label: 'Compras' },
+            { slug: 'vendas',      label: 'Vendas' },
+            { slug: 'financeiro',  label: 'Financeiro' },
+            { slug: 'marketing',   label: 'Marketing' },
+            { slug: 'utilizadores',label: 'Utilizadores & Empresas' },
+        ],
+
+        init() {
+            this.renderSections();
+        },
+
+        currentSectionLabel() {
+            const s = this.sections.find(x => x.slug === this.activeSection);
+            return s ? s.label : '';
+        },
+
+        setSection(slug) {
+            this.activeSection = slug;
+            if (this.searchQuery) this.clearSearch();
+            else this.renderSections();
+            document.getElementById('settings-content').scrollTop = 0;
+        },
+
+        renderSections() {
+            document.querySelectorAll('.settings-section').forEach(sec => {
+                sec.style.display = sec.dataset.section === this.activeSection ? '' : 'none';
+            });
+        },
+
+        doSearch() {
+            const q = this.searchQuery.trim().toLowerCase();
+            if (!q) { this.clearSearch(); return; }
+
+            // Restore original HTML first
+            document.querySelectorAll('.settings-group').forEach(g => {
+                if (this._originalHTML[g.dataset._id]) {
+                    const label = g.querySelector('[data-group-label]');
+                    if (label) label.innerHTML = this._originalHTML[g.dataset._id];
+                }
+            });
+
+            let totalMatches = 0;
+
+            document.querySelectorAll('.settings-section').forEach(sec => {
+                let sectionHasMatch = false;
+                const secLabel = sec.dataset.section;
+
+                sec.querySelectorAll('.settings-group').forEach(group => {
+                    const text = group.innerText.toLowerCase();
+                    if (text.includes(q)) {
+                        sectionHasMatch = true;
+                        group.style.display = '';
+                        // Count matches
+                        const matches = (text.match(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')) || []).length;
+                        totalMatches += matches;
+                        // Highlight
+                        this._highlightInGroup(group, q);
+                    } else {
+                        group.style.display = 'none';
+                    }
+                });
+
+                sec.style.display = sectionHasMatch ? '' : 'none';
+
+                // Show section header if it matches
+                if (sectionHasMatch) {
+                    // Add pill showing section name above group
+                    sec.querySelectorAll('.settings-group').forEach(g => {
+                        if (g.style.display !== 'none') {
+                            let pill = g.querySelector('.search-section-pill');
+                            if (!pill) {
+                                pill = document.createElement('div');
+                                pill.className = 'search-section-pill px-8 pt-3 pb-0 text-xs text-primary font-semibold flex items-center gap-1.5';
+                                pill.innerHTML = `<span class="opacity-60">${this.currentSectionLabelBySlug(secLabel)}</span><svg class="h-3 w-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg><span>${g.dataset.group}</span>`;
+                                g.prepend(pill);
+                            }
+                        }
+                    });
+                }
+            });
+
+            this.searchMatches = totalMatches;
+        },
+
+        _highlightInGroup(group, q) {
+            const esc = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const re = new RegExp(`(${esc})`, 'gi');
+            this._walkText(group, re);
+        },
+
+        _walkText(node, re) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const parent = node.parentNode;
+                if (!parent || ['SCRIPT','STYLE','INPUT','SELECT','TEXTAREA','MARK'].includes(parent.tagName)) return;
+                if (!re.test(node.textContent)) return;
+                re.lastIndex = 0;
+                const span = document.createElement('span');
+                span.innerHTML = node.textContent.replace(re, '<mark class="bg-primary/30 text-primary rounded px-0.5">$1</mark>');
+                parent.replaceChild(span, node);
+            } else {
+                Array.from(node.childNodes).forEach(child => this._walkText(child, re));
+            }
+        },
+
+        clearSearch() {
+            this.searchQuery = '';
+            this.searchMatches = 0;
+            // Remove highlights & pills by reloading sections
+            document.querySelectorAll('mark').forEach(m => {
+                const parent = m.parentNode;
+                parent.replaceChild(document.createTextNode(m.textContent), m);
+                parent.normalize();
+            });
+            // Remove pills
+            document.querySelectorAll('.search-section-pill').forEach(p => p.remove());
+            // Unwrap highlight spans
+            document.querySelectorAll('span').forEach(s => {
+                if (s.querySelector('mark') === null && s.parentNode && !s.className) {
+                    const parent = s.parentNode;
+                    while (s.firstChild) parent.insertBefore(s.firstChild, s);
+                    parent.removeChild(s);
+                }
+            });
+            // Restore section/group visibility
+            document.querySelectorAll('.settings-group').forEach(g => g.style.display = '');
+            this.renderSections();
+        },
+
+        currentSectionLabelBySlug(slug) {
+            const s = this.sections.find(x => x.slug === slug);
+            return s ? s.label : slug;
+        },
+    };
+}
+
+// ─── Logo upload ──────────────────────────────────────────────
+function handleLogoUploadSettings(input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const srcImg = new Image();
+        srcImg.onload = function() {
+            const size = Math.min(srcImg.width, srcImg.height, 400);
+            const canvas = document.createElement('canvas');
+            canvas.width = size; canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const ox = (srcImg.width - size) / 2;
+            const oy = (srcImg.height - size) / 2;
+            ctx.drawImage(srcImg, ox, oy, size, size, 0, 0, size, size);
+            const b64 = canvas.toDataURL('image/png', 0.92);
+            const preview = document.getElementById('logo-preview-settings');
+            const placeholder = document.getElementById('logo-placeholder-settings');
+            if (preview) { preview.src = b64; preview.classList.remove('hidden'); }
+            if (placeholder) placeholder.classList.add('hidden');
+            const hidden = document.getElementById('logo_base64_input');
+            if (hidden) hidden.value = b64;
+        };
+        srcImg.src = e.target.result;
+    };
+    reader.readAsDataURL(input.files[0]);
+}
+
+function autoHttpsSettings(input) {
+    const v = input.value.trim();
+    if (v && !/^https?:\/\//i.test(v)) input.value = 'https://' + v;
+}
+
+// Submit form with a specific section value (used for CRM sub-actions)
+function submitCRMAction(sectionValue, extraData) {
+    const form = document.getElementById('settings-form');
+    if (!form) return;
+    let sectionInput = form.querySelector('input[name="section"]');
+    if (!sectionInput) {
+        sectionInput = document.createElement('input');
+        sectionInput.type = 'hidden';
+        sectionInput.name = 'section';
+        form.appendChild(sectionInput);
+    }
+    sectionInput.value = sectionValue;
+
+    // Inject extra hidden fields (e.g. lead_count)
+    if (extraData) {
+        Object.entries(extraData).forEach(([k, v]) => {
+            let el = form.querySelector(`input[name="${k}"]`);
+            if (!el) {
+                el = document.createElement('input');
+                el.type = 'hidden';
+                el.name = k;
+                form.appendChild(el);
+            }
+            el.value = v;
+        });
+    }
+    form.submit();
+}
+
+// ── Generate Leads Modal ──────────────────────────────────────────────────────
+function openGenerateLeadsModal() {
+    const modal = document.getElementById('modal-generate-leads');
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    // Reset state
+    document.getElementById('modal-gen-loading').classList.remove('hidden');
+    document.getElementById('modal-gen-result').classList.add('hidden');
+    document.getElementById('modal-gen-error').classList.add('hidden');
+    document.getElementById('btn-confirm-generate').disabled = true;
+
+    const yearsSelect = document.querySelector('select[name="lead_generation_years"]');
+    const years = yearsSelect ? yearsSelect.value : '3';
+
+    const url = `?action=crm_leads_preview&years=${years}`;
+
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('modal-gen-loading').classList.add('hidden');
+            document.getElementById('modal-gen-result').classList.remove('hidden');
+
+            const eligible = data.eligible || 0;
+            document.getElementById('modal-gen-count').textContent = eligible;
+            document.getElementById('modal-gen-years-label').textContent =
+                `Janela sazonal · ${data.years} ano${data.years !== 1 ? 's' : ''} de histórico`;
+
+            // Render windows list
+            const windowsEl = document.getElementById('modal-gen-windows');
+            windowsEl.innerHTML = '';
+            (data.windows || []).forEach(w => {
+                const start = w.start.split('-').reverse().join('/');
+                const end   = w.end.split('-').reverse().join('/');
+                const div = document.createElement('div');
+                div.className = 'flex items-center gap-2 text-xs text-gray-600';
+                div.innerHTML = `<span class="w-4 h-4 flex-shrink-0 rounded text-center text-gray-700 font-medium bg-gray-800">${w.year}</span>`
+                    + `<span class="text-gray-500">${start}</span>`
+                    + `<svg class="h-3 w-3 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`
+                    + `<span class="text-gray-500">${end}</span>`;
+                windowsEl.appendChild(div);
+            });
+
+            if (eligible === 0) {
+                document.getElementById('modal-gen-input-area').classList.add('hidden');
+                document.getElementById('modal-gen-empty').classList.remove('hidden');
+            } else {
+                document.getElementById('modal-gen-input-area').classList.remove('hidden');
+                document.getElementById('modal-gen-empty').classList.add('hidden');
+                const inp = document.getElementById('modal-gen-count-input');
+                inp.max = eligible;
+                inp.value = Math.min(10, eligible);
+                document.getElementById('modal-gen-max').textContent = eligible;
+                document.getElementById('btn-confirm-generate').disabled = false;
+            }
+        })
+        .catch(() => {
+            document.getElementById('modal-gen-loading').classList.add('hidden');
+            document.getElementById('modal-gen-error').classList.remove('hidden');
+        });
+}
+
+function closeGenerateLeadsModal() {
+    document.getElementById('modal-generate-leads').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+function confirmGenerateLeads() {
+    const count = document.getElementById('modal-gen-count-input').value;
+    closeGenerateLeadsModal();
+    submitCRMAction('crm_generate_leads', { lead_count: count });
+}
+
+// Close modal on Escape
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeGenerateLeadsModal();
+});
+// ─────────────────────────────────────────────────────────────────────────────
+</script>
+{% endblock %}

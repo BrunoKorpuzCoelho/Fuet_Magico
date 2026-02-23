@@ -112,3 +112,32 @@ class SetNewPasswordForm(forms.Form):
         if len(p1) < 8:
             raise ValidationError('A password deve ter pelo menos 8 caracteres.')
         return p2
+
+
+class CompanyCreateForm(forms.ModelForm):
+    """Formulário para criar/editar uma empresa."""
+
+    class Meta:
+        model = Company
+        fields = [
+            'name', 'legal_name', 'vat', 'company_registry',
+            'email', 'phone', 'website',
+            'address', 'city', 'postal_code', 'country',
+            'currency',
+            'parent_company',
+        ]
+        widgets = {
+            'name':             forms.TextInput(attrs={'class': _INPUT, 'placeholder': 'Nome da empresa'}),
+            'legal_name':       forms.TextInput(attrs={'class': _INPUT, 'placeholder': 'Denominação social completa'}),
+            'vat':              forms.TextInput(attrs={'class': _INPUT, 'placeholder': '500 000 000'}),
+            'company_registry': forms.TextInput(attrs={'class': _INPUT, 'placeholder': 'Nº registo comercial'}),
+            'email':            forms.EmailInput(attrs={'class': _INPUT, 'placeholder': 'geral@empresa.pt'}),
+            'phone':            forms.TextInput(attrs={'class': _INPUT, 'placeholder': '+351 210 000 000'}),
+            'website':          forms.URLInput(attrs={'class': _INPUT, 'placeholder': 'https://empresa.pt'}),
+            'address':          forms.TextInput(attrs={'class': _INPUT, 'placeholder': 'Rua, nº, andar'}),
+            'city':             forms.TextInput(attrs={'class': _INPUT, 'placeholder': 'Lisboa'}),
+            'postal_code':      forms.TextInput(attrs={'class': _INPUT, 'placeholder': '1000-001'}),
+            'country':          forms.TextInput(attrs={'class': _INPUT, 'placeholder': 'Portugal'}),
+            'currency':         forms.TextInput(attrs={'class': _INPUT, 'placeholder': 'EUR'}),
+            'parent_company':   forms.Select(attrs={'class': _SELECT}),
+        }

@@ -19,7 +19,7 @@
         {% csrf_token %}
         <input type="hidden" name="steps_json" id="steps_json_field">
 
-        <div class="mx-auto max-w-6xl px-6 pt-8 pb-24">
+        <div class="mx-auto max-w-6xl px-4 md:px-6 pt-6 md:pt-8 pb-24">
 
             <!-- ══ NOME ══ -->
             <input
@@ -30,10 +30,10 @@
                 placeholder="Nome da cadeia de atividade..."
                 required
                 @input="markDirty()"
-                class="w-full bg-transparent border-0 border-b-2 border-gray-600 text-3xl font-light text-gray-300 placeholder-gray-700 focus:outline-none focus:border-primary pb-3 mb-10">
+                class="w-full bg-transparent border-0 border-b-2 border-gray-600 text-2xl md:text-3xl font-light text-gray-300 placeholder-gray-700 focus:outline-none focus:border-primary pb-3 mb-8 md:mb-10">
 
             <!-- ══ GRID 2 COLUNAS ══ -->
-            <div class="grid grid-cols-2 gap-x-16 mb-10">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6 md:gap-y-0 mb-8 md:mb-10">
 
                 <!-- COLUNA ESQUERDA: Descrição + Modelo -->
                 <div>
@@ -106,8 +106,8 @@
             </div>
 
             <!-- ══ TABELA DE PASSOS ══ -->
-            <div class="bg-gray-800/30 border border-t-0 border-gray-700 rounded-b-lg overflow-hidden">
-                <table class="min-w-full" id="steps-table">
+            <div class="bg-gray-800/30 border border-t-0 border-gray-700 rounded-b-lg overflow-x-auto">
+                <table class="w-full min-w-[800px]" id="steps-table">
                     <thead>
                         <tr class="border-b border-gray-700 bg-[#1a2332]/60">
                             <th class="px-3 py-2.5 w-8"></th><!-- drag handle -->

@@ -248,14 +248,19 @@
 {% endblock %}
 
 {% block sub_navbar %}
+{% if is_prospect_detail %}
+{% url 'crm:prospects_list' as prospect_discard_url %}
+{% include 'components/crm_navbar.html' with show_form_actions=True action_discard_url=prospect_discard_url %}
+{% else %}
 {% include 'components/crm_navbar.html' with show_form_actions=True %}
+{% endif %}
 {% endblock %}
 
 {% block content %}
 <div class="bg-[#1f2937]">
-    <div class="flex gap-0">
+    <div class="flex flex-col md:flex-row gap-0">
         <!-- FORMULÁRIO (Esquerda - 70%) -->
-        <div class="flex-1 relative" style="max-width: 70%;">
+        <div class="flex-1 relative w-full md:max-w-[70%]">
             
             <!-- Ribbon: Won (Ganho) -->
             {% if is_edit and lead.stage and lead.stage.is_won_stage %}
@@ -291,12 +296,89 @@
                 <!-- Hidden fields -->
                 {{ form.contact }}
                 {{ form.lost_reason }}
+                {{ form.lost_reason_category }}
                 <input type="hidden" name="stage" id="id_stage" value="{% if is_edit and lead.stage %}{{ lead.stage.id }}{% elif form.stage.value %}{{ form.stage.value }}{% endif %}">
                 <input type="hidden" name="priority" id="id_priority" value="{{ form.priority.value|default:'MEDIUM' }}">
                 <input type="hidden" name="source" id="id_source" value="{{ form.source.value|default:'OTHER' }}">
+                <input type="hidden" name="is_prospect" id="id_is_prospect" value="{% if form.is_prospect.value %}True{% else %}False{% endif %}">
 
-                <div class="p-6">
-            
+                <div class="p-4 md:p-6">
+
+            {% if is_prospect_detail %}
+            <!-- ===== PROSPECTO: Botão Qualificar ===== -->
+            <div class="flex items-center gap-3 mb-6">
+                <button type="button"
+                        onclick="openQualifyModal()"
+                        class="flex items-center gap-2 px-4 py-1.5 rounded-md bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                    </svg>
+                    Qualificar
+                </button>
+                <span class="text-xs text-gray-500 dark:text-gray-400">Mover este prospecto para o pipeline de oportunidades</span>
+            </div>
+
+            <!-- Modal de confirmação de qualificação -->
+            <div id="qualify-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div class="absolute inset-0 bg-black/60" onclick="closeQualifyModal()"></div>
+                <div class="relative bg-gray-800 rounded-xl border border-gray-700 shadow-2xl w-full max-w-md p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-100">Qualificar Prospecto</h3>
+                            <p class="text-sm text-gray-400">Este prospecto será movido para o pipeline de oportunidades.</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-300 mb-6">
+                        Tens a certeza que queres qualificar <strong class="text-white">{{ lead.title }}</strong>?
+                        Após a qualificação, o prospecto deixará de aparecer nesta lista e passará a ser uma oportunidade no pipeline.
+                    </p>
+                    <div class="flex gap-3 justify-end">
+                        <button type="button" onclick="closeQualifyModal()"
+                                class="px-4 py-2 rounded-lg border border-gray-600 text-sm text-gray-300 hover:bg-gray-700 transition-colors">
+                            Cancelar
+                        </button>
+                        <button type="button" onclick="confirmQualify()"
+                                class="px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            Sim, Qualificar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <script>
+            function openQualifyModal()  { document.getElementById('qualify-modal').classList.remove('hidden'); }
+            function closeQualifyModal() { document.getElementById('qualify-modal').classList.add('hidden'); }
+            document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeQualifyModal(); });
+            async function confirmQualify() {
+                const btn = document.querySelector('#qualify-modal button[onclick="confirmQualify()"]');
+                if (btn) { btn.disabled = true; btn.textContent = 'A qualificar...'; }
+                try {
+                    const resp = await fetch('{% url "crm:prospect_convert" lead.id %}', {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                    });
+                    // convert view always redirects on success (302); fetch follows it
+                    if (resp.ok || resp.redirected) {
+                        window.location.href = '{% url "crm:lead_pipeline" %}';
+                    } else {
+                        alert('Erro ao qualificar. Tenta novamente.');
+                        if (btn) { btn.disabled = false; btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Sim, Qualificar'; }
+                    }
+                } catch(e) {
+                    alert('Erro de rede. Verifica a ligação e tenta novamente.');
+                    if (btn) { btn.disabled = false; }
+                }
+            }
+            </script>
+
+            {% else %}
             <!-- Alpine.js Wrapper for Stage Bar + Buttons + Modal -->
             <div x-data="stageBar()"
                  data-lead-id="{% if is_edit %}{{ lead.id }}{% endif %}"
@@ -306,8 +388,119 @@
                  data-new-stage-id="{% if new_stage %}{{ new_stage.id }}{% endif %}"
                  data-current-stage-id="{% if is_edit and lead.stage %}{{ lead.stage.id }}{% endif %}">
             
-            <!-- Action Buttons + Stage Bar -->
-            <div class="flex items-center justify-between gap-4 mb-6">
+            <!-- MOBILE: Hamburger Menus (Actions + Stage) -->
+            <div class="md:hidden flex items-center justify-between gap-3 mb-6" @click.away="showActionsMenu = false; showStagesMenu = false">
+                <!-- Left: Actions Hamburger -->
+                <div class="relative">
+                    <button type="button"
+                            @click="showActionsMenu = !showActionsMenu; showStagesMenu = false"
+                            class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 hover:bg-gray-700 transition-colors">
+                        <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                        <span class="text-sm text-gray-300 font-medium">Ações</span>
+                    </button>
+                    
+                    <!-- Actions Dropdown -->
+                    <div x-show="showActionsMenu"
+                         x-transition
+                         class="absolute left-0 top-full mt-2 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50"
+                         style="display: none;">
+                        <!-- Novo Orçamento -->
+                        <button type="button"
+                                x-show="!isLostStage()"
+                                class="w-full text-left px-4 py-3 hover:bg-gray-700 transition-colors border-b border-gray-700 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <span class="text-sm text-gray-200">Novo Orçamento</span>
+                        </button>
+                        
+                        <!-- Ganho -->
+                        <button type="button"
+                                x-show="!isWonStage() && !isLostStage()"
+                                @click="markAsWon(); showActionsMenu = false"
+                                class="w-full text-left px-4 py-3 hover:bg-gray-700 transition-colors border-b border-gray-700 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span class="text-sm text-green-500 font-medium">Marcar como Ganho</span>
+                        </button>
+                        
+                        <!-- Perdido -->
+                        <button type="button"
+                                x-show="!isWonStage() && !isLostStage()"
+                                @click="openLostReasonModal(); showActionsMenu = false"
+                                class="w-full text-left px-4 py-3 hover:bg-gray-700 transition-colors border-b border-gray-700 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span class="text-sm text-red-500 font-medium">Marcar como Perdido</span>
+                        </button>
+                        
+                        <!-- Restaurar -->
+                        <button type="button"
+                                x-show="isLostStage()"
+                                @click="restoreLead(); showActionsMenu = false"
+                                class="w-full text-left px-4 py-3 hover:bg-gray-700 transition-colors border-b border-gray-700 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span class="text-sm text-blue-500 font-medium">Restaurar</span>
+                        </button>
+                        
+                        <!-- Motivos de Perda -->
+                        <button type="button"
+                                x-show="isLostStage()"
+                                @click="viewEditLostReason(); showActionsMenu = false"
+                                class="w-full text-left px-4 py-3 hover:bg-gray-700 transition-colors flex items-center gap-2">
+                            <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span class="text-sm text-gray-300">Ver/Editar Motivos de Perda</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right: Current Stage Button with Dropdown -->
+                <div class="relative flex-1">
+                    <button type="button"
+                            @click="showStagesMenu = !showStagesMenu; showActionsMenu = false"
+                            class="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border transition-colors"
+                            :class="isWonStage() ? 'bg-green-500/20 border-green-500 text-green-400' : isLostStage() ? 'bg-red-500/20 border-red-500 text-red-400' : 'bg-primary/20 border-primary text-primary'">
+                        <span class="text-sm font-semibold" x-text="getCurrentStageName()"></span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    
+                    <!-- Stages Dropdown -->
+                    <div x-show="showStagesMenu"
+                         x-transition
+                         class="absolute right-0 top-full mt-2 w-64 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50"
+                         style="display: none;">
+                        {% for stage in stages %}
+                        <button type="button"
+                                @click="selectStage('{{ stage.id }}'); showStagesMenu = false"
+                                :class="currentStage === '{{ stage.id }}' ? 'bg-primary/20 border-l-4 border-primary' : 'border-l-4 border-transparent'"
+                                class="w-full text-left px-4 py-3 hover:bg-gray-700 transition-colors {% if not forloop.last %}border-b border-gray-700{% endif %}">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium"
+                                      :class="currentStage === '{{ stage.id }}' ? 'text-primary' : 'text-gray-300'">
+                                    {{ stage.name }}
+                                </span>
+                                <svg x-show="currentStage === '{{ stage.id }}'" class="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- DESKTOP: Action Buttons + Stage Bar -->
+            <div class="hidden md:flex items-center justify-between gap-4 mb-6">
                 <!-- Left: Action Buttons -->
                 <div class="flex items-center gap-3">
                     <!-- Novo Orçamento: Sempre visível exceto quando Lost -->
@@ -379,6 +572,9 @@
             <script>
             function stageBar() {
                 const stageIds = [{% for stage in stages %}'{{ stage.id }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+                const stageNames = {
+                    {% for stage in stages %}'{{ stage.id }}': '{{ stage.name }}'{% if not forloop.last %}, {% endif %}{% endfor %}
+                };
                 const stageInput = document.getElementById('id_stage');
                 const initialStage = stageInput ? stageInput.value : (stageIds.length > 0 ? stageIds[0] : '');
                 const wonStageId = document.querySelector('[data-won-stage-id]')?.dataset.wonStageId || '';
@@ -388,13 +584,21 @@
                 return {
                     currentStage: initialStage,
                     stageIds: stageIds,
+                    stageNames: stageNames,
                     saving: false,
                     wonStageId: wonStageId,
                     lostStageId: lostStageId,
                     newStageId: newStageId,
                     showLostReasonModal: false,
+                    showActionsMenu: false,
+                    showStagesMenu: false,
+                    lostReasonCategory: '{{ lead.lost_reason_category|default:"" }}',
                     lostReasonText: '',
                     isEditingLostReason: false, // Novo: para diferenciar entre marcar perdido vs editar
+                    
+                    getCurrentStageName() {
+                        return this.stageNames[this.currentStage] || 'Estágio';
+                    },
                     
                     isWonStage() {
                         return this.currentStage === this.wonStageId;
@@ -414,6 +618,7 @@
                     
                     openLostReasonModal() {
                         this.lostReasonText = '';
+                        this.lostReasonCategory = '';
                         this.isEditingLostReason = false;
                         this.showLostReasonModal = true;
                     },
@@ -422,6 +627,8 @@
                         // Pega o valor atual do lost_reason
                         const lostReasonField = document.getElementById('id_lost_reason') || document.querySelector('[name="lost_reason"]');
                         this.lostReasonText = lostReasonField ? lostReasonField.value : '';
+                        const lostCategoryField = document.getElementById('id_lost_reason_category') || document.querySelector('[name="lost_reason_category"]');
+                        this.lostReasonCategory = lostCategoryField ? lostCategoryField.value : '';
                         this.isEditingLostReason = true;
                         this.showLostReasonModal = true;
                     },
@@ -439,6 +646,12 @@
                             console.log('Lost reason updated:', this.lostReasonText);
                         } else {
                             console.error('Lost reason field not found!');
+                        }
+
+                        // Set lost reason category in form
+                        const lostCategoryField = document.getElementById('id_lost_reason_category') || document.querySelector('[name="lost_reason_category"]');
+                        if (lostCategoryField) {
+                            lostCategoryField.value = this.lostReasonCategory || '';
                         }
                         
                         this.showLostReasonModal = false;
@@ -631,6 +844,21 @@
                             <p class="text-xs text-gray-500 mb-3" x-show="isEditingLostReason">
                                 Edite o motivo da perda se necessário ou apenas visualize.
                             </p>
+                            <!-- Category dropdown -->
+                            <div class="mb-3">
+                                <label class="block text-xs font-semibold text-gray-400 mb-1">Categoria <span class="text-gray-600">(opcional)</span></label>
+                                <select x-model="lostReasonCategory"
+                                        class="w-full rounded-lg border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-300 focus:border-red-500 focus:ring-red-500">
+                                    <option value="">-- Selecionar categoria --</option>
+                                    <option value="PRICE">Preço</option>
+                                    <option value="COMPETITOR">Concorrência</option>
+                                    <option value="TIMING">Timing / Sem urgência</option>
+                                    <option value="NO_BUDGET">Sem Orçamento</option>
+                                    <option value="NO_RESPONSE">Sem Resposta</option>
+                                    <option value="REQUIREMENTS">Requisitos não cumpridos</option>
+                                    <option value="OTHER">Outro</option>
+                                </select>
+                            </div>
                             <textarea x-model="lostReasonText"
                                       class="w-full rounded-lg border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300 placeholder-gray-500 focus:border-red-500 focus:ring-red-500 resize-none"
                                       placeholder="Ex: Cliente escolheu concorrente com preço mais baixo..."
@@ -660,13 +888,14 @@
             </div>
             
             </div><!-- Fecha wrapper Alpine.js stageBar -->
+            {% endif %}{# end {% if not is_prospect_detail %} #}
 
             <!-- Card principal do formulário -->
-            <div class="bg-[#1a2332] rounded-lg border border-gray-700/50 p-6 {% if is_edit and lead.stage.is_lost_stage %}opacity-60 pointer-events-none{% endif %}">
+            <div class="bg-[#1a2332] rounded-lg border border-gray-700/50 p-4 md:p-6 {% if is_edit and lead.stage.is_lost_stage %}opacity-60 pointer-events-none{% endif %}">
 
                 <!-- Título (GIGANTE) -->
                 <div class="mb-6">
-                    <input class="w-full border-0 border-b-2 border-gray-600 bg-transparent text-3xl font-light text-gray-300 placeholder:text-gray-600 focus:border-primary focus:ring-0 focus:outline-none py-2 px-1" 
+                    <input class="w-full border-0 border-b-2 border-gray-600 bg-transparent text-2xl md:text-3xl font-light text-gray-300 placeholder:text-gray-600 focus:border-primary focus:ring-0 focus:outline-none py-2 px-1" 
                            id="id_title" 
                            name="title"
                            placeholder="ex: Preço do Produto" 
@@ -676,7 +905,7 @@
                 </div>
 
                 <!-- Expected Revenue + Probability (mesma linha) -->
-                <div class="flex items-center gap-12 mb-6">
+                <div class="flex flex-col md:flex-row md:items-center gap-6 md:gap-12 mb-6">
                     <!-- Expected Revenue -->
                     <div class="flex items-center gap-3">
                         <label class="text-sm font-semibold text-gray-400 whitespace-nowrap">Receita Esperada</label>
@@ -713,7 +942,7 @@
                 <div class="border-t border-gray-700/50 my-5"></div>
 
                 <!-- Grid 2 Colunas - Campos tipo Odoo (label esquerda, valor direita) -->
-                <div class="grid grid-cols-2 gap-x-16 gap-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-4">
                     <!-- LEFT COLUMN -->
                     <!-- Contact (with autocomplete) -->
                     <div class="flex items-center gap-4" x-data="contactAutocomplete()" @click.away="showResults = false">
@@ -1201,11 +1430,11 @@
                             
                             <div class="space-y-4">
                                 <!-- Campanha -->
-                                <div class="grid grid-cols-4 gap-4 items-center">
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
                                     <label class="text-sm font-medium text-gray-400">
                                         Campanha
                                     </label>
-                                    <div class="col-span-3">
+                                    <div class="md:col-span-3">
                                         <input type="text" 
                                                name="marketing_campaign"
                                                class="w-full px-0 py-0.5 bg-transparent border-0 border-b border-transparent text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:border-primary hover:border-gray-600"
@@ -1214,11 +1443,11 @@
                                 </div>
 
                                 <!-- Mídia -->
-                                <div class="grid grid-cols-4 gap-4 items-center">
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
                                     <label class="text-sm font-medium text-gray-400">
                                         Mídia
                                     </label>
-                                    <div class="col-span-3">
+                                    <div class="md:col-span-3">
                                         <input type="text" 
                                                name="marketing_medium"
                                                class="w-full px-0 py-0.5 bg-transparent border-0 border-b border-transparent text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:border-primary hover:border-gray-600"
@@ -1227,11 +1456,11 @@
                                 </div>
 
                                 <!-- Origem -->
-                                <div class="grid grid-cols-4 gap-4 items-center">
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
                                     <label class="text-sm font-medium text-gray-400">
                                         Origem
                                     </label>
-                                    <div class="col-span-3">
+                                    <div class="md:col-span-3">
                                         <input type="text" 
                                                name="marketing_source"
                                                class="w-full px-0 py-0.5 bg-transparent border-0 border-b border-transparent text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:border-primary hover:border-gray-600"
@@ -1240,11 +1469,11 @@
                                 </div>
 
                                 <!-- Referenciado Por -->
-                                <div class="grid grid-cols-4 gap-4 items-center">
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
                                     <label class="text-sm font-medium text-gray-400">
                                         Referenciado Por
                                     </label>
-                                    <div class="col-span-3">
+                                    <div class="md:col-span-3">
                                         <input type="text" 
                                                name="marketing_referred_by"
                                                class="w-full px-0 py-0.5 bg-transparent border-0 border-b border-transparent text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-0 focus:border-primary hover:border-gray-600"
@@ -1272,7 +1501,7 @@
         </div>
         
         <!-- CHATTER (Direita - 30%) -->
-        <div class="w-[30%] border-l border-gray-700 bg-[#1a2332] h-[80vh] sticky top-0 flex flex-col" 
+        <div class="w-full md:w-[30%] border-t md:border-t-0 md:border-l border-gray-700 bg-[#1a2332] h-auto md:h-[80vh] md:sticky md:top-0 flex flex-col" 
              style="margin-right: 10px;"
              x-data="{ activeTab: 'log' }">
             <!-- Tabs Header - HORIZONTAL -->
@@ -1532,13 +1761,119 @@
                 </div>
                 
                 <!-- Tab: WhatsApp -->
-                <div x-show="activeTab === 'whatsapp'" class="p-4">
-                    <div class="text-center py-8">
-                        <svg class="w-12 h-12 mx-auto text-gray-600 mb-3" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                <div x-show="activeTab === 'whatsapp'"
+                     class="flex flex-col h-full relative"
+                     x-data="leadWhatsAppPanel('{{ lead.id }}', '{{ lead_phone|default:'' }}', {{ has_whatsapp|yesno:'true,false' }})"
+                     x-effect="if (activeTab === 'whatsapp' && !loaded && !loading) load()">
+
+                    <!-- Warning: no WhatsApp configured -->
+                    <div x-show="!hasWhatsApp" class="m-3 p-3 bg-yellow-900/40 border border-yellow-600/50 rounded-lg flex items-start gap-2 text-sm text-yellow-300">
+                        <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                         </svg>
-                        <p class="text-sm text-gray-400">WhatsApp em desenvolvimento</p>
+                        <span>WhatsApp não configurado. Contacte o administrador para configurar o número desta empresa.</span>
                     </div>
+
+                    <!-- Warning: no phone on lead -->
+                    <div x-show="hasWhatsApp && !contactPhone" class="m-3 p-3 bg-blue-900/40 border border-blue-600/50 rounded-lg flex items-start gap-2 text-sm text-blue-300">
+                        <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                        </svg>
+                        <span>Adicione um número de telefone à oportunidade para enviar mensagens.</span>
+                    </div>
+
+                    <!-- Refresh bar (visible when WhatsApp is configured) -->
+                    <div x-show="hasWhatsApp" class="flex items-center gap-2 px-3 py-1.5 border-b border-gray-700/60 flex-shrink-0">
+                        <button type="button" @click="load()"
+                                :disabled="loading"
+                                class="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg :class="loading ? 'animate-spin' : ''" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            <span x-text="loading ? 'A carregar...' : 'Atualizar'"></span>
+                        </button>
+                        <span x-show="contactPhone" :title="'Número: ' + contactPhone"
+                              class="ml-auto text-[10px] text-gray-500 truncate max-w-[140px]"
+                              x-text="'📱 ' + contactPhone"></span>
+                    </div>
+
+                    <!-- Bubble area -->
+                    <div x-show="hasWhatsApp" class="flex-1 overflow-y-auto p-3 space-y-3 min-h-0" x-ref="bubbleArea">
+
+                        <!-- Loading -->
+                        <div x-show="loading" class="flex justify-center py-4">
+                            <svg class="animate-spin w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                            </svg>
+                        </div>
+
+                        <!-- Empty state -->
+                        <div x-show="!loading && messages.length === 0" class="flex flex-col items-center justify-center py-10 text-gray-500">
+                            <svg class="w-10 h-10 mb-2 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                            </svg>
+                            <p class="text-sm">Nenhuma mensagem de WhatsApp.</p>
+                        </div>
+
+                        <!-- Message bubbles -->
+                        <template x-for="m in messages" :key="m.id">
+                            <div class="flex flex-col" :class="m.direction === 'outbound' ? 'items-end' : 'items-start'">
+                                <div class="max-w-[85%] rounded-2xl px-3 py-2 text-sm shadow"
+                                     :class="m.direction === 'outbound' ? 'rounded-br-sm text-white' : 'bg-[#1a2b1e] text-green-100 rounded-bl-sm border border-green-800/40'"
+                                     :style="m.direction === 'outbound' ? 'background-color:rgba(37,211,102,0.18);border:1px solid rgba(37,211,102,0.35)' : ''">
+
+                                    <!-- Text body -->
+                                    <p class="break-words whitespace-pre-wrap" x-text="m.body"></p>
+
+                                    <!-- Meta: timestamp + sender -->
+                                    <div class="mt-1 flex items-center gap-1 text-[10px]"
+                                         :class="m.direction === 'outbound' ? 'justify-end text-green-300/80' : 'justify-start opacity-60'">
+                                        <span x-show="m.direction === 'outbound' && m.sent_by" x-text="m.sent_by"></span>
+                                        <span x-show="m.direction === 'outbound' && m.sent_by"> • </span>
+                                        <span x-text="fmtDate(m.sent_at)"></span>
+                                        <!-- Tick icon for outbound -->
+                                        <svg x-show="m.direction === 'outbound'" class="w-3 h-3 text-green-400 ml-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Send area -->
+                    <div x-show="hasWhatsApp && contactPhone"
+                         class="border-t border-gray-700/60 px-3 py-2 flex-shrink-0">
+
+                        <!-- Error message -->
+                        <div x-show="sendError" class="mb-2 p-2 bg-red-900/40 border border-red-600/50 rounded text-xs text-red-300" x-text="sendError"></div>
+
+                        <div class="flex gap-2 items-end">
+                            <textarea
+                                x-model="newMessage"
+                                @keydown.ctrl.enter.prevent="send()"
+                                rows="2"
+                                placeholder="Mensagem WhatsApp… (Ctrl+Enter para enviar)"
+                                class="flex-1 resize-none rounded-xl bg-gray-700 border border-gray-600 text-sm text-gray-100 placeholder-gray-500 px-3 py-2 focus:outline-none focus:border-green-500 transition-colors"
+                            ></textarea>
+                            <button type="button"
+                                    @click="send()"
+                                    :disabled="sending || !newMessage.trim()"
+                                    class="flex-shrink-0 w-9 h-9 rounded-xl bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors">
+                                <svg x-show="!sending" class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/>
+                                </svg>
+                                <svg x-show="sending" class="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="text-[10px] text-gray-600 mt-1">Ctrl+Enter para enviar</p>
+                    </div>
+
                 </div>
                 
                 <!-- Tab: Enviar Mensagem -->
@@ -3721,6 +4056,86 @@ function leadFollowersWidget(leadId) {
                 });
                 this.followers = this.followers.filter(f => f.user_id !== userId);
             } catch(e) {}
+        },
+
+        csrf() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                   document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1] || '';
+        },
+    };
+}
+
+// ─────────────────────────────────────────────────────────────
+// WhatsApp Panel Alpine.js component
+// ─────────────────────────────────────────────────────────────
+function leadWhatsAppPanel(leadId, contactPhone, hasWhatsApp) {
+    return {
+        leadId,
+        contactPhone,
+        hasWhatsApp,
+
+        messages: [],
+        loading:  false,
+        loaded:   false,
+        sending:  false,
+        newMessage: '',
+        sendError: '',
+
+        async load() {
+            if (!this.hasWhatsApp) return;
+            this.loading = true;
+            try {
+                const r = await fetch(`/crm/leads/${this.leadId}/whatsapp/`);
+                const d = await r.json();
+                if (d.success) {
+                    this.messages = d.messages;
+                    this.$nextTick(() => this.scrollBottom());
+                }
+            } catch(e) {
+                console.error('[WhatsApp] load error', e);
+            } finally {
+                this.loading = false;
+                this.loaded  = true;
+            }
+        },
+
+        async send() {
+            const text = this.newMessage.trim();
+            if (!text || this.sending) return;
+            this.sending   = true;
+            this.sendError = '';
+            try {
+                const r = await fetch(`/crm/leads/${this.leadId}/whatsapp/send/`, {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrf() },
+                    body:    JSON.stringify({ message: text, to_phone: this.contactPhone }),
+                });
+                const d = await r.json();
+                if (d.success) {
+                    this.newMessage = '';
+                    if (d.message) {
+                        this.messages.push(d.message);
+                        this.$nextTick(() => this.scrollBottom());
+                    }
+                } else {
+                    this.sendError = d.error || 'Erro ao enviar mensagem.';
+                }
+            } catch(e) {
+                this.sendError = 'Erro de rede ao enviar mensagem.';
+            } finally {
+                this.sending = false;
+            }
+        },
+
+        scrollBottom() {
+            const el = this.$refs.bubbleArea;
+            if (el) el.scrollTop = el.scrollHeight;
+        },
+
+        fmtDate(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            return d.toLocaleString('pt-PT', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
         },
 
         csrf() {

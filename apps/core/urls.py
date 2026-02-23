@@ -19,6 +19,9 @@ urlpatterns = [
     path('api/chatter/whatsapp/', views.chatter_send_whatsapp, name='chatter_send_whatsapp'),
     path('api/users/search/', views.users_search_api, name='users_search_api'),
 
+    # WhatsApp Webhook (unauthenticated — Meta calls this)
+    path('whatsapp/webhook/', views.whatsapp_webhook, name='whatsapp_webhook'),
+
     # Planned Activities API
     path('api/chatter/planned-activity/create/', views.planned_activity_create, name='planned_activity_create'),
     path('api/chatter/planned-activity/<uuid:pk>/done/', views.planned_activity_done, name='planned_activity_done'),

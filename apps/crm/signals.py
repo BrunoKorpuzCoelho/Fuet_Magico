@@ -72,6 +72,48 @@ def create_default_crm_stages(sender, **kwargs):
 _lead_pre_save_state = {}
 
 
+# ─── Pontuação Preditiva — auto-probability on stage change ──────────────────
+
+@receiver(pre_save, sender='crm.Lead')
+def lead_capture_previous_stage(sender, instance, **kwargs):
+    """Guarda o stage anterior para detectar mudança de stage."""
+    if instance.pk:
+        try:
+            old = sender.objects.only('stage_id').get(pk=instance.pk)
+            instance._previous_stage_id = old.stage_id
+        except sender.DoesNotExist:
+            instance._previous_stage_id = None
+    else:
+        instance._previous_stage_id = None
+
+
+@receiver(post_save, sender='crm.Lead')
+def lead_auto_probability(sender, instance, created, **kwargs):
+    """
+    Quando o estágio de uma lead muda (ou é criada), aplica automaticamente
+    a probabilidade histórica do novo estágio — se predictive_scoring estiver ativo.
+    Não dispara se probability_locked=True.
+    """
+    from .services import apply_stage_probability_to_lead
+
+    prev_stage_id = getattr(instance, '_previous_stage_id', None)
+    stage_changed = created or (prev_stage_id != instance.stage_id)
+
+    if not stage_changed:
+        return
+    if instance.probability_locked:
+        return
+
+    old_probability = instance.probability
+    apply_stage_probability_to_lead(instance)
+
+    if instance.probability != old_probability:
+        # Salva só o campo probability, sem disparar signals novamente
+        sender.objects.filter(pk=instance.pk).update(probability=instance.probability)
+
+
+# ─── Audit log signals ───────────────────────────────────────────────────────
+
 @receiver(pre_save, sender='crm.Lead')
 def lead_pre_save(sender, instance, **kwargs):
     """

@@ -1,0 +1,905 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Relatórios CRM — Fuet Mágico{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ─── Page base ─────────────────────────────────────────────────────── */
+.reports-bg {
+    background: linear-gradient(160deg, #0a1120 0%, #0f172a 40%, #0c1a14 100%);
+    min-height: 100vh;
+}
+
+/* ─── KPI Cards ─────────────────────────────────────────────────────── */
+.kpi-card {
+    background: linear-gradient(135deg, rgba(219,198,147,0.06) 0%, rgba(219,198,147,0.02) 100%);
+    border: 1px solid rgba(219,198,147,0.18);
+    border-radius: 16px;
+    backdrop-filter: blur(12px);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+.kpi-card::before {
+    content:'';
+    position:absolute; top:0; left:0; right:0; height:2px;
+    background: linear-gradient(90deg, transparent, #dbc693, transparent);
+    opacity: 0.6;
+}
+.kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 40px rgba(219,198,147,0.12);
+}
+.kpi-glow {
+    position:absolute; top:-20px; right:-20px; width:80px; height:80px;
+    border-radius:50%;
+    filter: blur(30px);
+    opacity: 0.25;
+}
+
+/* ─── Chart Cards ────────────────────────────────────────────────────── */
+.chart-card {
+    background: rgba(15,23,42,0.7);
+    border: 1px solid rgba(219,198,147,0.12);
+    border-radius: 20px;
+    backdrop-filter: blur(16px);
+    position: relative;
+    overflow: hidden;
+    transition: box-shadow 0.3s ease;
+}
+.chart-card:hover {
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(219,198,147,0.2);
+}
+.chart-card::after {
+    content:'';
+    position:absolute; bottom:0; left:0; right:0; height:1px;
+    background: linear-gradient(90deg, transparent, rgba(219,198,147,0.15), transparent);
+}
+.chart-header {
+    display:flex; align-items:flex-start; justify-content:space-between;
+    padding: 1.5rem 1.5rem 0;
+    margin-bottom: 1.25rem;
+}
+.chart-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    letter-spacing: -0.01em;
+}
+.chart-subtitle {
+    font-size: 0.72rem;
+    color: #64748b;
+    margin-top: 2px;
+}
+.chart-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+.chart-body {
+    padding: 0 1.25rem 1.5rem;
+    position: relative;
+}
+
+/* ─── Section label ──────────────────────────────────────────────────── */
+.section-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #dbc693;
+    opacity: 0.7;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.section-label::after {
+    content:''; flex:1; height:1px;
+    background: linear-gradient(90deg, rgba(219,198,147,0.2), transparent);
+}
+
+/* ─── Gradient text ──────────────────────────────────────────────────── */
+.text-gold {
+    background: linear-gradient(135deg, #dbc693 0%, #f5e6c8 50%, #c9a96e 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ─── Sparkline-style number ─────────────────────────────────────────── */
+.kpi-number {
+    font-size: 2.4rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.03em;
+}
+
+/* ─── Chart legend pill ──────────────────────────────────────────────── */
+.legend-pill {
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:0.68rem; font-weight:600;
+    color:#94a3b8; letter-spacing:0.03em;
+}
+.legend-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:#0f172a; }
+::-webkit-scrollbar-thumb { background:#374151; border-radius:10px; }
+
+/* ─── Info button ────────────────────────────────────────────────────── */
+.info-btn {
+    width:22px; height:22px;
+    border-radius:50%;
+    border:1px solid rgba(219,198,147,0.35);
+    background:rgba(219,198,147,0.08);
+    color:#dbc693;
+    font-size:11px;
+    font-weight:800;
+    cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center;
+    transition:all 0.2s;
+    flex-shrink:0;
+    line-height:1;
+    letter-spacing:0;
+}
+.info-btn:hover {
+    background:rgba(219,198,147,0.22);
+    border-color:rgba(219,198,147,0.7);
+    box-shadow:0 0 10px rgba(219,198,147,0.25);
+}
+/* ─── Info modal backdrop ────────────────────────────────────────────── */
+.info-modal-backdrop {
+    position:fixed; inset:0; z-index:999;
+    background:rgba(4,8,20,0.75);
+    backdrop-filter:blur(6px);
+    display:flex; align-items:center; justify-content:center;
+    padding:1.5rem;
+}
+.info-modal {
+    background:linear-gradient(160deg,#0e1a2e 0%,#0c1628 100%);
+    border:1px solid rgba(219,198,147,0.25);
+    border-radius:20px;
+    max-width:560px; width:100%;
+    box-shadow:0 32px 80px rgba(0,0,0,0.7),0 0 0 1px rgba(219,198,147,0.1);
+    overflow:hidden;
+}
+.info-modal-header {
+    background:linear-gradient(90deg,rgba(219,198,147,0.08),transparent);
+    border-bottom:1px solid rgba(219,198,147,0.12);
+    padding:1.25rem 1.5rem;
+    display:flex; align-items:center; justify-content:space-between; gap:1rem;
+}
+.info-modal-title {
+    font-size:1rem; font-weight:800; color:#f1f5f9; letter-spacing:-0.01em;
+}
+.info-modal-close {
+    width:28px; height:28px; border-radius:50%;
+    border:1px solid rgba(255,255,255,0.1);
+    background:rgba(255,255,255,0.05);
+    color:#94a3b8; font-size:14px; cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center;
+    transition:all 0.2s; flex-shrink:0;
+}
+.info-modal-close:hover { background:rgba(239,68,68,0.15); color:#f87171; border-color:rgba(239,68,68,0.3); }
+.info-modal-body { padding:1.5rem; }
+.info-section-label {
+    font-size:0.65rem; font-weight:800; letter-spacing:0.15em;
+    text-transform:uppercase; color:#dbc693; opacity:0.7;
+    margin-bottom:0.5rem; margin-top:1.25rem;
+}
+.info-section-label:first-child { margin-top:0; }
+.info-text { font-size:0.88rem; color:#94a3b8; line-height:1.7; }
+.info-formula {
+    background:rgba(219,198,147,0.06);
+    border:1px solid rgba(219,198,147,0.15);
+    border-radius:10px;
+    padding:0.85rem 1rem;
+    font-family:'Courier New',monospace;
+    font-size:0.8rem;
+    color:#dbc693;
+    line-height:1.8;
+    white-space:pre-wrap;
+}
+</style>
+{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/crm_navbar_simple.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="reports-bg">
+<div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- ── Page Header ───────────────────────────────────────────────── -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+    <div>
+      <h1 class="text-3xl font-extrabold text-gold tracking-tight">Relatórios</h1>
+      <p class="text-sm text-slate-400 mt-1">Análise do pipeline · Actualizado agora</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 text-xs text-slate-500 bg-slate-800/50 rounded-lg px-3 py-2 border border-slate-700/50">
+        <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+        Dados em tempo real
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
+  <div class="section-label">Resumo do Mês</div>
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#6366f1;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Em Pipeline</p>
+      <div class="kpi-number text-white mb-1">{{ kpi_pipeline }}</div>
+      <p class="text-xs text-slate-500">oportunidades activas</p>
+    </div>
+
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#22c55e;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Ganhas Este Mês</p>
+      <div class="kpi-number text-emerald-400 mb-1">{{ kpi_won_month }}</div>
+      <p class="text-xs text-slate-500">negócios fechados</p>
+    </div>
+
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#dbc693;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Receita Est. (Mês)</p>
+      <div class="kpi-number text-gold mb-1">€{{ kpi_revenue_month|floatformat:0|intcomma }}</div>
+      <p class="text-xs text-slate-500">de oportunidades ganhas</p>
+    </div>
+
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#f59e0b;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Prob. Média Pipeline</p>
+      <div class="kpi-number text-amber-400 mb-1">{{ kpi_avg_prob }}%</div>
+      <p class="text-xs text-slate-500">probabilidade de fecho</p>
+    </div>
+
+  </div>
+
+  <!-- ── Row 1: Funil + Ganhas vs Perdidas ─────────────────────────── -->
+  <div class="section-label">Análise de Pipeline</div>
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+
+    <!-- Funil de Conversão -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Funil de Conversão</div>
+          <div class="chart-subtitle">Leads por estágio · volume e valor estimado</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="chart-badge" style="background:rgba(99,102,241,0.15);color:#818cf8;">Pipeline</span>
+          <button class="info-btn" onclick="chartInfoOpen('funil')" title="Explicação do gráfico">i</button>
+        </div>
+      </div>
+      <div class="chart-body">
+        <canvas id="chartFunnel" height="260"></canvas>
+      </div>
+    </div>
+
+    <!-- Ganhas vs Perdidas -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Ganhas vs. Perdidas</div>
+          <div class="chart-subtitle">Últimos 12 meses · receita gerada</div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="legend-pill"><span class="legend-dot" style="background:#22c55e"></span>Ganhas</span>
+          <span class="legend-pill"><span class="legend-dot" style="background:#ef4444"></span>Perdidas</span>
+          <span class="legend-pill"><span class="legend-dot" style="background:#dbc693"></span>Receita</span>
+          <button class="info-btn" onclick="chartInfoOpen('ganhos_perdidos')" title="Explicação do gráfico">i</button>
+        </div>
+      </div>
+      <div class="chart-body">
+        <canvas id="chartWonLost" height="260"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Row 2: Responsável + Previsão ─────────────────────────────── -->
+  <div class="section-label">Performance e Previsão</div>
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+
+    <!-- Performance por Responsável -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Performance por Responsável</div>
+          <div class="chart-subtitle">Top 8 · leads ganhas, em aberto e perdidas</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="chart-badge" style="background:rgba(219,198,147,0.1);color:#dbc693;">Equipa</span>
+          <button class="info-btn" onclick="chartInfoOpen('responsavel')" title="Explicação do gráfico">i</button>
+        </div>
+      </div>
+      <div class="chart-body">
+        <canvas id="chartResponsavel" height="280"></canvas>
+      </div>
+    </div>
+
+    <!-- Previsão de Receita -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Previsão de Receita</div>
+          <div class="chart-subtitle">Próximos 6 meses · esperado vs. ponderado por probabilidade</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="chart-badge" style="background:rgba(245,158,11,0.15);color:#f59e0b;">Forecast</span>
+          <button class="info-btn" onclick="chartInfoOpen('forecast')" title="Explicação do gráfico">i</button>
+        </div>
+      </div>
+      <div class="chart-body">
+        <canvas id="chartForecast" height="280"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Row 3: Fonte + Motivos Perda ──────────────────────────────── -->
+  <div class="section-label">Qualidade e Perda</div>
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-10">
+
+    <!-- Análise por Fonte -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Análise por Fonte</div>
+          <div class="chart-subtitle">Volume de leads e receita ganha por canal de origem</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="chart-badge" style="background:rgba(20,184,166,0.15);color:#2dd4bf;">Fonte</span>
+          <button class="info-btn" onclick="chartInfoOpen('fonte')" title="Explicação do gráfico">i</button>
+        </div>
+      </div>
+      <div class="chart-body" style="display:flex; align-items:center; gap:1.5rem;">
+        <div style="flex:0 0 220px; height:220px;">
+          <canvas id="chartSource"></canvas>
+        </div>
+        <div id="sourceLegend" class="flex flex-col gap-2 flex-1 min-w-0"></div>
+      </div>
+    </div>
+
+    <!-- Motivos de Perda -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Motivos de Perda</div>
+          <div class="chart-subtitle">Categorias de leads perdidas · identificar padrões</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="chart-badge" style="background:rgba(239,68,68,0.12);color:#f87171;">Perda</span>
+          <button class="info-btn" onclick="chartInfoOpen('perda')" title="Explicação do gráfico">i</button>
+        </div>
+      </div>
+      <div class="chart-body">
+        <canvas id="chartLostReasons" height="240"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</div>
+
+<!-- ─────── Info Modal ──────────────────────────────────────────────── -->
+<div id="chartInfoModal" class="info-modal-backdrop" style="display:none;">
+  <div class="info-modal">
+    <div class="info-modal-header">
+      <span class="info-modal-title" id="chartInfoTitle"></span>
+      <button class="info-modal-close" onclick="chartInfoClose()">&times;</button>
+    </div>
+    <div class="info-modal-body">
+      <div class="info-section-label">O que é?</div>
+      <p class="info-text" id="chartInfoWhat"></p>
+
+      <div class="info-section-label">Que comparações faz?</div>
+      <p class="info-text" id="chartInfoComparisons"></p>
+
+      <div class="info-section-label">Fórmula / Cálculo</div>
+      <div class="info-formula" id="chartInfoFormula"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────── Chart.js 4 ───────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+<script>
+// ── Data from Django ─────────────────────────────────────────────────
+const FUNNEL_LABELS   = {{ funnel_labels_json|safe }};
+const FUNNEL_COUNTS   = {{ funnel_counts_json|safe }};
+const FUNNEL_VALUES   = {{ funnel_values_json|safe }};
+
+const MONTHLY_LABELS  = {{ monthly_labels_json|safe }};
+const MONTHLY_WON     = {{ monthly_won_json|safe }};
+const MONTHLY_LOST    = {{ monthly_lost_json|safe }};
+const MONTHLY_REVENUE = {{ monthly_revenue_json|safe }};
+
+const RESP_LABELS     = {{ resp_labels_json|safe }};
+const RESP_TOTAL      = {{ resp_total_json|safe }};
+const RESP_WON        = {{ resp_won_json|safe }};
+const RESP_LOST       = {{ resp_lost_json|safe }};
+const RESP_REVENUE    = {{ resp_revenue_json|safe }};
+
+const FC_LABELS       = {{ forecast_labels_json|safe }};
+const FC_EXPECTED     = {{ forecast_expected_json|safe }};
+const FC_WEIGHTED     = {{ forecast_weighted_json|safe }};
+
+const SRC_LABELS      = {{ source_labels_json|safe }};
+const SRC_COUNTS      = {{ source_counts_json|safe }};
+const SRC_REVENUE     = {{ source_revenue_json|safe }};
+
+const LOST_LABELS     = {{ lost_cat_labels_json|safe }};
+const LOST_COUNTS     = {{ lost_cat_counts_json|safe }};
+
+// ── Brand palette ────────────────────────────────────────────────────
+const C_PRIMARY    = '#dbc693';
+const C_PRIMARY_DK = '#c9a96e';
+const C_GREEN      = '#22c55e';
+const C_RED        = '#ef4444';
+const C_INDIGO     = '#6366f1';
+const C_AMBER      = '#f59e0b';
+const C_TEAL       = '#14b8a6';
+const C_ROSE       = '#f43f5e';
+const C_VIOLET     = '#8b5cf6';
+const C_SLATE      = '#64748b';
+const C_CYAN       = '#06b6d4';
+
+const PALETTE = [C_PRIMARY, C_INDIGO, C_TEAL, C_AMBER, C_ROSE, C_VIOLET, C_CYAN, C_GREEN, C_RED, C_SLATE];
+
+// ── Shared Chart.js defaults ─────────────────────────────────────────
+Chart.defaults.color          = '#94a3b8';
+Chart.defaults.borderColor    = 'rgba(255,255,255,0.05)';
+Chart.defaults.font.family    = "'Inter','Segoe UI',sans-serif";
+Chart.defaults.font.size      = 11;
+Chart.defaults.animation.duration = 900;
+Chart.defaults.animation.easing   = 'easeOutQuart';
+
+// ── Shared tooltip style ─────────────────────────────────────────────
+const sharedTooltip = {
+  backgroundColor : 'rgba(10,17,32,0.95)',
+  borderColor     : 'rgba(219,198,147,0.3)',
+  borderWidth     : 1,
+  titleColor      : '#f1f5f9',
+  bodyColor       : '#94a3b8',
+  padding         : 12,
+  cornerRadius    : 10,
+  displayColors   : true,
+  boxPadding      : 5,
+  titleFont       : { weight:'700', size:12 },
+  bodyFont        : { size:11 },
+  callbacks: {
+    label: (ctx) => {
+      const v = ctx.raw;
+      if (typeof v === 'number' && v >= 1000) return ` ${ctx.dataset.label}: €${v.toLocaleString('pt-PT')}`;
+      return ` ${ctx.dataset.label}: ${typeof v === 'number' ? v.toLocaleString('pt-PT') : v}`;
+    }
+  }
+};
+
+// helper: gradient fill on a canvas
+function makeGrad(ctx, color, alpha1=0.45, alpha2=0.0) {
+  const g = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+  g.addColorStop(0, color.replace(')', `,${alpha1})`).replace('rgb(','rgba(').replace('#', '').replace(/^([0-9a-f]{6})$/, (m) => {
+    const r=parseInt(m.slice(0,2),16), g2=parseInt(m.slice(2,4),16), b=parseInt(m.slice(4,6),16);
+    return `rgba(${r},${g2},${b},${alpha1})`;
+  }));
+  g.addColorStop(1, `rgba(0,0,0,0)`);
+  return g;
+}
+function hexToRgba(hex, a) {
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+function gradFill(canvas, hex, a1=0.5, a2=0.02) {
+  const ctx = canvas.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, canvas.height || 260);
+  g.addColorStop(0, hexToRgba(hex, a1));
+  g.addColorStop(1, hexToRgba(hex, a2));
+  return g;
+}
+
+// ── 1. Funil de Conversão ────────────────────────────────────────────
+(function() {
+  const canvas = document.getElementById('chartFunnel');
+  const ctx = canvas.getContext('2d');
+  const colors = FUNNEL_LABELS.map((_, i) => {
+    const stops = [C_PRIMARY, C_INDIGO, C_TEAL, C_AMBER, C_VIOLET, C_CYAN];
+    return stops[i % stops.length];
+  });
+  new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: FUNNEL_LABELS,
+      datasets: [
+        {
+          label: 'Nº Leads',
+          data: FUNNEL_COUNTS,
+          backgroundColor: colors.map(c => hexToRgba(c, 0.75)),
+          borderColor: colors,
+          borderWidth: 1.5,
+          borderRadius: 8,
+          borderSkipped: false,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Valor Est. (€)',
+          data: FUNNEL_VALUES,
+          type: 'line',
+          borderColor: C_PRIMARY,
+          backgroundColor: hexToRgba(C_PRIMARY, 0.08),
+          borderWidth: 2.5,
+          pointBackgroundColor: C_PRIMARY,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          tension: 0.35,
+          fill: true,
+          yAxisID: 'y2',
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { display:false },
+        tooltip: sharedTooltip,
+      },
+      scales: {
+        x: { grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#94a3b8', maxRotation:30 } },
+        y: {
+          position:'left',
+          grid:{ color:'rgba(255,255,255,0.04)' },
+          ticks:{ color:'#94a3b8', stepSize:1 },
+          title:{ display:true, text:'Leads', color:'#64748b', font:{size:10} }
+        },
+        y2: {
+          position:'right',
+          grid:{ drawOnChartArea:false },
+          ticks:{ color:'#dbc693', callback: v => '€'+v.toLocaleString('pt-PT') },
+          title:{ display:true, text:'Valor (€)', color:'#dbc693', font:{size:10} }
+        }
+      }
+    }
+  });
+})();
+
+// ── 2. Ganhas vs. Perdidas ──────────────────────────────────────────
+(function() {
+  const canvas = document.getElementById('chartWonLost');
+  const gWon  = gradFill(canvas, C_GREEN, 0.55, 0.02);
+  const gLost = gradFill(canvas, C_RED, 0.55, 0.02);
+  const gRev  = gradFill(canvas, C_PRIMARY, 0.3, 0.0);
+  new Chart(canvas, {
+    data: {
+      labels: MONTHLY_LABELS,
+      datasets: [
+        {
+          type: 'bar', label: 'Ganhas', data: MONTHLY_WON,
+          backgroundColor: hexToRgba(C_GREEN, 0.75), borderColor: C_GREEN, borderWidth:1.5,
+          borderRadius:6, borderSkipped:false, yAxisID:'y',
+        },
+        {
+          type: 'bar', label: 'Perdidas', data: MONTHLY_LOST,
+          backgroundColor: hexToRgba(C_RED, 0.65), borderColor: C_RED, borderWidth:1.5,
+          borderRadius:6, borderSkipped:false, yAxisID:'y',
+        },
+        {
+          type: 'line', label: 'Receita (€)', data: MONTHLY_REVENUE,
+          borderColor: C_PRIMARY, backgroundColor: gRev,
+          borderWidth:2.5, fill:true, tension:0.4,
+          pointBackgroundColor: C_PRIMARY, pointRadius:4, pointHoverRadius:6,
+          yAxisID:'y2',
+        }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{ legend:{display:false}, tooltip:sharedTooltip },
+      scales:{
+        x:{ grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#94a3b8', maxRotation:45, font:{size:9}} },
+        y:{
+          position:'left', grid:{color:'rgba(255,255,255,0.04)'},
+          ticks:{color:'#94a3b8',stepSize:1},
+          title:{display:true,text:'Leads',color:'#64748b',font:{size:10}}
+        },
+        y2:{
+          position:'right', grid:{drawOnChartArea:false},
+          ticks:{color:'#dbc693', callback:v=>'€'+v.toLocaleString('pt-PT')},
+          title:{display:true,text:'Receita (€)',color:'#dbc693',font:{size:10}}
+        }
+      }
+    }
+  });
+})();
+
+// ── 3. Performance por Responsável ──────────────────────────────────
+(function() {
+  if (!RESP_LABELS.length) {
+    document.getElementById('chartResponsavel').parentElement.innerHTML =
+      '<p class="text-center text-slate-500 text-sm py-12">Sem dados de responsáveis</p>';
+    return;
+  }
+  const canvas = document.getElementById('chartResponsavel');
+  new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: RESP_LABELS,
+      datasets: [
+        {
+          label:'Ganhas', data:RESP_WON,
+          backgroundColor:hexToRgba(C_GREEN,0.8), borderColor:C_GREEN,
+          borderWidth:1.5, borderRadius:6, borderSkipped:false,
+        },
+        {
+          label:'Em aberto', data:RESP_TOTAL.map((t,i)=>Math.max(0,t-RESP_WON[i]-RESP_LOST[i])),
+          backgroundColor:hexToRgba(C_INDIGO,0.6), borderColor:C_INDIGO,
+          borderWidth:1.5, borderRadius:6, borderSkipped:false,
+        },
+        {
+          label:'Perdidas', data:RESP_LOST,
+          backgroundColor:hexToRgba(C_RED,0.65), borderColor:C_RED,
+          borderWidth:1.5, borderRadius:6, borderSkipped:false,
+        }
+      ]
+    },
+    options: {
+      indexAxis:'y',
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{
+          position:'bottom', labels:{color:'#94a3b8', boxWidth:10, boxHeight:10, borderRadius:3, padding:16, font:{size:10,weight:'600'}}
+        },
+        tooltip:sharedTooltip,
+      },
+      scales:{
+        x:{ stacked:false, grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#94a3b8',stepSize:1} },
+        y:{ grid:{display:false}, ticks:{color:'#e2e8f0',font:{size:11}} }
+      }
+    }
+  });
+})();
+
+// ── 4. Previsão de Receita ──────────────────────────────────────────
+(function() {
+  const canvas = document.getElementById('chartForecast');
+  const gExp  = gradFill(canvas, C_AMBER, 0.5, 0.02);
+  const gWeig = gradFill(canvas, C_PRIMARY, 0.4, 0.01);
+  new Chart(canvas, {
+    data:{
+      labels: FC_LABELS,
+      datasets:[
+        {
+          type:'bar', label:'Valor esperado (€)', data:FC_EXPECTED,
+          backgroundColor:hexToRgba(C_AMBER,0.55), borderColor:C_AMBER,
+          borderWidth:1.5, borderRadius:8, borderSkipped:false, yAxisID:'y',
+        },
+        {
+          type:'line', label:'Ponderado por prob. (€)', data:FC_WEIGHTED,
+          borderColor:C_PRIMARY, backgroundColor:gWeig,
+          borderWidth:2.5, fill:true, tension:0.45,
+          pointBackgroundColor:C_PRIMARY, pointRadius:5, pointHoverRadius:7,
+          yAxisID:'y',
+        }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{
+          position:'bottom', labels:{color:'#94a3b8',boxWidth:10,boxHeight:10,borderRadius:3,padding:16,font:{size:10,weight:'600'}}
+        },
+        tooltip:sharedTooltip,
+      },
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#94a3b8'}},
+        y:{
+          grid:{color:'rgba(255,255,255,0.04)'},
+          ticks:{color:'#94a3b8', callback:v=>'€'+v.toLocaleString('pt-PT')},
+          title:{display:true,text:'Euros (€)',color:'#64748b',font:{size:10}}
+        }
+      }
+    }
+  });
+})();
+
+// ── 5. Análise por Fonte ────────────────────────────────────────────
+(function() {
+  const canvas = document.getElementById('chartSource');
+  const colors = SRC_LABELS.map((_, i) => PALETTE[i % PALETTE.length]);
+
+  if (!SRC_LABELS.length) {
+    canvas.parentElement.innerHTML='<p class="text-center text-slate-500 text-sm py-12 w-full">Sem dados</p>';
+    return;
+  }
+
+  new Chart(canvas, {
+    type:'doughnut',
+    data:{
+      labels:SRC_LABELS,
+      datasets:[{
+        data:SRC_COUNTS,
+        backgroundColor: colors.map(c=>hexToRgba(c,0.8)),
+        borderColor: colors,
+        borderWidth:2,
+        hoverOffset:12,
+        hoverBorderWidth:0,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      cutout:'68%',
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          ...sharedTooltip,
+          callbacks:{
+            label:(ctx)=>{
+              const total=ctx.dataset.data.reduce((a,b)=>a+b,0);
+              const pct=total?((ctx.raw/total)*100).toFixed(1):'0';
+              return ` ${ctx.label}: ${ctx.raw} leads (${pct}%)`;
+            }
+          }
+        },
+      },
+      animation:{ animateRotate:true, duration:1200, easing:'easeOutQuart' }
+    }
+  });
+
+  // Custom legend
+  const legendEl = document.getElementById('sourceLegend');
+  SRC_LABELS.forEach((l, i) => {
+    const total = SRC_COUNTS.reduce((a,b)=>a+b,0);
+    const pct = total ? ((SRC_COUNTS[i]/total)*100).toFixed(1) : '0';
+    const div = document.createElement('div');
+    div.className='flex items-center justify-between gap-3 min-w-0';
+    div.innerHTML=`
+      <div class="flex items-center gap-2 min-w-0">
+        <span style="width:10px;height:10px;border-radius:50%;background:${colors[i]};flex-shrink:0;"></span>
+        <span class="text-xs text-slate-300 truncate">${l}</span>
+      </div>
+      <div class="text-right flex-shrink-0">
+        <span class="text-xs font-bold" style="color:${colors[i]}">${pct}%</span>
+        <span class="text-xs text-slate-600 ml-1">(${SRC_COUNTS[i]})</span>
+      </div>`;
+    legendEl.appendChild(div);
+  });
+})();
+
+// ── 6. Motivos de Perda ─────────────────────────────────────────────
+(function() {
+  if (!LOST_LABELS.length) {
+    document.getElementById('chartLostReasons').parentElement.innerHTML =
+      '<p class="text-center text-slate-500 text-sm py-12">Ainda sem leads perdidas categorizadas</p>';
+    return;
+  }
+  const canvas = document.getElementById('chartLostReasons');
+  const colors = LOST_LABELS.map((_, i) => {
+    const c = [C_RED, C_AMBER, C_ROSE, C_VIOLET, C_INDIGO, C_SLATE, C_CYAN];
+    return c[i % c.length];
+  });
+  new Chart(canvas, {
+    type:'bar',
+    data:{
+      labels:LOST_LABELS,
+      datasets:[{
+        label:'Leads perdidas',
+        data:LOST_COUNTS,
+        backgroundColor:colors.map(c=>hexToRgba(c,0.75)),
+        borderColor:colors,
+        borderWidth:1.5,
+        borderRadius:8,
+        borderSkipped:false,
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          ...sharedTooltip,
+          callbacks:{
+            label:(ctx)=>{
+              const total=LOST_COUNTS.reduce((a,b)=>a+b,0);
+              const pct=total?((ctx.raw/total)*100).toFixed(1):'0';
+              return ` ${ctx.raw} leads (${pct}% do total perdido)`;
+            }
+          }
+        }
+      },
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#94a3b8',stepSize:1}},
+        y:{grid:{display:false},ticks:{color:'#e2e8f0',font:{size:11}}}
+      }
+    }
+  });
+})();
+</script>
+
+<script>
+(function() {
+  const INFO = {
+    funil: {
+      title: 'Funil de Conversão',
+      what: 'Mostra a distribuição actual de todas as leads activas pelos estágios do pipeline. Cada barra representa um estágio, com a altura a indicar o número de leads nesse estágio.',
+      comparisons: 'Compara o volume de leads (eixo esquerdo, barras coloridas) com o valor estimado de receita acumulado por estágio (eixo direito, linha dourada). Permite identificar onde há mais oportunidades em valor vs. em quantidade.',
+      formula: 'Nº Leads por estágio:\n  COUNT(leads) WHERE stage = X AND is_active = True\n\nValor estimado por estágio:\n  SUM(expected_revenue) WHERE stage = X AND is_active = True'
+    },
+    ganhos_perdidos: {
+      title: 'Ganhas vs. Perdidas',
+      what: 'Evolução mensal dos últimos 12 meses mostrando quantas oportunidades foram ganhas e perdidas em cada mês, juntamente com a receita efectivamente gerada.',
+      comparisons: 'Compara ganhas (verde) e perdidas (vermelho) no mesmo eixo (eixo esquerdo) para avaliar o rácio de sucesso mês a mês. A linha dourada (eixo direito) mostra a receita real gerada, permitindo perceber se meses com más vitórias em número compensam em valor.',
+      formula: 'Ganhas no mês M:\n  COUNT(leads) WHERE closed_at IN mês M AND stage.is_won = True\n\nPerdidas no mês M:\n  COUNT(leads) WHERE closed_at IN mês M AND stage.is_lost = True\n\nReceita no mês M:\n  SUM(expected_revenue) WHERE closed_at IN mês M AND stage.is_won = True'
+    },
+    responsavel: {
+      title: 'Performance por Responsável',
+      what: 'Apresenta os 8 utilizadores com mais leads atribuídas, dividindo o seu portefólio em três categorias: leads ganhas, leads em aberto (activas) e leads perdidas.',
+      comparisons: 'Coloca lado a lado o resultado de cada comercial — vitórias (verde), pipeline activo (dourado) e derrotas (vermelho) — numa barra horizontal empilhada. Permite comparar eficiência entre membros da equipa e identificar padrões de performance.',
+      formula: 'Para cada utilizador responsável:\n  Ganhas   = COUNT(leads) WHERE responsible = U AND stage.is_won = True\n  Perdidas = COUNT(leads) WHERE responsible = U AND stage.is_lost = True\n  Aberto   = COUNT(leads) WHERE responsible = U AND is_active = True\n             AND NOT is_won AND NOT is_lost\n\nTop 8 ordenado por: Ganhas + Aberto + Perdidas (total)'
+    },
+    forecast: {
+      title: 'Previsão de Receita',
+      what: 'Projecta a receita esperada para os próximos 6 meses com base nas leads activas que têm data de fecho prevista definida. Apresenta dois cenários: o optimista (valor bruto) e o realista (ponderado pela probabilidade de fecho).',
+      comparisons: 'Compara o Valor Esperado Bruto (barras — soma do expected_revenue de todas as leads previstas para esse mês) com a Receita Ponderada (linha — valor ajustado pela probabilidade de fecho de cada lead). A diferença entre os dois representa o risco do pipeline.',
+      formula: 'Para cada mês futuro M (próximos 6):\n\n  Esperado Bruto:\n    SUM(expected_revenue)\n    WHERE expected_close_date IN mês M AND is_active = True\n\n  Ponderado por Probabilidade:\n    SUM(expected_revenue × probability / 100)\n    WHERE expected_close_date IN mês M AND is_active = True'
+    },
+    fonte: {
+      title: 'Análise por Fonte',
+      what: 'Doughnut chart que mostra a distribuição das leads por canal de origem (Website, Cold Call, Referência, Instagram, etc.). A legenda lateral inclui o volume e a receita gerada por cada fonte.',
+      comparisons: 'Compara a participação relativa de cada canal no total de leads geradas. A legenda mostra também a receita associada a cada fonte, permitindo perceber quais os canais que não só trazem mais leads mas também as mais valiosas.',
+      formula: 'Para cada fonte S:\n  Volume   = COUNT(leads) WHERE source = S\n  Receita  = SUM(expected_revenue) WHERE source = S\n             AND stage.is_won = True\n  % total  = Volume(S) / SUM(todos os volumes) × 100'
+    },
+    perda: {
+      title: 'Motivos de Perda',
+      what: 'Gráfico de barras horizontais que categoriza todas as leads perdidas pelo motivo de perda registado no momento de fechar a oportunidade como perdida.',
+      comparisons: 'Ordena os motivos de maior para menor frequência, permitindo identificar padrões sistémicos. O tooltip mostra a percentagem de cada motivo sobre o total de perdas, facilitando a priorização de acções correctivas.',
+      formula: 'Para cada categoria de perda C:\n  COUNT(leads) WHERE stage.is_lost = True\n               AND lost_reason_category = C\n\n  % = COUNT(C) / SUM(todas as perdas) × 100\n\nCategorias:\n  PRICE · COMPETITOR · TIMING · NO_BUDGET\n  NO_RESPONSE · REQUIREMENTS · OTHER'
+    }
+  };
+
+  window.chartInfoOpen = function(key) {
+    const d = INFO[key];
+    if (!d) return;
+    document.getElementById('chartInfoTitle').textContent       = d.title;
+    document.getElementById('chartInfoWhat').textContent        = d.what;
+    document.getElementById('chartInfoComparisons').textContent = d.comparisons;
+    document.getElementById('chartInfoFormula').textContent     = d.formula;
+    document.getElementById('chartInfoModal').style.display     = 'flex';
+  };
+
+  window.chartInfoClose = function() {
+    document.getElementById('chartInfoModal').style.display = 'none';
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') window.chartInfoClose();
+  });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const backdrop = document.getElementById('chartInfoModal');
+    if (backdrop) {
+      backdrop.addEventListener('click', function(e) {
+        if (e.target === backdrop) window.chartInfoClose();
+      });
+    }
+  });
+})();
+</script>
+{% endblock %}

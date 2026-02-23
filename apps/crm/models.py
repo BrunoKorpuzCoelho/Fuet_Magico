@@ -78,6 +78,12 @@ class CRMStage(AbstractBaseModel):
         verbose_name='Cor',
         help_text='Cor hexadecimal (ex: #28a745 para verde)'
     )
+    win_probability = models.FloatField(
+        default=10.0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        verbose_name='Probabilidade Histórica (%)',
+        help_text='Calculado automaticamente: % de leads ganhas que passaram por este estágio'
+    )
     owner_company = models.ForeignKey(
         Company,
         on_delete=models.CASCADE,
@@ -122,9 +128,20 @@ class Lead(AbstractBaseModel):
         ('REFERRAL', 'Referral'),
         ('COLD_CALL', 'Cold Call'),
         ('SOCIAL_MEDIA', 'Social Media'),
+        ('RETURNING', 'Cliente Recorrente'),
         ('OTHER', 'Other'),
     ]
-    
+
+    LOST_REASON_CATEGORY_CHOICES = [
+        ('PRICE', 'Preço'),
+        ('COMPETITOR', 'Concorrência'),
+        ('TIMING', 'Timing / Sem urgência'),
+        ('NO_BUDGET', 'Sem Orçamento'),
+        ('NO_RESPONSE', 'Sem Resposta'),
+        ('REQUIREMENTS', 'Requisitos não cumpridos'),
+        ('OTHER', 'Outro'),
+    ]
+
     contact = models.ForeignKey(
         Contact,
         on_delete=models.CASCADE,
@@ -235,7 +252,31 @@ class Lead(AbstractBaseModel):
         verbose_name='Stage Updated At',
         help_text='Timestamp when stage was last changed (for routing calculation)'
     )
-    
+    is_prospect = models.BooleanField(
+        default=False,
+        verbose_name='É Prospecto',
+        help_text='Prospecto ainda n\u00e3o qualificado — n\u00e3o aparece no pipeline principal'
+    )
+    probability_locked = models.BooleanField(
+        default=False,
+        verbose_name='Probabilidade Manual',
+        help_text='Se True, a probabilidade não é atualizada automaticamente pelo sistema'
+    )
+    closed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Data de Fecho',
+        help_text='Data/hora em que a lead foi ganha ou perdida. Preenchido automaticamente.'
+    )
+    lost_reason_category = models.CharField(
+        max_length=20,
+        choices=LOST_REASON_CATEGORY_CHOICES,
+        blank=True,
+        default='',
+        verbose_name='Categoria do Motivo de Perda',
+        help_text='Categoria estruturada do motivo de perda (para análise em relatórios)'
+    )
+
     class Meta:
         ordering = ['-created_at']
         verbose_name = 'Lead'
@@ -255,6 +296,30 @@ class Lead(AbstractBaseModel):
         }
         return priority_map.get(self.priority, 2)
     
+    def save(self, *args, **kwargs):
+        """Override: auto-set closed_at when stage changes to won/lost; clear it when moved back."""
+        if self.pk and self.stage_id:
+            try:
+                old = Lead.objects.only('stage_id', 'closed_at').get(pk=self.pk)
+                if old.stage_id != self.stage_id:
+                    self.stage_updated_at = timezone.now()
+                    if self.stage.is_won_stage or self.stage.is_lost_stage:
+                        if not self.closed_at:
+                            self.closed_at = timezone.now()
+                    else:
+                        self.closed_at = None
+            except Lead.DoesNotExist:
+                pass
+        elif not self.pk and self.stage_id:
+            # New lead — set closed_at if created directly in a won/lost stage
+            try:
+                if self.stage.is_won_stage or self.stage.is_lost_stage:
+                    if not self.closed_at:
+                        self.closed_at = timezone.now()
+            except Exception:
+                pass
+        super().save(*args, **kwargs)
+
     def filter_by_company(self, company=None):
         if company:
             return Lead.objects.filter(
@@ -396,7 +461,54 @@ class LeadNote(AbstractBaseModel):
         return f'{self.author} — {self.lead} ({self.created_at:%d/%m/%Y})'
 
 
-# Os emails enviados/recebidos no contexto de uma lead são guardados em
+class CRMConfig(AbstractBaseModel):
+    """
+    Configura\u00e7\u00f5es de CRM por empresa.
+    Criado automaticamente na primeira vez que as defini\u00e7\u00f5es s\u00e3o guardadas.
+    """
+    company = models.OneToOneField(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='crm_config',
+        verbose_name='Empresa'
+    )
+    predictive_scoring = models.BooleanField(
+        default=True,
+        verbose_name='Pontua\u00e7\u00e3o Preditiva',
+        help_text='Calcula automaticamente a probabilidade de fecho com base no hist\u00f3rico de leads'
+    )
+    prospects_enabled = models.BooleanField(
+        default=False,
+        verbose_name='Prospectos',
+        help_text='Ativa a fase de prospecto antes do pipeline (leads n\u00e3o qualificadas)'
+    )
+    lead_generation_years = models.IntegerField(
+        default=3,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        verbose_name='Per\u00edodo Hist\u00f3rico (anos)',
+        help_text='Quantos anos de hist\u00f3rico usar para gerar leads autom\u00e1ticas'
+    )
+    last_probability_update = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='\u00daltima Atualiza\u00e7\u00e3o de Probabilidades'
+    )
+
+    class Meta:
+        verbose_name = 'Configura\u00e7\u00f5es CRM'
+        verbose_name_plural = 'Configura\u00e7\u00f5es CRM'
+
+    def __str__(self):
+        return f'CRM Config — {self.company}'
+
+    @classmethod
+    def for_company(cls, company):
+        """Retorna (ou cria) a config CRM da empresa."""
+        config, _ = cls.objects.get_or_create(company=company)
+        return config
+
+
+# Os emails enviados/recebidos no contexto de uma lead s\u00e3o guardados em
 # apps.core.models.ChatterMessage (message_type='EMAIL') com GenericForeignKey
 # a apontar para o registo em questão (Lead, futuramente Compra, Venda, etc.).
 #

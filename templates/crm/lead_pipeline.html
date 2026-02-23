@@ -22,6 +22,19 @@
         flex-shrink: 0;
     }
     
+    /* Mobile: colunas mais estreitas para melhor UX */
+    @media (max-width: 767px) {
+        .kanban-column {
+            width: 280px !important;
+            min-width: 280px !important;
+        }
+        
+        .kanban-column.collapsed {
+            width: 60px !important;
+            min-width: 60px !important;
+        }
+    }
+    
     .kanban-column-body {
         flex: 1;
     }
@@ -42,6 +55,7 @@
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
     }
 </style>
+
 {% endblock %}
 
 {% block sub_navbar %}
@@ -83,7 +97,10 @@
                         <span>Novo</span>
                     </a>
                     
-                    <button type="button" class="px-4 py-2 bg-transparent border border-primary hover:bg-primary/10 text-white rounded-lg font-medium transition-colors flex items-center space-x-2">
+                    <button type="button"
+                            id="btn-pipeline-generate-leads"
+                            onclick="openPipelineGenerateModal()"
+                            class="px-4 py-2 bg-transparent border border-primary hover:bg-primary/10 text-white rounded-lg font-medium transition-colors flex items-center space-x-2">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                         </svg>
@@ -104,6 +121,7 @@
                                 placeholder="Pesquisar oportunidades..."
                                 class="w-full px-4 py-2 pl-10 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                             <input type="hidden" name="field" id="searchField" value="{{ search_field|default:'title' }}">
+                            <input type="hidden" name="age" id="ageFilterInput" value="{{ age_filter|default:'1' }}">
                             
                             <!-- Search Icon -->
                             <svg class="absolute left-3 top-2.5 h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -120,6 +138,18 @@
                                 </svg>
                             </button>
                         </div>
+
+                        <!-- Active period indicator -->
+                        <div class="flex items-center mt-1 px-1 gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+                            <span>Período:</span>
+                            <span class="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
+                                {% if age_filter == 'all' %}Todas
+                                {% elif age_filter == '2' %}Até 2 anos
+                                {% elif age_filter == '3' %}Até 3 anos
+                                {% elif age_filter == '5' %}Até 5 anos
+                                {% else %}Até 1 ano{% endif %}
+                            </span>
+                        </div>
                     
                         <!-- Combined Filters Dropdown -->
                         <div x-show="filtersOpen" 
@@ -127,7 +157,7 @@
                              x-transition:enter="transition ease-out duration-100"
                              x-transition:enter-start="opacity-0 scale-95"
                              x-transition:enter-end="opacity-100 scale-100"
-                             class="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto"
+                             class="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto overflow-x-visible"
                              style="display: none;">
                             <div class="p-3">
                                 <!-- Search Fields Section -->
@@ -150,6 +180,37 @@
                                 <a href="#" @click.prevent="document.getElementById('searchField').value='description'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
                                     Search <strong>Description</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
                                 </a>
+
+                                <!-- Age Filter Section -->
+                                <hr class="my-3 border-gray-200 dark:border-gray-700">
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">PERÍODO:</p>
+                                <a href="#" @click.prevent="document.getElementById('ageFilterInput').value='1'; document.getElementById('searchForm').submit();"
+                                   class="flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if age_filter == '1' or not age_filter %}text-primary font-semibold{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                                    <span>Até 1 ano</span>
+                                    {% if age_filter == '1' or not age_filter %}<span>✓</span>{% endif %}
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('ageFilterInput').value='2'; document.getElementById('searchForm').submit();"
+                                   class="flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if age_filter == '2' %}text-primary font-semibold{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                                    <span>Até 2 anos</span>
+                                    {% if age_filter == '2' %}<span>✓</span>{% endif %}
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('ageFilterInput').value='3'; document.getElementById('searchForm').submit();"
+                                   class="flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if age_filter == '3' %}text-primary font-semibold{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                                    <span>Até 3 anos</span>
+                                    {% if age_filter == '3' %}<span>✓</span>{% endif %}
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('ageFilterInput').value='5'; document.getElementById('searchForm').submit();"
+                                   class="flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if age_filter == '5' %}text-primary font-semibold{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                                    <span>Até 5 anos</span>
+                                    {% if age_filter == '5' %}<span>✓</span>{% endif %}
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('ageFilterInput').value='all'; document.getElementById('searchForm').submit();"
+                                   class="flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if age_filter == 'all' %}text-primary font-semibold{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                                    <span>Todas</span>
+                                    {% if age_filter == 'all' %}<span>✓</span>{% endif %}
+                                </a>
+
+
                             </div>
                         </div>
                     </form>
@@ -178,47 +239,157 @@
     </div>
 
     <!-- Search & Actions Bar - Mobile -->
-    <div class="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-3">
+    <div class="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-3" x-data="{ menuOpen: false, filtersOpen: false, searchQuery: '{{ search_query|default:'' }}' }">
         <div class="px-4">
-            <div class="flex items-center gap-2 mb-3">
-                <!-- New Button -->
-                <a href="{% url 'crm:lead_create' %}" class="p-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors">
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                </a>
-                
-                <!-- Create Leads Button -->
-                <button type="button" class="p-2 bg-transparent border border-primary hover:bg-primary/10 text-white rounded-lg transition-colors">
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+            <!-- Main Row: Hamburger + Search + View Toggle -->
+            <div class="flex items-center gap-2">
+                <!-- Hamburger Menu Button -->
+                <button @click="menuOpen = !menuOpen" class="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                     </svg>
                 </button>
                 
-                <!-- Search -->
-                <form method="GET" action="{% url 'crm:crm_home' %}" class="flex-1">
-                    <div class="relative">
-                        <input type="text" name="search" value="{{ search_query|default:'' }}" placeholder="Pesquisar oportunidades..." 
-                               class="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary">
-                        <svg class="absolute left-3 top-2.5 h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
-                    </div>
-                </form>
+                <!-- Search Bar -->
+                <div class="flex-1 relative" x-data="{ filtersOpen: false }">
+                    <form method="GET" action="{% url 'crm:crm_home' %}" id="searchFormMobile">
+                        <div class="relative">
+                            <input type="text" 
+                                   name="search" 
+                                   x-model="searchQuery"
+                                   @focus="filtersOpen = true"
+                                   @input="filtersOpen = searchQuery.length > 0"
+                                   value="{{ search_query|default:'' }}" 
+                                   placeholder="Pesquisar..." 
+                                   class="w-full px-3 py-2 pl-9 pr-9 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <input type="hidden" name="field" id="searchFieldMobile" value="{{ search_field|default:'title' }}">
+                            <input type="hidden" name="age" id="ageFilterMobile" value="{{ age_filter|default:'1' }}">
+                            
+                            <!-- Search Icon -->
+                            <svg class="absolute left-2.5 top-2.5 h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            
+                            <!-- Filter Dropdown Button (Chevron) -->
+                            <button 
+                                type="button"
+                                @click="filtersOpen = !filtersOpen"
+                                class="absolute right-2 top-2 p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                <svg class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <!-- Active period indicator -->
+                        <div class="flex items-center mt-1 px-1 gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+                            <span>Período:</span>
+                            <span class="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
+                                {% if age_filter == 'all' %}Todas
+                                {% elif age_filter == '2' %}Até 2 anos
+                                {% elif age_filter == '3' %}Até 3 anos
+                                {% elif age_filter == '5' %}Até 5 anos
+                                {% else %}Até 1 ano{% endif %}
+                            </span>
+                        </div>
+                        
+                        <!-- Filters Dropdown Mobile -->
+                        <div x-show="filtersOpen" 
+                             @click.away="filtersOpen = false"
+                             x-transition:enter="transition ease-out duration-100"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             class="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto"
+                             style="display: none;">
+                            <div class="p-3">
+                                <!-- Search Fields Section -->
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">PESQUISAR POR CAMPO:</p>
+                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='title'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Search <strong>Title</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='contact'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Search <strong>Contact</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='source'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Search <strong>Source</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='assigned_to'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Search <strong>Assigned To</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='priority'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Search <strong>Priority</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='description'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Search <strong>Description</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+
+                                <!-- Age Filter Section -->
+                                <hr class="my-3 border-gray-200 dark:border-gray-700">
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">PERÍODO:</p>
+                                <a href="#" @click.prevent="document.getElementById('ageFilterMobile').value='1'; document.getElementById('searchFormMobile').submit();"
+                                   class="flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if age_filter == '1' or not age_filter %}text-primary font-semibold{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                                    <span>Até 1 ano</span>
+                                    {% if age_filter == '1' or not age_filter %}<span>✓</span>{% endif %}
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('ageFilterMobile').value='2'; document.getElementById('searchFormMobile').submit();"
+                                   class="flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if age_filter == '2' %}text-primary font-semibold{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                                    <span>Até 2 anos</span>
+                                    {% if age_filter == '2' %}<span>✓</span>{% endif %}
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('ageFilterMobile').value='3'; document.getElementById('searchFormMobile').submit();"
+                                   class="flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if age_filter == '3' %}text-primary font-semibold{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                                    <span>Até 3 anos</span>
+                                    {% if age_filter == '3' %}<span>✓</span>{% endif %}
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('ageFilterMobile').value='5'; document.getElementById('searchFormMobile').submit();"
+                                   class="flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if age_filter == '5' %}text-primary font-semibold{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                                    <span>Até 5 anos</span>
+                                    {% if age_filter == '5' %}<span>✓</span>{% endif %}
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('ageFilterMobile').value='all'; document.getElementById('searchFormMobile').submit();"
+                                   class="flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if age_filter == 'all' %}text-primary font-semibold{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                                    <span>Todas</span>
+                                    {% if age_filter == 'all' %}<span>✓</span>{% endif %}
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
                 
                 <!-- View Toggle -->
                 <div class="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-                    <a href="{% url 'crm:lead_pipeline' %}" class="px-2 py-1.5 bg-primary text-white">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <a href="{% url 'crm:lead_pipeline' %}" class="p-2 bg-primary text-white transition-colors">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
                         </svg>
                     </a>
-                    <a href="{% url 'crm:lead_list' %}" class="px-2 py-1.5 text-gray-600 dark:text-gray-400">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <a href="{% url 'crm:lead_list' %}" class="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                         </svg>
                     </a>
                 </div>
+            </div>
+            
+            <!-- Mobile Menu Dropdown -->
+            <div x-show="menuOpen" @click.away="menuOpen = false" class="mt-3 bg-gray-50 dark:bg-gray-700 rounded-lg p-3 space-y-2" style="display: none;">
+                <!-- New Lead Button -->
+                <a href="{% url 'crm:lead_create' %}" class="w-full px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center justify-center space-x-2">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    <span>Novo Lead</span>
+                </a>
+                
+                <!-- Create Leads Button -->
+                <button type="button"
+                        onclick="openPipelineGenerateModal()"
+                        class="w-full px-4 py-2 bg-transparent border border-primary hover:bg-primary/10 text-white rounded-lg font-medium transition-colors flex items-center justify-center space-x-2">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                    </svg>
+                    <span>Criar Leads</span>
+                </button>
             </div>
         </div>
     </div>
@@ -299,6 +470,14 @@
             <div class="kanban-column-body space-y-2 px-1"
                  :style="collapsed ? 'height: 0; min-height: 0; overflow: hidden; padding: 0;' : 'min-height: 200px;'"
                  data-stage-id="{{ stage_data.stage.id }}">
+                {% if not stage_data.leads %}
+                <div class="flex flex-col items-center justify-center py-8 text-gray-600 select-none pointer-events-none">
+                    <svg class="h-7 w-7 mb-2 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <p class="text-xs opacity-40">Sem oportunidades</p>
+                </div>
+                {% endif %}
                 {% for lead in stage_data.leads %}
                 <div class="lead-card rounded-lg p-3 shadow-sm cursor-move border hover:border-gray-600
                     {% if lead.is_overdue %}bg-red-900/30 border-red-700/50{% elif lead.is_warning %}bg-yellow-900/30 border-yellow-700/50{% else %}bg-gray-800 dark:bg-gray-800 border-gray-700{% endif %}"
@@ -378,10 +557,12 @@
 
 <!-- SortableJS for Drag & Drop (loaded from CDN) -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+
 <script>
     // Global variables and functions (must be outside DOMContentLoaded for onclick handlers)
     let isDragging = false;
-    
+
     // Navigate to lead detail/edit page
     function navigateToLead(leadId) {
         if (!isDragging) {
@@ -464,37 +645,199 @@
             });
         }
 
-        // Initialize Sortable on each column
-        const columns = document.querySelectorAll('.kanban-column-body');
-        columns.forEach(column => {
-            Sortable.create(column, {
-                group: 'leads',  // Allow drag between ALL columns
-                animation: 150,
-                ghostClass: 'opacity-50',
-                dragClass: 'sortable-drag',
-                fallbackOnBody: true,
-                swapThreshold: 0.65,
-                handle: '.lead-card',  // Only cards are draggable
-                draggable: '.lead-card',
-                onStart: function(evt) {
-                    isDragging = true;
-                },
-                onEnd: function(evt) {
-                    const leadId = evt.item.dataset.leadId;
-                    const oldStageId = evt.from.dataset.stageId;
-                    const newStageId = evt.to.dataset.stageId;
-                    
-                    if (oldStageId !== newStageId) {
-                        moveLeadToStage(leadId, newStageId, evt.item);
+        // Detect touch devices
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+        
+        // Initialize Sortable on each column (only on non-touch devices)
+        if (!isTouchDevice) {
+            const columns = document.querySelectorAll('.kanban-column-body');
+            columns.forEach(column => {
+                Sortable.create(column, {
+                    group: 'leads',  // Allow drag between ALL columns
+                    animation: 150,
+                    ghostClass: 'opacity-50',
+                    dragClass: 'sortable-drag',
+                    fallbackOnBody: true,
+                    swapThreshold: 0.65,
+                    handle: '.lead-card',  // Only cards are draggable
+                    draggable: '.lead-card',
+                    onStart: function(evt) {
+                        isDragging = true;
+                    },
+                    onEnd: function(evt) {
+                        const leadId = evt.item.dataset.leadId;
+                        const oldStageId = evt.from.dataset.stageId;
+                        const newStageId = evt.to.dataset.stageId;
+                        
+                        if (oldStageId !== newStageId) {
+                            moveLeadToStage(leadId, newStageId, evt.item);
+                        }
+                        
+                        // Reset drag state after a short delay to prevent click
+                        setTimeout(() => {
+                            isDragging = false;
+                        }, 100);
                     }
-                    
-                    // Reset drag state after a short delay to prevent click
-                    setTimeout(() => {
-                        isDragging = false;
-                    }, 100);
-                }
+                });
             });
-        });
+        }
     });
+
+    // ── Gerar Leads Modal ────────────────────────────────────────────────────
+    const PREVIEW_URL = '{% url "crm:generate_leads" %}?action=preview';
+    const GENERATE_URL = '{% url "crm:generate_leads" %}';
+    const CSRF = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    function openPipelineGenerateModal() {
+        const modal = document.getElementById('pipeline-gen-modal');
+        modal.classList.remove('hidden');
+
+        // Reset
+        document.getElementById('pgen-loading').classList.remove('hidden');
+        document.getElementById('pgen-result').classList.add('hidden');
+        document.getElementById('pgen-error').classList.add('hidden');
+        document.getElementById('pgen-confirm').disabled = true;
+
+        fetch(PREVIEW_URL, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('pgen-loading').classList.add('hidden');
+                document.getElementById('pgen-result').classList.remove('hidden');
+
+                const eligible = data.eligible || 0;
+                document.getElementById('pgen-count').textContent = eligible;
+                document.getElementById('pgen-years-label').textContent =
+                    `Janela sazonal · ${data.years} ano${data.years !== 1 ? 's' : ''} de histórico`;
+
+                const windowsEl = document.getElementById('pgen-windows');
+                windowsEl.innerHTML = '';
+                (data.windows || []).forEach(w => {
+                    const s = w.start.split('-').reverse().join('/');
+                    const e = w.end.split('-').reverse().join('/');
+                    const d = document.createElement('div');
+                    d.className = 'flex items-center gap-2 text-xs text-gray-500';
+                    d.innerHTML = `<span class="w-5 text-center text-gray-600 font-medium">${w.year}</span>`
+                        + `<span>${s}</span>`
+                        + `<span class="text-gray-600">→</span>`
+                        + `<span>${e}</span>`;
+                    windowsEl.appendChild(d);
+                });
+
+                if (eligible === 0) {
+                    document.getElementById('pgen-input-area').classList.add('hidden');
+                    document.getElementById('pgen-empty').classList.remove('hidden');
+                } else {
+                    document.getElementById('pgen-input-area').classList.remove('hidden');
+                    document.getElementById('pgen-empty').classList.add('hidden');
+                    const inp = document.getElementById('pgen-count-input');
+                    inp.max = eligible;
+                    inp.value = Math.min(10, eligible);
+                    document.getElementById('pgen-max').textContent = eligible;
+                    document.getElementById('pgen-confirm').disabled = false;
+                }
+            })
+            .catch(() => {
+                document.getElementById('pgen-loading').classList.add('hidden');
+                document.getElementById('pgen-error').classList.remove('hidden');
+            });
+    }
+
+    function closePipelineGenerateModal() {
+        document.getElementById('pipeline-gen-modal').classList.add('hidden');
+    }
+
+    function confirmPipelineGenerate() {
+        const count = document.getElementById('pgen-count-input').value;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = GENERATE_URL;
+        form.innerHTML = `<input name="csrfmiddlewaretoken" value="${CSRF}"><input name="lead_count" value="${count}">`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closePipelineGenerateModal();
+    });
+    // ────────────────────────────────────────────────────────────────────────
 </script>
+
+<!-- Modal: Gerar Leads de Seguimento (Pipeline) -->
+<div id="pipeline-gen-modal"
+     class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden"
+     role="dialog" aria-modal="true">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closePipelineGenerateModal()"></div>
+    <div class="relative z-10 w-full max-w-md bg-[#111827] border border-gray-700 rounded-2xl shadow-2xl overflow-hidden">
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                    <svg class="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                </div>
+                <h3 class="text-base font-semibold text-gray-100">Gerar Leads de Seguimento</h3>
+            </div>
+            <button onclick="closePipelineGenerateModal()" class="text-gray-500 hover:text-gray-300 transition-colors">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <!-- Body -->
+        <div class="px-6 py-5 space-y-4">
+            <div id="pgen-loading" class="flex flex-col items-center py-6 gap-3">
+                <svg class="animate-spin h-8 w-8 text-emerald-400" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+                <span class="text-sm text-gray-500">A analisar histórico…</span>
+            </div>
+            <div id="pgen-result" class="hidden space-y-4">
+                <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-800/60 border border-gray-700">
+                    <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                        <span id="pgen-count" class="text-lg font-bold text-emerald-400">—</span>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-gray-200">contactos elegíveis encontrados</div>
+                        <div id="pgen-years-label" class="text-xs text-gray-500"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Janelas sazonais analisadas</div>
+                    <div id="pgen-windows" class="space-y-1 max-h-32 overflow-y-auto"></div>
+                </div>
+                <div id="pgen-input-area">
+                    <label class="block text-xs font-medium text-gray-400 mb-2">
+                        Quantas leads pretende gerar?
+                        <span class="text-gray-600 font-normal">(máx. <span id="pgen-max">0</span>)</span>
+                    </label>
+                    <div class="flex items-center gap-3">
+                        <input type="number" id="pgen-count-input" min="1" max="1" value="10"
+                               class="w-28 h-9 px-3 rounded-lg border border-gray-700 bg-gray-800 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <span class="text-xs text-gray-600">leads criadas como prospectos</span>
+                    </div>
+                </div>
+                <div id="pgen-empty" class="hidden text-center py-2">
+                    <p class="text-sm text-gray-500">Nenhum contacto elegível.<br>
+                    <span class="text-xs text-gray-600">Todos já têm prospectos ou oportunidades abertas.</span></p>
+                </div>
+            </div>
+            <div id="pgen-error" class="hidden text-center py-4">
+                <p class="text-sm text-red-400">Erro ao carregar dados.</p>
+            </div>
+        </div>
+        <!-- Footer -->
+        <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-800 bg-gray-900/40">
+            <button onclick="closePipelineGenerateModal()"
+                    class="px-4 h-8 rounded-lg border border-gray-700 text-sm text-gray-400 hover:text-gray-200 transition-colors">
+                Cancelar
+            </button>
+            <button id="pgen-confirm" onclick="confirmPipelineGenerate()" disabled
+                    class="px-4 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium text-white transition-colors">
+                Gerar Leads
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}

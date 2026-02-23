@@ -835,8 +835,353 @@ def user_smtp_save(request, user_id):
     return JsonResponse({'success': True, 'has_smtp': config.has_smtp_configured})
 
 
-@login_required
-@require_http_methods(['POST'])
+# ──────────────────────────────────────────────────────────────────────────────
+# Company Management
+# ──────────────────────────────────────────────────────────────────────────────
+
+@admin_required
+def company_list_view(request):
+    """Lista todas as empresas (admin only)."""
+    from django.core.paginator import Paginator
+    from django.db.models import Q as Qobj
+
+    qs = Company.objects.select_related('parent_company').order_by('name')
+
+    search_query = request.GET.get('search', '').strip()
+    search_field = request.GET.get('field', '')
+    status_filter = request.GET.get('status', 'active')
+
+    if search_query:
+        if search_field == 'name':
+            qs = qs.filter(name__icontains=search_query)
+        elif search_field == 'legal_name':
+            qs = qs.filter(legal_name__icontains=search_query)
+        elif search_field == 'vat':
+            qs = qs.filter(vat__icontains=search_query)
+        elif search_field == 'email':
+            qs = qs.filter(email__icontains=search_query)
+        elif search_field == 'city':
+            qs = qs.filter(city__icontains=search_query)
+        elif search_field == 'phone':
+            qs = qs.filter(phone__icontains=search_query)
+        else:
+            qs = qs.filter(
+                Qobj(name__icontains=search_query) |
+                Qobj(legal_name__icontains=search_query) |
+                Qobj(vat__icontains=search_query) |
+                Qobj(email__icontains=search_query) |
+                Qobj(city__icontains=search_query) |
+                Qobj(phone__icontains=search_query)
+            )
+
+    if status_filter == 'archived':
+        qs = qs.filter(is_active=False)
+    else:
+        qs = qs.filter(is_active=True)
+
+    total_count = qs.count()
+
+    try:
+        page_size = int(request.GET.get('page_size', 25))
+        page_size = max(5, min(page_size, 200))
+    except (ValueError, TypeError):
+        page_size = 25
+
+    paginator = Paginator(qs, page_size)
+    page_number = request.GET.get('page', 1)
+    companies_page = paginator.get_page(page_number)
+
+    return render(request, 'accounts/company_list.html', {
+        'companies': companies_page,
+        'total_count': total_count,
+        'page_size': page_size,
+        'search_query': search_query,
+        'search_field': search_field,
+        'status_filter': status_filter,
+    })
+
+
+@admin_required
+@require_POST
+def company_bulk_archive(request):
+    """Arquivar empresas selecionadas (AJAX)."""
+    try:
+        data = json.loads(request.body)
+        company_ids = data.get('company_ids', [])
+    except Exception:
+        return JsonResponse({'success': False, 'error': {'code': 'INVALID', 'message': 'Pedido inválido.'}}, status=400)
+
+    if not company_ids:
+        return JsonResponse({'success': False, 'error': {'code': 'NO_SELECTION', 'message': 'Nenhuma empresa selecionada.'}}, status=400)
+
+    qs = Company.objects.filter(pk__in=company_ids, is_active=True)
+    if not qs.exists():
+        return JsonResponse({'success': False, 'error': {'code': 'ALREADY_ARCHIVED', 'message': 'As empresas selecionadas já estão arquivadas.'}}, status=409)
+
+    count = qs.update(is_active=False)
+    return JsonResponse({'success': True, 'message': f'{count} empresa(s) arquivada(s).'})
+
+
+@admin_required
+@require_POST
+def company_bulk_unarchive(request):
+    """Desarquivar empresas selecionadas (AJAX)."""
+    try:
+        data = json.loads(request.body)
+        company_ids = data.get('company_ids', [])
+    except Exception:
+        return JsonResponse({'success': False, 'error': {'code': 'INVALID', 'message': 'Pedido inválido.'}}, status=400)
+
+    if not company_ids:
+        return JsonResponse({'success': False, 'error': {'code': 'NO_SELECTION', 'message': 'Nenhuma empresa selecionada.'}}, status=400)
+
+    qs = Company.objects.filter(pk__in=company_ids, is_active=False)
+    if not qs.exists():
+        return JsonResponse({'success': False, 'error': {'code': 'ALREADY_ACTIVE', 'message': 'As empresas selecionadas já estão ativas.'}}, status=409)
+
+    count = qs.update(is_active=True)
+    return JsonResponse({'success': True, 'message': f'{count} empresa(s) reativada(s).'})
+
+
+@admin_required
+@require_POST
+def company_bulk_delete(request):
+    """Eliminar empresas selecionadas (AJAX)."""
+    try:
+        data = json.loads(request.body)
+        company_ids = data.get('company_ids', [])
+    except Exception:
+        return JsonResponse({'success': False, 'error': {'code': 'INVALID', 'message': 'Pedido inválido.'}}, status=400)
+
+    if not company_ids:
+        return JsonResponse({'success': False, 'error': {'code': 'NO_SELECTION', 'message': 'Nenhuma empresa selecionada.'}}, status=400)
+
+    qs = Company.objects.filter(pk__in=company_ids)
+    count = qs.count()
+    if not count:
+        return JsonResponse({'success': False, 'error': {'code': 'NOT_FOUND', 'message': 'Empresas não encontradas.'}}, status=404)
+
+    try:
+        qs.delete()
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': {'code': 'DELETE_ERROR', 'message': f'Não foi possível eliminar: {str(e)}'}}, status=409)
+
+    return JsonResponse({'success': True, 'message': f'{count} empresa(s) eliminada(s).'})
+
+
+@admin_required
+def company_create_view(request):
+    """Criar uma nova empresa."""
+    from .forms import CompanyCreateForm
+    import base64
+    import uuid
+    from django.core.files.base import ContentFile
+
+    if request.method == 'POST':
+        form = CompanyCreateForm(request.POST)
+        if form.is_valid():
+            company = form.save(commit=False)
+            # Handle base64 logo
+            logo_b64 = request.POST.get('logo_base64', '').strip()
+            if logo_b64 and ',' in logo_b64:
+                try:
+                    header, data = logo_b64.split(',', 1)
+                    img_bytes = base64.b64decode(data)
+                    ext = 'png' if 'png' in header else 'jpg'
+                    company.logo.save(f'{uuid.uuid4()}.{ext}', ContentFile(img_bytes), save=False)
+                except Exception:
+                    pass
+            company.save()
+
+            # Save WhatsApp config if phone_number_id was supplied
+            wa_phone = request.POST.get('wa_phone_number_id', '').strip()
+            if wa_phone:
+                try:
+                    from apps.core.models import CompanyWhatsAppConfig
+                    wa_cfg = CompanyWhatsAppConfig(
+                        company=company,
+                        phone_number_id=wa_phone,
+                        business_account_id=request.POST.get('wa_business_account_id', '').strip(),
+                        webhook_verify_token=request.POST.get('wa_webhook_verify_token', '').strip(),
+                        is_active=bool(request.POST.get('wa_is_active')),
+                    )
+                    raw_token = request.POST.get('wa_access_token', '').strip()
+                    if raw_token:
+                        wa_cfg.set_encrypted_token(raw_token)
+                    wa_cfg.save()
+                except Exception:
+                    pass  # WA config is optional; don't block company creation
+
+            messages.success(request, 'Empresa criada com sucesso.')
+            return redirect('accounts:company_list')
+    else:
+        form = CompanyCreateForm()
+
+    return render(request, 'accounts/company_create.html', {'form': form})
+
+
+@admin_required
+def company_edit_view(request, pk):
+    """Editar uma empresa existente."""
+    from .forms import CompanyCreateForm
+    import base64
+    import uuid
+    from django.core.files.base import ContentFile
+    from django.shortcuts import get_object_or_404
+
+    company = get_object_or_404(Company, pk=pk)
+
+    try:
+        from apps.core.models import CompanyWhatsAppConfig
+        wa_cfg = company.whatsapp_config
+    except Exception:
+        wa_cfg = None
+
+    if request.method == 'POST':
+        form = CompanyCreateForm(request.POST, instance=company)
+        if form.is_valid():
+            updated = form.save(commit=False)
+            # Handle base64 logo (only if user uploaded a new one)
+            logo_b64 = request.POST.get('logo_base64', '').strip()
+            if logo_b64 and ',' in logo_b64:
+                try:
+                    header, data = logo_b64.split(',', 1)
+                    img_bytes = base64.b64decode(data)
+                    ext = 'png' if 'png' in header else 'jpg'
+                    updated.logo.save(f'{uuid.uuid4()}.{ext}', ContentFile(img_bytes), save=False)
+                except Exception:
+                    pass
+            updated.save()
+
+            # Save / update WhatsApp config
+            wa_phone = request.POST.get('wa_phone_number_id', '').strip()
+            if wa_phone:
+                try:
+                    from apps.core.models import CompanyWhatsAppConfig
+                    wa_obj, _ = CompanyWhatsAppConfig.objects.get_or_create(company=updated)
+                    wa_obj.phone_number_id = wa_phone
+                    wa_obj.business_account_id = request.POST.get('wa_business_account_id', '').strip()
+                    wa_obj.webhook_verify_token = request.POST.get('wa_webhook_verify_token', '').strip()
+                    wa_obj.is_active = bool(request.POST.get('wa_is_active'))
+                    raw_token = request.POST.get('wa_access_token', '').strip()
+                    if raw_token:
+                        wa_obj.set_encrypted_token(raw_token)
+                    wa_obj.save()
+                except Exception:
+                    pass
+
+            messages.success(request, 'Empresa atualizada com sucesso.')
+            return redirect('accounts:company_edit', pk=company.pk)
+    else:
+        form = CompanyCreateForm(instance=company)
+
+    import json as _json
+    users_data = []
+    role_lookup = dict(CustomUser.ROLE_CHOICES)
+    for u in company.users.order_by('first_name', 'last_name', 'username'):
+        users_data.append({
+            'id': u.pk,
+            'name': u.get_full_name() or u.username,
+            'username': u.username,
+            'email': u.email or '—',
+            'role': u.role,
+            'role_label': role_lookup.get(u.role, u.role),
+            'is_active': u.is_active,
+            'avatar': u.avatar or '',
+            'edit_url': f'/accounts/users/{u.pk}/edit/',
+        })
+
+    return render(request, 'accounts/company_edit.html', {
+        'form': form,
+        'company': company,
+        'wa_cfg': wa_cfg,
+        'company_users_json': users_data,
+    })
+
+
+@admin_required
+@require_POST
+def company_user_add_view(request, pk):
+    """Adicionar utilizador a uma empresa (AJAX)."""
+    import json
+    from django.shortcuts import get_object_or_404
+    company = get_object_or_404(Company, pk=pk)
+    try:
+        data = json.loads(request.body)
+        user_id = int(data.get('user_id'))
+    except Exception:
+        return JsonResponse({'success': False, 'error': 'Pedido inválido.'}, status=400)
+    try:
+        user = CustomUser.objects.get(pk=user_id)
+    except CustomUser.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Utilizador não encontrado.'}, status=404)
+    company.users.add(user)
+    role_labels = dict(CustomUser.ROLE_CHOICES)
+    return JsonResponse({
+        'success': True,
+        'user': {
+            'id': user.pk,
+            'name': user.get_full_name() or user.username,
+            'username': user.username,
+            'email': user.email or '—',
+            'role': user.role,
+            'role_label': role_labels.get(user.role, user.role),
+            'is_active': user.is_active,
+            'avatar': user.avatar or '',
+            'edit_url': f'/accounts/users/{user.pk}/edit/',
+        },
+    })
+
+
+@admin_required
+@require_POST
+def company_user_remove_view(request, pk, user_id):
+    """Remover utilizador de uma empresa (AJAX)."""
+    from django.shortcuts import get_object_or_404
+    company = get_object_or_404(Company, pk=pk)
+    try:
+        user = CustomUser.objects.get(pk=user_id)
+    except CustomUser.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Utilizador não encontrado.'}, status=404)
+    company.users.remove(user)
+    if user.default_company_id and str(user.default_company_id) == str(company.pk):
+        user.default_company = None
+        user.save(update_fields=['default_company'])
+    return JsonResponse({'success': True})
+
+
+@admin_required
+def company_users_search_api(request, pk):
+    """Pesquisa utilizadores que NÃO pertencem à empresa (para adicionar)."""
+    from django.shortcuts import get_object_or_404
+    from django.db.models import Q as Qobj
+    company = get_object_or_404(Company, pk=pk)
+    q = request.GET.get('q', '').strip()
+    qs = CustomUser.objects.exclude(companies=company).filter(is_active=True)
+    if q:
+        qs = qs.filter(
+            Qobj(first_name__icontains=q) |
+            Qobj(last_name__icontains=q) |
+            Qobj(username__icontains=q) |
+            Qobj(email__icontains=q)
+        )
+    qs = qs.order_by('first_name', 'last_name', 'username')[:10]
+    role_labels = dict(CustomUser.ROLE_CHOICES)
+    return JsonResponse({
+        'results': [
+            {
+                'id': u.pk,
+                'name': u.get_full_name() or u.username,
+                'username': u.username,
+                'email': u.email or '',
+                'role': u.role,
+                'role_label': role_labels.get(u.role, u.role),
+            }
+            for u in qs
+        ],
+    })
+
+
 def user_smtp_test(request, user_id):
     """Send a test email using the target user's SMTP config."""
     from django.shortcuts import get_object_or_404

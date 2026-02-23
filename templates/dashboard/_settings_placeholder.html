@@ -1,0 +1,29 @@
+{% comment %}
+Variables: title, desc, phase
+{% endcomment %}
+<div class="px-8 pt-12 pb-16 flex flex-col items-center justify-center text-center max-w-lg mx-auto">
+    <!-- Icon -->
+    <div class="w-16 h-16 rounded-2xl bg-gray-800/60 border border-gray-700 flex items-center justify-center mb-6">
+        <svg class="h-8 w-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+        </svg>
+    </div>
+
+    <h3 class="text-lg font-semibold text-gray-300 mb-2">
+        {{ title }}
+        {% if phase %}
+        <span class="ml-2 px-2 py-0.5 text-xs font-medium text-gray-600 bg-gray-800 border border-gray-700 rounded-full">{{ phase }}</span>
+        {% endif %}
+    </h3>
+
+    <p class="text-sm text-gray-600 leading-relaxed">{{ desc }}</p>
+
+    <div class="mt-6 flex items-center gap-2 text-xs text-gray-700">
+        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Disponível em breve
+    </div>
+</div>

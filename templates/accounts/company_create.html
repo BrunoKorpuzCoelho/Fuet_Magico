@@ -1,0 +1,493 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+{% endblock %}
+
+{% block title %}Nova Empresa{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/companies_navbar.html' with show_form_actions=True form_action_id='company-create-form' %}
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#1f2937]">
+    <form method="post" enctype="multipart/form-data" id="company-create-form">
+        {% csrf_token %}
+
+        <div class="mx-auto max-w-7xl p-6">
+
+            {% if form.errors %}
+            <div class="mb-4 bg-red-900/30 border border-red-700 rounded-lg px-4 py-3 text-sm text-red-300 space-y-1">
+                {% for field in form %}{% for error in field.errors %}<p>{{ field.label }}: {{ error }}</p>{% endfor %}{% endfor %}
+                {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Topo: Logo + Morada | Nome + Denominação + 2col(NIF/Telefone | Email/Website) -->
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+
+                <!-- COLUNA ESQUERDA: Logo + Morada abaixo -->
+                <div class="lg:col-span-1 flex flex-col items-center gap-4">
+
+                    <!-- Logo -->
+                    <div class="relative group cursor-pointer w-40 h-40 rounded-xl overflow-hidden border-2 border-gray-700 hover:border-primary transition-colors flex-shrink-0"
+                         onclick="document.getElementById('id_logo_input').click()">
+                        <img id="logo-preview" src="" alt="Logo" class="w-full h-full object-cover hidden">
+                        <div id="logo-placeholder"
+                             class="w-full h-full flex flex-col items-center justify-center bg-gray-700 gap-2">
+                            <svg class="w-16 h-16 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                            </svg>
+                            <span class="text-xs text-gray-500">Carregar logo</span>
+                        </div>
+                        <div class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <span class="text-white text-xs font-medium">Adicionar logo</span>
+                        </div>
+                    </div>
+                    <input type="file" id="id_logo_input" accept="image/*" class="hidden" onchange="previewLogo(this)">
+                    <input type="hidden" name="logo_base64" id="logo_base64_input" value="">
+
+                    <!-- Morada abaixo do logo -->
+                    <div class="w-full space-y-2">
+                        <label class="font-medium text-xs text-gray-500">Morada</label>
+                        <input class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                               name="address" placeholder="Rua, número, andar"
+                               value="{{ form.address.value|default:'' }}">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                   name="city" placeholder="Cidade"
+                                   value="{{ form.city.value|default:'' }}">
+                            <input class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                   name="postal_code" placeholder="Código Postal"
+                                   value="{{ form.postal_code.value|default:'' }}">
+                        </div>
+                        <input class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                               name="country" placeholder="País"
+                               value="{{ form.country.value|default:'Portugal' }}">
+                    </div>
+                </div>
+
+                <!-- COLUNA DIREITA: Nome + Denominação + 2 colunas (NIF/Tel | Email/Website) -->
+                <div class="lg:col-span-2">
+                    <div class="space-y-4">
+
+                        <!-- Nome (gigante, largura total) -->
+                        <div>
+                            <label class="sr-only" for="id_name">Nome</label>
+                            <input class="flex w-full px-3 py-2 h-14 border-0 border-b-2 border-gray-600 bg-transparent text-3xl font-light text-gray-400 placeholder:text-gray-600 focus-visible:border-primary focus-visible:ring-0 rounded-none focus-visible:outline-none"
+                                   id="id_name" name="name"
+                                   placeholder="Nome da empresa"
+                                   value="{{ form.name.value|default:'' }}" required>
+                        </div>
+
+                        <!-- Denominação Social (largura total) -->
+                        <div>
+                            <label class="font-medium mb-1 flex items-center gap-2 text-xs text-gray-500" for="id_legal_name">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                     stroke-linejoin="round" class="h-3 w-3">
+                                    <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
+                                    <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
+                                    <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/>
+                                    <path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>
+                                </svg>
+                                Denominação Social
+                            </label>
+                            <input class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                   id="id_legal_name" name="legal_name"
+                                   placeholder="Denominação social completa"
+                                   value="{{ form.legal_name.value|default:'' }}">
+                        </div>
+
+                        <!-- 2 colunas: NIF + Telefone | Email + Website -->
+                        <div class="grid grid-cols-2 gap-x-6 gap-y-3 pt-1">
+
+                            <!-- COLUNA A: NIF + Telefone -->
+                            <div class="space-y-3">
+                                <div class="flex items-center gap-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                         stroke-linejoin="round" class="h-4 w-4 text-primary flex-shrink-0">
+                                        <rect x="2" y="5" width="20" height="14" rx="2"/>
+                                        <line x1="2" y1="10" x2="22" y2="10"/>
+                                    </svg>
+                                    <input class="flex w-full px-3 py-2 h-9 border-0 border-b border-gray-700 bg-transparent text-gray-400 placeholder:text-gray-600 focus-visible:border-primary focus-visible:ring-0 rounded-none focus-visible:outline-none"
+                                           id="id_vat" name="vat"
+                                           placeholder="NIF"
+                                           value="{{ form.vat.value|default:'' }}">
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                         stroke-linejoin="round" class="h-4 w-4 text-primary flex-shrink-0">
+                                        <path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/>
+                                    </svg>
+                                    <input class="flex w-full px-3 py-2 h-9 border-0 border-b border-gray-700 bg-transparent text-gray-400 placeholder:text-gray-600 focus-visible:border-primary focus-visible:ring-0 rounded-none focus-visible:outline-none"
+                                           id="id_phone" name="phone" type="text"
+                                           placeholder="Telefone"
+                                           value="{{ form.phone.value|default:'' }}">
+                                </div>
+                                <!-- Nº Registo + Moeda -->
+                                <div class="mt-2 pt-2 border-t border-gray-800 space-y-3">
+                                    <div class="flex items-center gap-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-primary flex-shrink-0">
+                                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                                        </svg>
+                                        <input class="flex w-full px-3 py-2 h-9 border-0 border-b border-gray-700 bg-transparent text-gray-400 placeholder:text-gray-600 focus-visible:border-primary focus-visible:ring-0 rounded-none focus-visible:outline-none"
+                                               name="company_registry" placeholder="Nº Registo Comercial"
+                                               value="{{ form.company_registry.value|default:'' }}">
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-primary flex-shrink-0">
+                                            <circle cx="12" cy="12" r="10"/>
+                                            <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/>
+                                            <path d="M12 18V6"/>
+                                        </svg>
+                                        <select name="currency" class="flex-1 h-9 rounded-md border border-gray-700 bg-[#1a2332] px-2 text-sm text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                                            <option value="EUR" {% if form.currency.value == 'EUR' or not form.currency.value %}selected{% endif %}>EUR — Euro</option>
+                                            <option value="USD" {% if form.currency.value == 'USD' %}selected{% endif %}>USD — Dólar Americano</option>
+                                            <option value="GBP" {% if form.currency.value == 'GBP' %}selected{% endif %}>GBP — Libra Esterlina</option>
+                                            <option value="CHF" {% if form.currency.value == 'CHF' %}selected{% endif %}>CHF — Franco Suíço</option>
+                                            <option value="BRL" {% if form.currency.value == 'BRL' %}selected{% endif %}>BRL — Real Brasileiro</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- COLUNA B: Email + Website -->
+                            <div class="space-y-3">
+                                <div class="flex items-center gap-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                         stroke-linejoin="round" class="h-4 w-4 text-primary flex-shrink-0">
+                                        <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/>
+                                        <rect x="2" y="4" width="20" height="16" rx="2"/>
+                                    </svg>
+                                    <input class="flex w-full px-3 py-2 h-9 border-0 border-b border-gray-700 bg-transparent text-gray-400 placeholder:text-gray-600 focus-visible:border-primary focus-visible:ring-0 rounded-none focus-visible:outline-none"
+                                           id="id_email" name="email" type="email"
+                                           placeholder="Email"
+                                           value="{{ form.email.value|default:'' }}">
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                         stroke-linejoin="round" class="h-4 w-4 text-primary flex-shrink-0">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+                                        <path d="M2 12h20"/>
+                                    </svg>
+                                    <input class="flex w-full px-3 py-2 h-9 border-0 border-b border-gray-700 bg-transparent text-gray-400 placeholder:text-gray-500 focus-visible:border-primary focus-visible:ring-0 rounded-none focus-visible:outline-none"
+                                           name="website" type="text" id="id_website"
+                                           placeholder="Website"
+                                           value="{{ form.website.value|default:'' }}"
+                                           onblur="autoHttps(this)">
+                                </div>
+                                <!-- Empresa Mãe + Idioma -->
+                                <div class="mt-2 pt-2 border-t border-gray-800 space-y-3">
+                                    <div class="flex items-center gap-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-primary flex-shrink-0">
+                                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                            <circle cx="9" cy="7" r="4"/>
+                                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                        </svg>
+                                        <div class="flex-1">{{ form.parent_company }}</div>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                        </div><!-- /2 colunas -->
+                    </div>
+                </div>
+            </div><!-- /topo -->
+
+            <!-- TABS: Notas | WhatsApp -->
+            <div class="mt-10" x-data="{ activeTab: 'notas' }">
+                <div class="border-b border-gray-700">
+                    <nav class="flex gap-1">
+                        <button type="button"
+                                @click="activeTab = 'notas'"
+                                :class="activeTab === 'notas' ? 'border-primary text-primary' : 'border-transparent text-gray-400 hover:text-gray-300'"
+                                class="border-b-2 px-4 py-3 text-sm font-medium transition-colors">
+                            Notas
+                        </button>
+                        <button type="button"
+                                @click="activeTab = 'whatsapp'"
+                                :class="activeTab === 'whatsapp' ? 'border-primary text-primary' : 'border-transparent text-gray-400 hover:text-gray-300'"
+                                class="border-b-2 px-4 py-3 text-sm font-medium transition-colors flex items-center gap-2">
+                            <svg viewBox="0 0 24 24" class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                            </svg>
+                            WhatsApp
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Tab: Notas -->
+                <div class="py-6" x-show="activeTab === 'notas'" x-transition>
+                    <div id="notes-editor" style="height: 300px; background: #1a2332; color: #e5e7eb;"></div>
+                    <input type="hidden" name="notes" id="notes-input" value="">
+                </div>
+
+                <!-- Tab: WhatsApp -->
+                <div class="py-6" x-show="activeTab === 'whatsapp'" x-transition style="display:none;">
+                    <div class="max-w-2xl space-y-4">
+
+                        <!-- Cabeçalho da tab com botão info -->
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Credenciais WhatsApp Business API</span>
+                            <button type="button" onclick="openWAInfoModal()"
+                                    class="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 16v-4"/>
+                                    <path d="M12 8h.01"/>
+                                </svg>
+                                Como obter?
+                            </button>
+                        </div>
+
+                        <!-- Phone Number ID -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Phone Number ID</label>
+                            <input type="text" name="wa_phone_number_id"
+                                   placeholder="123456789012345"
+                                   class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary font-mono text-sm">
+                        </div>
+
+                        <!-- WABA ID -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Business Account ID <span class="normal-case font-normal text-gray-600">(WABA)</span></label>
+                            <input type="text" name="wa_business_account_id"
+                                   placeholder="987654321098765"
+                                   class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary font-mono text-sm">
+                        </div>
+
+                        <!-- Access Token -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Access Token <span class="normal-case font-normal text-gray-600">(encriptado)</span></label>
+                            <div class="relative">
+                                <input type="password" id="wa_access_token" name="wa_access_token"
+                                       placeholder="EAAxxxxxxxxxxxxxxx..."
+                                       class="flex w-full rounded-md border px-3 py-2 pr-10 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary font-mono text-sm">
+                                <button type="button" onclick="toggleTokenVisibility()"
+                                        class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors">
+                                    <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                    <svg id="eye-off-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                                        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                                        <line x1="1" y1="1" x2="23" y2="23"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Webhook Verify Token -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Webhook Verify Token</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="wa_webhook_verify_token" name="wa_webhook_verify_token"
+                                       placeholder="segredo-webhook"
+                                       class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary font-mono text-sm">
+                                <button type="button" onclick="generateWebhookToken()"
+                                        class="flex-shrink-0 px-3 py-1.5 text-xs rounded-md border border-gray-600 text-gray-400 hover:border-primary hover:text-primary transition-colors whitespace-nowrap">
+                                    Gerar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Activo -->
+                        <div class="flex items-center gap-3 pt-2">
+                            <input type="checkbox" id="wa_is_active" name="wa_is_active" value="1" checked
+                                   class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-green-500 focus:ring-green-500 focus:ring-1">
+                            <label for="wa_is_active" class="text-sm text-gray-300 cursor-pointer">Activar integração WhatsApp</label>
+                        </div>
+
+                    </div>
+                </div><!-- /tab whatsapp -->
+
+            </div><!-- /tabs -->
+
+        </div>
+    </form>
+</div>
+
+<!-- Modal: Info WhatsApp Business API -->
+<div id="wa-info-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="fixed inset-0 bg-black/75" onclick="closeWAInfoModal()"></div>
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="relative w-full max-w-lg bg-gray-800 rounded-xl shadow-2xl border border-gray-700" onclick="event.stopPropagation()">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+                <div class="flex items-center gap-2">
+                    <svg viewBox="0 0 24 24" class="h-5 w-5 text-green-400 fill-current" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                    </svg>
+                    <h3 class="text-base font-semibold text-white">WhatsApp Business API</h3>
+                </div>
+                <button type="button" onclick="closeWAInfoModal()" class="text-gray-400 hover:text-white transition-colors">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <!-- Body -->
+            <div class="px-6 py-5 space-y-4 text-sm text-gray-300">
+                <p class="text-xs text-green-400/80 bg-green-900/10 border border-green-700/30 rounded-lg px-3 py-2">
+                    Obtém as credenciais no <strong>Meta Business Manager</strong>. Precisas de uma conta verificada com WhatsApp Business API activada.
+                </p>
+                <div class="space-y-3">
+                    <div>
+                        <p class="font-semibold text-gray-200">Phone Number ID</p>
+                        <p class="text-xs text-gray-400 mt-0.5">Meta Business Manager → WhatsApp → Números de telefone → <em>ID do número de telefone</em></p>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-200">Business Account ID (WABA)</p>
+                        <p class="text-xs text-gray-400 mt-0.5">Meta Business Manager → Definições do negócio → <em>ID da conta do WhatsApp Business</em></p>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-200">Access Token</p>
+                        <p class="text-xs text-gray-400 mt-0.5">Recomendado: <em>System User Token</em> permanente. Gerado em <strong>Meta for Developers → App → WhatsApp → API Setup</strong>. Pode ser temporário (70 min) ou permanente.</p>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-200">Webhook Verify Token</p>
+                        <p class="text-xs text-gray-400 mt-0.5">String secreta que defines tu. Deve coincidir com o campo <em>Verify Token</em> em <strong>Meta for Developers → App → Webhooks</strong>.</p>
+                    </div>
+                </div>
+                <div class="pt-2 border-t border-gray-700 space-y-1">
+                    <p class="text-xs text-gray-500 font-medium">Links úteis:</p>
+                    <a href="https://business.facebook.com" target="_blank" rel="noopener" class="flex items-center gap-1 text-xs text-primary hover:underline">
+                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        Meta Business Manager
+                    </a>
+                    <a href="https://developers.facebook.com" target="_blank" rel="noopener" class="flex items-center gap-1 text-xs text-primary hover:underline">
+                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        Meta for Developers
+                    </a>
+                </div>
+            </div>
+            <!-- Footer -->
+            <div class="flex justify-end px-6 py-4 border-t border-gray-700">
+                <button type="button" onclick="closeWAInfoModal()" class="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script>
+function previewLogo(input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const MAX = 512;
+        const srcImg = new Image();
+        srcImg.onload = () => {
+            const canvas = document.createElement('canvas');
+            let w = srcImg.width, h = srcImg.height;
+            if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+            else       { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(srcImg, 0, 0, w, h);
+            const b64 = canvas.toDataURL('image/png', 0.92);
+            const img = document.getElementById('logo-preview');
+            if (img) { img.src = b64; img.classList.remove('hidden'); }
+            const ph = document.getElementById('logo-placeholder');
+            if (ph) ph.style.display = 'none';
+            const hidden = document.getElementById('logo_base64_input');
+            if (hidden) hidden.value = b64;
+        };
+        srcImg.src = e.target.result;
+    };
+    reader.readAsDataURL(input.files[0]);
+}
+
+function toggleTokenVisibility() {
+    const input = document.getElementById('wa_access_token');
+    const eyeOn  = document.getElementById('eye-icon');
+    const eyeOff = document.getElementById('eye-off-icon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        eyeOn.style.display  = 'none';
+        eyeOff.style.display = 'block';
+    } else {
+        input.type = 'password';
+        eyeOn.style.display  = 'block';
+        eyeOff.style.display = 'none';
+    }
+}
+
+function generateWebhookToken() {
+    const arr = new Uint8Array(18);
+    crypto.getRandomValues(arr);
+    const token = btoa(String.fromCharCode(...arr)).replace(/[+/=]/g, '').substring(0, 24);
+    document.getElementById('wa_webhook_verify_token').value = token;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const actionButtons = document.getElementById('form-action-buttons');
+    if (actionButtons) actionButtons.style.display = 'flex';
+});
+
+function autoHttps(input) {
+    const v = input.value.trim();
+    if (v && !/^https?:\/\//i.test(v)) {
+        input.value = 'https://' + v;
+    }
+}
+
+// Quill Notes Editor
+document.addEventListener('DOMContentLoaded', function() {
+    if (!document.getElementById('notes-editor')) return;
+    const quill = new Quill('#notes-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'color': [] }, { 'background': [] }],
+                [{ 'align': [] }],
+                ['link', 'blockquote', 'clean']
+            ]
+        },
+        placeholder: 'Notas sobre esta empresa...'
+    });
+    document.querySelector('form').addEventListener('submit', function() {
+        document.getElementById('notes-input').value = quill.root.innerHTML;
+    });
+    const editorStyle = document.createElement('style');
+    editorStyle.textContent = `
+        .ql-toolbar { background: #374151 !important; border-color: #4b5563 !important; }
+        .ql-toolbar button, .ql-toolbar .ql-picker-label { color: #e5e7eb !important; }
+        .ql-toolbar button:hover, .ql-toolbar .ql-picker-label:hover { color: #dbc693 !important; }
+        .ql-toolbar button.ql-active, .ql-toolbar .ql-picker-label.ql-active { color: #dbc693 !important; }
+        .ql-stroke { stroke: #e5e7eb !important; }
+        .ql-fill { fill: #e5e7eb !important; }
+        .ql-picker-options { background: #374151 !important; border-color: #4b5563 !important; }
+        .ql-picker-item { color: #e5e7eb !important; }
+        .ql-container { border-color: #4b5563 !important; font-size: 14px; }
+        .ql-editor { min-height: 250px; color: #e5e7eb; }
+        .ql-editor.ql-blank::before { color: #6b7280; font-style: normal; }
+    `;
+    document.head.appendChild(editorStyle);
+});
+
+// Modal WA Info
+function openWAInfoModal()  { document.getElementById('wa-info-modal').classList.remove('hidden'); }
+function closeWAInfoModal() { document.getElementById('wa-info-modal').classList.add('hidden'); }
+</script>
+{% endblock %}

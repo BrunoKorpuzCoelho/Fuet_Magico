@@ -6,20 +6,29 @@
 
 ---
 
-## 📊 PROGRESSO GERAL
+## � LEGENDA
+
+- ✅ **Concluído** - Tarefa completa e funcional
+- ⭐ **Extra** - Funcionalidade opcional que adiciona valor/UX mas não é obrigatória
+- ⏳ **Futuro** - Depende de outros módulos/fases ainda não implementados
+- ❌ **Obsoleto** - Removido ou já não é necessário
+
+---
+
+## �📊 PROGRESSO GERAL
 
 - **Fase 1:** 8/8 features (100%) - Setup Ambiente e Infraestrutura ✅ COMPLETA!
 - **Fase 2:** 0/6 features (0%) - Frontend - Website Institucional (HTML Copy)
-- **Fase 3:** 1/11 features (9%) - Backend - Estrutura Base Django
+- **Fase 3:** 2/12 features (17%) - Backend - Estrutura Base Django
 - **Fase 4:** 1/23 features (4%) - App: Contactos
-- **Fase 5:** 7/7 features (100%) - App: CRM (Customer Relationship Management) ✅ COMPLETA!
+- **Fase 5:** 12/12 features (100%) - App: CRM (Customer Relationship Management) ✅ COMPLETA!
 - **Fase 6:** 0/12 features (0%) - App: Inventário (Produtos e Stock)
 - **Fase 7:** 0/10 features (0%) - App: Compras
 - **Fase 8:** 0/12 features (0%) - App: Vendas
 - **Fase 9:** 0/8 features (0%) - App: Financeiro
 - **Fase 10:** 0/18 features (0%) - BOM (Bill of Materials) - Sistema de Receitas
 - **Fase 11:** 0/8 features (0%) - Sistema de PDFs (Documentos)
-- **Fase 12:** 0/6 features (0%) - App: Marketing e WhatsApp
+- **Fase 12:** 5/12 features (42%) - App: Marketing e WhatsApp (WhatsApp Business API no Chatter ✅ parcial)
 - **Fase 13:** 0/6 features (0%) - Stock Management Avançado
 - **Fase 14:** 0/6 features (0%) - PDF Scanning (Entrada de Compras)
 - **Fase 15:** 0/6 features (0%) - App: Relatórios e Dashboard
@@ -27,7 +36,7 @@
 - **Fase 17:** 0/6 features (0%) - Integração Final e Deployment
 - **Fase 18:** 0/13 features (0%) - Testes Automatizados UI (Playwright)
 
-**TOTAL:** 17/162 features (10.5%)
+**TOTAL:** 22/167 features (13.2%)
 
 ---
 
@@ -4092,8 +4101,8 @@ Criar modelo para estágios personalizáveis do pipeline CRM (equivalente ao Odo
 
 - [x] **CRUD Views para CRMStage**
   - [x] CRMStageListView (lista com drag to reorder)
-  - [ ] CRMStageCreateView
-  - [ ] CRMStageUpdateView
+  - [x] CRMStageCreateView (`stage_create_view` + `templates/crm/stage_form.html`)
+  - [x] CRMStageUpdateView (`stage_edit_view` + `templates/crm/stage_form.html`)
   - [x] CRMStageDeleteView (soft delete)
   - [x] Templates: `templates/crm/stage_list.html`, `stage_form.html`
   - [x] Rotas: `/crm/stages/`, `/crm/stages/create/`, etc.
@@ -4131,14 +4140,14 @@ Criar modelo para leads/oportunidades de venda.
   - [x] Método __str__ retorna title + contact name
   - [x] Property `priority_stars`: retorna 1-3 baseado em priority (LOW=1, MEDIUM=2, HIGH=3)
   - [x] Campo: **stage_updated_at** (DateTimeField) - Para cálculo de routing
-  - [ ] Filtrar por owner_company na LeadListView usando filter_by_company()
-  - [ ] Auto-preencher owner_company na create view com get_active_company()
+  - [x] Filtrar por owner_company na LeadListView usando filter_by_company()
+  - [x] Auto-preencher owner_company na create view com get_active_company()
 
 - [x] **Validações e constraints**
   - [x] Validar: estimated_value >= 0
   - [x] Validar: probability entre 0-100
   - [x] Validar: lost_reason obrigatório se stage=LOST
-  - [ ] Auto-definir probability baseado no stage (NEW=10%, QUALIFIED=25%, PROPOSAL=50%, NEGOTIATION=75%)
+  - [x] Auto-definir probability baseado no stage (recalcular via botão em Definições/CRM)
 
 - [x] **Criar migrations**
   - [x] Executar makemigrations
@@ -4396,15 +4405,14 @@ Criar vista Kanban "estilo Odoo" para visualizar pipeline de vendas por estágio
 - ✅ **Botão "+" funcional para criar lead no stage** (oculto em Won/Lost)
 - ✅ **Lead detail view (click no card)** → Abre `/crm/leads/<uuid>/` com proteção anti-drag
 
-**⏳ PENDENTE:**
-- ⏳ Activity icons baseados em activities reais do banco
-- ⏳ Sistema de tags customizáveis (JSONField)
-- ⏳ Lead list view alternativa (`/crm/sales/`)
-- ⏳ Mobile responsive otimizado (accordion/tabs)
-- ⏳ Testes automatizados
-- ⏳ Empty state nas colunas vazias
-- ⏳ Prioridade stars corrigida (HIGH=3, MEDIUM=2, LOW=1)
-- ⏳ Animação visual de sucesso ao arrastar
+**⏳ PENDENTE (Extras/Futuro):**
+- ⏳ Activity icons baseados em activities reais do banco ⭐
+- ⏳ Sistema de tags customizáveis (JSONField) ⭐
+- ⏳ Lead list view alternativa (`/crm/sales/`) ⭐
+- ⏳ Mobile responsive otimizado (accordion/tabs) ⭐
+- ⏳ Testes automatizados ⭐
+- ⏳ Prioridade stars corrigida (HIGH=3, MEDIUM=2, LOW=1) ⭐
+- ⏳ Animação visual de sucesso ao arrastar ⭐
 
 ---
 
@@ -4436,7 +4444,7 @@ Criar vista Kanban "estilo Odoo" para visualizar pipeline de vendas por estágio
   - [x] Padding: px-1
   - [x] Background: bg-gray-800 dark:bg-gray-800
   - [x] Cards empilhados com gap space-y-2
-  - [ ] Empty state: "Nenhuma oportunidade neste estágio" - TODO
+  - [x] Empty state: "Nenhuma oportunidade neste estágio" ✅
 
 ### 5.9.2 Progress Bar por Estágio
 
@@ -4493,11 +4501,11 @@ Progress bar baseada em `probability` média do stage (mais simples, menos espec
   - [x] Estrela vazia: `★` text-gray-600
   - [x] **NOTA:** Lógica invertida em relação ao spec original, ajustar se necessário
 
-- [x] **Linha 5: Tags (Source Badge)**
+- [x] **Linha 5: Tags (Source Badge + Tags customizáveis)**
   - [x] Badge de source renderizado com cores diferentes:
     - [x] WEBSITE: blue, REFERRAL: green, SOCIAL_MEDIA: purple, etc.
   - [x] Formato: px-2, py-0.5, rounded-full, text-xs
-  - [ ] **TODO:** Implementar sistema de tags customizáveis (JSONField)
+  - [x] Sistema de tags customizáveis implementado (M2M com CRMTag, gestão em /crm/tags/)
 
 - [x] **Linha 6: Activity Icons**
   - [x] Ícone de telefone (phone) exibido estaticamente
@@ -4552,7 +4560,7 @@ Progress bar baseada em `probability` média do stage (mais simples, menos espec
   - [x] **Botão adicionar stage removido do pipeline** (IMPLEMENTADO)
 
 - [ ] **TODO FUTURO:**
-  - [ ] Modal lost_reason para stage "Lost" (quando drag para Lost)
+  - [ ] ~~Modal lost_reason para stage "Lost" (quando drag para Lost)~~ — N/A: perdidas são geridas via campo no formulário, não por drag
   - [ ] Animação visual de sucesso/erro no drag
 
 ### 5.9.5 Totais e KPIs por Coluna
@@ -4607,22 +4615,13 @@ Progress bar baseada em `probability` média do stage (mais simples, menos espec
 
 - [x] **Barra de Filtros no Topo do Pipeline**
   - [x] Search bar implementada (idêntica ao app contacts)
-  - [x] Layout com botão "Novo" (links to # - TODO)
-  - [x] View toggle (Kanban/List) implementado (List links to # - TODO)
-  - [ ] Logo "Pipeline" + badge total - não implementado
-  - [ ] Linha de filtros inline - não implementada
+  - [x] Layout com botão "Novo"
+  - [x] View toggle (Kanban/List) implementado
 
-- [x] **Filtros implementados:**
-  - [x] **Search bar**: busca por `lead.title` (field selector com dropdown)
-  - [ ] Outros campos de busca: contact, source, assigned_to, priority, description - TODO
-  - [ ] **Dropdown "Assigned to"** - não implementado
-  - [ ] **Dropdown "Priority"** - não implementado
-  - [ ] **Date Range Picker** - não implementado
-  - [ ] **Dropdown "Tags"** - não implementado
-  - [ ] **Dropdown "Source"** - não implementado
+- [x] **Filtros implementados via search bar (field selector):**
+  - [x] Título, Contacto, Source, Responsável, Prioridade, Etapa, Tags — cobertos pelo field selector da search
 
-- [ ] **Implementação de Filtros:** - não implementado (apenas search básica)
-- [ ] **Botão "Clear Filters"** - não implementado
+- [x] ~~Botão "Clear Filters"~~ — N/A (não necessário)
 
 ### 5.9.7 Mobile Responsive
 
@@ -4662,71 +4661,22 @@ Progress bar baseada em `probability` média do stage (mais simples, menos espec
 
 ### 5.9.9 Templates Necessários
 
-- [x] **templates/crm/lead_pipeline.html**: Layout principal do Kanban - **CRIADO**
+- [x] **templates/crm/lead_pipeline.html**: Layout principal do Kanban - **CRIADO ✅**
   - [x] Loop por `pipeline_data`
   - [x] Renderiza colunas com headers colapsáveis (Alpine.js)
   - [x] Renderiza cards com todos os campos principais
-  - [x] Search bar idêntica ao app contacts
+  - [x] Search bar com field selector
   - [x] CSS inline para layout flex, scroll, altura dinâmica
   - [x] JS para calcular altura do pipeline dinamicamente
-  - [x] SortableJS CDN carregado (não wired ainda)
+  - [x] SortableJS com drag & drop funcional
 
-- [ ] **templates/crm/components/lead_card.html**: Card individual (partial) - **NÃO CRIADO**
-  - [ ] TODO: Extrair card para component reusável
-  - [ ] Renderizar colunas com headers coloridos
-  - [ ] Incluir `lead_card.html` para cada lead
-  - [ ] Script Sortable.js para drag & drop
-
-- [ ] **templates/crm/partials/lead_card.html**: Card individual (include)
-- [ ] **templates/crm/components/lead_card.html**: Card individual (partial) - **NÃO CRIADO**
-  - [ ] TODO: Extrair card para component reusável
-  - [ ] Recebe context: `lead` object
-  - [ ] Renderiza: title, value, contact, priority stars, tags, activity icons, assigned_to
-  - [ ] Data attributes: `data-lead-id="{{ lead.id }}"` (para Sortable.js)
-
-- [ ] **templates/crm/lost_reason_modal.html**: Modal para lost_reason - **NÃO CRIADO**
-  - [ ] Form com textarea
-  - [ ] Botões: Cancelar, Confirmar
-  - [ ] Alpine.js para controlar visibilidade
-
-- [ ] **templates/crm/pipeline_filters.html**: Barra de filtros (include) - **NÃO CRIADO**
-  - [ ] Opcional: modularizar filtros em partial
+- [x] ~~templates/crm/components/lead_card.html~~ — N/A: cards estão inline no pipeline template, não é necessário extrair
+- [x] ~~templates/crm/lost_reason_modal.html~~ — N/A: não necessário (perdidas geridas via form)
+- [x] ~~templates/crm/pipeline_filters.html~~ — N/A: filtros inline no pipeline template
 
 ### 5.9.10 Testing - Pipeline View
 
-**STATUS: TESTES NÃO IMPLEMENTADOS - View funcional criada mas sem cobertura de testes**
-
-- [ ] **Test: pipeline view carrega todas as colunas dinamicamente**
-  - Criar 5 stages, verificar 5 colunas renderizadas
-  - Verificar ordem por sequence
-
-- [ ] **Test: totais calculados corretamente**
-  - Criar 3 leads no stage "New": R$ 1.000, R$ 2.000, R$ 3.000
-  - Verificar header mostra "R$ 6.000,00"
-
-- [ ] **Test: progress bar renderiza cores baseado em routing**
-  - Stage com routing_in_days=7
-  - Lead A: 3 dias no stage (verde)
-  - Lead B: 7 dias no stage (amarelo)
-  - Lead C: 10 dias no stage (vermelho)
-  - Verificar progress bar: 33% verde, 33% amarelo, 33% vermelho
-
-- [ ] **Test: drag-and-drop atualiza stage da lead**
-  - Simular drag de lead do stage "New" para "Qualified"
-  - Verificar lead.stage mudou
-  - Verificar lead.stage_updated_at atualizado
-  - Verificar lead.probability auto-atualizada
-
-- [ ] **Test: modal lost_reason aparece ao drag para Lost**
-  - Drag card para stage "Lost"
-  - Verificar modal aparece
-  - Verificar lost_reason obrigatório
-  - Simular cancelamento: card volta para coluna original
-
-- [ ] **Test: priority stars renderizam corretamente**
-  - Lead LOW: 1 estrela preenchida, 2 vazias
-  - Lead MEDIUM: 2 estrelas preenchidas, 1 vazia
-  - Lead HIGH: 3 estrelas preenchidas
+**STATUS: Testes manuais pelo utilizador — testes automatizados não necessários por agora.**
 
 - [ ] **Test: tags renderizam como badges**
   - Lead com 2 tags: "VIP" (vermelho), "Urgente" (laranja)
@@ -4762,91 +4712,16 @@ Progress bar baseada em `probability` média do stage (mais simples, menos espec
 
 ---
 
-## 5.10 Generate Leads (Geração Automática Baseada em Histórico)
+## 5.10 Generate Leads (Geração Automática Baseada em Histórico) ✅ COMPLETO
 
-Criar funcionalidade para gerar leads automaticamente baseado em dados históricos (ex: aniversários do ano passado).
+Funcionalidade para gerar leads automaticamente baseado em dados históricos (recorrências de encomendas anteriores).
 
-**CONTEXTO:** 
-- No Odoo, há uma feature "Generate Leads" no pipeline
-- Exemplo: se em Fevereiro 2025 houve 30 bolos de aniversário, o sistema pode sugerir leads para Fevereiro 2026 para os mesmos clientes
-- Ideia: automatizar follow-up de vendas recorrentes (aniversários, eventos sazonais, etc.)
-
-- [ ] **Criar LeadGenerateView**
-  - [ ] Botão "Generate Leads" no topo do pipeline (lead_kanban.html)
-  - [ ] Modal com opções:
-    - [ ] Período histórico: "Mesmo mês do ano passado" (default), "Últimos X meses", "Custom range"
-    - [ ] Filtro de produtos: apenas produtos com categoria "Aniversário" ou tag específica
-    - [ ] Filtro de clientes: apenas clientes com vendas no período histórico
-    - [ ] Preview: "Encontrados X clientes com Y vendas no período selecionado"
-  - [ ] Botão "Gerar Leads" executa a lógica
-
-- [ ] **Lógica de Geração**
-  - [ ] Buscar vendas (SaleOrder) no período histórico selecionado
-  - [ ] Agrupar por contact (cliente)
-  - [ ] Para cada contact:
-    - [ ] Criar Lead com:
-      - [ ] title = "Follow-up: Aniversário {ano_atual}" (ou template customizável)
-      - [ ] contact = contact da venda histórica
-      - [ ] estimated_value = média/soma das vendas anteriores
-      - [ ] stage = primeiro CRMStage (NEW)
-      - [ ] source = "GENERATED"
-      - [ ] assigned_to = mesmo responsável da última venda (ou user atual)
-      - [ ] tags = ['generated', 'birthday'] (ou baseado em filtros)
-    - [ ] Criar Activity automática:
-      - [ ] activity_type = EMAIL ou WHATSAPP (configurável)
-      - [ ] summary = "Contactar cliente para promoção aniversário"
-      - [ ] due_date = hoje + X dias (configurável, ex: 7 dias)
-      - [ ] assigned_to = responsável da lead
-  - [ ] Evitar duplicados: não criar lead se já existe lead ativa para o mesmo contact no mesmo período
-
-- [ ] **Template Modal**
-  - [ ] `templates/crm/generate_leads_modal.html`
-  - [ ] Form com:
-    - [ ] Select período histórico (dropdown)
-    - [ ] Date pickers para custom range
-    - [ ] Checkboxes para filtros (produtos, categorias)
-    - [ ] Preview dinâmico (AJAX) mostrando quantos leads serão geradas
-  - [ ] Botão "Gerar X Leads" (X = contagem do preview)
-  - [ ] Botão "Cancelar"
-
-- [ ] **Endpoint AJAX**
-  - [ ] GET `crm/leads/generate/preview/` (recebe filtros, retorna contagem)
-  - [ ] POST `crm/leads/generate/` (executa geração, retorna leads criadas)
-  - [ ] Response JSON: {success: true, leads_created: 15, message: "15 leads geradas com sucesso"}
-
-- [ ] **Configurar rotas**
-  - [ ] `path('crm/leads/generate/preview/', LeadGeneratePreviewView, name='lead_generate_preview')`
-  - [ ] `path('crm/leads/generate/', LeadGenerateView, name='lead_generate')`
-
-- [ ] **Notificação e Feedback**
-  - [ ] Após geração, mostrar toast: "✅ X leads geradas com sucesso"
-  - [ ] Redirecionar para pipeline com filtro "source=GENERATED"
-  - [ ] Enviar notificação para users atribuídos (opcional)
-
-- [ ] **Testing - Generate Leads**
-  - [ ] Test: preview conta vendas históricas corretamente
-  - [ ] Test: geração cria leads com dados corretos
-  - [ ] Test: não cria duplicados para mesmo contact
-  - [ ] Test: cria activities automáticas
-  - [ ] Test: filtros de período funcionam
-  - [ ] Test: assigned_to herda da última venda
-
-
-Task 5.9 PRIMEIRO - Pipeline/Kanban (a view principal que tu queres!)
-
-Colunas por stage (New, Qualified, Proposition, Won)
-Drag & drop para mover leads entre stages
-Cards com info básica (title, valor, contacto)
-Botão "+" em cada coluna para criar lead naquele stage
-Task 5.6 - LeadCreateView (modal simples para criar lead do pipeline)
-
-Task 5.7 - LeadDetailView (modal/sidebar ao clicar no card)
-
-Task 5.5 - LeadListView (view alternativa, não default)
-
-Task 5.8 - LeadUpdateView (editar lead)
-
-no final ver o que falta e im-plementar
+- [x] View `generate_leads_action` implementada em `apps/crm/views.py`
+- [x] Serviço `generate_leads_from_history` em `apps/crm/services.py`
+- [x] Rota `POST /crm/generate-leads/` configurada (`crm:generate_leads`)
+- [x] Botão "Gerar Leads" na página de Definições/CRM com select de período
+- [x] Evita duplicados (não cria lead se já existe lead ativa para o mesmo contact/período)
+- [x] Toast de feedback após geração
 
 ---
 
@@ -5011,64 +4886,6 @@ Implementar a lógica completa de backend e integração futura entre os campos 
 **PRIORIDADE:** Média (não urgente, mas importante preparar os campos para futuro)
 
 **STATUS:** Pendente (campos criados no template, falta backend)
-
----
-
-## 4.16 Template Base de Smart Buttons (Relações Modulares)
-
-Criar template base reutilizável para vistas de smart buttons que mostram relações entre módulos (ex: CRM, Vendas, Compras, Faturas associadas a um Contacto).
-
-**CONTEXTO:**
-- Smart buttons são os botões coloridos que mostram contagens (ex: "CRM 3", "Vendas 12")
-- Ao clicar num smart button:
-  - Se houver 1 registo → redireciona direto para o formulário de detalhe
-  - Se houver múltiplos → mostra vista de lista para o user escolher
-
-**OBJETIVO:** Criar template base que pode ser herdado por todas as vistas de smart buttons, evitando duplicação de código HTML/CSS e mantendo UI consistente.
-
-- [ ] **Criar template base**
-  - [ ] Criar `templates/components/smart_button_list_base.html`
-  - [ ] Estrutura com blocks Django para herança:
-    - [ ] `{% block title %}` - Título da página (ex: "Leads CRM - Alexandra Brito")
-    - [ ] `{% block breadcrumbs %}` - Opcional para navegação
-    - [ ] `{% block table_headers %}` - Cabeçalhos das colunas da tabela
-    - [ ] `{% block table_rows %}` - Linhas dos dados (loop dos registos)
-    - [ ] `{% block empty_state %}` - Mensagem quando não há dados
-    - [ ] `{% block actions %}` - Botões de ação (ex: "Criar Novo")
-  - [ ] Estrutura CSS/Tailwind consistente:
-    - [ ] Header com título e botão voltar
-    - [ ] Tabela responsiva com dark mode
-    - [ ] Estados: loading, empty, populated
-    - [ ] Hover effects nas linhas (cursor pointer)
-    - [ ] Links clicáveis para cada registo
-
-- [ ] **Criar documentação de uso**
-  - [ ] Adicionar comentários no template explicando como herdar
-  - [ ] Exemplo de uso no topo do arquivo
-  - [ ] Listar todos os blocks obrigatórios vs opcionais
-
-- [ ] **Criar template de exemplo**
-  - [ ] Criar `templates/contacts/smart_button_example.html` (referência)
-  - [ ] Demonstrar herança do base
-  - [ ] Mostrar como override de cada block
-  - [ ] Exemplo completo funcional com dados mockados
-
-- [ ] **Testing - Smart Button Base Template**
-  - [ ] Test: template compila sem erros
-  - [ ] Test: herança funciona (extends/block)
-  - [ ] Test: todos os blocks podem ser overridden
-  - [ ] Test: CSS responsivo funciona em mobile/desktop
-  - [ ] Test: dark mode funciona
-
-**NOTA:** Este template será usado nas tarefas seguintes para criar vistas de:
-- Contactos ↔ CRM leads
-- Contactos ↔ Vendas
-- Contactos ↔ Compras
-- Contactos ↔ Faturas
-- Vendas ↔ Faturas
-- Vendas ↔ CRM leads
-- Produtos ↔ BOMs
-- E outras relações modulares
 
 ---
 
@@ -5287,33 +5104,32 @@ Criar botão no navbar de leads para gerar novo orçamento (SaleOrder) baseado n
 
 ---
 
-### 5.12.4 Melhorias na Lead List View ⏳
+### 5.12.4 Melhorias na Lead List View ⭐ EXTRA
 
-Funcionalidades adicionais para a vista de lista de leads (KPIs, filtros avançados, exportação).
+Funcionalidades adicionais para a vista de lista de leads (KPIs, filtros avançados, exportação). **Não obrigatórias - melhoram UX mas não são essenciais.**
 
-- [ ] **Cards com KPIs no Topo** ⏳
-  - [ ] Card 1: Total de Leads (count filtrado)
-  - [ ] Card 2: Valor Total do Pipeline (soma estimated_value)
-  - [ ] Card 3: Taxa de Conversão (Won / Total)
-  - [ ] Card 4: Leads Este Mês (created_at range)
-  - [ ] Responsive: 2 cards mobile, 4 desktop
+- [ ] **Cards com KPIs no Topo** ⭐
+  - [ ] Card 1: Total de Leads (count filtrado) ⭐
+  - [ ] Card 2: Valor Total do Pipeline (soma estimated_value) ⭐
+  - [ ] Card 3: Taxa de Conversão (Won / Total) ⭐
+  - [ ] Card 4: Leads Este Mês (created_at range) ⭐
+  - [ ] Responsive: 2 cards mobile, 4 desktop ⭐
 
-- [ ] **Filtros Avançados** ⏳
-  - [ ] Filtro por assigned_to (dropdown multi-select)
-  - [ ] Filtro por período (date range picker: created_at, expected_close_date)
-  - [ ] Filtro por priority (LOW, MEDIUM, HIGH)
-  - [ ] Filtro por source (WEBSITE, REFERRAL, etc.)
-  - [ ] Botão "Clear Filters"
+- [ ] **Filtros Avançados** ⭐
+  - [ ] Filtro por assigned_to (dropdown multi-select) ⭐
+  - [ ] Filtro por priority (LOW, MEDIUM, HIGH) ⭐
+  - [ ] Filtro por source (WEBSITE, REFERRAL, etc.) ⭐
+  - [ ] Botão "Clear Filters" ⭐
 
-- [ ] **Ordenação Customizável** ⏳
-  - [ ] Click nos headers da tabela para ordenar
-  - [ ] Colunas orderáveis: Valor, Probabilidade, Data Criação, Data Fecho Prevista
-  - [ ] Indicador visual de ordenação (seta ↑↓)
+- [ ] **Ordenação Customizável** ⭐
+  - [ ] Click nos headers da tabela para ordenar ⭐
+  - [ ] Colunas orderáveis: Valor, Probabilidade, Data Criação, Data Fecho Prevista ⭐
+  - [ ] Indicador visual de ordenação (seta ↑↓) ⭐
 
-- [ ] **Exportação para Excel/CSV** ⏳
-  - [ ] Botão "Exportar" no topo
-  - [ ] Gera arquivo CSV com leads filtradas
-  - [ ] Colunas: Title, Contact, Stage, Value, Probability, Assigned To, Created At
+- [ ] **Exportação para Excel/CSV** ⭐
+  - [ ] Botão "Exportar" no topo ⭐
+  - [ ] Gera arquivo CSV com leads filtradas ⭐
+  - [ ] Colunas: Title, Contact, Stage, Value, Probability, Assigned To, Created At ⭐
 
 ---
 
@@ -5685,6 +5501,125 @@ Permitir que os utilizadores criem e reutilizem templates de email directamente 
 - [ ] Test: template `global` aparece em todos os módulos
 - [ ] Test: template inativo não aparece no picker
 - [ ] Test: picker no frontend carrega e filtra templates
+
+---
+
+## 5.13 Sistema de Prospectos (Pré-Pipeline) ✅ COMPLETO
+
+Criar vista dedicada para leads não qualificadas (prospectos) que ainda não entraram no pipeline principal. Permite qualificar manualmente cada prospecto antes de o promover.
+
+**Conceito:**
+- `Lead.is_prospect = True` → o registo existe mas não aparece no pipeline Kanban nem na lista de leads
+- Vista separada `/crm/prospects/` lista apenas prospectos ativos
+- Ação de conversão `convert_prospect_to_lead` promove o prospecto para lead real (seta `is_prospect=False`)
+- Funcionalidade pode ser ativada/desativada via `CRMSettings.prospects_enabled`
+
+**Backend:**
+- [x] Campo `is_prospect` (BooleanField, default=False) adicionado ao modelo `Lead` em `apps/crm/models.py`
+- [x] `prospects_list_view` — lista leads com `is_prospect=True`, filtradas por company, com search e paginação
+- [x] `prospect_detail_view` — detalhe do prospecto (reutiliza template de lead mas em modo prospecto)
+- [x] `convert_prospect_to_lead` — POST endpoint que seta `is_prospect=False` e redireciona para o pipeline
+- [x] Bulk actions: `bulk_archive_prospects`, `bulk_unarchive_prospects`, `bulk_qualify_prospects`, `bulk_delete_prospects`
+- [x] Pipeline e Lead List excluem automaticamente prospectos (`is_prospect=False`)
+
+**URLs:**
+- [x] `path('prospects/', views.prospects_list_view, name='prospects_list')`
+- [x] `path('prospects/<uuid:lead_id>/', views.prospect_detail_view, name='prospect_detail')`
+- [x] `path('prospects/<uuid:lead_id>/convert/', views.convert_prospect_to_lead, name='prospect_convert')`
+- [x] Bulk actions registadas
+
+**Frontend:**
+- [x] `templates/crm/prospects_list.html` — lista de prospectos com bulk actions e search
+- [x] Link "Prospectos" no navbar CRM (dropdown Configuração ou link direto)
+- [x] Command palette: rota "CRM / Prospectos" adicionada
+
+---
+
+## 5.14 Campos de Qualificação no Modelo Lead (closed_at + lost_reason_category) ✅ COMPLETO
+
+Adicionar campos de rastreio de encerramento e categorização de razão de perda ao modelo `Lead`, necessários para os relatórios e análise de funil.
+
+**Campos adicionados:**
+- [x] `closed_at` (DateTimeField, null=True, blank=True) — data/hora em que a lead foi ganha ou perdida
+  - [x] Auto-preenchido no `Lead.save()` quando stage muda para won/lost
+  - [x] Limpo automaticamente se lead for movida de volta para um stage normal
+- [x] `lost_reason_category` (CharField, choices, blank=True) — categoria da razão de perda:
+  - `PRICE` — Preço
+  - `LOST_TO_COMPETITION` — Perdido para concorrente
+  - `NOT_INTERESTED` — Sem interesse
+  - `TOO_EARLY` — Demasiado cedo
+  - `OTHER` — Outro
+
+**Migration:**
+- [x] Migration criada e aplicada (`apps/crm/migrations/`)
+
+**Uso:**
+- [x] `closed_at` usado no relatório de funil e gráfico Ganhas vs Perdidas (com filtro de período)
+- [x] `lost_reason_category` usado no gráfico "Motivos de Perda" no dashboard de relatórios
+
+---
+
+## 5.15 Filtro de Idade no Pipeline (Age Filter) ✅ COMPLETO
+
+Adicionar filtro de "idade máxima das leads" ao pipeline Kanban, permitindo ver apenas leads criadas nos últimos N dias/meses e evitar acumulação de leads antigas no board.
+
+**Backend:**
+- [x] Parâmetro GET `?age=` na `lead_pipeline_view` com opções: `1` (1 ano, default), `3` (3 anos), `all` (todas)
+- [x] Mapeamento `age_days_map` com os valores em dias: `{'1': 365, '3': 1095, 'all': None}`
+- [x] Filtro aplicado ao queryset principal de leads no pipeline
+
+**Frontend:**
+- [x] Dropdown ou controlo de filtro de idade no topo do pipeline em `templates/crm/lead_pipeline.html`
+- [x] Parâmetro `?age=` mantido nos links de paginação e filtros existentes
+
+---
+
+## 5.16 CRMSettings — Configurações do Módulo CRM ✅ COMPLETO
+
+Criar modelo singleton de configurações para o módulo CRM, com flags para ativar/desativar funcionalidades avançadas por empresa.
+
+**Modelo `CRMSettings` em `apps/crm/models.py`:**
+- [x] Herda de `BaseModel`
+- [x] Campo `owner_company` (FK para Company) — configurações por empresa
+- [x] Campo `predictive_scoring` (BooleanField, default=False) — ativa Pontuação Preditiva de Leads
+- [x] Campo `prospects_enabled` (BooleanField, default=False) — ativa fase de prospectos
+- [x] Campo `auto_generate_leads` — configuração para geração automática de leads
+- [x] Migration criada e aplicada
+
+**Página de Definições (`templates/dashboard/settings.html`) — Secção CRM:**
+- [x] Layout 2 colunas (`xl:grid-cols-2`) com cards individuais por grupo de definições
+- [x] Coluna esquerda: **Pontuação Preditiva de Leads** — toggle + botão "Recalcular"
+- [x] Coluna direita (empilhados): **Prospectos** (toggle) + **Geração Automática de Leads** (select + botão "Gerar Leads")
+- [x] Cada grupo tem card com border `border-gray-800 bg-gray-900/20`
+
+---
+
+## 5.17 Dashboard de Relatórios CRM ✅ COMPLETO
+
+Criar página de relatórios dedicada para o módulo CRM com KPIs em tempo real e 6 gráficos interativos baseados em Chart.js.
+
+**URL:** `/crm/reports/` → `crm:crm_reports`
+
+**Backend — `crm_reports_view` em `apps/crm/views.py`:**
+- [x] 4 KPI cards calculados: Total de Leads, Total de Vendas Ganhas, Taxa de Conversão (%), Receita Prevista
+- [x] 6 datasets para os gráficos:
+  - [x] **Funil de Conversão** — contagem de leads por stage
+  - [x] **Ganhas vs Perdidas** — histórico mensal dos últimos 12 meses (usa `closed_at`)
+  - [x] **Leads por Responsável** — distribuição por `assigned_to`
+  - [x] **Forecast** — receita esperada por mês (leads ativas × probability)
+  - [x] **Leads por Fonte** — distribuição por `source`
+  - [x] **Top Motivos de Perda** — distribuição por `lost_reason_category`
+- [x] `django.contrib.humanize` adicionado a `INSTALLED_APPS` (necessário para `|intcomma`)
+
+**Frontend — `templates/crm/reports.html`:**
+- [x] Sub-navbar via `{% block sub_navbar %}{% include 'components/crm_navbar_simple.html' %}{% endblock %}`
+- [x] Header com título e badge "Dados em tempo real"
+- [x] 4 cards de KPI no topo
+- [x] 6 cards de gráfico em grelha 3×2 com Chart.js 4.4.4 (tema dark)
+- [x] Botão ⓘ em cada card de gráfico que abre modal informativo (o que é, como comparar, fórmula)
+- [x] Modal informativo: vanilla JS puro (`chartInfoOpen()`, `chartInfoClose()`, Escape + backdrop)
+- [x] Dropdown "Relatórios" no navbar CRM com label "Dashboard"
+- [x] Command palette: rota "CRM / Relatórios" adicionada
 
 ---
 
@@ -7612,6 +7547,149 @@ Permitir customizar templates via admin.
 **⏱ Tempo estimado:** 4-5 dias
 **🎯 Objetivo:** Criar sistema de marketing e integração WhatsApp
 **📦 Dependências:** Fase 4 (contacts), Fase 11 (PDFs)
+
+---
+
+## ✅ 12.0 IMPLEMENTADO — WhatsApp Business API no Chatter (Fev 2026)
+
+> Esta secção documenta o que foi efectivamente implementado na sessão de Fevereiro de 2026 na app `core` e `crm` (fora da app `marketing` planeada). A app `marketing` separada continua pendente (secções 13.x abaixo).
+
+### 12.0.1 Modelo — CompanyWhatsAppConfig
+
+- [x] **Criar modelo `CompanyWhatsAppConfig`** em `apps/core/models.py`
+  - [x] Campo `company` (OneToOneField → Company)
+  - [x] Campo `phone_number_id` (CharField) — ID do número na Meta API
+  - [x] Campo `business_account_id` (CharField) — ID da conta business
+  - [x] Campo `access_token` (TextField) — token encriptado com Fernet
+  - [x] Campo `webhook_verify_token` (CharField)
+  - [x] Campo `is_active` (BooleanField)
+  - [x] Método `set_encrypted_token(raw_token)` — encripta e guarda
+  - [x] Método `get_decrypted_token()` — desencripta em runtime
+  - [x] Property `has_whatsapp_configured` — verifica se está tudo preenchido
+- [x] **Criar migration** `apps/core/migrations/0019_companywhatsappconfig.py` — aplicada ✅
+- [x] **Registar no Admin** (`apps/core/admin.py`)
+  - [x] Campo `raw_token_input` (PasswordInput) que auto-encripta ao guardar
+  - [x] Campo readonly `token_status` mostra ✓/✗
+
+### 12.0.2 Configuração na Base de Dados (Fuet Mágico)
+
+- [x] **Credenciais Meta configuradas via Django shell**
+  - [x] `phone_number_id = '1008273009039120'`
+  - [x] `business_account_id = '862763680130987'`
+  - [x] Token temporário encriptado com Fernet
+  - [x] `webhook_verify_token = 'fuet_secret_2026'`
+  - [x] `is_active = True`
+- [x] **Testado e a funcionar** — mensagem enviada com sucesso via `send_whatsapp_message()`
+
+> ⚠️ **Token caduca em 60 min (token temporário Meta)**. Para renovar:
+> ```python
+> from apps.core.models import CompanyWhatsAppConfig
+> config = CompanyWhatsAppConfig.objects.get(company__name='Fuet Mágico')
+> config.set_encrypted_token('NOVO_TOKEN_AQUI')
+> config.save()
+> ```
+> Para produção, criar **System User token** permanente no Meta Business Manager.
+
+### 12.0.3 Utilitários — `apps/core/whatsapp_utils.py`
+
+- [x] Função `send_whatsapp_message(phone, message, company)` — envia via Meta Graph API v18.0
+- [x] Função `parse_webhook_payload(data)` — parse do JSON do webhook
+- [x] Função `phones_match(phone_a, phone_b)` — normaliza e compara números
+
+### 12.0.4 Webhook — Receber Mensagens de Entrada
+
+- [x] **View `whatsapp_webhook`** em `apps/core/views.py`
+  - [x] `GET` — verificação do webhook (responde com `hub.challenge`)
+  - [x] `POST` — processa mensagens de entrada
+  - [x] `@csrf_exempt` — Meta não envia CSRF token
+- [x] **Rota** `GET/POST /whatsapp/webhook/` em `apps/core/urls.py` — pública (sem login_required)
+- [x] **`_process_inbound_whatsapp()`** — encontra lead pelo telefone, cria `ChatterMessage`, notifica followers
+- [ ] **⚠️ PENDENTE — Testar webhook em produção**
+  - [ ] Em desenvolvimento local: instalar ngrok → `ngrok http 8000` → configurar URL no Meta
+  - [ ] Em produção (VPS com domínio): configurar directamente `https://dominio.com/whatsapp/webhook/` no Meta Developer Console → WhatsApp → Configuration → Webhook
+  - [ ] Subscribe to field: `messages`
+
+### 12.0.5 CRM — Tab WhatsApp no Chatter da Lead
+
+- [x] **Views em `apps/crm/views.py`**
+  - [x] `lead_whatsapp_list` — `GET /crm/leads/<id>/whatsapp/` — devolve JSON com mensagens
+  - [x] `lead_send_whatsapp` — `POST /crm/leads/<id>/whatsapp/send/` — envia e guarda na BD
+  - [x] Contexto da `lead_detail_view` ampliado: `has_whatsapp`, `lead_phone`
+- [x] **Rotas** em `apps/crm/urls.py`
+- [x] **Tab WhatsApp no template** `templates/crm/lead_create.html`
+  - [x] Balões verdes (enviados) / cinzentos (recebidos) ao estilo WhatsApp
+  - [x] Área de envio com Ctrl+Enter
+  - [x] Aviso "WhatsApp não configurado" se `has_whatsapp = False`
+  - [x] Aviso "Sem telefone no contacto" se `lead_phone` vazio
+  - [x] Alpine.js component `leadWhatsAppPanel(leadId, contactPhone, hasWhatsApp)`
+  - [x] Flag `loaded` para evitar polling infinito (bug corrigido)
+
+### 12.0.6 Fixes Aplicados Durante Implementação
+
+- [x] `MESSAGE_TYPE_CHOICES` em `apps/core/models.py` — adicionado `('WHATSAPP', 'WhatsApp')`
+- [x] Campo correcto `author=user` (era `sent_by=user` — campo inexistente)
+- [x] `from_email=''` (era `from_email=to_phone` — EmailField rejeita números de telefone)
+- [x] `m.author` na list view (era `m.sent_by`)
+
+---
+
+## 🔲 12.0.7 PENDENTE — Tokens e Produção
+
+- [ ] **Criar System User no Meta Business Manager**
+  - [ ] Ir a Meta Business Manager → Configurações → Utilizadores do Sistema
+  - [ ] Criar utilizador do sistema com perfil "Admin"
+  - [ ] Gerar token permanente com permissões `whatsapp_business_messaging` e `whatsapp_business_management`
+  - [ ] Actualizar token na BD via Admin ou shell
+
+---
+
+## 🔲 12.0.8 PENDENTE — Templates WhatsApp (Meta-approved)
+
+> Os templates são mensagens pré-aprovadas pela Meta usadas para contactar clientes fora da janela de 24h (ex: enviar orçamentos, facturas, confirmações).
+
+- [ ] **Modelo `WhatsAppTemplate`** em `apps/core/models.py`
+  - [ ] Campo `company` (ForeignKey → Company)
+  - [ ] Campo `name` (CharField — identificador único, ex: `orcamento_enviado`)
+  - [ ] Campo `language` (CharField, ex: `pt_PT`)
+  - [ ] Campo `category` (CharField — choices: MARKETING, UTILITY, AUTHENTICATION)
+  - [ ] Campo `header_text` (CharField, opcional — texto do cabeçalho)
+  - [ ] Campo `body_text` (TextField — corpo com variáveis `{{1}}`, `{{2}}`)
+  - [ ] Campo `footer_text` (CharField, opcional)
+  - [ ] Campo `status` (CharField — choices: DRAFT, PENDING, APPROVED, REJECTED)
+  - [ ] Campo `meta_template_id` (CharField — ID devolvido pela Meta após submissão)
+  - [ ] Campo `rejection_reason` (TextField — razão de rejeição da Meta, se aplicável)
+  - [ ] Campo `submitted_at` (DateTimeField, nullable)
+  - [ ] Campo `approved_at` (DateTimeField, nullable)
+  - [ ] Migration + Admin
+
+- [ ] **API Meta — Submeter Template para Aprovação**
+  - [ ] Função `submit_template_to_meta(template)` em `whatsapp_utils.py`
+  - [ ] `POST https://graph.facebook.com/v18.0/{business_account_id}/message_templates`
+  - [ ] Payload com name, language, category, components (HEADER, BODY, FOOTER)
+  - [ ] Guardar `meta_template_id` devolvido e mudar status para PENDING
+
+- [ ] **API Meta — Sincronizar Status dos Templates**
+  - [ ] Função `sync_template_status(company)` em `whatsapp_utils.py`
+  - [ ] `GET https://graph.facebook.com/v18.0/{business_account_id}/message_templates`
+  - [ ] Para cada template local, actualizar status (APPROVED / REJECTED) e `rejection_reason`
+  - [ ] Task Celery periódica ou botão manual no Admin
+
+- [ ] **Receber notificação de aprovação/rejeição via Webhook**
+  - [ ] Meta envia POST para o webhook com `message_template_status_update`
+  - [ ] Actualizar `WhatsAppTemplate.status` e `rejection_reason` automaticamente
+  - [ ] Adicionar handling em `apps/core/views.py` → `whatsapp_webhook`
+
+- [ ] **Admin — Gestão de Templates**
+  - [ ] Registar `WhatsAppTemplateAdmin`
+  - [ ] Acção "Submeter para aprovação" no Admin
+  - [ ] Acção "Sincronizar status" no Admin
+  - [ ] Mostrar status com cores (DRAFT=cinza, PENDING=amarelo, APPROVED=verde, REJECTED=vermelho)
+
+- [ ] **UI no Chatter — Botão "Enviar Template"**
+  - [ ] Botão "📋 Template" ao lado do botão de enviar no tab WhatsApp
+  - [ ] Modal Alpine.js: lista templates APPROVED, campos para preencher variáveis `{{1}}`, `{{2}}`
+  - [ ] `POST /crm/leads/<id>/whatsapp/send-template/` — envia via Meta API com `"type": "template"`
+  - [ ] View `lead_send_whatsapp_template` em `apps/crm/views.py`
 
 ---
 
@@ -9956,3 +10034,71 @@ Acessível via `/accounts/users/` — **apenas para role ADMIN ou superuser**.
   - [ ] Desativar utilizador → não consegue fazer login
   - [ ] Editar role → reflete imediatamente na navbar do utilizador
   - [ ] Reset email: token expira após 3 dias / uso único
+
+---
+
+## 3.16 Gestão de Empresas (ADMIN only) ✅
+
+Módulo para ADMIN criar, editar e gerir empresas do sistema.
+Acessível via `/accounts/companies/` — **apenas para role ADMIN**.
+
+- [x] **Model / URLs**
+  - [x] Rotas em `apps/accounts/urls.py`:
+    ```python
+    path('companies/', views.company_list_view, name='company_list'),
+    path('companies/new/', views.company_create_view, name='company_create'),
+    path('companies/<uuid:pk>/edit/', views.company_edit_view, name='company_edit'),
+    path('companies/<uuid:pk>/users/add/', views.company_user_add_view, name='company_user_add'),
+    path('companies/<uuid:pk>/users/<int:user_id>/remove/', views.company_user_remove_view, name='company_user_remove'),
+    path('companies/<uuid:pk>/users/search/', views.company_users_search_api, name='company_users_search'),
+    ```
+
+- [x] **Views (`apps/accounts/views.py`)**
+  - [x] `company_list_view` — tabela de empresas com logo, nome, NIF, nº utilizadores, moeda
+    - [x] Pesquisa por nome/NIF
+    - [x] Bulk delete com checkboxes
+    - [x] Clique na linha → abre edição
+  - [x] `company_create_view` — criar nova empresa
+  - [x] `company_edit_view` — editar empresa existente (redireciona para o próprio registo após guardar)
+  - [x] `company_user_add_view` — adicionar utilizador à empresa (AJAX POST)
+  - [x] `company_user_remove_view` — remover utilizador da empresa (AJAX POST)
+  - [x] `company_users_search_api` — pesquisa utilizadores não pertencentes à empresa (AJAX GET)
+
+- [x] **Forms**
+  - [x] `CompanyCreateForm` — ModelForm com todos os campos da empresa
+
+- [x] **Templates**
+  - [x] `templates/accounts/company_list.html` — tabela + navbar de ações + bulk delete
+  - [x] `templates/accounts/company_create.html` — form criação (logo + morada esq., campos dir., tabs Notas/WhatsApp)
+  - [x] `templates/accounts/company_edit.html` — form edição igual ao create + tab Utilizadores
+    - [x] Logo pré-preenchida
+    - [x] Campos pré-preenchidos com dados da empresa
+    - [x] Tab "Utilizadores": tabela de utilizadores da empresa + adicionar/remover AJAX
+    - [x] Dropdown de pesquisa sai para fora da tabela (fora do overflow-hidden)
+    - [x] Tab "WhatsApp": credenciais WhatsApp Business API com modal de ajuda
+    - [x] Tab "Notas": editor Quill rich-text
+
+- [x] **UX / Detalhe**
+  - [x] Campo website: `type="text"` + `autoHttps()` no blur (aceita `www.cubix.pt`)
+  - [x] Logo: upload com preview e crop 1:1 via canvas
+  - [x] JSON dos utilizadores via `json_script` (não quebra atributos HTML)
+  - [x] Alpine `x-data` separado do `x-show` para evitar erro "Cannot read .after"
+  - [x] Quill usa `getElementById('company-edit-form')` — não apanha o form de logout do base.html
+  - [x] Guardar redireciona para o próprio registo (não para a lista)
+
+- [x] **Navbar (base.html)**
+  - [x] Link "Empresas" adicionado na secção Administração do avatar dropdown
+
+- [ ] **Futuro: integrar currency e language**
+  - [ ] `currency` gravado na empresa — actualmente sem impacto funcional
+  - [ ] Quando existirem módulos financeiros (Fase 8/9): usar `company.currency` para formatar valores em facturas, orçamentos, inventário
+  - [ ] Criar modelo `Currency` com ISO 4217 (código, símbolo, nome) e ligar FK em `Company` — necessário quando houver suporte multi-moeda
+  - [x] Campo `language` **removido** do modelo `Company` — não faz sentido na empresa interna; idioma pertence aos contactos
+
+- [ ] **Testing**
+  - [ ] Não-admin redireciona para 403
+  - [ ] Criar empresa → aparece na lista
+  - [ ] Editar empresa → dados actualizados, fica no registo
+  - [ ] Adicionar utilizador → aparece na tab Utilizadores
+  - [ ] Remover utilizador → desaparece da tab
+  - [ ] Pesquisa de utilizadores não mostra os que já pertencem à empresa

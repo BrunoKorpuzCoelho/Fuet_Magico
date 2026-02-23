@@ -1,10 +1,11 @@
+from django import forms
 from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
     AuditLog, ErrorLog, Company, ChatterMessage, ChatterActivity,
     ActivityType, ScheduledActivity, ActivityWorkflow,
     ActivityChain, ActivityChainStep, ActivityChainInstance, ActivityLog,
-    Notification, ChatterFollower,
+    Notification, ChatterFollower, CompanyWhatsAppConfig,
 )
 
 
@@ -23,7 +24,7 @@ class ActivityTypeAdmin(admin.ModelAdmin):
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display = ['name', 'vat', 'city', 'country', 'currency', 'language', 'is_active', 'created_at']
+    list_display = ['name', 'vat', 'city', 'country', 'currency', 'is_active', 'created_at']
     list_filter = ['is_active', 'country', 'currency', 'created_at']
     search_fields = ['name', 'legal_name', 'vat', 'email', 'city']
     readonly_fields = ['id', 'created_at', 'updated_at']
@@ -39,7 +40,7 @@ class CompanyAdmin(admin.ModelAdmin):
             'fields': ['address', 'city', 'postal_code', 'country']
         }),
         ('Regional Settings', {
-            'fields': ['currency', 'language']
+            'fields': ['currency']
         }),
         ('Branding', {
             'fields': ['logo'],
@@ -395,3 +396,60 @@ class ChatterFollowerAdmin(admin.ModelAdmin):
     list_filter   = ['content_type']
     search_fields = ['user__first_name', 'user__last_name', 'user__username']
     readonly_fields = ['created_at']
+
+
+@admin.register(CompanyWhatsAppConfig)
+class CompanyWhatsAppConfigAdmin(admin.ModelAdmin):
+    list_display   = ['company', 'phone_number_id', 'is_active', 'updated_at']
+    list_filter    = ['is_active']
+    search_fields  = ['company__name', 'phone_number_id']
+    readonly_fields = ['created_at', 'updated_at', 'token_status']
+    fieldsets = (
+        ('Empresa', {'fields': ('company', 'is_active')}),
+        ('Meta Credentials', {
+            'fields': (
+                'phone_number_id',
+                'business_account_id',
+                'raw_token_input',
+                'token_status',
+                'webhook_verify_token',
+            ),
+            'description': 'O token é encriptado automaticamente ao guardar. '
+                           'Deixa "Novo token" em branco para manter o token existente.',
+        }),
+        ('Timestamps', {'fields': ('created_at', 'updated_at')}),
+    )
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        # Add a write-only raw token field to the form
+        form.base_fields['raw_token_input'] = forms.CharField(
+            label='Novo Access Token',
+            required=(obj is None),  # required only when creating
+            widget=forms.PasswordInput(render_value=False, attrs={'autocomplete': 'new-password', 'size': 80}),
+            help_text='Cola aqui o token da Meta. Será encriptado automaticamente. '
+                      'Deixa em branco para manter o token guardado.',
+        )
+        return form
+
+    def token_status(self, obj):
+        if obj and obj.access_token:
+            return format_html('<span style="color:green">✓ Token guardado (encriptado)</span>')
+        return format_html('<span style="color:red">✗ Sem token</span>')
+    token_status.short_description = 'Estado do token'
+
+    def save_model(self, request, obj, form, change):
+        raw = form.cleaned_data.get('raw_token_input', '').strip()
+        if raw:
+            obj.set_encrypted_token(raw)
+        elif not obj.access_token:
+            # Preserve existing token from DB if no new token provided
+            if change:
+                from .models import CompanyWhatsAppConfig as WAConfig
+                try:
+                    original = WAConfig.objects.get(pk=obj.pk)
+                    obj.access_token = original.access_token
+                except WAConfig.DoesNotExist:
+                    pass
+        super().save_model(request, obj, form, change)
+

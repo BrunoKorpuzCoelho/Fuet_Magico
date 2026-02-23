@@ -446,7 +446,7 @@
                                     <span class="mr-3">👤</span>
                                     Meu Perfil
                                 </a>
-                                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <a href="{% url 'dashboard:settings' %}" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span class="mr-3">⚙️</span>
                                     Definições
                                 </a>
@@ -459,10 +459,9 @@
                                     <span class="mr-3">👥</span>
                                     Utilizadores
                                 </a>
-                                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-500 cursor-not-allowed">
+                                <a href="{% url 'accounts:company_list' %}" class="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 transition">
                                     <span class="mr-3">🏢</span>
                                     Empresas
-                                    <span class="ml-auto text-[10px] text-gray-600 border border-gray-700 rounded px-1">em breve</span>
                                 </a>
                                 <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-500 cursor-not-allowed">
                                     <span class="mr-3">🛡️</span>
@@ -704,7 +703,13 @@
 
             async load() {
                 try {
-                    const res  = await fetch('/api/notifications/?limit=50');
+                    const res = await fetch('/api/notifications/?limit=50');
+                    // Verificar se resposta é JSON (não HTML de login)
+                    const contentType = res.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        // Provavelmente redirect de login, ignorar silenciosamente
+                        return;
+                    }
                     const data = await res.json();
                     this.notifications = data.notifications || [];
                     this.unreadCount   = data.unread_count  || 0;
@@ -713,7 +718,7 @@
                     const firstGroup = this.activityGroups.find(g => g.items.length > 0);
                     if (firstGroup && this.openGroup === 'overdue') this.openGroup = firstGroup.key;
                 } catch (e) {
-                    console.warn('Notifications load error:', e);
+                    // Erro silencioso - pode ser que user não está autenticado
                 }
             },
 
@@ -855,6 +860,10 @@
               keywords: ['crm', 'leads', 'lista', 'oportunidades', 'negócios', 'negocios'], icon: '📋' },
             { label: 'CRM / Nova Lead', category: 'CRM', url: '{% url "crm:lead_create" %}',
               keywords: ['crm', 'nova lead', 'criar lead', 'nova oportunidade', 'novo negócio'], icon: '➕' },
+            { label: 'CRM / Relatórios', category: 'CRM', url: '{% url "crm:crm_reports" %}',
+              keywords: ['crm', 'relatórios', 'reports', 'dashboard relatórios', 'análise', 'funil', 'forecast', 'previsão', 'ganhas', 'perdidas'], icon: '📈' },
+            { label: 'CRM / Prospectos', category: 'CRM', url: '{% url "crm:prospects_list" %}',
+              keywords: ['crm', 'prospectos', 'prospects', 'pré-pipeline', 'qualificação'], icon: '🎯' },
             { label: 'CRM / Configuração / Etapas', category: 'CRM', url: '{% url "crm:stage_list" %}',
               keywords: ['crm', 'etapas', 'estágios', 'stages', 'fases', 'configuração'], icon: '🔧' },
             { label: 'CRM / Configuração / Tags', category: 'CRM', url: '{% url "crm:crm_tag_list" %}',
@@ -882,10 +891,18 @@
 
             // Admin-only routes
             ...(isAdmin ? [
-                { label: 'Utilizadores', category: 'Admin', url: '/accounts/users/',
+                { label: 'Definições', category: 'Admin', url: '{% url "dashboard:settings" %}',
+                  keywords: ['definições', 'settings', 'configurações', 'crm config', 'sistema', 'empresa'], icon: '⚙️' },
+                { label: 'Definições / CRM', category: 'Admin', url: '{% url "dashboard:settings" %}?s=crm',
+                  keywords: ['definições', 'crm', 'pontuação', 'prospectos', 'geração leads', 'configuração crm'], icon: '⚙️' },
+                { label: 'Utilizadores', category: 'Admin', url: '{% url "accounts:user_list" %}',
                   keywords: ['utilizadores', 'users', 'equipa', 'funcionários', 'contas', 'acessos', 'gestão utilizadores'], icon: '👥' },
-                { label: 'Utilizadores / Novo Utilizador', category: 'Admin', url: '/accounts/users/new/',
+                { label: 'Utilizadores / Novo Utilizador', category: 'Admin', url: '{% url "accounts:user_create" %}',
                   keywords: ['novo utilizador', 'criar user', 'novo acesso', 'novo funcionário', 'add user'], icon: '➕' },
+                { label: 'Empresas', category: 'Admin', url: '{% url "accounts:company_list" %}',
+                  keywords: ['empresas', 'companies', 'organizações', 'multi-empresa', 'tenants'], icon: '🏢' },
+                { label: 'Empresas / Nova Empresa', category: 'Admin', url: '{% url "accounts:company_create" %}',
+                  keywords: ['nova empresa', 'criar empresa', 'nova organização', 'add company'], icon: '➕' },
                 { label: 'Admin / Painel Django', category: 'Admin', url: '/admin/',
                   keywords: ['admin', 'administração', 'django', 'backend', 'painel admin'], icon: '🛡️' },
                 { label: 'DevTools / Logs de Aplicação', category: 'Admin', url: '/devtools/logs/application/',

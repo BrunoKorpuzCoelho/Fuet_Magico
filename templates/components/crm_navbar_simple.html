@@ -7,16 +7,44 @@
                    class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
                     CRM
                 </a>
-                
-                <a href="#" 
-                   class="text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed">
-                    Vendas
+
+                {% if crm_config and crm_config.prospects_enabled %}
+                <a href="{% url 'crm:prospects_list' %}"
+                   class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+                    Prospectos
                 </a>
+                {% endif %}
                 
-                <a href="#" 
-                   class="text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed">
-                    Relatórios
-                </a>
+                <div class="relative" x-data="{ open: false }">
+                    <button @click="open = !open"
+                            class="flex items-center space-x-1 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+                        <span>Relatórios</span>
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <div x-show="open"
+                         @click.away="open = false"
+                         x-transition:enter="transition ease-out duration-100"
+                         x-transition:enter-start="opacity-0 scale-95"
+                         x-transition:enter-end="opacity-100 scale-100"
+                         x-transition:leave="transition ease-in duration-75"
+                         x-transition:leave-start="opacity-100 scale-100"
+                         x-transition:leave-end="opacity-0 scale-95"
+                         class="absolute left-0 mt-2 w-52 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+                         style="display:none;">
+                        <div class="py-1">
+                            <div class="px-4 py-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">CRM</div>
+                            <a href="{% url 'crm:crm_reports' %}"
+                               class="flex items-center gap-2 pl-8 pr-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <svg class="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                                Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="relative" x-data="{ open: false }">
                     <button @click="open = !open" 
@@ -42,8 +70,8 @@
                             <div class="px-4 py-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                                 Definições
                             </div>
-                            <a href="#"
-                               class="block pl-8 pr-4 py-2 text-sm text-gray-400 dark:text-gray-500 cursor-not-allowed">
+                            <a href="{% url 'dashboard:settings' %}?s=crm"
+                               class="block pl-8 pr-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 CRM
                             </a>
 

@@ -5,9 +5,15 @@ from django.views.decorators.http import require_http_methods, require_POST
 from django.contrib.auth.decorators import login_required
 from django.db import models
 from django.utils import timezone
+import json
+import logging
+from django.views.decorators.csrf import csrf_exempt
 from apps.accounts.decorators import role_required
-from .models import AuditLog, ErrorLog, Notification
+from .models import AuditLog, ErrorLog, Notification, CompanyWhatsAppConfig
+from .whatsapp_utils import parse_webhook_payload, phones_match
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 @require_http_methods(["GET"])
@@ -350,56 +356,185 @@ def chatter_create_message(request):
 @require_POST
 def chatter_send_whatsapp(request):
     """
-    API endpoint to send WhatsApp message.
-    
+    Send a WhatsApp message via Meta Cloud API for a CRM Lead.
+
     POST /api/chatter/whatsapp/
     Body JSON:
     {
-        "object_type": "crm.lead",
-        "object_id": "uuid-here",
-        "message": "WhatsApp message text"
+        "lead_id": "<uuid>",
+        "to_phone": "+351912345678",
+        "message": "Hello!",
+        "reply_to_wamid": "wamid.xxx"   // optional
     }
-    
-    Returns:
-        JSON: {"success": True/False, "message": "..."}
-    
-    Notes:
-        - This is a PLACEHOLDER for Phase 12 (WhatsApp API)
-        - Will be fully implemented when WhatsApp integration is added
     """
     try:
+        from apps.core.models import ChatterMessage
+        from apps.core.whatsapp_utils import send_whatsapp_message
+
         data = json.loads(request.body)
-        
-        object_type = data.get('object_type')
-        object_id = data.get('object_id')
-        message = data.get('message', '')
-        
-        # Log for now (Phase 12 will implement actual WhatsApp API)
-        print("=" * 80)
-        print("[CHATTER API] chatter_send_whatsapp() CALLED - PLACEHOLDER")
-        print(f"User: {request.user.get_full_name()}")
-        print(f"Object Type: {object_type}")
-        print(f"Object ID: {object_id}")
-        print(f"Message: {message[:100]}...")
-        print("=" * 80)
-        
-        # TODO: Implement in Phase 12 (WhatsApp API integration)
-        # 1. Get phone number from object (Lead, Contact, etc.)
-        # 2. Send via WhatsApp API
-        # 3. Create WhatsAppMessage record
-        # 4. Create ChatterActivity for audit log
-        
-        return JsonResponse({
-            'success': True,
-            'message': 'PLACEHOLDER - WhatsApp integration will be implemented in Phase 12'
-        })
-    
-    except Exception as e:
-        print(f"[CHATTER API] ERROR: {e}")
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)
+        lead_id   = data.get('lead_id')
+        to_phone  = data.get('to_phone', '').strip()
+        body_text = data.get('message', '').strip()
+        reply_to  = data.get('reply_to_wamid', '')
+
+        if not to_phone or not body_text:
+            return JsonResponse({'success': False, 'error': 'to_phone e message são obrigatórios'}, status=400)
+
+        # Get company WhatsApp config via the active company of the request user
+        user = request.user
+        active_company = getattr(user, 'active_company', None)
+        if not active_company:
+            # Fallback: try the first company the user belongs to
+            from apps.core.multi_company import get_user_active_company
+            active_company = get_user_active_company(request)
+
+        config = getattr(active_company, 'whatsapp_config', None) if active_company else None
+        if not config or not config.has_whatsapp_configured:
+            return JsonResponse({'success': False, 'error': 'WhatsApp não configurado para esta empresa'}, status=400)
+
+        result = send_whatsapp_message(config, to_phone, body_text, reply_to or None)
+
+        if result['success']:
+            # Persist as ChatterMessage (direction=outbound)
+            from django.contrib.contenttypes.models import ContentType
+            from apps.crm.models import Lead
+            ct = ContentType.objects.get_for_model(Lead)
+            try:
+                lead = Lead.objects.get(pk=lead_id)
+                ChatterMessage.objects.create(
+                    content_type=ct,
+                    object_id=lead.pk,
+                    message_type='WHATSAPP',
+                    direction='outbound',
+                    from_email='',
+                    to_email='',
+                    subject='',
+                    body=body_text,
+                    body_html='',
+                    message_id=result['wamid'],
+                    author=user,
+                )
+            except Exception as persist_exc:
+                logger.warning('[WhatsApp] Could not persist outbound message: %s', persist_exc)
+
+            return JsonResponse({'success': True, 'wamid': result['wamid']})
+
+        return JsonResponse({'success': False, 'error': result['error']}, status=500)
+
+    except Exception as exc:
+        logger.exception('[WhatsApp] chatter_send_whatsapp error')
+        return JsonResponse({'success': False, 'error': str(exc)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(['GET', 'POST'])
+def whatsapp_webhook(request):
+    """
+    Meta WhatsApp Cloud API webhook endpoint.
+
+    GET  /whatsapp/webhook/  — token verification challenge
+    POST /whatsapp/webhook/  — inbound message delivery
+    """
+    if request.method == 'GET':
+        mode      = request.GET.get('hub.mode', '')
+        token     = request.GET.get('hub.verify_token', '')
+        challenge = request.GET.get('hub.challenge', '')
+
+        # Find a matching config by verify token
+        config = CompanyWhatsAppConfig.objects.filter(
+            webhook_verify_token=token, is_active=True
+        ).first()
+
+        if mode == 'subscribe' and config:
+            logger.info('[WhatsApp Webhook] Verified for company=%s', config.company_id)
+            from django.http import HttpResponse
+            return HttpResponse(challenge, content_type='text/plain')
+
+        logger.warning('[WhatsApp Webhook] GET verification failed: mode=%s token=%s', mode, token)
+        from django.http import HttpResponse
+        return HttpResponse('Forbidden', status=403)
+
+    # POST — receive inbound messages
+    try:
+        payload = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError) as exc:
+        logger.error('[WhatsApp Webhook] Invalid JSON: %s', exc)
+        from django.http import HttpResponse
+        return HttpResponse('Bad Request', status=400)
+
+    messages_parsed = parse_webhook_payload(payload)
+    logger.info('[WhatsApp Webhook] Received %d message(s)', len(messages_parsed))
+
+    for msg in messages_parsed:
+        _process_inbound_whatsapp(msg)
+
+    # Meta expects a 200 OK immediately
+    from django.http import HttpResponse
+    return HttpResponse('EVENT_RECEIVED', content_type='text/plain')
+
+
+def _process_inbound_whatsapp(msg: dict):
+    """
+    Match an inbound WhatsApp message to a CRM Lead and persist a ChatterMessage.
+    Calls notify_followers() to alert subscribers.
+    """
+    from django.contrib.contenttypes.models import ContentType
+    from apps.crm.models import Lead
+    from apps.core.models import ChatterMessage
+    from apps.core.models import notify_followers
+
+    from_phone = msg['from_phone']
+    body       = msg['body']
+    wamid      = msg['wamid']
+
+    # Find a Lead whose phone matches the sender
+    lead = None
+    for candidate in Lead.objects.filter(is_active=True).only('id', 'phone', 'title'):
+        if phones_match(candidate.phone or '', from_phone):
+            lead = candidate
+            break
+
+    if not lead:
+        logger.info('[WhatsApp Webhook] No lead found for phone %s — skipping', from_phone)
+        return
+
+    ct = ContentType.objects.get_for_model(Lead)
+
+    # Avoid duplicates by wamid
+    if ChatterMessage.objects.filter(message_id=wamid).exists():
+        logger.debug('[WhatsApp Webhook] Duplicate wamid %s, skipping', wamid)
+        return
+
+    from django.utils import timezone
+    import datetime
+    ts = msg.get('timestamp', 0)
+    sent_at = (
+        timezone.make_aware(datetime.datetime.utcfromtimestamp(ts))
+        if ts else timezone.now()
+    )
+
+    ChatterMessage.objects.create(
+        content_type=ct,
+        object_id=lead.pk,
+        message_type='WHATSAPP',
+        direction='inbound',
+        from_email=from_phone,
+        to_email='',
+        subject='',
+        body=body,
+        body_html='',
+        message_id=wamid,
+        sent_at=sent_at,
+    )
+
+    notify_followers(
+        lead,
+        'WHATSAPP',
+        f'{lead.title} — WhatsApp de {msg.get("wa_name") or from_phone}',
+        message=body[:200],
+        link=f'/crm/leads/{lead.id}/',
+    )
+    logger.info('[WhatsApp Webhook] Saved inbound msg for lead %s (wamid=%s)', lead.id, wamid)
 
 
 @login_required
