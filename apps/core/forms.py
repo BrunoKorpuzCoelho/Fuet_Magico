@@ -20,6 +20,19 @@ class ScheduledActivityForm(forms.ModelForm):
     Scheduling (due_date, assigned_to) happens in ActivityLog when the chain runs.
     """
 
+    APPLICABLE_MODEL_CHOICES = [
+        ('CRM', 'CRM — Leads'),
+        ('WHATSAPP', 'WhatsApp Templates'),
+        ('CONTACT', 'Contactos'),
+    ]
+
+    applicable_models = forms.MultipleChoiceField(
+        choices=APPLICABLE_MODEL_CHOICES,
+        required=False,
+        label='Modelos aplicáveis',
+        help_text='Deixar vazio para aplicar a todos os módulos.',
+    )
+
     class Meta:
         model = ScheduledActivity
         fields = [
@@ -77,6 +90,16 @@ class ScheduledActivityForm(forms.ModelForm):
         self.fields['summary'].required = False
         self.fields['icon_svg'].required = False
         self.fields['icon_color'].required = False
+        # Set initial value for applicable_models from instance
+        if self.instance and self.instance.pk:
+            self.initial['applicable_models'] = self.instance.applicable_models or []
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.applicable_models = self.cleaned_data.get('applicable_models', [])
+        if commit:
+            instance.save()
+        return instance
 
 
 class ActivityLogForm(forms.ModelForm):

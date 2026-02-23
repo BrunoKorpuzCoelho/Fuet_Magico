@@ -16,6 +16,14 @@ FERNET_KEY = os.getenv('FERNET_KEY', '')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,cubixtest.pt,www.cubixtest.pt').split(',')
 
+# ---------------------------------------------------------------
+# WhatsApp Business API (Meta Graph API)
+# ---------------------------------------------------------------
+# Obter em: https://developers.facebook.com/apps/ → WhatsApp → API Setup
+WHATSAPP_ACCESS_TOKEN = os.getenv('WHATSAPP_ACCESS_TOKEN', '')   # System User token (permanent)
+WHATSAPP_WABA_ID = os.getenv('WHATSAPP_WABA_ID', '')             # WhatsApp Business Account ID
+WHATSAPP_PHONE_NUMBER_ID = os.getenv('WHATSAPP_PHONE_NUMBER_ID', '')  # Phone Number ID
+
 
 
 INSTALLED_APPS = [
@@ -32,6 +40,7 @@ INSTALLED_APPS = [
     'apps.dashboard',
     'apps.contacts',
     'apps.crm',
+    'apps.whatsapp',
 ]
 
 MIDDLEWARE = [

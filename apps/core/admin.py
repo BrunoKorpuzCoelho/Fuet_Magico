@@ -5,7 +5,7 @@ from .models import (
     AuditLog, ErrorLog, Company, ChatterMessage, ChatterActivity,
     ActivityType, ScheduledActivity, ActivityWorkflow,
     ActivityChain, ActivityChainStep, ActivityChainInstance, ActivityLog,
-    Notification, ChatterFollower, CompanyWhatsAppConfig,
+    Notification, ChatterFollower, CompanyWhatsAppConfig, GenericActivity,
 )
 
 
@@ -221,7 +221,7 @@ class ActivityLogAdmin(admin.ModelAdmin):
 
 @admin.register(ScheduledActivity)
 class ScheduledActivityAdmin(admin.ModelAdmin):
-    list_display = ['name_or_summary', 'activity_type', 'icon_preview', 'owner_company', 'is_active', 'created_at']
+    list_display = ['name_or_summary', 'activity_type', 'icon_preview', 'applicable_models_display', 'owner_company', 'is_active', 'created_at']
     list_filter = ['activity_type', 'is_active', 'owner_company', 'decoration_type']
     search_fields = ['name', 'summary', 'description']
     readonly_fields = ['created_at', 'updated_at', 'icon_rendered_preview']
@@ -230,6 +230,10 @@ class ScheduledActivityAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Blueprint Info', {
             'fields': ('activity_type', 'name', 'summary', 'description')
+        }),
+        ('Visibilidade', {
+            'fields': ('applicable_models',),
+            'description': 'Selecionar módulos onde este blueprint aparece. Deixar vazio = aparece em todos os módulos.',
         }),
         ('Visual (Icon & Colors)', {
             'fields': ('icon', 'icon_svg', 'icon_color', 'icon_rendered_preview', 'decoration_type'),
@@ -248,6 +252,13 @@ class ScheduledActivityAdmin(admin.ModelAdmin):
     def name_or_summary(self, obj):
         return obj.name or obj.summary
     name_or_summary.short_description = 'Name / Summary'
+
+    def applicable_models_display(self, obj):
+        models_list = obj.applicable_models or []
+        if not models_list:
+            return '— todos —'
+        return ', '.join(models_list)
+    applicable_models_display.short_description = 'Módulos'
 
     def icon_preview(self, obj):
         if obj.icon_svg:
@@ -453,3 +464,10 @@ class CompanyWhatsAppConfigAdmin(admin.ModelAdmin):
                     pass
         super().save_model(request, obj, form, change)
 
+
+@admin.register(GenericActivity)
+class GenericActivityAdmin(admin.ModelAdmin):
+    list_display = ['summary', 'activity_type', 'content_type', 'object_id', 'assigned_to', 'due_date', 'is_done', 'owner_company']
+    list_filter  = ['activity_type', 'is_done', 'content_type', 'owner_company']
+    search_fields = ['summary', 'object_id']
+    raw_id_fields = ['assigned_to', 'scheduled_activity']

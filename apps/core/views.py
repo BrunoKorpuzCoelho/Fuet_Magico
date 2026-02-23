@@ -335,7 +335,26 @@ def chatter_create_message(request):
         # if message_type == 'EMAIL':
         #     from config.tasks import send_email_task
         #     send_email_task.delay(str(chatter_message.id))
-        
+
+        # Notificar seguidores (excluir o próprio autor)
+        try:
+            from apps.core.models import notify_followers
+            obj = content_type.get_object_for_this_type(pk=object_id)
+            notif_type = 'EMAIL' if message_type == 'EMAIL' else 'MENTION'
+            if message_type == 'EMAIL':
+                notif_title = f'Novo email em {content_type.name}: {subject or body[:60]}'
+            else:
+                notif_title = f'Nova nota em {obj} por {request.user.get_full_name() or request.user.username}'
+            notify_followers(
+                obj,
+                notif_type,
+                notif_title,
+                message=body[:200],
+                exclude_user=request.user,
+            )
+        except Exception:
+            pass  # não falhar o pedido por causa das notificações
+
         return JsonResponse({
             'success': True,
             'message': 'Message created successfully',

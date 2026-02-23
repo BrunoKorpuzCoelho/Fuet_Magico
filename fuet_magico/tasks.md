@@ -28,7 +28,7 @@
 - **Fase 9:** 0/8 features (0%) - App: Financeiro
 - **Fase 10:** 0/18 features (0%) - BOM (Bill of Materials) - Sistema de Receitas
 - **Fase 11:** 0/8 features (0%) - Sistema de PDFs (Documentos)
-- **Fase 12:** 5/12 features (42%) - App: Marketing e WhatsApp (WhatsApp Business API no Chatter ✅ parcial)
+- **Fase 12:** 17/26 features (65%) - App: WhatsApp Templates & Activities ✅ parcial
 - **Fase 13:** 0/6 features (0%) - Stock Management Avançado
 - **Fase 14:** 0/6 features (0%) - PDF Scanning (Entrada de Compras)
 - **Fase 15:** 0/6 features (0%) - App: Relatórios e Dashboard
@@ -36,7 +36,7 @@
 - **Fase 17:** 0/6 features (0%) - Integração Final e Deployment
 - **Fase 18:** 0/13 features (0%) - Testes Automatizados UI (Playwright)
 
-**TOTAL:** 22/167 features (13.2%)
+**TOTAL:** 34/181 features (18.8%)
 
 ---
 
@@ -7643,53 +7643,190 @@ Permitir customizar templates via admin.
 
 ---
 
-## 🔲 12.0.8 PENDENTE — Templates WhatsApp (Meta-approved)
+## ✅ 12.0.8 IMPLEMENTADO — Modelo WhatsAppTemplate e API Meta (Fev 2026)
 
-> Os templates são mensagens pré-aprovadas pela Meta usadas para contactar clientes fora da janela de 24h (ex: enviar orçamentos, facturas, confirmações).
+> Implementado em `apps/whatsapp/` (app dedicada, não em `apps/core/` como originalmente planeado).
 
-- [ ] **Modelo `WhatsAppTemplate`** em `apps/core/models.py`
-  - [ ] Campo `company` (ForeignKey → Company)
-  - [ ] Campo `name` (CharField — identificador único, ex: `orcamento_enviado`)
-  - [ ] Campo `language` (CharField, ex: `pt_PT`)
-  - [ ] Campo `category` (CharField — choices: MARKETING, UTILITY, AUTHENTICATION)
-  - [ ] Campo `header_text` (CharField, opcional — texto do cabeçalho)
-  - [ ] Campo `body_text` (TextField — corpo com variáveis `{{1}}`, `{{2}}`)
-  - [ ] Campo `footer_text` (CharField, opcional)
-  - [ ] Campo `status` (CharField — choices: DRAFT, PENDING, APPROVED, REJECTED)
-  - [ ] Campo `meta_template_id` (CharField — ID devolvido pela Meta após submissão)
-  - [ ] Campo `rejection_reason` (TextField — razão de rejeição da Meta, se aplicável)
-  - [ ] Campo `submitted_at` (DateTimeField, nullable)
-  - [ ] Campo `approved_at` (DateTimeField, nullable)
-  - [ ] Migration + Admin
+- [x] **Modelo `WhatsAppTemplate`** em `apps/whatsapp/models.py`
+  - [x] Campo `name` (CharField unique — identificador técnico, ex: `orcamento_aprovado`)
+  - [x] Campo `display_name` (CharField — nome legível para o utilizador)
+  - [x] Campo `language` (CharField — choices: pt_PT, pt_BR, en_US, en_GB, fr, es, de, it, nl, ar, zh_CN)
+  - [x] Campo `category` (CharField — choices: MARKETING, UTILITY, AUTHENTICATION)
+  - [x] Campo `status` (CharField — choices: DRAFT, PENDING, APPROVED, REJECTED, PAUSED, DISABLED)
+  - [x] Campo `allow_category_change` (BooleanField)
+  - [x] Campo `header_type` (CharField — choices: NONE, TEXT, IMAGE, VIDEO, DOCUMENT)
+  - [x] Campo `header_text` (CharField, opcional — máx. 60 caracteres)
+  - [x] Campo `body` (TextField — corpo com variáveis `{{1}}`, `{{2}}`)
+  - [x] Campo `footer` (CharField, opcional — máx. 60 caracteres)
+  - [x] Campo `buttons` (JSONField — lista de botões URL / PHONE_NUMBER / QUICK_REPLY / COPY_CODE)
+  - [x] Campo `variables` (JSONField — mapeamento `{"1": "contact.name", "2": "title"}`)
+  - [x] Campo `model_name` (CharField — modelo Django associado, ex: `crm.Lead`)
+  - [x] Campo `wa_template_uid` (CharField — ID devolvido pela Meta)
+  - [x] Campo `owner_company` (ForeignKey → Company)
+  - [x] Campo `created_by` (ForeignKey → User)
+  - [x] Property `status_color` (Tailwind class para badge)
+  - [x] Property `variable_count` (conta variáveis `{{N}}` no body)
+  - [x] Migration aplicada ✅
 
-- [ ] **API Meta — Submeter Template para Aprovação**
-  - [ ] Função `submit_template_to_meta(template)` em `whatsapp_utils.py`
-  - [ ] `POST https://graph.facebook.com/v18.0/{business_account_id}/message_templates`
-  - [ ] Payload com name, language, category, components (HEADER, BODY, FOOTER)
-  - [ ] Guardar `meta_template_id` devolvido e mudar status para PENDING
+- [x] **API Meta — Submeter Template para Aprovação** (`apps/whatsapp/api.py`)
+  - [x] Função `build_template_payload(template)` — constrói JSON para Meta API
+  - [x] Suporte a HEADER (TEXT / IMAGE / VIDEO / DOCUMENT) com `example`
+  - [x] Suporte a BODY com amostras de variáveis
+  - [x] Suporte a FOOTER e BUTTONS (URL, PHONE_NUMBER, QUICK_REPLY, COPY_CODE)
+  - [x] Função `submit_template_to_meta(template)` — `POST graph.facebook.com/v19.0/{waba_id}/message_templates`
+  - [x] Guarda `wa_template_uid` devolvido e muda status para PENDING
 
-- [ ] **API Meta — Sincronizar Status dos Templates**
-  - [ ] Função `sync_template_status(company)` em `whatsapp_utils.py`
-  - [ ] `GET https://graph.facebook.com/v18.0/{business_account_id}/message_templates`
-  - [ ] Para cada template local, actualizar status (APPROVED / REJECTED) e `rejection_reason`
-  - [ ] Task Celery periódica ou botão manual no Admin
+- [x] **Admin — Gestão de Templates** (`apps/whatsapp/admin.py`)
+  - [x] `WhatsAppTemplateAdmin` registado
+  - [x] `list_display`: display_name, name, category, language, status, header_type, owner_company, created_at
+  - [x] `list_filter`: category, language, status, header_type, owner_company
+  - [x] Fieldsets: Identificação, Classificação, Conteúdo, Variáveis, Meta API, Datas
 
-- [ ] **Receber notificação de aprovação/rejeição via Webhook**
+- [ ] **⚠️ PENDENTE — Receber notificação de aprovação/rejeição via Webhook**
   - [ ] Meta envia POST para o webhook com `message_template_status_update`
   - [ ] Actualizar `WhatsAppTemplate.status` e `rejection_reason` automaticamente
   - [ ] Adicionar handling em `apps/core/views.py` → `whatsapp_webhook`
 
-- [ ] **Admin — Gestão de Templates**
-  - [ ] Registar `WhatsAppTemplateAdmin`
-  - [ ] Acção "Submeter para aprovação" no Admin
-  - [ ] Acção "Sincronizar status" no Admin
-  - [ ] Mostrar status com cores (DRAFT=cinza, PENDING=amarelo, APPROVED=verde, REJECTED=vermelho)
-
-- [ ] **UI no Chatter — Botão "Enviar Template"**
+- [ ] **⚠️ PENDENTE — UI no Chatter — Botão "Enviar Template"**
   - [ ] Botão "📋 Template" ao lado do botão de enviar no tab WhatsApp
-  - [ ] Modal Alpine.js: lista templates APPROVED, campos para preencher variáveis `{{1}}`, `{{2}}`
-  - [ ] `POST /crm/leads/<id>/whatsapp/send-template/` — envia via Meta API com `"type": "template"`
+  - [ ] Modal Alpine.js: lista templates APPROVED, campos para preencher variáveis
   - [ ] View `lead_send_whatsapp_template` em `apps/crm/views.py`
+
+---
+
+## ✅ 12.0.9 IMPLEMENTADO — Modelo GenericActivity e Blueprint Filtering (Fev 2026)
+
+### GenericActivity (`apps/core/models.py`)
+
+- [x] **Novo modelo `GenericActivity`** — atividade genérica ligada a qualquer modelo via ContentType
+  - [x] ContentType FK + `object_id` + `content_object` (GenericForeignKey)
+  - [x] `scheduled_activity` (FK → ScheduledActivity, opcional — blueprint)
+  - [x] `activity_type` (CharField — TODO, EMAIL, CALL, WHATSAPP, DOCUMENT, SIGNATURE, MEETING)
+  - [x] `summary` (CharField), `due_date` (DateField)
+  - [x] `assigned_to` (FK → User), `is_done` (BooleanField), `done_date` (DateTimeField), `feedback` (TextField)
+  - [x] `owner_company` (FK → Company)
+  - [x] Property `is_overdue`, `is_today`
+  - [x] Indexes em `content_type+object_id`, `due_date`, `is_done`
+  - [x] `GenericActivityAdmin` registado em `apps/core/admin.py`
+  - [x] Migration aplicada ✅
+
+### ScheduledActivity — Campo `applicable_models`
+
+- [x] **Campo `applicable_models`** (JSONField, default=list, blank=True) em `ScheduledActivity`
+  - [x] Choices: `CRM` (CRM — Leads), `WHATSAPP` (WhatsApp Templates), `CONTACT` (Contactos)
+  - [x] Vazio = aplica-se a todos os módulos
+  - [x] Admin: novo fieldset "Visibilidade", coluna `Módulos` na list view
+  - [x] Form: `ScheduledActivityForm` com `MultipleChoiceField` e widget combobox pill picker (Alpine.js)
+  - [x] Template `crm/activity_form.html`: campo "Módulos" com input+dropdown+pills removíveis
+  - [x] Migration `0022_scheduledactivity_applicable_models.py` aplicada ✅
+
+### Blueprint Filtering por Módulo
+
+- [x] **Filtro `Q(applicable_models=[]) | Q(applicable_models__contains=['CRM'])`** aplicado em:
+  - [x] `lead_detail_view` (`apps/crm/views.py`) — activity picker da lead
+  - [x] `prospect_detail_view` (`apps/crm/views.py`) — activity picker do prospect
+  - [x] `activity_chain_create_view` (`apps/crm/views.py`) — blueprints na cadeia
+  - [x] `activity_chain_edit_view` (`apps/crm/views.py`) — blueprints na cadeia
+- [x] **Filtro `Q(applicable_models=[]) | Q(applicable_models__contains=['WHATSAPP'])`** aplicado em:
+  - [x] `template_edit_view` (`apps/whatsapp/views.py`) — blueprints no tab Atividade
+
+---
+
+## ✅ 12.1 IMPLEMENTADO — App `apps/whatsapp` — Gestão Completa de Templates (Fev 2026)
+
+### 12.1.1 Estrutura da App
+
+- [x] App `apps/whatsapp/` criada (`__init__.py`, `apps.py`, `models.py`, `views.py`, `urls.py`, `forms.py`, `api.py`, `admin.py`, `migrations/`)
+- [x] `apps.whatsapp` registado em `INSTALLED_APPS` (`config/settings.py`)
+- [x] URLs registadas em `config/urls.py` → `path('whatsapp/', include('apps.whatsapp.urls'))`
+- [x] Variáveis `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_WABA_ID`, `WHATSAPP_PHONE_NUMBER_ID` em `config/settings.py`
+- [x] Tile WhatsApp adicionado ao dashboard (`apps/dashboard/views.py`) com ícone SVG verde
+- [x] Secção WhatsApp adicionada às Definições (`templates/dashboard/settings.html`) — API Token, Número, Webhook, toggles de funcionalidades
+- [x] Ícone WhatsApp adicionado ao nav de definições (`templates/dashboard/_settings_nav_item.html`)
+
+### 12.1.2 URLs (`apps/whatsapp/urls.py`)
+
+- [x] `GET/POST /whatsapp/` → `template_list_view`
+- [x] `GET/POST /whatsapp/novo/` → `template_create_view`
+- [x] `GET/POST /whatsapp/<uuid>/editar/` → `template_edit_view`
+- [x] `POST /whatsapp/<uuid>/submeter/` → `template_submit_view`
+- [x] `POST /whatsapp/<uuid>/arquivar/` → `template_archive_view`
+- [x] `POST /whatsapp/<uuid>/desarquivar/` → `template_unarchive_view`
+- [x] `POST /whatsapp/<uuid>/eliminar/` → `template_delete_view`
+- [x] `POST /whatsapp/bulk/` → `bulk_action_view`
+- [x] `GET /whatsapp/<uuid>/notas/` → `template_notes_list`
+- [x] `POST /whatsapp/<uuid>/notas/criar/` → `template_note_create`
+- [x] `GET|POST /whatsapp/<uuid>/seguidores/` → `template_followers_api`
+- [x] `DELETE /whatsapp/<uuid>/seguidores/<uuid>/remover/` → `template_follower_remove_api`
+- [x] `POST /whatsapp/<uuid>/atividades/criar/` → `template_activity_create`
+- [x] `POST /whatsapp/<uuid>/atividades/<uuid>/concluir/` → `template_activity_done`
+- [x] `DELETE /whatsapp/<uuid>/atividades/<uuid>/eliminar/` → `template_activity_delete`
+
+### 12.1.3 Views CRUD
+
+- [x] **`template_list_view`** — lista paginada (50/página) com:
+  - [x] Pesquisa por display_name, name, body
+  - [x] Filtro active/archived, filtro `wa_status` (DRAFT/PENDING/APPROVED/REJECTED/PAUSED), filtro category
+  - [x] Bulk actions: arquivar, desarquivar, eliminar
+- [x] **`template_create_view`** — cria novo template, redireciona para lista
+- [x] **`template_edit_view`** — edição completa com:
+  - [x] Form readonly se status = PENDING ou APPROVED
+  - [x] Audit log (últimos 50 eventos)
+  - [x] Tab Atividades com `GenericActivity` (design CRM-idêntico)
+  - [x] AirDatepicker para data limite das atividades
+  - [x] Campo Responsável com utilizadores activos
+  - [x] Lista de blueprints filtrada por `WHATSAPP` applicable_models
+  - [x] Mapa de variáveis com preview em tempo real
+  - [x] Notificações criadas/removidas nos eventos de atividade
+  - [x] Auto-follow do utilizador actual como seguidor
+  - [x] `notify_followers` ao guardar alterações
+- [x] **`template_submit_view`** — submete à Meta API, atualiza `wa_template_uid` e status → PENDING
+- [x] **`template_archive_view`** / **`template_unarchive_view`** — toggle `is_active`
+- [x] **`template_delete_view`** — elimina template
+- [x] **`bulk_action_view`** — archive / unarchive / delete em massa
+
+### 12.1.4 Notes (Chatter interno)
+
+- [x] **`template_notes_list`** — devolve JSONResponse com notas internas do template (ChatterMessage, type=NOTE)
+- [x] **`template_note_create`** — cria nota, processa @menções (Notification MENTION), notifica seguidores via `notify_followers`
+
+### 12.1.5 Followers (Chatter)
+
+- [x] **`template_followers_api`** — GET lista seguidores (com auto-follow do utilizador actual); POST adiciona seguidor
+- [x] **`template_follower_remove_api`** — DELETE remove seguidor
+
+### 12.1.6 Atividades (GenericActivity)
+
+- [x] **`template_activity_create`** — cria `GenericActivity` ligada ao template via ContentType; cria `Notification` (OVERDUE/TODAY/UPCOMING) para o responsável
+- [x] **`template_activity_done`** — marca como concluído, guarda feedback, remove notificação pendente
+- [x] **`template_activity_delete`** — elimina atividade, remove notificação pendente
+- [x] **Design CRM-idêntico** no tab Atividades do template:
+  - [x] Secção "Atividades Planeadas" com chevron
+  - [x] Data relativa (Hoje / Amanhã / Daqui a N dias / Atrasado)
+  - [x] «sumário» + "para" + responsável + ⓘ info toggle
+  - [x] Painel de info expandível (Tipo / Responsável / Vence em)
+  - [x] Acções: ✓ Marcar Concluído | Cancelar
+  - [x] Popover inline "Marcar Concluído" com textarea de feedback
+  - [x] Modal de confirmação de cancelamento
+  - [x] Secção Concluídas com strikethrough + feedback
+
+### 12.1.7 Form (`apps/whatsapp/forms.py`)
+
+- [x] `WhatsAppTemplateForm` (ModelForm para WhatsAppTemplate)
+  - [x] Campos: name, display_name, category, language, header_type, header_text, body, footer, buttons, variables, model_name
+  - [x] Widget para `buttons` e `variables`: Textarea com JSON
+
+### 12.1.8 Templates HTML
+
+- [x] `templates/whatsapp/template_list.html` — lista com pesquisa, filtros, badges de status coloridos, bulk actions
+- [x] `templates/whatsapp/template_form.html` (~2200 linhas) — formulário rico com:
+  - [x] Tabs: Conteúdo / Histórico / Atividades
+  - [x] Preview live do template (header/body/footer/botões)
+  - [x] Mapeamento de variáveis com selector de campos do modelo
+  - [x] AirDatepicker dark theme para data das atividades
+  - [x] Botão "Submeter à Meta" com feedback JSON inline
+  - [x] Chatter de notas internas
+  - [x] Painel de seguidores
 
 ---
 

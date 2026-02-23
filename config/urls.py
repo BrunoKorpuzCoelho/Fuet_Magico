@@ -31,6 +31,7 @@ urlpatterns += i18n_patterns(
     path('dashboard/', include('apps.dashboard.urls')),
     path('contacts/', include('apps.contacts.urls')),
     path('crm/', include('apps.crm.urls')),
+    path('whatsapp/', include('apps.whatsapp.urls')),
     path('accounts/', include('apps.accounts.urls')),
     path('', include('apps.website.urls')),
     prefix_default_language=False,

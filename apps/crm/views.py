@@ -1405,10 +1405,13 @@ def lead_detail_view(request, lead_id):
     } for c in activity_chains])
 
     # ScheduledActivity blueprints available for this company (for activity picker)
+    # Only CRM-applicable blueprints (or global ones with no specific module set)
     scheduled_activities = ScheduledActivity.objects.filter(
         is_active=True
     ).select_related('activity_type').filter(
         Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).filter(
+        Q(applicable_models=[]) | Q(applicable_models__contains=['CRM'])
     ).order_by('activity_type__code', 'name')
     scheduled_activities_json = json.dumps([{
         'id': str(sa.id),
@@ -2151,6 +2154,8 @@ def prospect_detail_view(request, lead_id):
         'activity_type'
     ).filter(
         Q(owner_company__isnull=True) | Q(owner_company=active_company)
+    ).filter(
+        Q(applicable_models=[]) | Q(applicable_models__contains=['CRM'])
     ).order_by('activity_type__code', 'name')
     scheduled_activities_json = json.dumps([{
         'id': str(sa.id),
@@ -2782,7 +2787,9 @@ def activity_chain_create_view(request):
             except Exception as e:
                 messages.error(request, f'Erro ao criar cadeia: {e}')
 
-    blueprints = ScheduledActivity.objects.filter(is_active=True).select_related('activity_type').order_by('activity_type__name', 'name', 'summary')
+    blueprints = ScheduledActivity.objects.filter(is_active=True).filter(
+        Q(applicable_models=[]) | Q(applicable_models__contains=['CRM'])
+    ).select_related('activity_type').order_by('activity_type__name', 'name', 'summary')
     companies = Company.objects.filter(is_active=True).order_by('name')
 
     context = {
@@ -2875,7 +2882,9 @@ def activity_chain_edit_view(request, chain_id):
             'on_failure_delay_unit': fail_unit,
         })
 
-    blueprints = ScheduledActivity.objects.filter(is_active=True).select_related('activity_type').order_by('activity_type__name', 'name', 'summary')
+    blueprints = ScheduledActivity.objects.filter(is_active=True).filter(
+        Q(applicable_models=[]) | Q(applicable_models__contains=['CRM'])
+    ).select_related('activity_type').order_by('activity_type__name', 'name', 'summary')
     companies = Company.objects.filter(is_active=True).order_by('name')
 
     context = {

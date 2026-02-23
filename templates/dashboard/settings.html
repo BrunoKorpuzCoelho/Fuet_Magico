@@ -601,6 +601,81 @@
             </div>
         </section>
 
+        <!-- ===== SECTION: WHATSAPP ===== -->
+        <section class="settings-section" data-section="whatsapp">
+            <div class="settings-group" data-group="Configuração WhatsApp">
+                <div class="px-8 pt-8 pb-6">
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="h-6 w-0.5 bg-primary rounded-full"></div>
+                        <h2 class="text-base font-semibold text-gray-200">Configuração WhatsApp Business</h2>
+                    </div>
+                    <div class="space-y-4 max-w-2xl">
+                        <p class="text-sm text-gray-400 mb-4">Configure a integração com WhatsApp Business API para enviar e receber mensagens diretamente do sistema.</p>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-5">
+                            <!-- API Token -->
+                            <div class="lg:col-span-2">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">API Token</label>
+                                <input type="text" name="whatsapp_api_token" value="" placeholder="Insira o token da API WhatsApp Business"
+                                       class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+                                <p class="text-xs text-gray-500 mt-1.5">Obtenha o token em <a href="https://business.whatsapp.com" target="_blank" class="text-primary hover:text-primary/80 transition-colors">WhatsApp Business API</a></p>
+                            </div>
+
+                            <!-- Número de Telefone -->
+                            <div>
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Número de Telefone</label>
+                                <input type="text" name="whatsapp_phone" value="" placeholder="+351 912 345 678"
+                                       class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+                            </div>
+
+                            <!-- Webhook URL -->
+                            <div>
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Webhook URL</label>
+                                <input type="text" name="whatsapp_webhook" value="" placeholder="https://exemplo.com/webhook"
+                                       class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mx-8 border-t border-gray-800"></div>
+
+            <div class="settings-group" data-group="Funcionalidades">
+                <div class="px-8 pt-6 pb-8">
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="h-6 w-0.5 bg-primary rounded-full"></div>
+                        <h2 class="text-base font-semibold text-gray-200">Funcionalidades WhatsApp</h2>
+                    </div>
+                    <div class="space-y-4 max-w-xl">
+                        {% include 'dashboard/_settings_toggle.html' with name='whatsapp_notifications' label='Notificações WhatsApp' desc='Enviar notificações do sistema via WhatsApp' checked=False %}
+                        {% include 'dashboard/_settings_toggle.html' with name='whatsapp_auto_reply' label='Respostas Automáticas' desc='Ativar respostas automáticas para mensagens recebidas' checked=False %}
+                        {% include 'dashboard/_settings_toggle.html' with name='whatsapp_chatbot' label='Chatbot Inteligente' desc='Usar inteligência artificial para responder automaticamente' checked=False badge='Em breve' %}
+                        {% include 'dashboard/_settings_toggle.html' with name='whatsapp_broadcast' label='Envios em Massa' desc='Permitir envio de mensagens em massa para listas de contactos' checked=False %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mx-8 border-t border-gray-800"></div>
+
+            <div class="settings-group" data-group="Templates de Mensagem">
+                <div class="px-8 pt-6 pb-8">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="h-6 w-0.5 bg-primary rounded-full"></div>
+                        <h2 class="text-base font-semibold text-gray-200">Templates de Mensagem</h2>
+                    </div>
+                    <p class="text-sm text-gray-400 mb-4 max-w-xl">Gerir templates de mensagens pré-aprovados pela WhatsApp Business.</p>
+                    <button type="button"
+                            class="inline-flex items-center gap-2 px-4 h-9 rounded-lg text-sm font-medium bg-gray-800 text-gray-300 border border-gray-700 hover:bg-gray-700 transition-colors">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Novo Template
+                    </button>
+                </div>
+            </div>
+        </section>
+
         <!-- ===== SECTION: UTILIZADORES & EMPRESAS ===== -->
         <section class="settings-section" data-section="utilizadores">
             <div class="settings-group" data-group="Utilizadores">

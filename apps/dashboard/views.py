@@ -29,6 +29,7 @@ _APP_TILES = [
     {'slug': 'documents', 'name': 'Documentos',    'icon': '📄', 'url_name': None, 'url': '#'},
     {'slug': 'marketing', 'name': 'Marketing',     'icon': '📱', 'url_name': None, 'url': '#'},
     {'slug': 'reports',   'name': 'Relatórios',    'icon': '📊', 'url_name': None, 'url': '#'},
+    {'slug': 'whatsapp',  'name': 'WhatsApp',      'icon': '',   'url_name': 'whatsapp:template_list'},
 ]
 
 

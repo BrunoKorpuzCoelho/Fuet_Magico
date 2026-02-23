@@ -472,6 +472,19 @@ class ScheduledActivity(AbstractBaseModel):
         verbose_name='Owner Company'
     )
 
+    # Modelos aplicáveis (filtro de visibilidade por módulo)
+    APPLICABLE_MODEL_CHOICES = [
+        ('CRM', 'CRM — Leads'),
+        ('WHATSAPP', 'WhatsApp Templates'),
+        ('CONTACT', 'Contactos'),
+    ]
+    applicable_models = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name='Modelos aplicáveis',
+        help_text='Deixar vazio para aplicar a todos os módulos. Selecionar módulos específicos para filtrar a visibilidade.',
+    )
+
     class Meta:
         ordering = ['activity_type__name', 'name', 'summary']
         verbose_name = 'Scheduled Activity'
@@ -512,6 +525,109 @@ class ScheduledActivity(AbstractBaseModel):
                 return f'<i class="{self.icon}" style="font-size: {size}; color: {color};"></i>'
             return f'<span style="font-size: {size};">{self.icon}</span>'
         return f'<span style="font-size: {size};">{self.default_icon_emoji}</span>'
+
+
+class GenericActivity(AbstractBaseModel):
+    """
+    Instância genérica de atividade ligada a qualquer modelo via ContentType.
+
+    Equivalente ao crm.Activity mas sem FK direto a Lead — funciona para
+    WhatsAppTemplate, Contact, Company, ou qualquer outro modelo futuro.
+
+    Usage:
+        GenericActivity.objects.create(
+            content_type=ContentType.objects.get_for_model(template),
+            object_id=str(template.id),
+            activity_type='TODO',
+            summary='Rever template aprovado',
+            due_date=date.today(),
+            assigned_to=request.user,
+            owner_company=company,
+        )
+    """
+    from django.contrib.contenttypes.fields import GenericForeignKey as _GFK
+
+    ACTIVITY_TYPE_CHOICES = [
+        ('TODO',      'To-Do'),
+        ('EMAIL',     'Email'),
+        ('CALL',      'Chamada'),
+        ('WHATSAPP',  'WhatsApp'),
+        ('DOCUMENT',  'Documento'),
+        ('SIGNATURE', 'Assinatura'),
+        ('MEETING',   'Reunião'),
+    ]
+
+    # ─── Ligação genérica ────────────────────────────────────────────────
+    content_type = models.ForeignKey(
+        'contenttypes.ContentType',
+        on_delete=models.CASCADE,
+        verbose_name='Tipo de objeto',
+    )
+    object_id = models.CharField(max_length=255, verbose_name='ID do objeto')
+    content_object = _GFK('content_type', 'object_id')
+
+    # ─── Blueprint (opcional) ────────────────────────────────────────────
+    scheduled_activity = models.ForeignKey(
+        'ScheduledActivity',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='generic_activities',
+        verbose_name='Blueprint',
+    )
+
+    # ─── Campos da atividade ─────────────────────────────────────────────
+    activity_type = models.CharField(
+        max_length=20,
+        choices=ACTIVITY_TYPE_CHOICES,
+        default='TODO',
+        verbose_name='Tipo',
+    )
+    summary = models.CharField(max_length=255, verbose_name='Resumo')
+    due_date = models.DateField(verbose_name='Data limite')
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='generic_activities',
+        verbose_name='Atribuído a',
+    )
+
+    # ─── Estado ──────────────────────────────────────────────────────────
+    is_done = models.BooleanField(default=False, verbose_name='Concluído')
+    done_date = models.DateTimeField(null=True, blank=True, verbose_name='Data de conclusão')
+    feedback = models.TextField(blank=True, default='', verbose_name='Feedback')
+
+    # ─── Multi-company ────────────────────────────────────────────────────
+    owner_company = models.ForeignKey(
+        'Company',
+        on_delete=models.CASCADE,
+        null=True, blank=True,
+        related_name='generic_activities',
+        verbose_name='Empresa',
+    )
+
+    class Meta:
+        ordering = ['due_date', 'created_at']
+        verbose_name = 'Atividade Genérica'
+        verbose_name_plural = 'Atividades Genéricas'
+        indexes = [
+            models.Index(fields=['content_type', 'object_id']),
+            models.Index(fields=['due_date']),
+            models.Index(fields=['is_done']),
+        ]
+
+    def __str__(self):
+        return f'{self.get_activity_type_display()} — {self.summary}'
+
+    @property
+    def is_overdue(self):
+        from datetime import date
+        return not self.is_done and self.due_date < date.today()
+
+    @property
+    def is_today(self):
+        from datetime import date
+        return not self.is_done and self.due_date == date.today()
 
 
 class ActivityChain(AbstractBaseModel):
