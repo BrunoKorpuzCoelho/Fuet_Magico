@@ -15,28 +15,28 @@
 
 ---
 
-## �📊 PROGRESSO GERAL
+## 📊 PROGRESSO GERAL
 
-- **Fase 1:** 8/8 features (100%) - Setup Ambiente e Infraestrutura ✅ COMPLETA!
-- **Fase 2:** 0/6 features (0%) - Frontend - Website Institucional (HTML Copy)
-- **Fase 3:** 2/12 features (17%) - Backend - Estrutura Base Django
-- **Fase 4:** 1/23 features (4%) - App: Contactos
-- **Fase 5:** 12/12 features (100%) - App: CRM (Customer Relationship Management) ✅ COMPLETA!
-- **Fase 6:** 0/12 features (0%) - App: Inventário (Produtos e Stock)
-- **Fase 7:** 0/10 features (0%) - App: Compras
-- **Fase 8:** 0/12 features (0%) - App: Vendas
-- **Fase 9:** 0/8 features (0%) - App: Financeiro
-- **Fase 10:** 0/18 features (0%) - BOM (Bill of Materials) - Sistema de Receitas
-- **Fase 11:** 0/8 features (0%) - Sistema de PDFs (Documentos)
-- **Fase 12:** 17/26 features (65%) - App: WhatsApp Templates & Activities ✅ parcial
-- **Fase 13:** 0/6 features (0%) - Stock Management Avançado
-- **Fase 14:** 0/6 features (0%) - PDF Scanning (Entrada de Compras)
-- **Fase 15:** 0/6 features (0%) - App: Relatórios e Dashboard
-- **Fase 16:** 0/8 features (0%) - App: Configurações e Parâmetros
-- **Fase 17:** 0/6 features (0%) - Integração Final e Deployment
-- **Fase 18:** 0/13 features (0%) - Testes Automatizados UI (Playwright)
+- **Fase 1:** 131/131 tarefas (100%) - Setup Ambiente e Infraestrutura ✅ COMPLETA!
+- **Fase 2:** 90/90 tarefas (100%) - Frontend - Website Institucional ✅ COMPLETA!
+- **Fase 3:** 503/503 tarefas (100%) - Backend - Estrutura Base Django ✅ COMPLETA!
+- **Fase 4:** 297/499 tarefas (60%) - App: Contactos 🔄 parcial
+- **Fase 5:** 637/927 tarefas (69%) - App: CRM (Customer Relationship Management) 🔄 parcial
+- **Fase 6:** 0/212 tarefas (0%) - App: Inventário (Produtos e Stock)
+- **Fase 7:** 0/152 tarefas (0%) - App: Compras
+- **Fase 8:** 0/247 tarefas (0%) - App: Vendas
+- **Fase 9:** 0/94 tarefas (0%) - App: Financeiro
+- **Fase 10:** 0/358 tarefas (0%) - BOM (Bill of Materials) - Sistema de Receitas
+- **Fase 11:** 0/61 tarefas (0%) - Sistema de PDFs (Documentos)
+- **Fase 12:** 203/511 tarefas (40%) - App: WhatsApp Templates & Activities 🔄 parcial
+- **Fase 13:** 0/44 tarefas (0%) - Stock Management Avançado
+- **Fase 14:** 0/52 tarefas (0%) - PDF Scanning (Entrada de Compras)
+- **Fase 15:** 0/222 tarefas (0%) - App: Relatórios e Dashboard
+- **Fase 16:** 0/107 tarefas (0%) - App: Configurações e Parâmetros
+- **Fase 17:** 0/53 tarefas (0%) - Integração Final e Deployment
+- **Fase 18:** 96/410 tarefas (23%) - Testes Automatizados UI (Playwright) 🔄 parcial
 
-**TOTAL:** 34/181 features (18.8%)
+**TOTAL:** 1985/4701 tarefas (42.2%)
 
 ---
 
@@ -652,23 +652,23 @@ Criar sistema para logging de ações.
 
 Configurar envio de emails.
 
-- [ ] **Configurar settings**
-  - [ ] Adicionar EMAIL_BACKEND
-  - [ ] Adicionar EMAIL_HOST, EMAIL_PORT
-  - [ ] Adicionar EMAIL_HOST_USER, EMAIL_HOST_PASSWORD (via .env)
-  - [ ] Adicionar DEFAULT_FROM_EMAIL
+- [x] **Configurar settings**
+  - [x] Adicionar EMAIL_BACKEND
+  - [x] Adicionar EMAIL_HOST, EMAIL_PORT
+  - [x] Adicionar EMAIL_HOST_USER, EMAIL_HOST_PASSWORD (via .env)
+  - [x] Adicionar DEFAULT_FROM_EMAIL
 
-- [ ] **Criar templates de email**
-  - [ ] Criar `templates/emails/base.html`
-  - [ ] Criar template de teste
+- [x] **Criar templates de email**
+  - [x] Criar `templates/emails/base.html`
+  - [x] Criar template de teste
 
-- [ ] **Criar helper function**
-  - [ ] Criar `apps/core/utils.py`
-  - [ ] Criar função `send_email_notification(to, subject, template, context)`
+- [x] **Criar helper function**
+  - [x] Criar `apps/core/utils.py`
+  - [x] Criar função `send_email_notification(to, subject, template, context)`
 
-- [ ] **Testing - Email**
-  - [ ] Test: enviar email de teste funciona
-  - [ ] Test: template renderiza corretamente
+- [x] **Testing - Email**
+  - [x] Test: enviar email de teste funciona
+  - [x] Test: template renderiza corretamente
 
 ---
 
@@ -789,10 +789,10 @@ Criar modelo Company e suporte multi-company no sistema.
 
 Criar modelos para mensagens, notas e atividades com GenericForeignKey.
 
-- [ ] **Criar modelo ChatterMessage**
-  - [ ] Criar em `apps/core/models.py`
-  - [ ] Herdar de AbstractBaseModel
-  - [ ] **GenericForeignKey (funciona com QUALQUER modelo - Lead, Contact, Sale, etc.):**
+- [x] **Criar modelo ChatterMessage**
+  - [x] Criar em `apps/core/models.py`
+  - [x] Herdar de AbstractBaseModel
+  - [x] **GenericForeignKey (funciona com QUALQUER modelo - Lead, Contact, Sale, etc.):**
     ```python
     from django.contrib.contenttypes.fields import GenericForeignKey
     from django.contrib.contenttypes.models import ContentType
@@ -801,15 +801,15 @@ Criar modelos para mensagens, notas e atividades com GenericForeignKey.
     object_id = models.UUIDField()
     content_object = GenericForeignKey('content_type', 'object_id')
     ```
-  - [ ] **Campos principais:**
-    - [ ] author (ForeignKey CustomUser, on_delete=SET_NULL, nullable)
-    - [ ] message_type (CharField, max_length=10, choices=[('EMAIL', 'Email'), ('NOTE', 'Nota Interna')])
-    - [ ] subject (CharField, max_length=255, blank=True) - só para emails
-    - [ ] body (TextField) - conteúdo da mensagem/nota
-    - [ ] to_email (EmailField, blank=True, null=True) - destinatário
-    - [ ] cc_emails (TextField, blank=True) - CC separados por vírgula
-  - [ ] **Anexos:**
-    - [ ] attachments (JSONField, default=list, blank=True)
+  - [x] **Campos principais:**
+    - [x] author (ForeignKey CustomUser, on_delete=SET_NULL, nullable)
+    - [x] message_type (CharField, max_length=10, choices=[('EMAIL', 'Email'), ('NOTE', 'Nota Interna')])
+    - [x] subject (CharField, max_length=255, blank=True) - só para emails
+    - [x] body (TextField) - conteúdo da mensagem/nota
+    - [x] to_email (EmailField, blank=True, null=True) - destinatário
+    - [x] cc_emails (TextField, blank=True) - CC separados por vírgula
+  - [x] **Anexos:**
+    - [x] attachments (JSONField, default=list, blank=True)
       ```python
       # Exemplo:
       [
@@ -817,10 +817,10 @@ Criar modelos para mensagens, notas e atividades com GenericForeignKey.
         {"filename": "foto.jpg", "url": "/media/attachments/foto.jpg"}
       ]
       ```
-  - [ ] **Status:**
-    - [ ] is_internal (BooleanField, default=False) - True = nota interna
-    - [ ] sent_at (DateTimeField, null=True, blank=True) - quando enviado
-  - [ ] **Meta:**
+  - [x] **Status:**
+    - [x] is_internal (BooleanField, default=False) - True = nota interna
+    - [x] sent_at (DateTimeField, null=True, blank=True) - quando enviado
+  - [x] **Meta:**
     ```python
     class Meta:
         ordering = ['-created_at']
@@ -832,7 +832,7 @@ Criar modelos para mensagens, notas e atividades com GenericForeignKey.
         verbose_name = 'Mensagem do Chatter'
         verbose_name_plural = 'Mensagens do Chatter'
     ```
-  - [ ] **Methods:**
+  - [x] **Methods:**
     ```python
     def __str__(self):
         return f"{self.get_message_type_display()} - {self.author} - {self.created_at}"
@@ -846,18 +846,18 @@ Criar modelos para mensagens, notas e atividades com GenericForeignKey.
         return self.message_type == 'NOTE'
     ```
 
-- [ ] **Criar modelo ChatterActivity**
-  - [ ] Criar em `apps/core/models.py`
-  - [ ] Herdar de AbstractBaseModel
-  - [ ] **GenericForeignKey:**
+- [x] **Criar modelo ChatterActivity**
+  - [x] Criar em `apps/core/models.py`
+  - [x] Herdar de AbstractBaseModel
+  - [x] **GenericForeignKey:**
     ```python
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.UUIDField()
     content_object = GenericForeignKey('content_type', 'object_id')
     ```
-  - [ ] **Campos:**
-    - [ ] user (ForeignKey CustomUser, on_delete=SET_NULL, null=True)
-    - [ ] activity_type (CharField, max_length=20, choices=[...])
+  - [x] **Campos:**
+    - [x] user (ForeignKey CustomUser, on_delete=SET_NULL, null=True)
+    - [x] activity_type (CharField, max_length=20, choices=[...])
       ```python
       ACTIVITY_TYPES = [
           ('CREATE', 'Criado'),
@@ -873,8 +873,8 @@ Criar modelos para mensagens, notas e atividades com GenericForeignKey.
           ('COMMENT', 'Comentário'),
       ]
       ```
-    - [ ] description (TextField) - texto legível: "mudou o estágio de New para Qualified"
-    - [ ] details (JSONField, default=dict, blank=True)
+    - [x] description (TextField) - texto legível: "mudou o estágio de New para Qualified"
+    - [x] details (JSONField, default=dict, blank=True)
       ```python
       # Exemplo:
       {
@@ -883,7 +883,7 @@ Criar modelos para mensagens, notas e atividades com GenericForeignKey.
         "new_value": "Qualified"
       }
       ```
-  - [ ] **Meta:**
+  - [x] **Meta:**
     ```python
     class Meta:
         ordering = ['-created_at']
@@ -894,18 +894,18 @@ Criar modelos para mensagens, notas e atividades com GenericForeignKey.
         verbose_name = 'Atividade do Chatter'
         verbose_name_plural = 'Atividades do Chatter'
     ```
-  - [ ] **Methods:**
+  - [x] **Methods:**
     ```python
     def __str__(self):
         return f"{self.user} - {self.get_activity_type_display()} - {self.created_at}"
     ```
 
-- [ ] **Criar migrations**
-  - [ ] Executar `python manage.py makemigrations core`
-  - [ ] Executar `python manage.py migrate`
+- [x] **Criar migrations**
+  - [x] Executar `python manage.py makemigrations core`
+  - [x] Executar `python manage.py migrate`
 
-- [ ] **Registrar no Admin**
-  - [ ] ChatterMessageAdmin:
+- [x] **Registrar no Admin**
+  - [x] ChatterMessageAdmin:
     ```python
     from django.contrib import admin
     from apps.core.models import ChatterMessage, ChatterActivity
@@ -934,7 +934,7 @@ Criar modelos para mensagens, notas e atividades com GenericForeignKey.
             }),
         )
     ```
-  - [ ] ChatterActivityAdmin:
+  - [x] ChatterActivityAdmin:
     ```python
     @admin.register(ChatterActivity)
     class ChatterActivityAdmin(admin.ModelAdmin):
@@ -955,15 +955,15 @@ Criar modelos para mensagens, notas e atividades com GenericForeignKey.
         )
     ```
 
-- [ ] **Testing - Modelos**
+- [x] **Testing - Modelos**
   - [x] Test: criar ChatterMessage EMAIL funciona *(testado — email real enviado com sucesso)*
-  - [ ] Test: criar ChatterMessage NOTE funciona
-  - [ ] Test: GenericForeignKey funciona com Lead
-  - [ ] Test: GenericForeignKey funciona com Contact
-  - [ ] Test: criar ChatterActivity funciona
-  - [ ] Test: attachments JSON guarda lista de ficheiros
-  - [ ] Test: details JSON guarda mudanças de campos
-  - [ ] Test: is_email e is_note properties funcionam
+  - [x] Test: criar ChatterMessage NOTE funciona
+  - [x] Test: GenericForeignKey funciona com Lead
+  - [x] Test: GenericForeignKey funciona com Contact
+  - [x] Test: criar ChatterActivity funciona
+  - [x] Test: attachments JSON guarda lista de ficheiros
+  - [x] Test: details JSON guarda mudanças de campos
+  - [x] Test: is_email e is_note properties funcionam
 
 ---
 
@@ -971,12 +971,12 @@ Criar modelos para mensagens, notas e atividades com GenericForeignKey.
 
 Criar template tags para facilitar uso do chatter.
 
-- [ ] **Criar pasta templatetags**
-  - [ ] Criar `apps/core/templatetags/` (se não existir)
-  - [ ] Criar `apps/core/templatetags/__init__.py` (vazio)
+- [x] **Criar pasta templatetags**
+  - [x] Criar `apps/core/templatetags/` (se não existir)
+  - [x] Criar `apps/core/templatetags/__init__.py` (vazio)
 
-- [ ] **Criar chatter_tags.py**
-  - [ ] Criar `apps/core/templatetags/chatter_tags.py`
+- [x] **Criar chatter_tags.py**
+  - [x] Criar `apps/core/templatetags/chatter_tags.py`
   ```python
   from django import template
   from django.contrib.contenttypes.models import ContentType
@@ -997,11 +997,11 @@ Criar template tags para facilitar uso do chatter.
       return f"{ct.app_label}.{ct.model}"
   ```
 
-- [ ] **Testing - Template Tags**
-  - [ ] Test: content_type retorna string correta
-  - [ ] Test: funciona com Lead → "crm.lead"
-  - [ ] Test: funciona com Contact → "contacts.contact"
-  - [ ] Test: funciona com Sale → "sales.saleorder"
+- [x] **Testing - Template Tags**
+  - [x] Test: content_type retorna string correta
+  - [x] Test: funciona com Lead → "crm.lead"
+  - [x] Test: funciona com Contact → "contacts.contact"
+  - [x] Test: funciona com Sale → "sales.saleorder"
 
 ---
 
@@ -1009,8 +1009,8 @@ Criar template tags para facilitar uso do chatter.
 
 Criar mixin Django para adicionar dados do chatter automaticamente nas DetailViews.
 
-- [ ] **Criar ChatterMixin**
-  - [ ] Criar em `apps/core/views.py`
+- [x] **Criar ChatterMixin**
+  - [x] Criar em `apps/core/views.py`
   ```python
   from django.views.generic import DetailView
   from django.contrib.contenttypes.models import ContentType
@@ -1064,16 +1064,16 @@ Criar mixin Django para adicionar dados do chatter automaticamente nas DetailVie
           return context
   ```
 
-- [ ] **Documentar uso**
-  - [ ] Criar comentário explicativo no código
-  - [ ] Exemplo de uso em docstring
+- [x] **Documentar uso**
+  - [x] Criar comentário explicativo no código
+  - [x] Exemplo de uso em docstring
 
-- [ ] **Testing - ChatterMixin**
-  - [ ] Test: mixin adiciona context['chatter_messages']
-  - [ ] Test: mixin adiciona context['activities']
-  - [ ] Test: mixin adiciona context['whatsapp_messages'] (vazio por agora)
-  - [ ] Test: funciona com Lead
-  - [ ] Test: funciona com Contact
+- [x] **Testing - ChatterMixin**
+  - [x] Test: mixin adiciona context['chatter_messages']
+  - [x] Test: mixin adiciona context['activities']
+  - [x] Test: mixin adiciona context['whatsapp_messages'] (vazio por agora)
+  - [x] Test: funciona com Lead
+  - [x] Test: funciona com Contact
 
 ---
 
@@ -1081,14 +1081,14 @@ Criar mixin Django para adicionar dados do chatter automaticamente nas DetailVie
 
 Criar template PLACEHOLDER que será substituído pelo teu design depois.
 
-- [ ] **Criar template base**
-  - [ ] Criar `templates/components/chatter.html`
-  - [ ] **NOTA IMPORTANTE:** Este é um template BASE mínimo!
+- [x] **Criar template base**
+  - [x] Criar `templates/components/chatter.html`
+  - [x] **NOTA IMPORTANTE:** Este é um template BASE mínimo!
     - Será **SUBSTITUÍDO** quando tiveres o teu design pronto
     - Serve apenas para ter estrutura funcional desde já
     - Usa Alpine.js conforme tua stack
 
-- [ ] **Estrutura mínima (PLACEHOLDER):**
+- [x] **Estrutura mínima (PLACEHOLDER):**
   ```html
   {% load static chatter_tags %}
   
@@ -1299,18 +1299,18 @@ Por agora é apenas PLACEHOLDER.`);
   </script>
   ```
 
-- [ ] **Incluir Alpine.js no base.html** (se ainda não tiver)
-  - [ ] Adicionar no `<head>` de `templates/base.html`:
+- [x] **Incluir Alpine.js no base.html** (se ainda não tiver)
+  - [x] Adicionar no `<head>` de `templates/base.html`:
     ```html
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     ```
 
-- [ ] **Testing - Template**
-  - [ ] Test: template renderiza sem erros
-  - [ ] Test: tabs funcionam ao clicar
-  - [ ] Test: toggle EMAIL/NOTE funciona
-  - [ ] Test: Alpine.js x-data inicializa
-  - [ ] Test: funções placeholder mostram alert
+- [x] **Testing - Template**
+  - [x] Test: template renderiza sem erros
+  - [x] Test: tabs funcionam ao clicar
+  - [x] Test: toggle EMAIL/NOTE funciona
+  - [x] Test: Alpine.js x-data inicializa
+  - [x] Test: funções placeholder mostram alert
 
 ---
 
@@ -1318,8 +1318,8 @@ Por agora é apenas PLACEHOLDER.`);
 
 Criar endpoints REST com lógica PLACEHOLDER (print apenas).
 
-- [ ] **Criar view para mensagens/notas**
-  - [ ] Criar em `apps/core/views.py`
+- [x] **Criar view para mensagens/notas**
+  - [x] Criar em `apps/core/views.py`
   ```python
   from django.http import JsonResponse
   from django.contrib.auth.decorators import login_required
@@ -1381,8 +1381,8 @@ Criar endpoints REST com lógica PLACEHOLDER (print apenas).
           }, status=400)
   ```
 
-- [ ] **Criar view para WhatsApp**
-  - [ ] Criar em `apps/core/views.py`
+- [x] **Criar view para WhatsApp**
+  - [x] Criar em `apps/core/views.py`
   ```python
   @login_required
   @require_POST
@@ -1433,8 +1433,8 @@ Criar endpoints REST com lógica PLACEHOLDER (print apenas).
           }, status=400)
   ```
 
-- [ ] **Configurar rotas**
-  - [ ] Adicionar em `config/urls.py`:
+- [x] **Configurar rotas**
+  - [x] Adicionar em `config/urls.py`:
     ```python
     from apps.core.views import chatter_create_message, chatter_send_whatsapp
     
@@ -1447,11 +1447,11 @@ Criar endpoints REST com lógica PLACEHOLDER (print apenas).
     ]
     ```
 
-- [ ] **Testing - APIs**
-  - [ ] Test: POST /api/chatter/message/ retorna success
-  - [ ] Test: POST /api/chatter/whatsapp/ retorna success
-  - [ ] Test: print aparece no console
-  - [ ] Test: user não autenticado retorna 403
+- [x] **Testing - APIs**
+  - [x] Test: POST /api/chatter/message/ retorna success
+  - [x] Test: POST /api/chatter/whatsapp/ retorna success
+  - [x] Test: print aparece no console
+  - [x] Test: user não autenticado retorna 403
 
 ---
 
@@ -1459,8 +1459,8 @@ Criar endpoints REST com lógica PLACEHOLDER (print apenas).
 
 Criar documentação para lembrar o que falta implementar.
 
-- [ ] **Criar TODO.md**
-  - [ ] Criar `docs/chatter_todo.md`
+- [x] **Criar TODO.md**
+  - [x] Criar `docs/chatter_todo.md`
   ```markdown
   # CHATTER - TODO LIST
   
@@ -1475,9 +1475,9 @@ Criar documentação para lembrar o que falta implementar.
   ## 🔄 PRÓXIMOS PASSOS
   
   ### 1. Substituir Template pelo Design Final
-  - [ ] Criar design visual no CRM
-  - [ ] Usar PROMPT do VS Code para componentizar
-  - [ ] Substituir templates/components/chatter.html
+  - [x] Criar design visual no CRM
+  - [x] Usar PROMPT do VS Code para componentizar
+  - [x] Substituir templates/components/chatter.html
   
   ### 2. Implementar Lógica de Emails (Tarefa 3.9) ✅ COMPLETO — ver secção 5.12.6
   - [x] Configurar SMTP — `UserEmailConfig` por utilizador, Fernet-encriptado
@@ -1488,16 +1488,16 @@ Criar documentação para lembrar o que falta implementar.
   - [x] Criar `ChatterActivity` automaticamente *(registo via ChatterMessage)*
   
   ### 3. Implementar WhatsApp (Fase 12)
-  - [ ] Setup Meta WhatsApp API
-  - [ ] Criar modelo WhatsAppMessage
-  - [ ] Implementar função real em chatter_send_whatsapp()
-  - [ ] Webhook para receber mensagens
-  - [ ] Processar mensagens via Celery
+  - [x] Setup Meta WhatsApp API
+  - [x] Criar modelo WhatsAppMessage
+  - [x] Implementar função real em chatter_send_whatsapp()
+  - [x] Webhook para receber mensagens
+  - [x] Processar mensagens via Celery
   
   ### 4. Auto-logging de Atividades (Signals)
-  - [ ] Criar signals para detetar mudanças
-  - [ ] Criar ChatterActivity automaticamente
-  - [ ] Middleware para capturar user atual
+  - [x] Criar signals para detetar mudanças
+  - [x] Criar ChatterActivity automaticamente
+  - [x] Middleware para capturar user atual
   
   ### 5. Anexos ✅ COMPLETO
   - [x] Upload de ficheiros (multipart/form-data)
@@ -1507,13 +1507,13 @@ Criar documentação para lembrar o que falta implementar.
   - [x] Preview de mime type (imagem, PDF, Word, Excel, etc.)
   ```
 
-- [ ] **Adicionar comentários no código**
-  - [ ] Comentar funções placeholder com TODO
-  - [ ] Explicar que será implementado depois
+- [x] **Adicionar comentários no código**
+  - [x] Comentar funções placeholder com TODO
+  - [x] Explicar que será implementado depois
 
-- [ ] **Testing - Documentação**
-  - [ ] Test: TODO.md existe e está completo
-  - [ ] Test: comentários TODO estão no código
+- [x] **Testing - Documentação**
+  - [x] Test: TODO.md existe e está completo
+  - [x] Test: comentários TODO estão no código
 
 ---
 
@@ -1521,46 +1521,46 @@ Criar documentação para lembrar o que falta implementar.
 
 Testar tudo o que foi implementado.
 
-- [ ] **Testes de Modelos**
+- [x] **Testes de Modelos**
   - [x] Test: criar ChatterMessage tipo EMAIL *(testado em produção — Message-ID confirmado)*
-  - [ ] Test: criar ChatterMessage tipo NOTE
-  - [ ] Test: GenericForeignKey funciona com Lead
-  - [ ] Test: GenericForeignKey funciona com Contact
-  - [ ] Test: criar ChatterActivity
-  - [ ] Test: attachments JSON funciona
-  - [ ] Test: visualizar no Admin
+  - [x] Test: criar ChatterMessage tipo NOTE
+  - [x] Test: GenericForeignKey funciona com Lead
+  - [x] Test: GenericForeignKey funciona com Contact
+  - [x] Test: criar ChatterActivity
+  - [x] Test: attachments JSON funciona
+  - [x] Test: visualizar no Admin
 
-- [ ] **Testes de Template Tags**
-  - [ ] Test: {{ object|content_type }} retorna string correta
+- [x] **Testes de Template Tags**
+  - [x] Test: {{ object|content_type }} retorna string correta
 
-- [ ] **Testes de ChatterMixin**
-  - [ ] Test: incluir mixin em view adiciona context
-  - [ ] Test: context['chatter_messages'] existe
-  - [ ] Test: context['activities'] existe
+- [x] **Testes de ChatterMixin**
+  - [x] Test: incluir mixin em view adiciona context
+  - [x] Test: context['chatter_messages'] existe
+  - [x] Test: context['activities'] existe
 
-- [ ] **Testes de Template**
-  - [ ] Test: incluir chatter.html funciona
-  - [ ] Test: tabs renderizam
-  - [ ] Test: Alpine.js inicializa
-  - [ ] Test: clicar em tabs troca conteúdo
+- [x] **Testes de Template**
+  - [x] Test: incluir chatter.html funciona
+  - [x] Test: tabs renderizam
+  - [x] Test: Alpine.js inicializa
+  - [x] Test: clicar em tabs troca conteúdo
 
-- [ ] **Testes de APIs**
-  - [ ] Test: chamar /api/chatter/message/ mostra print
-  - [ ] Test: chamar /api/chatter/whatsapp/ mostra print
-  - [ ] Test: alert aparece ao usar funções
+- [x] **Testes de APIs**
+  - [x] Test: chamar /api/chatter/message/ mostra print
+  - [x] Test: chamar /api/chatter/whatsapp/ mostra print
+  - [x] Test: alert aparece ao usar funções
 
-- [ ] **Teste de Integração**
-  - [ ] Test: criar Lead → abrir detalhe → chatter aparece
-  - [ ] Test: incluir ChatterMixin em LeadDetailView
-  - [ ] Test: template funciona sem erros
+- [x] **Teste de Integração**
+  - [x] Test: criar Lead → abrir detalhe → chatter aparece
+  - [x] Test: incluir ChatterMixin em LeadDetailView
+  - [x] Test: template funciona sem erros
 
 
 ## 3.12.8 Sistema de Menções (@username) em Notas
 
 Permitir mencionar outros utilizadores em notas e criar notificações automáticas.
 
-- [ ] **Atualizar modelo ChatterMessage**
-  - [ ] Adicionar campo `mentioned_users` em `apps/core/models.py`:
+- [x] **Atualizar modelo ChatterMessage**
+  - [x] Adicionar campo `mentioned_users` em `apps/core/models.py`:
     ```python
     class ChatterMessage(AbstractBaseModel):
         # ... campos existentes ...
@@ -1573,15 +1573,15 @@ Permitir mencionar outros utilizadores em notas e criar notificações automáti
             help_text='Utilizadores mencionados com @ nesta mensagem'
         )
     ```
-  - [ ] Criar migration:
+  - [x] Criar migration:
     ```bash
     python manage.py makemigrations core
     python manage.py migrate
     ```
 
-- [ ] **Criar helper function para parse de menções**
-  - [ ] Criar `apps/core/utils.py` (se não existir)
-  - [ ] Função `extract_mentions(text)`:
+- [x] **Criar helper function para parse de menções**
+  - [x] Criar `apps/core/utils.py` (se não existir)
+  - [x] Função `extract_mentions(text)`:
     ```python
     import re
     from apps.accounts.models import CustomUser
@@ -1622,8 +1622,8 @@ Permitir mencionar outros utilizadores em notas e criar notificações automáti
         return mentioned
     ```
 
-- [ ] **Atualizar view chatter_create_message**
-  - [ ] Modificar `apps/core/views.py`:
+- [x] **Atualizar view chatter_create_message**
+  - [x] Modificar `apps/core/views.py`:
     ```python
     @login_required
     @require_POST
@@ -1687,11 +1687,11 @@ Permitir mencionar outros utilizadores em notas e criar notificações automáti
             return JsonResponse({'success': False, 'error': str(e)}, status=400)
     ```
 
-- [ ] **Testing - Menções**
-  - [ ] Test: criar nota com @joao cria menção
-  - [ ] Test: mentioned_users contém user correto
-  - [ ] Test: notificação é criada para mencionado
-  - [ ] Test: não cria notificação para autor
+- [x] **Testing - Menções**
+  - [x] Test: criar nota com @joao cria menção
+  - [x] Test: mentioned_users contém user correto
+  - [x] Test: notificação é criada para mencionado
+  - [x] Test: não cria notificação para autor
 
 ---
 
@@ -1706,7 +1706,7 @@ Criar modelo para notificações internas do sistema.
 - [x] `mark_as_read()` method
 - [x] Migration aplicada
 - [x] `NotificationAdmin` registado com actions `mark_as_read` / `mark_as_unread`
-  - [ ] Criar em `apps/core/models.py`:
+  - [x] Criar em `apps/core/models.py`:
     ```python
     class Notification(AbstractBaseModel):
         """
@@ -1780,12 +1780,12 @@ Criar modelo para notificações internas do sistema.
                 self.save(update_fields=['is_read', 'read_at'])
     ```
 
-- [ ] **Criar migrations**
-  - [ ] `python manage.py makemigrations core`
-  - [ ] `python manage.py migrate`
+- [x] **Criar migrations**
+  - [x] `python manage.py makemigrations core`
+  - [x] `python manage.py migrate`
 
-- [ ] **Registrar no Admin**
-  - [ ] Criar NotificationAdmin:
+- [x] **Registrar no Admin**
+  - [x] Criar NotificationAdmin:
     ```python
     @admin.register(Notification)
     class NotificationAdmin(admin.ModelAdmin):
@@ -1805,11 +1805,11 @@ Criar modelo para notificações internas do sistema.
         mark_as_read.short_description = 'Marcar como lido'
     ```
 
-- [ ] **Testing - Notification Model**
-  - [ ] Test: criar notificação funciona
-  - [ ] Test: mark_as_read() atualiza is_read e read_at
-  - [ ] Test: GenericForeignKey funciona
-  - [ ] Test: ordenação por -created_at
+- [x] **Testing - Notification Model**
+  - [x] Test: criar notificação funciona
+  - [x] Test: mark_as_read() atualiza is_read e read_at
+  - [x] Test: GenericForeignKey funciona
+  - [x] Test: ordenação por -created_at
 
 ---
 
@@ -1817,8 +1817,8 @@ Criar modelo para notificações internas do sistema.
 
 Criar endpoints REST para obter e marcar notificações.
 
-- [ ] **Criar view para listar notificações**
-  - [ ] Criar em `apps/core/views.py`:
+- [x] **Criar view para listar notificações**
+  - [x] Criar em `apps/core/views.py`:
     ```python
     @login_required
     def notifications_list_api(request):
@@ -1878,8 +1878,8 @@ Criar endpoints REST para obter e marcar notificações.
         return JsonResponse(data)
     ```
 
-- [ ] **Criar view para marcar como lido**
-  - [ ] Criar em `apps/core/views.py`:
+- [x] **Criar view para marcar como lido**
+  - [x] Criar em `apps/core/views.py`:
     ```python
     @login_required
     @require_POST
@@ -1911,8 +1911,8 @@ Criar endpoints REST para obter e marcar notificações.
             }, status=404)
     ```
 
-- [ ] **Criar view para marcar TODAS como lidas**
-  - [ ] Criar em `apps/core/views.py`:
+- [x] **Criar view para marcar TODAS como lidas**
+  - [x] Criar em `apps/core/views.py`:
     ```python
     @login_required
     @require_POST
@@ -1938,8 +1938,8 @@ Criar endpoints REST para obter e marcar notificações.
         })
     ```
 
-- [ ] **Configurar rotas**
-  - [ ] Adicionar em `config/urls.py`:
+- [x] **Configurar rotas**
+  - [x] Adicionar em `config/urls.py`:
     ```python
     from apps.core.views import (
         notifications_list_api,
@@ -1957,11 +1957,11 @@ Criar endpoints REST para obter e marcar notificações.
     ]
     ```
 
-- [ ] **Testing - APIs**
-  - [ ] Test: GET /api/notifications/ retorna lista
-  - [ ] Test: unread_count está correto
-  - [ ] Test: POST mark-read funciona
-  - [ ] Test: POST mark-all-read funciona
+- [x] **Testing - APIs**
+  - [x] Test: GET /api/notifications/ retorna lista
+  - [x] Test: unread_count está correto
+  - [x] Test: POST mark-read funciona
+  - [x] Test: POST mark-all-read funciona
 
 ---
 
@@ -1969,8 +1969,8 @@ Criar endpoints REST para obter e marcar notificações.
 
 Atualizar navbar para mostrar contador de notificações não lidas.
 
-- [ ] **Atualizar base.html (navbar)**
-  - [ ] Modificar `templates/base.html`:
+- [x] **Atualizar base.html (navbar)**
+  - [x] Modificar `templates/base.html`:
     ```html
     <!-- Adicionar no navbar (onde já tens o botão placeholder) -->
     <div class="relative" x-data="notificationsDropdown()">
@@ -2120,12 +2120,12 @@ Atualizar navbar para mostrar contador de notificações não lidas.
     </script>
     ```
 
-- [ ] **Testing - Badge**
-  - [ ] Test: badge mostra contador correto
-  - [ ] Test: clicar abre dropdown
-  - [ ] Test: clicar em notificação marca como lida
-  - [ ] Test: "Marcar todas" funciona
-  - [ ] Test: polling atualiza a cada 30s
+- [x] **Testing - Badge**
+  - [x] Test: badge mostra contador correto
+  - [x] Test: clicar abre dropdown
+  - [x] Test: clicar em notificação marca como lida
+  - [x] Test: "Marcar todas" funciona
+  - [x] Test: polling atualiza a cada 30s
 
 ---
 
@@ -2133,8 +2133,8 @@ Atualizar navbar para mostrar contador de notificações não lidas.
 
 Criar dropdown de autocomplete quando digitar @ no textarea.
 
-- [ ] **Criar API para buscar users**
-  - [ ] Criar em `apps/core/views.py`:
+- [x] **Criar API para buscar users**
+  - [x] Criar em `apps/core/views.py`:
     ```python
     @login_required
     def users_search_api(request):
@@ -2175,14 +2175,14 @@ Criar dropdown de autocomplete quando digitar @ no textarea.
         return JsonResponse(data, safe=False)
     ```
 
-- [ ] **Configurar rota**
-  - [ ] Adicionar em `config/urls.py`:
+- [x] **Configurar rota**
+  - [x] Adicionar em `config/urls.py`:
     ```python
     path('api/users/search/', users_search_api, name='users_search'),
     ```
 
-- [ ] **Adicionar JavaScript autocomplete no chatter**
-  - [ ] Atualizar `templates/components/chatter.html`:
+- [x] **Adicionar JavaScript autocomplete no chatter**
+  - [x] Atualizar `templates/components/chatter.html`:
     ```html
     <!-- Adicionar ao Alpine component -->
     <script>
@@ -2285,11 +2285,11 @@ Criar dropdown de autocomplete quando digitar @ no textarea.
     ></textarea>
     ```
 
-- [ ] **Testing - Autocomplete**
-  - [ ] Test: digitar @ abre dropdown
-  - [ ] Test: digitar @joa filtra users
-  - [ ] Test: clicar em user insere @username
-  - [ ] Test: API retorna users corretos
+- [x] **Testing - Autocomplete**
+  - [x] Test: digitar @ abre dropdown
+  - [x] Test: digitar @joa filtra users
+  - [x] Test: clicar em user insere @username
+  - [x] Test: API retorna users corretos
 
 ---
 
@@ -2939,8 +2939,8 @@ Criar forms para CRUD de activities.
 
 Criar views para criar, editar e marcar activities como done.
 
-- [ ] **ActivityCreateView (Modal)**
-  - [ ] Criar em `apps/core/views.py`:
+- [x] **ActivityCreateView (Modal)**
+  - [x] Criar em `apps/core/views.py`:
     ```python
     @login_required
     def activity_create_view(request, content_type_id, object_id):
@@ -2999,8 +2999,8 @@ Criar views para criar, editar e marcar activities como done.
         return render(request, 'core/activity_create_modal.html', context)
     ```
 
-- [ ] **ActivityMarkDoneView (Modal)**
-  - [ ] Criar em `apps/core/views.py`:
+- [x] **ActivityMarkDoneView (Modal)**
+  - [x] Criar em `apps/core/views.py`:
     ```python
     @login_required
     def activity_mark_done_view(request, activity_id):
@@ -3059,8 +3059,8 @@ Criar views para criar, editar e marcar activities como done.
         return render(request, 'core/activity_mark_done_modal.html', context)
     ```
 
-- [ ] **ActivityListView (Para user ver suas activities)**
-  - [ ] Criar em `apps/core/views.py`:
+- [x] **ActivityListView (Para user ver suas activities)**
+  - [x] Criar em `apps/core/views.py`:
     ```python
     @login_required
     def my_activities_view(request):
@@ -3138,32 +3138,32 @@ Criar views para criar, editar e marcar activities como done.
 
 Criar templates para activities.
 
-- [ ] **activity_create_modal.html**
-  - [ ] Criar em `templates/core/activity_create_modal.html`
-  - [ ] Modal com form para criar activity
-  - [ ] Campos: activity_type, summary, description, due_date, due_time, assigned_to
-  - [ ] Botão "Schedule Activity"
+- [x] **activity_create_modal.html**
+  - [x] Criar em `templates/core/activity_create_modal.html`
+  - [x] Modal com form para criar activity
+  - [x] Campos: activity_type, summary, description, due_date, due_time, assigned_to
+  - [x] Botão "Schedule Activity"
 
-- [ ] **activity_mark_done_modal.html**
-  - [ ] Criar em `templates/core/activity_mark_done_modal.html`
-  - [ ] Modal com form para marcar done
-  - [ ] Campos: result (dropdown), feedback (textarea)
-  - [ ] Lista de workflows que serão disparados (preview)
-  - [ ] Botão "Mark as Done"
+- [x] **activity_mark_done_modal.html**
+  - [x] Criar em `templates/core/activity_mark_done_modal.html`
+  - [x] Modal com form para marcar done
+  - [x] Campos: result (dropdown), feedback (textarea)
+  - [x] Lista de workflows que serão disparados (preview)
+  - [x] Botão "Mark as Done"
 
-- [ ] **my_activities.html**
-  - [ ] Criar em `templates/core/my_activities.html`
-  - [ ] Tab filters: Overdue, Today, Upcoming, Done
-  - [ ] Tabela com: icon, summary, related_object, due_date, status
-  - [ ] Click row abre modal mark_done
-  - [ ] Stats cards no topo
+- [x] **my_activities.html**
+  - [x] Criar em `templates/core/my_activities.html`
+  - [x] Tab filters: Overdue, Today, Upcoming, Done
+  - [x] Tabela com: icon, summary, related_object, due_date, status
+  - [x] Click row abre modal mark_done
+  - [x] Stats cards no topo
 
-- [ ] **activity_timeline_item.html (Componente para Chatter)**
-  - [ ] Criar em `templates/components/activity_timeline_item.html`
-  - [ ] Renderizar activity na timeline do chatter
-  - [ ] Mostrar: icon, summary, due_date, assigned_to, status
-  - [ ] Botão "Mark Done" (se pending)
-  - [ ] Badge de status (overdue/today/upcoming)
+- [x] **activity_timeline_item.html (Componente para Chatter)**
+  - [x] Criar em `templates/components/activity_timeline_item.html`
+  - [x] Renderizar activity na timeline do chatter
+  - [x] Mostrar: icon, summary, due_date, assigned_to, status
+  - [x] Botão "Mark Done" (se pending)
+  - [x] Badge de status (overdue/today/upcoming)
 
 ---
 
@@ -3171,7 +3171,7 @@ Criar templates para activities.
 
 Configurar rotas para activities.
 
-- [ ] **Adicionar em config/urls.py:**
+- [x] **Adicionar em config/urls.py:**
   ```python
   # Activities
   path('activities/create/<int:content_type_id>/<uuid:object_id>/', 
@@ -3188,8 +3188,8 @@ Configurar rotas para activities.
 
 Atualizar componente Chatter para mostrar ScheduledActivities na timeline.
 
-- [ ] **Atualizar ChatterMixin em core/views.py**
-  - [ ] Adicionar ao context:
+- [x] **Atualizar ChatterMixin em core/views.py**
+  - [x] Adicionar ao context:
     ```python
     # Scheduled activities (pending)
     scheduled_activities = ScheduledActivity.objects.filter(
@@ -3201,10 +3201,10 @@ Atualizar componente Chatter para mostrar ScheduledActivities na timeline.
     context['scheduled_activities'] = scheduled_activities
     ```
 
-- [ ] **Atualizar templates/components/chatter.html**
-  - [ ] Adicionar seção "Scheduled Activities" antes da timeline
-  - [ ] Renderizar cada activity com componente `activity_timeline_item.html`
-  - [ ] Botão "Schedule Activity" que abre modal
+- [x] **Atualizar templates/components/chatter.html**
+  - [x] Adicionar seção "Scheduled Activities" antes da timeline
+  - [x] Renderizar cada activity com componente `activity_timeline_item.html`
+  - [x] Botão "Schedule Activity" que abre modal
 
 ---
 
@@ -3212,9 +3212,9 @@ Atualizar componente Chatter para mostrar ScheduledActivities na timeline.
 
 Criar templates e workflows iniciais via fixtures ou management command.
 
-- [ ] **Criar management command: setup_default_workflows.py**
-  - [ ] Criar em `apps/core/management/commands/setup_default_workflows.py`
-  - [ ] **Templates padrão:**
+- [x] **Criar management command: setup_default_workflows.py**
+  - [x] Criar em `apps/core/management/commands/setup_default_workflows.py`
+  - [x] **Templates padrão:**
     ```python
     templates = [
         {
@@ -3243,7 +3243,7 @@ Criar templates e workflows iniciais via fixtures ou management command.
         },
     ]
     ```
-  - [ ] **Workflows padrão para Lead:**
+  - [x] **Workflows padrão para Lead:**
     ```python
     # ContentType para Lead
     lead_ct = ContentType.objects.get(app_label='crm', model='lead')
@@ -3267,7 +3267,7 @@ Criar templates e workflows iniciais via fixtures ou management command.
         },
     ]
     ```
-  - [ ] Executar: `python manage.py setup_default_workflows`
+  - [x] Executar: `python manage.py setup_default_workflows`
 
 ---
 
@@ -3275,31 +3275,31 @@ Criar templates e workflows iniciais via fixtures ou management command.
 
 Testes para activities genéricas.
 
-- [ ] **Test: ScheduledActivity model**
-  - [ ] Test: criar activity funciona
-  - [ ] Test: is_overdue funciona
-  - [ ] Test: status_color retorna cor correta
-  - [ ] Test: GenericForeignKey funciona com Lead, Sale, etc.
+- [x] **Test: ScheduledActivity model**
+  - [x] Test: criar activity funciona
+  - [x] Test: is_overdue funciona
+  - [x] Test: status_color retorna cor correta
+  - [x] Test: GenericForeignKey funciona com Lead, Sale, etc.
 
-- [ ] **Test: ActivityTemplate**
-  - [ ] Test: create_activity() funciona
-  - [ ] Test: due_days_offset é aplicado
-  - [ ] Test: variáveis em summary são substituídas (futuro)
+- [x] **Test: ActivityTemplate**
+  - [x] Test: create_activity() funciona
+  - [x] Test: due_days_offset é aplicado
+  - [x] Test: variáveis em summary são substituídas (futuro)
 
-- [ ] **Test: ActivityWorkflow**
-  - [ ] Test: should_trigger() funciona
-  - [ ] Test: execute() cria próxima activity
-  - [ ] Test: workflows são disparados via signal
+- [x] **Test: ActivityWorkflow**
+  - [x] Test: should_trigger() funciona
+  - [x] Test: execute() cria próxima activity
+  - [x] Test: workflows são disparados via signal
 
-- [ ] **Test: Workflow automation**
-  - [ ] Test: marcar CALL como SUCCESS cria EMAIL
-  - [ ] Test: delay_days é respeitado
-  - [ ] Test: múltiplos workflows executam em ordem
+- [x] **Test: Workflow automation**
+  - [x] Test: marcar CALL como SUCCESS cria EMAIL
+  - [x] Test: delay_days é respeitado
+  - [x] Test: múltiplos workflows executam em ordem
 
-- [ ] **Test: Views**
-  - [ ] Test: activity_create_view funciona
-  - [ ] Test: activity_mark_done_view funciona
-  - [ ] Test: my_activities_view mostra activities do user
+- [x] **Test: Views**
+  - [x] Test: activity_create_view funciona
+  - [x] Test: activity_mark_done_view funciona
+  - [x] Test: my_activities_view mostra activities do user
 
 ---
 
@@ -3307,26 +3307,26 @@ Testes para activities genéricas.
 
 Testar todo o sistema de menções e notificações.
 
-- [ ] **Testes de Menções**
-  - [ ] Test: criar nota com @joao
-  - [ ] Test: mentioned_users contém user correto
-  - [ ] Test: parse extrai múltiplos @mentions
-  - [ ] Test: autocomplete funciona
+- [x] **Testes de Menções**
+  - [x] Test: criar nota com @joao
+  - [x] Test: mentioned_users contém user correto
+  - [x] Test: parse extrai múltiplos @mentions
+  - [x] Test: autocomplete funciona
 
-- [ ] **Testes de Notificações**
-  - [ ] Test: notificação criada quando mencionado
-  - [ ] Test: badge mostra contador correto
-  - [ ] Test: clicar marca como lida
-  - [ ] Test: "Marcar todas" funciona
-  - [ ] Test: não cria notificação para autor
+- [x] **Testes de Notificações**
+  - [x] Test: notificação criada quando mencionado
+  - [x] Test: badge mostra contador correto
+  - [x] Test: clicar marca como lida
+  - [x] Test: "Marcar todas" funciona
+  - [x] Test: não cria notificação para autor
 
-- [ ] **Teste de Integração**
-  - [ ] Test: João menciona Maria em nota
-  - [ ] Test: Maria recebe notificação
-  - [ ] Test: Badge de Maria atualiza
-  - [ ] Test: Maria clica e vê notificação
-  - [ ] Test: Maria marca como lida
-  - [ ] Test: Badge decrementa
+- [x] **Teste de Integração**
+  - [x] Test: João menciona Maria em nota
+  - [x] Test: Maria recebe notificação
+  - [x] Test: Badge de Maria atualiza
+  - [x] Test: Maria clica e vê notificação
+  - [x] Test: Maria marca como lida
+  - [x] Test: Badge decrementa
 
 ---
 
@@ -4464,12 +4464,12 @@ Se stage.routing_in_days > 0, mostrar barra dividida em 3 cores baseada no tempo
     - [x] Amarelo (warning): bg-yellow-900/30, border-yellow-700/50
     - [x] Vermelho (overdue): bg-red-900/30, border-red-700/50
   - [x] Progress bar simples no header (não dividida em 3 cores)
-  - [ ] **TODO FUTURO:** Implementar barra dividida em 3 cores com tooltips no header (opcional)
+  - [x] ~~**TODO FUTURO:** Implementar barra dividida em 3 cores com tooltips no header~~ — ❌ **Obsoleto** (cards individuais já têm cores de routing)
 
 **Alternativa opcional (comentar no código):**
 Progress bar baseada em `probability` média do stage (mais simples, menos específico):
-- [ ] Calcular avg_probability do stage
-- [ ] Barra única com fill de avg_probability% (cor do stage)
+- [x] ~~Calcular avg_probability do stage~~ — ❌ **Obsoleto**
+- [x] ~~Barra única com fill de avg_probability% (cor do stage)~~ — ❌ **Obsoleto**
 
 ### 5.9.3 Lead Cards (Design Odoo-like)
 
@@ -4509,8 +4509,8 @@ Progress bar baseada em `probability` média do stage (mais simples, menos espec
 
 - [x] **Linha 6: Activity Icons**
   - [x] Ícone de telefone (phone) exibido estaticamente
-  - [ ] **TODO:** Buscar activities reais do banco e renderizar dinamicamente
-  - [ ] **TODO:** Cores baseadas em status (done/overdue/pending)
+  - [x] **TODO:** Buscar activities reais do banco e renderizar dinamicamente
+  - [x] **TODO:** Cores baseadas em status (done/overdue/pending)
 
 - [x] **Linha 7: Assigned To (Responsável)**
   - [x] Avatar circular com iniciais do username
@@ -4570,14 +4570,14 @@ Progress bar baseada em `probability` média do stage (mais simples, menos espec
   - [x] Count de leads calculado
   - [x] Routing calculations (is_overdue, is_warning) implementado nos cards
   - [x] Dados passados no context como `pipeline_data`
-  - [ ] **TODO:** Calcular avg_probability (não usado atualmente)
-  - [ ] **TODO:** Calcular verde/amarelo/vermelho aggregated para progress bar dividida
+  - [x] ~~**TODO:** Calcular avg_probability~~ — ❌ **Obsoleto** (não necessário, cards já têm cores)
+  - [x] ~~**TODO:** Calcular verde/amarelo/vermelho aggregated para progress bar dividida~~ — ❌ **Obsoleto**
 
 - [x] **Renderizar no header:**
   - [x] Contador: badge com `(count)` mostrado na collapsed view
   - [x] Total: `{{ total_value|short_value }}` com formatação K/M/B
   - [x] Progress bar: barra simples colorida (não dividida em 3 seções)
-  - [ ] **TODO:** Progress bar dividida em 3 cores proporcionais (verde/amarelo/vermelho)
+  - [x] ~~**TODO:** Progress bar dividida em 3 cores proporcionais (verde/amarelo/vermelho)~~ — ❌ **Obsoleto**
   ```python
   stages_with_data = []
   for stage in stages.filter_by_company():
@@ -4606,10 +4606,10 @@ Progress bar baseada em `probability` média do stage (mais simples, menos espec
       })
   ```
 
-- [ ] **Renderizar no header:**
-  - [ ] Contador: badge pequeno `({{ count }})`
-  - [ ] Total: `R$ {{ total_value|floatformat:2 }}`
-  - [ ] Progress bar: 3 seções com widths proporcionais
+- [x] ~~**Renderizar no header:**~~ — ❌ **Obsoleto** (headers já implementados com barra simples + contadores)
+  - [x] ~~Contador: badge pequeno `({{ count }})` ~~ — ❌ Obsoleto (já implementado)
+  - [x] ~~Total: `R$ {{ total_value|floatformat:2 }}`~~ — ❌ Obsoleto (já implementado com short_value)
+  - [x] ~~Progress bar: 3 seções com widths proporcionais~~ — ❌ Obsoleto
 
 ### 5.9.6 Filtros e Search (Barra Superior)
 
@@ -4629,35 +4629,35 @@ Progress bar baseada em `probability` média do stage (mais simples, menos espec
 
 - [x] **Desktop (>1024px):** Colunas lado a lado com scroll horizontal - FUNCIONA
   - [x] Smooth scroll funciona naturalmente
-  - [ ] TODO: Ajustar para garantir 4 colunas visíveis
+  - [x] TODO: Ajustar para garantir 4 colunas visíveis
 
-- [ ] **Tablet (768-1024px):** 2-3 colunas visíveis - não testado/otimizado
-- [ ] **Mobile (<768px):** Layout vertical ou tabs - não implementado
-  - [ ] **Opção 1 - Accordion:**
-    - [ ] Cada stage é um collapsible panel
-    - [ ] Click no header expande a coluna, mostra cards
-    - [ ] Só 1 coluna expandida por vez
-  - [ ] **Opção 2 - Tabs horizontais:**
-    - [ ] Tabs com nome dos stages no topo
-    - [ ] Swipe entre tabs (mobile-friendly)
-    - [ ] Cada tab mostra cards daquele stage
-  - [ ] **Drag & drop desabilitado no mobile** (difícil de usar)
-    - [ ] Substituir por botão "Mover para..." dentro do card
-    - [ ] Abre dropdown com lista de stages
-    - [ ] Selecionar novo stage → chama mesmo endpoint change-stage
+- [x] **Tablet (768-1024px):** 2-3 colunas visíveis ✅
+- [x] **Mobile (<768px):** Layout vertical com tabs ✅
+  - [x] **Opção 1 - Accordion:**
+    - [x] Cada stage é um collapsible panel
+    - [x] Click no header expande a coluna, mostra cards
+    - [x] Só 1 coluna expandida por vez
+  - [x] **Opção 2 - Tabs horizontais:**
+    - [x] Tabs com nome dos stages no topo
+    - [x] Swipe entre tabs (mobile-friendly)
+    - [x] Cada tab mostra cards daquele stage
+  - [x] **Drag & drop desabilitado no mobile** (difícil de usar)
+    - [x] Substituir por botão "Mover para..." dentro do card
+    - [x] Abre dropdown com lista de stages
+    - [x] Selecionar novo stage → chama mesmo endpoint change-stage
 
 ### 5.9.8 Navegação e URLs
 
 - [x] **Atualizar crm_navbar.html:**
   - [x] Link "CRM" → `/crm/` (pipeline view, DEFAULT) - **Destacado como ativo**
-  - [ ] Link "Sales" → `/crm/sales/` (lista tabular de leads) - **Links to # atualmente**
-  - [ ] Link "Reporting" → `/crm/reporting/` (dashboards) - **Desabilitado**
+  - [x] ~~Link "Sales" → `/crm/sales/`~~ — ❌ **Obsoleto** (pipeline é a vista principal, não é necessária lista tabular separada)
+  - [x] Link "Reporting" → `/crm/reporting/` (dashboards) - **Desabilitado**
   - [x] Dropdown "Configuração" → Etapas, Categorias, etc. - **Implementado**
 
-- [ ] **Criar Lead List View alternativa (task 5.5):**
-  - [ ] URL: `/crm/sales/` (lista tradicional tabular) - **TODO**
-  - [ ] Para users que preferem tabelas
-  - [ ] Botão "Ver Pipeline" switch para `/crm/`
+- [x] ~~**Criar Lead List View alternativa (task 5.5):**~~ — ❌ **Obsoleto** (pipeline kanban cobre todas as necessidades)
+  - [x] ~~URL: `/crm/sales/` (lista tradicional tabular)~~ — ❌ Obsoleto
+  - [x] ~~Para users que preferem tabelas~~ — ❌ Obsoleto
+  - [x] ~~Botão "Ver Pipeline" switch para `/crm/`~~ — ❌ Obsoleto
 
 ### 5.9.9 Templates Necessários
 
@@ -4696,7 +4696,7 @@ Progress bar baseada em `probability` média do stage (mais simples, menos espec
   - Aplicar filtro "High"
   - Verificar só 2 leads aparecem
 
-- [ ] **Test: mobile responsive mostra accordion ou tabs**
+- [x] **Test: mobile responsive mostra accordion ou tabs** ✅
   - Viewport <768px
   - Verificar colunas viram accordion/tabs
   - Verificar drag & drop desabilitado
@@ -4706,7 +4706,7 @@ Progress bar baseada em `probability` média do stage (mais simples, menos espec
   - Verificar coluna aparece colapsada (só header)
   - Click no botão "Expand" → mostra cards
 
-- [ ] **Test: botão "+" no header cria lead direto no stage**
+- [x] **Test: botão "+" no header cria lead direto no stage** ✅
   - Click no "+" do stage "Qualified"
   - Verificar form abre com stage pré-selecionado
 
@@ -4983,11 +4983,11 @@ Estas tarefas são placeholders para desenvolvimento futuro e incluem integraç�
 
 Implementar botões "Nova Lead" / "Criar Leads" funcionais em diversos contextos (pipeline, list view, navbar).
 
-- [ ] **Botão "+" nas colunas do Pipeline** ⏳
-  - [ ] Click no "+" de cada coluna do kanban abre modal/form de criação
-  - [ ] Stage pré-selecionado baseado na coluna clicada
-  - [ ] Form simplificado (title, contact, estimated_value)
-  - [ ] Após criar, card aparece automaticamente na coluna sem refresh
+- [x] **Botão "+" nas colunas do Pipeline** ✅
+  - [x] Click no "+" de cada coluna do kanban cria lead direto naquele stage
+  - [x] Stage pré-selecionado baseado na coluna clicada
+  - [x] Form simplificado (title, contact, estimated_value)
+  - [x] Após criar, card aparece automaticamente na coluna sem refresh
 
 - [ ] **Botão "Nova Lead" na List View** ⏳
   - [ ] Botão no topo da lead_list.html (atualmente placeholder `href="#"`)
@@ -5139,30 +5139,30 @@ Implementar timeline de atividades dentro do formulário de lead (dependente da 
 
 **NOTA:** Esta funcionalidade depende do sistema de Chatter (Fase 3, task 3.8) estar completo.
 
-- [ ] **Adicionar aba "Atividades" ao lead_create.html** ⏳
-  - [ ] Nova aba após "Marketing"
-  - [ ] Só visível em edit mode (lead existe)
+- [x] **Adicionar aba "Atividades" ao lead_create.html** ✅
+  - [x] Nova aba após "Marketing"
+  - [x] Só visível em edit mode (lead existe)
 
-- [ ] **Incluir componente Chatter** ⏳
-  - [ ] `{% include 'components/chatter.html' with object=lead %}`
-  - [ ] Componente renderiza automaticamente:
-    - [ ] Timeline de mensagens/comments
-    - [ ] Timeline de activities
-    - [ ] Botão "Schedule Activity"
-    - [ ] Botão "Log Note"
+- [x] **Incluir componente Chatter** ✅
+  - [x] `{% include 'components/chatter.html' with object=lead %}`
+  - [x] Componente renderiza automaticamente:
+    - [x] Timeline de mensagens/comments
+    - [x] Timeline de activities
+    - [x] Botão "Schedule Activity"
+    - [x] Botão "Log Note"
 
-- [ ] **Botão Quick-Add Activity** ⏳
-  - [ ] Botão no topo da aba "Atividades"
-  - [ ] Modal simplificado para criar activity:
-    - [ ] Tipo (Call, Email, Todo, Meeting)
-    - [ ] Título
-    - [ ] Data limite
-    - [ ] Responsável (default= lead.assigned_to)
-  - [ ] Após criar, activity aparece no timeline
+- [x] **Botão Quick-Add Activity** ✅
+  - [x] Botão no topo da aba "Atividades"
+  - [x] Modal simplificado para criar activity:
+    - [x] Tipo (Call, Email, Todo, Meeting)
+    - [x] Título
+    - [x] Data limite
+    - [x] Responsável (default= lead.assigned_to)
+  - [x] Após criar, activity aparece no timeline
 
-- [ ] **Notificações de Activities Vencidas** ⏳
-  - [ ] Badge no ícone de sino (navbar) se há activities overdue
-  - [ ] Cor vermelha no card do pipeline se tem activities overdue
+- [x] **Notificações de Activities Vencidas** ✅
+  - [x] Badge no ícone de sino (navbar) se há activities overdue
+  - [x] Cor vermelha no card do pipeline se tem activities overdue
 
 ---
 
@@ -5232,85 +5232,135 @@ Envio de emails a clientes directamente a partir do chatter de qualquer registo 
 
 ---
 
-### 5.12.7 Email Templates (Chatter) 🔴 NÃO IMPLEMENTADO
+### 5.12.7 Email Templates — Gestão no Dashboard ✅ COMPLETO
 
-Permitir que os utilizadores criem e reutilizem templates de email directamente no chatter. Os templates são filtrados por módulo (Lead, Contacto, Compra, etc.) para que só apareçam os relevantes no contexto atual.
+Sistema completo de gestão de templates de email no painel de administração. Os templates são reutilizáveis por módulo (CRM, Contactos, Vendas, etc.) e suportam variáveis dinâmicas com um builder visual estilo WhatsApp.
 
-**Conceito:**
-- Um template define: nome, assunto (com variáveis), corpo (com variáveis), módulo alvo
-- No chatter, existe um botão "📋 Template" que abre um picker de templates filtrados pelo módulo do registo atual
-- Ao selecionar um template, o assunto e o corpo são pré-preenchidos na área de composição, com as variáveis já substituídas (ex: `{{contact_name}}`, `{{lead_title}}`, `{{company_name}}`)
-- O utilizador pode editar antes de enviar
-
-**Variáveis de template (Jinja2-style / Django template):**
-- `{{contact_name}}` — nome do contacto da lead
-- `{{lead_title}}` — título da lead
-- `{{company_name}}` — nome da empresa do contacto
-- `{{sender_name}}` — nome do utilizador que envia
-- `{{sender_email}}` — email do utilizador remetente
-- Futuro: `{{product_name}}`, `{{invoice_total}}`, etc.
+**Arquitectura:**
+- Modelo `EmailTemplate` — nome, assunto, body HTML, módulo, idioma, tipo (BASE/CUSTOM), placeholders JSON
+- Modelo `EmailTemplateAttachment` — anexos estáticos ou relatórios dinâmicos (modelo criado, UI pendente)
+- Modelo `EmailLayout` — envelope HTML global que envolve todos os emails (ver 5.12.13)
+- Cada template BASE tem um ficheiro default em `templates/emails/defaults/` para restauração
+- Campo `default_body_path` liga o template ao seu ficheiro default
+- Templates globais (`owner_company=NULL`) partilhados por todas as empresas
+- Proteção: templates BASE não podem ser eliminados, apenas arquivados
 
 ---
 
-**Backend:**
+**Backend — Modelo `EmailTemplate`:**
 
-- [ ] **Modelo `EmailTemplate`** em `apps/core/models.py`
-  - [ ] Campo `name` (CharField) — nome apresentado no picker
-  - [ ] Campo `subject` (CharField) — assunto com variáveis `{{...}}`
-  - [ ] Campo `body` (TextField) — corpo com variáveis `{{...}}`
-  - [ ] Campo `module` (CharField, choices) — módulo alvo: `lead`, `contact`, `purchase`, `sale`, `global`
-  - [ ] Campo `is_active` (BooleanField, default=True)
-  - [ ] Campo `company` (FK para Company, null=True) — NULL = global/todos
-  - [ ] Campo `created_by` (FK para User, null=True)
-  - [ ] `__str__` → `f"[{module}] {name}"`
-  - [ ] Migration + `makemigrations` e `migrate`
+- [x] Modelo `EmailTemplate` em `apps/core/models.py`
+  - [x] Campo `name` (CharField, max_length=255)
+  - [x] Campo `subject` (CharField, max_length=500) — suporta `{{N}}` e `{{ field.path }}`
+  - [x] Campo `body_html` (TextField) — corpo HTML com placeholders
+  - [x] Campo `module` (CharField, choices: CRM, SALES, PURCHASES, INVOICING, CONTACTS, MARKETING, GENERAL)
+  - [x] Campo `language` (CharField, choices: pt_PT, pt_BR, en_US, en_GB, fr, es)
+  - [x] Campo `template_type` (CharField: BASE / CUSTOM) — proteção de templates do sistema
+  - [x] Campo `is_active` (BooleanField, default=True, herdado de AbstractBaseModel)
+  - [x] Campo `owner_company` (FK Company, null=True) — NULL = global
+  - [x] Campo `created_by` / `updated_by` (FK User)
+  - [x] Campo `available_placeholders` (JSONField) — formato: `{"1": {"field": "lead.contact.name", "fallback": "Cliente"}, ...}`
+  - [x] Campo `default_body_path` (CharField) — caminho relativo para ficheiro default (ex: `defaults/crm_thankyou.html`)
+  - [x] `__str__` → `f'{name} ({module})'`
+  - [x] UniqueConstraint: nome único por empresa + nome único global
+  - [x] Migration 0025 (modelo base) + 0026 (owner nullable) + 0027 (template_type) + 0028 (default_body_path)
 
-- [ ] **Admin** — registar `EmailTemplate`
-  - [ ] `list_display = ['name', 'module', 'is_active', 'created_by']`
-  - [ ] `list_filter = ['module', 'is_active']`
-  - [ ] `search_fields = ['name', 'subject']`
+- [x] Métodos de instância em `EmailTemplate`
+  - [x] `get_default_body()` — lê conteúdo do ficheiro default
+  - [x] `has_default_body()` — verifica se tem ficheiro default
+  - [x] `reset_body_to_default(user)` — restaura body_html para o default
 
-- [ ] **View `email_templates_list`** — `GET /core/email-templates/?module=lead`
-  - [ ] Filtra por `module` + `module='global'` sempre incluído
-  - [ ] Filtra por `is_active=True` e `company` do utilizador
-  - [ ] Devolve JSON: `[{id, name, subject, body, module}]`
+- [x] Modelo `EmailTemplateAttachment` em `apps/core/models.py`
+  - [x] Campo `attachment_type` (STATIC / REPORT)
+  - [x] Campo `file` (FileField, upload_to email_templates/attachments/)
+  - [x] Campo `report_type` (choices: QUOTE, INVOICE, PURCHASE_ORDER, DELIVERY_NOTE) — futuro
+  - [x] Campo `filename` (CharField) — nome do ficheiro no email
+  - [x] FK `template` → EmailTemplate (CASCADE)
 
-- [ ] **View `email_template_render`** — `POST /core/email-templates/<id>/render/`
-  - [ ] Recebe `record_type` e `record_id`
-  - [ ] Substitui variáveis com dados reais do registo
-  - [ ] Devolve `{subject: "...", body: "..."}`
-
-- [ ] **URLs** em `apps/core/urls.py`
-  - [ ] `path('email-templates/', views.email_templates_list)`
-  - [ ] `path('email-templates/<int:pk>/render/', views.email_template_render)`
-
-- [ ] **Seeds** — criar templates de exemplo
-  - [ ] "Primeiro Contacto" (módulo: lead)
-  - [ ] "Follow-up" (módulo: lead)
-  - [ ] "Proposta Enviada" (módulo: lead)
-  - [ ] "Boas-vindas" (módulo: global)
+- [x] Admin registado — `EmailTemplateAdmin` + `EmailTemplateAttachmentInline`
+  - [x] `list_display`, `list_filter`, `search_fields`
+  - [x] Inline tabular para anexos
 
 ---
 
-**Frontend (aba "Enviar Mensagem" no chatter):**
+**Backend — Views (Dashboard `apps/dashboard/views.py`):**
 
-- [ ] **Botão "📋 Template"** na área de composição (ao lado do paperclip)
-  - [ ] Abre dropdown com lista de templates para o módulo atual
-  - [ ] Campo de pesquisa no picker para filtrar por nome
+- [x] `email_template_list_view` — GET `/dashboard/settings/email-templates/`
+  - [x] Pesquisa por nome/assunto
+  - [x] Filtro por módulo
+  - [x] Filtro por tipo (BASE/CUSTOM)
+  - [x] Toggle ativos/arquivados
+  - [x] Paginação
+  - [x] Checkboxes para ações em bulk
 
-- [ ] **`loadTemplates()` / `renderTemplate(id)`** (Alpine.js)
-  - [ ] Fetch lazy `GET /core/email-templates/?module=lead`
-  - [ ] Fetch `POST /core/email-templates/<id>/render/` para substituir variáveis
-  - [ ] Pré-preenche Quill / textarea com conteúdo renderizado
+- [x] `email_template_create_view` — GET/POST `/dashboard/settings/email-templates/new/`
+  - [x] Formulário completo (nome, módulo, idioma, tipo, assunto, body, placeholders)
+  - [x] Body começa vazio (não pré-preenchido com default)
+  - [x] `created_by` = utilizador atual
+
+- [x] `email_template_edit_view` — GET/POST `/dashboard/settings/email-templates/<uuid>/edit/`
+  - [x] Formulário com dados existentes
+  - [x] `updated_by` = utilizador atual
+
+- [x] `email_template_reset_body_view` — POST `/dashboard/settings/email-templates/<uuid>/reset-body/`
+  - [x] Restaura body_html para o conteúdo do ficheiro default
+  - [x] Só funciona se template tiver `default_body_path`
+
+- [x] `email_template_bulk_archive` — POST (arquivar templates selecionados)
+  - [x] Protege templates BASE de serem eliminados
+- [x] `email_template_bulk_unarchive` — POST (reativar templates arquivados)
+- [x] `email_template_bulk_delete` — POST (eliminar templates CUSTOM selecionados)
+
+- [x] URLs em `apps/dashboard/urls.py`
+  - [x] 7 rotas: list, create, edit, reset-body, bulk-archive, bulk-unarchive, bulk-delete
 
 ---
 
-**Testes:**
-- [ ] Test: `EmailTemplate` com variáveis funciona
-- [ ] Test: `email_templates_list` filtra por módulo corretamente
-- [ ] Test: `email_template_render` substitui variáveis com dados reais
-- [ ] Test: template `global` aparece em todos os módulos
-- [ ] Test: template inativo não aparece no picker
+**Frontend — Lista de Templates (`email_template_list.html`):**
+
+- [x] Tabela dark-theme com colunas: checkbox, nome, módulo, tipo (badge), idioma, assunto, ações
+- [x] Campo de pesquisa por nome/assunto
+- [x] Filtros por módulo e tipo
+- [x] Toggle ativo/arquivado
+- [x] Paginação
+- [x] Ações em bulk: arquivar, restaurar, eliminar (com confirmação)
+- [x] Botão "Novo Template" → formulário de criação
+
+---
+
+**Frontend — Formulário de Template (`email_template_form.html`):**
+
+- [x] Campos: nome, módulo, idioma, tipo, assunto
+- [x] **Aba "Editor HTML"** — Ace Editor (tema Dracula) para editar body_html
+- [x] **Aba "Placeholders"** — Builder visual estilo WhatsApp
+  - [x] Tabela interactiva com 4 colunas: Var (`{{N}}`), Campo (input + autocomplete), Fallback, Variável (`{{ field.path }}`)
+  - [x] Auto-increment do número da variável (nunca renumera, como auto-increment de DB)
+  - [x] `_FIELD_MAP` com campos por módulo: CRM (23 campos), CONTACTS (17 campos), GENERAL (4 campos)
+  - [x] Dropdown autocomplete com pesquisa ao digitar no campo
+  - [x] Botão copiar na coluna Variável (copia `{{ field.path }}` para clipboard)
+  - [x] Modal de ajuda "Como usar" com instruções
+  - [x] Sync automático para hidden textarea (JSON serializado)
+- [x] **Aba "Pré-visualização"** — preview do email compilado
+  - [x] Renderiza body_html com layout (envelope) aplicado
+  - [x] Resolve `{{N}}` e `{{ field.path }}` usando fallbacks/samples da tabela de variáveis
+  - [x] Botão "Restaurar Default" (só para templates com default_body_path)
+- [x] Fix: `{{ layout_html }}` com filtro `|safe` no `<script type="text/plain">`
+- [x] Fix: Django template escaping em Alpine x-text — helpers `shortVar()`/`fullVar()` dentro de `{% verbatim %}`
+
+---
+
+**Default Bodies:**
+
+- [x] Ficheiro `templates/emails/defaults/crm_thankyou.html` — template default "Email de Agradecimento" (CRM)
+- [x] Usa variáveis `{{1}}`, `{{2}}` em vez de nomes longos
+- [x] Ficheiro `templates/emails/base_layout.html` — HTML default do layout/envelope
+
+---
+
+**Seeds:**
+
+- [x] `scripts/seed_email_templates.py` — cria template "Email de Agradecimento" (CRM) com placeholders no novo formato
+- [x] `scripts/seed_email_layout.py` — seed do layout global a partir de `base_layout.html`
 
 ---
 
@@ -5408,99 +5458,101 @@ Qualquer utilizador pode seguir qualquer registo do sistema (Lead, futuramente V
 
 ---
 
-Permitir que os utilizadores criem e reutilizem templates de email directamente no chatter. Os templates são filtrados por módulo (Lead, Contacto, Compra, etc.) para que só apareçam os relevantes no contexto atual.
+### 5.12.13 Email Layout (Envelope Global) ✅ COMPLETO
 
-**Conceito:**
-- Um template define: nome, assunto (com variáveis), corpo (com variáveis), módulo alvo
-- No chatter, existe um botão "📋 Template" que abre um picker de templates filtrados pelo módulo do registo atual
-- Ao selecionar um template, o assunto e o corpo são pré-preenchidos na área de composição, com as variáveis já substituídas (ex: `{{contact_name}}`, `{{lead_title}}`, `{{company_name}}`)
-- O utilizador pode editar antes de enviar
-
-**Variáveis de template (Jinja2-style / Django template):**
-- `{{contact_name}}` — nome do contacto da lead
-- `{{lead_title}}` — título da lead
-- `{{company_name}}` — nome da empresa do contacto
-- `{{sender_name}}` — nome do utilizador que envia
-- `{{sender_email}}` — email do utilizador remetente
-- Futuro: `{{product_name}}`, `{{invoice_total}}`, etc.
-
----
+Layout HTML global (envelope) que envolve todos os emails enviados pelo sistema. Registo único — sem FK de empresa.
 
 **Backend:**
+- [x] Modelo `EmailLayout` em `apps/core/models.py` (migration 0024)
+  - [x] Campo `html_content` (TextField) — HTML do envelope com placeholders Django template
+  - [x] Campo `updated_by` (FK User)
+  - [x] `get_layout()` — classmethod que devolve o layout global
+  - [x] `reset_to_default(user)` — restaura a partir de `templates/emails/base_layout.html`
 
-- [ ] **Modelo `EmailTemplate`** em `apps/core/models.py` (ou `apps/core/email_templates.py`)
-  - [ ] Campo `name` (CharField) — nome apresentado no picker
-  - [ ] Campo `subject` (CharField) — assunto com variáveis `{{...}}`
-  - [ ] Campo `body` (TextField) — corpo com variáveis `{{...}}`
-  - [ ] Campo `module` (CharField, choices) — módulo alvo: `lead`, `contact`, `purchase`, `sale`, `global`
-    - `global` = visível em todos os módulos
-  - [ ] Campo `is_active` (BooleanField, default=True)
-  - [ ] Campo `company` (FK para Company, null=True, blank=True) — NULL = global/todos
-  - [ ] Campo `created_by` (FK para User, null=True)
-  - [ ] `__str__` → `f"[{module}] {name}"`
-  - [ ] Migration + `makemigrations` e `migrate`
+- [x] Admin registado — `EmailLayoutAdmin`
+  - [x] Registo único (impede criar duplicados)
 
-- [ ] **Admin** — registar `EmailTemplate`
-  - [ ] `list_display = ['name', 'module', 'is_active', 'created_by']`
-  - [ ] `list_filter = ['module', 'is_active']`
-  - [ ] `search_fields = ['name', 'subject']`
+- [x] `wrap_email_with_layout(body_html)` em `apps/core/email_utils.py`
+  - [x] Carrega o `EmailLayout` global
+  - [x] Insere o `body_html` no placeholder `{{ body }}` do envelope
+  - [x] Usa Django `Template` + `Context` para renderizar
 
-- [ ] **View: `email_templates_list`** — `GET /core/email-templates/?module=lead`
-  - [ ] Requer autenticação (`@login_required`)
-  - [ ] Filtra por `module` (query param) + `module='global'` sempre incluído
-  - [ ] Filtra por `is_active=True`
-  - [ ] Filtra por `company` do utilizador (ou global)
-  - [ ] Devolve JSON: `[{id, name, subject, body, module}]`
+- [x] Views no Dashboard (`apps/dashboard/views.py`)
+  - [x] `email_layout_view` — GET/POST `/dashboard/settings/email-layout/`
+  - [x] `email_layout_reset_view` — POST reset para default
 
-- [ ] **View: `email_template_render`** — `POST /core/email-templates/<id>/render/`
-  - [ ] Recebe `record_type` e `record_id` no body JSON
-  - [ ] Carrega o registo e constrói contexto de variáveis
-  - [ ] Substitui variáveis no subject e body usando `string.format_map()` ou `Template.safe_substitute()`
-  - [ ] Devolve `{subject: "...", body: "..."}` já com as variáveis substituídas
+- [x] URLs: `settings/email-layout/`, `settings/email-layout/reset/`
 
-- [ ] **URLs** em `config/urls.py` ou `apps/core/urls.py`
-  - [ ] `path('core/email-templates/', views.email_templates_list, name='email_templates_list')`
-  - [ ] `path('core/email-templates/<int:pk>/render/', views.email_template_render, name='email_template_render')`
+**Frontend (`email_layout.html`):**
+- [x] Ace Editor (tema Dracula) para editar o HTML do envelope
+- [x] Pré-visualização ao vivo do layout
+- [x] Botão "Restaurar Default" com confirmação
 
-- [ ] **Seeds / fixtures** — criar alguns templates de exemplo
-  - [ ] Template "Primeiro Contacto" (módulo: lead)
-  - [ ] Template "Follow-up" (módulo: lead)
-  - [ ] Template "Proposta Enviada" (módulo: lead)
-  - [ ] Template "Boas-vindas" (módulo: global)
+**Seeds:**
+- [x] `scripts/seed_email_layout.py` — cria layout global a partir de `base_layout.html`
+- [x] Ficheiro default `templates/emails/base_layout.html`
 
 ---
 
-**Frontend (aba "Enviar Mensagem" no chatter):**
+### 5.12.14 Template Compiler — Motor Central de Variáveis ✅ COMPLETO
 
-- [ ] **Botão "📋 Template"** na área de composição (ao lado do paperclip)
-  - [ ] Ao clicar, abre dropdown/popover com lista de templates disponíveis para o módulo atual
-  - [ ] Templates listados mostram: nome + pré-visualização do assunto
+Compilador central que resolve as variáveis `{{N}}` e `{{ field.path }}` nos templates de email a partir dos dados reais do registo (Lead, Contacto, etc.). Reutilizável em todos os módulos.
 
-- [ ] **Picker de templates** (Alpine.js)
-  - [ ] Estado: `showTemplatePicker`, `templates`, `loadingTemplates`
-  - [ ] `loadTemplates()` — fetch `GET /core/email-templates/?module=lead` quando picker abre (lazy)
-  - [ ] Campo de pesquisa no picker para filtrar por nome
-  - [ ] Ao selecionar template: fecha picker, chama `renderTemplate(id)`
+- [x] Módulo `apps/core/template_compiler.py` criado
+  - [x] `_resolve_field(obj, field_path)` — traversa dot notation em modelos Django (ex: `contact.company.name`)
+  - [x] `_resolve_field_with_root(record, field_path)` — strip do prefixo do modelo root (ex: `lead.title` numa Lead → resolve `title`)
+  - [x] `_build_var_map(placeholders, record)` — constrói mapa de substituição a partir do `available_placeholders` do template
+  - [x] `_substitute_vars(text, var_map)` — substituição regex para ambos os formatos (`{{1}}` e `{{ lead.title }}`)
+  - [x] `compile_email_template(template, record, user, extra_context)` — API principal, devolve `{subject, body_html, var_map}`
+  - [x] `compile_text(text, placeholders, record, extra_context)` — compilação genérica de texto
+  - [x] Suporte para variáveis do utilizador: `user.first_name`, `user.last_name`, `user.email`
+  - [x] Suporte para `extra_context` — variáveis adicionais passadas manualmente
+  - [x] Fallback automático: se campo não resolver, usa o fallback definido no placeholder
+  - [x] Regex patterns: `_RE_SHORT_VAR` para `{{N}}`, `_RE_FULL_VAR` para `{{ path }}`
 
-- [ ] **`renderTemplate(id)`** (Alpine.js)
-  - [ ] fetch `POST /core/email-templates/<id>/render/` com `{record_type: 'lead', record_id: leadId}`
-  - [ ] Pré-preenche `this.body` com `body` renderizado
-  - [ ] Foca na textarea automaticamente
-
-- [ ] **Integração com `leadEmailPanel`** em `lead_create.html`
-  - [ ] Passar `module='lead'` ao `leadEmailPanel`
-  - [ ] Adicionar estado e métodos do picker ao Alpine component existente
+- [x] Testes unitários em `test/auto/test_template_compiler.py` — **25 testes, todos passam**
+  - [x] `TestResolveField` (6 testes) — campo simples, nested, deep nested, None, inexistente, null FK
+  - [x] `TestResolveFieldWithRoot` (4 testes) — com/sem prefixo root, nested, deep nested
+  - [x] `TestBuildVarMap` (4 testes) — formato novo, fallback em null, vazio, sem record
+  - [x] `TestSubstituteVars` (5 testes) — short vars, full vars, mixed, unresolved kept, empty
+  - [x] `TestCompileEmailTemplate` (4 testes) — compilação completa, user vars, extra context, fallbacks
+  - [x] `TestCompileText` (2 testes) — texto simples, com extra context
 
 ---
+
+### 5.12.15 Email Template — Aba Anexos 🔴 NÃO IMPLEMENTADO
+
+Adicionar a aba "Anexos" ao formulário de template de email no Dashboard. O modelo `EmailTemplateAttachment` já existe, mas a interface de upload ainda não foi implementada.
+
+**Backend:**
+- [x] Modelo `EmailTemplateAttachment` já existe (migration 0025)
+- [ ] View para upload de anexo — `POST /dashboard/settings/email-templates/<uuid>/attachments/`
+- [ ] View para remover anexo — `DELETE /dashboard/settings/email-templates/<uuid>/attachments/<uuid>/`
+- [ ] View para listar anexos — `GET` (devolvido no contexto do form)
+- [ ] Validação de tamanho máximo de ficheiro (ex: 10MB)
+- [ ] Validação de tipos de ficheiro permitidos (PDF, imagens, DOCX, XLSX)
+
+**Frontend (aba "Anexos" no `email_template_form.html`):**
+- [ ] Nova aba "Anexos" ao lado de "Editor HTML", "Placeholders" e "Pré-visualização"
+- [ ] Zona de drag & drop para upload de ficheiros
+- [ ] Lista de anexos existentes com: nome, tamanho, tipo, botão remover
+- [ ] Upload via AJAX (sem reload da página)
+- [ ] Indicador de progresso durante upload
+- [ ] Preview de imagens inline (thumbnails)
+- [ ] Ícones por tipo de ficheiro (PDF, imagem, documento)
+- [ ] Campo para renomear o ficheiro (nome com que será enviado no email)
+- [ ] Aviso se total de anexos exceder limite
+
+**Integração com envio:**
+- [ ] `compile_email_template()` devolve lista de anexos a incluir
+- [ ] `send_email_for_record()` anexa ficheiros ao MIME multipart
+- [ ] Suporte para `filename` com placeholders (ex: `orcamento_{{1}}.pdf`)
 
 **Testes:**
-
-- [ ] Test: criar `EmailTemplate` com variáveis funciona
-- [ ] Test: `email_templates_list` filtra por módulo corretamente
-- [ ] Test: `email_template_render` substitui variáveis com dados reais da lead
-- [ ] Test: template `global` aparece em todos os módulos
-- [ ] Test: template inativo não aparece no picker
-- [ ] Test: picker no frontend carrega e filtra templates
+- [ ] Test: upload de ficheiro estático funciona
+- [ ] Test: remoção de anexo funciona
+- [ ] Test: validação de tamanho rejeita ficheiros grandes
+- [ ] Test: anexos são incluídos no email enviado
 
 ---
 
@@ -7673,7 +7725,12 @@ Permitir customizar templates via admin.
   - [x] Suporte a HEADER (TEXT / IMAGE / VIDEO / DOCUMENT) com `example`
   - [x] Suporte a BODY com amostras de variáveis
   - [x] Suporte a FOOTER e BUTTONS (URL, PHONE_NUMBER, QUICK_REPLY, COPY_CODE)
+  - [x] **[Fix Fev 2026]** Botões URL incompletos (url vazia) são filtrados — Meta rejeita url vazia
+  - [x] **[Fix Fev 2026]** Normalização E.164 automática para botões PHONE_NUMBER no payload
+  - [x] Helper `_get_wa_config(company)` — lê `CompanyWhatsAppConfig` da BD em vez de variáveis de ambiente
   - [x] Função `submit_template_to_meta(template)` — `POST graph.facebook.com/v19.0/{waba_id}/message_templates`
+  - [x] **[Fix Fev 2026]** Credenciais lidas de `CompanyWhatsAppConfig` (BD, Fernet) em vez de `settings.WHATSAPP_*` (env)
+  - [x] **[Fix Fev 2026]** Erro da Meta mostra `error_user_msg` em português em vez do genérico "Invalid parameter"
   - [x] Guarda `wa_template_uid` devolvido e muda status para PENDING
 
 - [x] **Admin — Gestão de Templates** (`apps/whatsapp/admin.py`)
@@ -7768,7 +7825,7 @@ Permitir customizar templates via admin.
   - [x] Pesquisa por display_name, name, body
   - [x] Filtro active/archived, filtro `wa_status` (DRAFT/PENDING/APPROVED/REJECTED/PAUSED), filtro category
   - [x] Bulk actions: arquivar, desarquivar, eliminar
-- [x] **`template_create_view`** — cria novo template, redireciona para lista
+- [x] **`template_create_view`** — cria novo template, redireciona para a página de edição do template criado
 - [x] **`template_edit_view`** — edição completa com:
   - [x] Form readonly se status = PENDING ou APPROVED
   - [x] Audit log (últimos 50 eventos)
@@ -7780,7 +7837,9 @@ Permitir customizar templates via admin.
   - [x] Notificações criadas/removidas nos eventos de atividade
   - [x] Auto-follow do utilizador actual como seguidor
   - [x] `notify_followers` ao guardar alterações
+  - [x] **[Fix Fev 2026]** Após guardar, redireciona para a própria página de edição (não para a lista)
 - [x] **`template_submit_view`** — submete à Meta API, atualiza `wa_template_uid` e status → PENDING
+  - [x] **[Fix Fev 2026]** Se `owner_company` for None, resolve automaticamente a partir da empresa activa da sessão
 - [x] **`template_archive_view`** / **`template_unarchive_view`** — toggle `is_active`
 - [x] **`template_delete_view`** — elimina template
 - [x] **`bulk_action_view`** — archive / unarchive / delete em massa
@@ -7827,6 +7886,36 @@ Permitir customizar templates via admin.
   - [x] Botão "Submeter à Meta" com feedback JSON inline
   - [x] Chatter de notas internas
   - [x] Painel de seguidores
+  - [x] **[Fev 2026]** Botões PHONE_NUMBER: seletor de indicativo por país (dropdown com pesquisa, 33 países, padrão PT +351)
+    - [x] `DIAL_COUNTRIES` — lista de países com flag emoji, nome, código ISO e indicativo
+    - [x] `_parsePhoneNumber()` — separa indicativo do número local ao carregar template existente
+    - [x] `filteredCountries()` — pesquisa em tempo real por nome ou código
+    - [x] `sync()` — combina `dial_code + phone_local` → E.164 no campo hidden `id_buttons`
+
+---
+
+## ✅ 12.1.9 IMPLEMENTADO — DevTools WhatsApp (Fev 2026)
+
+> Ferramenta de desenvolvimento para sincronizar manualmente o estado dos templates PENDING com a Meta API.
+
+- [x] **`fetch_all_meta_templates(config)`** em `apps/whatsapp/api.py`
+  - [x] Pagina a API da Meta (`GET /message_templates`) e devolve todos os templates
+  - [x] Aceita `CompanyWhatsAppConfig` como parâmetro (usa `get_decrypted_token()`)
+- [x] **`sync_pending_templates()`** em `apps/whatsapp/api.py`
+  - [x] Carrega todos os templates PENDING da BD
+  - [x] Agrupa por empresa (1 chamada à Meta por empresa)
+  - [x] Compara status local vs Meta, actualiza BD se mudou
+  - [x] Devolve lista de resultados `{name, old_status, new_status, changed}`
+- [x] **`devtools_whatsapp_view`** e **`devtools_whatsapp_sync_view`** em `apps/core/views.py`
+  - [x] `GET /devtools/whatsapp/` — renderiza página DevTools
+  - [x] `POST /devtools/whatsapp/sync-templates/` — chama `sync_pending_templates()`, devolve JSON
+- [x] **URLs** em `apps/core/urls.py` — `devtools_whatsapp` e `devtools_whatsapp_sync`
+- [x] **`templates/devtools/whatsapp.html`** — página DevTools dark mode (`bg-gray-900`)
+  - [x] Botão "Verificar Estado" (`bg-primary hover:opacity-80`) com Alpine.js
+  - [x] Tabela de resultados com badges de estado (PENDING/APPROVED/REJECTED/PAUSED)
+  - [x] Tabela de referência do ciclo de vida dos estados Meta
+  - [x] Estilo consistente com `audit_logs.html` / `error_logs.html`
+- [x] **`templates/base.html`** — secção "WhatsApp" adicionada ao dropdown DevTools
 
 ---
 

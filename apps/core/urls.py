@@ -13,6 +13,10 @@ urlpatterns = [
     path('devtools/logs/application/', views.application_logs_view, name='application_logs_view'),
     path('devtools/logs/error/', views.error_logs_view, name='error_logs_view'),
     path('devtools/logs/audit/', views.audit_logs_view, name='audit_logs_view'),
+
+    # DevTools — WhatsApp
+    path('devtools/whatsapp/', views.devtools_whatsapp_view, name='devtools_whatsapp'),
+    path('devtools/whatsapp/sync-templates/', views.devtools_whatsapp_sync_view, name='devtools_whatsapp_sync'),
     
     # Chatter APIs
     path('api/chatter/message/', views.chatter_create_message, name='chatter_create_message'),

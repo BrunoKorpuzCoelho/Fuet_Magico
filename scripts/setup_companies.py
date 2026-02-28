@@ -118,8 +118,9 @@ def setup_companies():
     print("3. You should see a company selector above 'Meu Perfil'")
     print("=" * 60)
 
-if __name__ == '__main__':
+def run():
     setup_companies()
 
-# Always execute when loaded via shell
-setup_companies()
+
+if __name__ == '__main__':
+    run()

@@ -1,14 +1,6 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.urls import reverse
-import json
-from .models import UserSettings, Notification
-
-
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
@@ -106,7 +98,6 @@ def toggle_developer_mode(request):
 
 from apps.accounts.decorators import admin_required
 from apps.core.models import Company
-from django.contrib import messages
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
@@ -228,7 +219,468 @@ def settings_view(request):
     return render(request, 'dashboard/settings.html', {
         'company': company,
         'active_section': request.GET.get('s', 'geral'),
+        'active_tab': request.GET.get('tab', 'geral'),
         'crm_config': crm_config,
         'user_count': User.objects.filter(is_active=True).count(),
         'company_count': Company.objects.count(),
     })
+
+
+@admin_required
+@require_http_methods(['GET', 'POST'])
+def email_layout_view(request):
+    """Vista de edição do Email Layout (envelope global)."""
+    from apps.core.models import EmailLayout
+
+    layout = EmailLayout.get_layout()
+    if not layout:
+        # Auto-seed if missing
+        layout = EmailLayout.reset_to_default(user=request.user)
+
+    if request.method == 'POST':
+        html_content = request.POST.get('html_content', '').strip()
+        if html_content:
+            layout.html_content = html_content
+            layout.updated_by = request.user
+            layout.save()
+            messages.success(request, 'Email Layout atualizado com sucesso.')
+        else:
+            messages.error(request, 'O conteúdo HTML não pode estar vazio.')
+        return redirect('dashboard:email_layout')
+
+    # Build preview context with real company/user data
+    company = None
+    active_company_id = request.session.get('active_company_id')
+    if active_company_id:
+        company = Company.objects.filter(pk=active_company_id).first()
+    if not company:
+        company = getattr(request.user, 'default_company', None)
+    if not company:
+        company = Company.objects.order_by('name').first()
+
+    sender_name = request.user.get_full_name() or request.user.username
+    sender_initials = ''.join([p[0] for p in sender_name.split()[:2]]).upper() if sender_name else '?'
+    sender_email = ''
+    try:
+        sender_email = request.user.email_config.email_address
+    except Exception:
+        sender_email = request.user.email or ''
+
+    from django.utils import timezone
+
+    preview_context = {
+        'company_name': company.name if company else 'Empresa',
+        'company_initial': company.name[0].upper() if company and company.name else 'E',
+        'company_logo_url': request.build_absolute_uri(company.logo.url) if company and company.logo else '',
+        'company_address': '',
+        'company_full_address': '',
+        'company_email': company.email if company else '',
+        'company_phone': company.phone if company else '',
+        'company_website': company.website if company else '',
+        'company_website_display': (company.website or '').replace('https://', '').replace('http://', '').rstrip('/') if company else '',
+        'sender_name': sender_name,
+        'sender_initials': sender_initials,
+        'sender_email': sender_email,
+        'sender_phone': getattr(request.user, 'phone', '') or '',
+        'sender_role': request.user.get_role_display() if hasattr(request.user, 'get_role_display') else '',
+        'date_sent': timezone.now().strftime('%d/%m/%Y'),
+    }
+
+    # Build company address
+    if company:
+        parts = []
+        if company.address:
+            parts.append(company.address.split('\n')[0].strip())
+        loc = ' '.join(filter(None, [company.postal_code, company.city]))
+        if loc:
+            parts.append(loc)
+        if company.country:
+            parts.append(company.country)
+        preview_context['company_address'] = ' · '.join(parts)
+        preview_context['company_full_address'] = ' · '.join(parts)
+
+    return render(request, 'dashboard/email_layout.html', {
+        'layout': layout,
+        'preview_context': json.dumps(preview_context),
+    })
+
+
+@admin_required
+@require_http_methods(['POST'])
+def email_layout_reset_view(request):
+    """Restaura o Email Layout para o ficheiro default."""
+    from apps.core.models import EmailLayout
+    EmailLayout.reset_to_default(user=request.user)
+    messages.success(request, 'Email Layout restaurado para o default.')
+    return redirect('dashboard:email_layout')
+
+
+@admin_required
+@require_http_methods(['GET'])
+def email_template_list_view(request):
+    """Lista de Email Templates com pesquisa, filtros e paginação."""
+    from apps.core.models import EmailTemplate
+    from apps.core.multi_company import filter_by_company
+    from django.core.paginator import Paginator
+    from django.db.models import Q
+
+    search_query = request.GET.get('search', '')
+    search_field = request.GET.get('field', 'name')
+    page_number = request.GET.get('page', 1)
+    page_size = request.GET.get('page_size', 50)
+    status_filter = request.GET.get('status', 'active')
+    module_filter = request.GET.get('module', '')
+
+    try:
+        page_size = int(page_size)
+        if page_size < 1:
+            page_size = 50
+    except (ValueError, TypeError):
+        page_size = 50
+
+    if status_filter == 'archived':
+        templates = EmailTemplate.objects.filter(is_active=False)
+    else:
+        templates = EmailTemplate.objects.filter(is_active=True)
+
+    templates = filter_by_company(templates, request)
+
+    # Module filter
+    if module_filter:
+        templates = templates.filter(module=module_filter)
+
+    # Search
+    if search_query:
+        field_mapping = {
+            'name': Q(name__icontains=search_query),
+            'module': Q(module__icontains=search_query),
+            'subject': Q(subject__icontains=search_query),
+            'language': Q(language__icontains=search_query),
+        }
+        if search_field in field_mapping:
+            templates = templates.filter(field_mapping[search_field])
+
+    templates = templates.order_by('module', 'name')
+
+    paginator = Paginator(templates, page_size)
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'templates': page_obj,
+        'search_query': search_query,
+        'search_field': search_field,
+        'total_count': paginator.count,
+        'page_size': page_size,
+        'status_filter': status_filter,
+        'module_filter': module_filter,
+        'module_choices': EmailTemplate.MODULE_CHOICES,
+    }
+
+    return render(request, 'dashboard/email_template_list.html', context)
+
+
+@admin_required
+@require_http_methods(['POST'])
+def email_template_bulk_archive(request):
+    """Arquivar (is_active=False) templates selecionados (apenas CUSTOM)."""
+    from apps.core.models import EmailTemplate
+    try:
+        data = json.loads(request.body)
+        ids = data.get('ids', [])
+        if not ids:
+            return JsonResponse({'success': False, 'error': {'code': 'NO_SELECTION', 'message': 'Nenhum template selecionado.'}}, status=400)
+
+        templates = EmailTemplate.objects.filter(id__in=ids)
+        base_templates = [t for t in templates if t.template_type == 'BASE']
+        already_archived = [t for t in templates if t.template_type == 'CUSTOM' and not t.is_active]
+        to_archive = [t for t in templates if t.template_type == 'CUSTOM' and t.is_active]
+
+        # All selected are already archived (or BASE)
+        if not to_archive:
+            if already_archived:
+                return JsonResponse({'success': False, 'error': {'code': 'ALREADY_ARCHIVED', 'message': 'Os templates selecionados já estão arquivados.'}})
+            if base_templates:
+                return JsonResponse({'success': False, 'error': {'code': 'BASE_PROTECTED', 'message': 'Templates base do sistema não podem ser arquivados.'}})
+
+        count = EmailTemplate.objects.filter(id__in=[t.id for t in to_archive]).update(is_active=False)
+        msg = f'{count} template(s) arquivado(s) com sucesso.'
+        warning = None
+        if already_archived:
+            warning = f'{len(already_archived)} template(s) já estava(m) arquivado(s).'
+        if base_templates:
+            base_msg = f'{len(base_templates)} template(s) base ignorado(s).'
+            warning = f'{warning} {base_msg}' if warning else base_msg
+        result = {'success': True, 'message': msg}
+        if warning:
+            result['warning'] = warning
+        return JsonResponse(result)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': {'code': 'SERVER_ERROR', 'message': str(e)}}, status=500)
+
+
+@admin_required
+@require_http_methods(['POST'])
+def email_template_bulk_unarchive(request):
+    """Desarquivar (is_active=True) templates selecionados (apenas CUSTOM)."""
+    from apps.core.models import EmailTemplate
+    try:
+        data = json.loads(request.body)
+        ids = data.get('ids', [])
+        if not ids:
+            return JsonResponse({'success': False, 'error': {'code': 'NO_SELECTION', 'message': 'Nenhum template selecionado.'}}, status=400)
+
+        templates = EmailTemplate.objects.filter(id__in=ids)
+        base_templates = [t for t in templates if t.template_type == 'BASE']
+        already_active = [t for t in templates if t.template_type == 'CUSTOM' and t.is_active]
+        to_unarchive = [t for t in templates if t.template_type == 'CUSTOM' and not t.is_active]
+
+        # All selected are already active (or BASE)
+        if not to_unarchive:
+            if already_active:
+                return JsonResponse({'success': False, 'error': {'code': 'ALREADY_ACTIVE', 'message': 'Os templates selecionados já estão ativos.'}})
+            if base_templates:
+                return JsonResponse({'success': False, 'error': {'code': 'BASE_PROTECTED', 'message': 'Templates base do sistema não podem ser desarquivados.'}})
+
+        count = EmailTemplate.objects.filter(id__in=[t.id for t in to_unarchive]).update(is_active=True)
+        msg = f'{count} template(s) desarquivado(s) com sucesso.'
+        warning = None
+        if already_active:
+            warning = f'{len(already_active)} template(s) já estava(m) ativo(s).'
+        if base_templates:
+            base_msg = f'{len(base_templates)} template(s) base ignorado(s).'
+            warning = f'{warning} {base_msg}' if warning else base_msg
+        result = {'success': True, 'message': msg}
+        if warning:
+            result['warning'] = warning
+        return JsonResponse(result)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': {'code': 'SERVER_ERROR', 'message': str(e)}}, status=500)
+
+
+@admin_required
+@require_http_methods(['POST'])
+def email_template_bulk_delete(request):
+    """Eliminar permanentemente templates CUSTOM selecionados."""
+    from apps.core.models import EmailTemplate
+    try:
+        data = json.loads(request.body)
+        ids = data.get('ids', [])
+        if not ids:
+            return JsonResponse({'success': False, 'error': {'code': 'NO_SELECTION', 'message': 'Nenhum template selecionado.'}}, status=400)
+
+        base_count = EmailTemplate.objects.filter(id__in=ids, template_type='BASE').count()
+        if base_count == len(ids):
+            return JsonResponse({'success': False, 'error': {'code': 'BASE_PROTECTED', 'message': 'Templates base do sistema não podem ser eliminados.'}}, status=403)
+
+        count, _ = EmailTemplate.objects.filter(id__in=ids, template_type='CUSTOM').delete()
+        msg = f'{count} template(s) eliminado(s) com sucesso.'
+        warning = None
+        if base_count:
+            warning = f'{base_count} template(s) base ignorado(s) (não podem ser eliminados).'
+        result = {'success': True, 'message': msg}
+        if warning:
+            result['warning'] = warning
+        return JsonResponse(result)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': {'code': 'SERVER_ERROR', 'message': str(e)}}, status=500)
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Email Template — Create / Edit / Reset Body
+# ══════════════════════════════════════════════════════════════════════
+
+@admin_required
+@require_http_methods(['GET', 'POST'])
+def email_template_create_view(request):
+    """Criar novo Email Template."""
+    from apps.core.models import EmailTemplate
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        module = request.POST.get('module', 'GENERAL')
+        language = request.POST.get('language', 'pt_PT')
+        subject = request.POST.get('subject', '').strip()
+        body_html = request.POST.get('body_html', '').strip()
+        placeholders_raw = request.POST.get('available_placeholders', '{}').strip()
+
+        if not name:
+            messages.error(request, 'O nome do template é obrigatório.')
+            return redirect('dashboard:email_template_create')
+        if not subject:
+            messages.error(request, 'O assunto é obrigatório.')
+            return redirect('dashboard:email_template_create')
+
+        import json as _json
+        try:
+            available_placeholders = _json.loads(placeholders_raw) if placeholders_raw else {}
+        except _json.JSONDecodeError:
+            available_placeholders = {}
+
+        # Determine owner_company
+        active_company_id = request.session.get('active_company_id')
+        owner_company = None
+        if active_company_id:
+            owner_company = Company.objects.filter(pk=active_company_id).first()
+
+        try:
+            tmpl = EmailTemplate.objects.create(
+                name=name,
+                module=module,
+                language=language,
+                subject=subject,
+                body_html=body_html,
+                available_placeholders=available_placeholders,
+                owner_company=owner_company,
+                template_type='CUSTOM',
+                created_by=request.user,
+                updated_by=request.user,
+            )
+            messages.success(request, f'Template "{name}" criado com sucesso.')
+            return redirect('dashboard:email_template_edit', template_id=tmpl.pk)
+        except Exception as e:
+            messages.error(request, f'Erro ao criar template: {e}')
+            return redirect('dashboard:email_template_create')
+
+    # GET — empty form (CUSTOM templates start blank)
+    from apps.core.models import EmailLayout
+    preview_context = _build_email_preview_context(request)
+    layout = EmailLayout.get_layout()
+    layout_html = layout.html_content if layout else '{{ body_content }}'
+
+    return render(request, 'dashboard/email_template_form.html', {
+        'template': None,
+        'preview_context': json.dumps(preview_context),
+        'layout_html': layout_html,
+        'placeholders_json': '{}',
+        'module_choices': EmailTemplate.MODULE_CHOICES,
+        'language_choices': EmailTemplate.LANGUAGE_CHOICES,
+    })
+
+
+@admin_required
+@require_http_methods(['GET', 'POST'])
+def email_template_edit_view(request, template_id):
+    """Editar Email Template existente."""
+    from apps.core.models import EmailTemplate
+    from django.shortcuts import get_object_or_404
+
+    tmpl = get_object_or_404(EmailTemplate, pk=template_id)
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        module = request.POST.get('module', tmpl.module)
+        language = request.POST.get('language', tmpl.language)
+        subject = request.POST.get('subject', '').strip()
+        body_html = request.POST.get('body_html', '').strip()
+        placeholders_raw = request.POST.get('available_placeholders', '{}').strip()
+
+        if not name:
+            messages.error(request, 'O nome do template é obrigatório.')
+            return redirect('dashboard:email_template_edit', template_id=tmpl.pk)
+        if not subject:
+            messages.error(request, 'O assunto é obrigatório.')
+            return redirect('dashboard:email_template_edit', template_id=tmpl.pk)
+
+        import json as _json
+        try:
+            available_placeholders = _json.loads(placeholders_raw) if placeholders_raw else {}
+        except _json.JSONDecodeError:
+            available_placeholders = tmpl.available_placeholders
+
+        tmpl.name = name
+        tmpl.module = module
+        tmpl.language = language
+        tmpl.subject = subject
+        tmpl.body_html = body_html
+        tmpl.available_placeholders = available_placeholders
+        tmpl.updated_by = request.user
+        try:
+            tmpl.save()
+            messages.success(request, f'Template "{name}" atualizado com sucesso.')
+        except Exception as e:
+            messages.error(request, f'Erro ao guardar: {e}')
+        return redirect('dashboard:email_template_edit', template_id=tmpl.pk)
+
+    # GET
+    from apps.core.models import EmailLayout
+    preview_context = _build_email_preview_context(request)
+    layout = EmailLayout.get_layout()
+    layout_html = layout.html_content if layout else '{{ body_content }}'
+
+    return render(request, 'dashboard/email_template_form.html', {
+        'template': tmpl,
+        'preview_context': json.dumps(preview_context),
+        'layout_html': layout_html,
+        'placeholders_json': json.dumps(tmpl.available_placeholders or {}, indent=4, ensure_ascii=False),
+        'module_choices': EmailTemplate.MODULE_CHOICES,
+        'language_choices': EmailTemplate.LANGUAGE_CHOICES,
+    })
+
+
+@admin_required
+@require_http_methods(['POST'])
+def email_template_reset_body_view(request, template_id):
+    """Restaura o body_html de um template para o default."""
+    from apps.core.models import EmailTemplate
+    from django.shortcuts import get_object_or_404
+
+    tmpl = get_object_or_404(EmailTemplate, pk=template_id)
+    tmpl.reset_body_to_default(user=request.user)
+    messages.success(request, 'Corpo do template restaurado para o default.')
+    return redirect('dashboard:email_template_edit', template_id=tmpl.pk)
+
+
+def _build_email_preview_context(request):
+    """Constrói o contexto de preview para templates de email (reutilizado por create/edit)."""
+    from django.utils import timezone
+
+    company = None
+    active_company_id = request.session.get('active_company_id')
+    if active_company_id:
+        company = Company.objects.filter(pk=active_company_id).first()
+    if not company:
+        company = getattr(request.user, 'default_company', None)
+    if not company:
+        company = Company.objects.order_by('name').first()
+
+    sender_name = request.user.get_full_name() or request.user.username
+    sender_initials = ''.join([p[0] for p in sender_name.split()[:2]]).upper() if sender_name else '?'
+    sender_email = ''
+    try:
+        sender_email = request.user.email_config.email_address
+    except Exception:
+        sender_email = request.user.email or ''
+
+    ctx = {
+        'contact_name': 'João Silva',
+        'lead_title': 'Proposta Website Redesign',
+        'company_name': company.name if company else 'Empresa',
+        'company_initial': company.name[0].upper() if company and company.name else 'E',
+        'company_logo_url': request.build_absolute_uri(company.logo.url) if company and company.logo else '',
+        'company_address': '',
+        'company_full_address': '',
+        'company_email': company.email if company else '',
+        'company_phone': company.phone if company else '',
+        'company_website': company.website if company else '',
+        'company_website_display': (company.website or '').replace('https://', '').replace('http://', '').rstrip('/') if company else '',
+        'sender_name': sender_name,
+        'sender_initials': sender_initials,
+        'sender_email': sender_email,
+        'sender_phone': getattr(request.user, 'phone', '') or '',
+        'sender_role': request.user.get_role_display() if hasattr(request.user, 'get_role_display') else '',
+        'date_sent': timezone.now().strftime('%d/%m/%Y'),
+    }
+
+    if company:
+        parts = []
+        if company.address:
+            parts.append(company.address.split('\n')[0].strip())
+        loc = ' '.join(filter(None, [company.postal_code, company.city]))
+        if loc:
+            parts.append(loc)
+        if company.country:
+            parts.append(company.country)
+        ctx['company_address'] = ' · '.join(parts)
+        ctx['company_full_address'] = ' · '.join(parts)
+
+    return ctx

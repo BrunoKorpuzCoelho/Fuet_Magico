@@ -92,9 +92,10 @@ def template_create_view(request):
         if form.is_valid():
             template = form.save(commit=False)
             template.created_by = request.user
+            template._current_user = request.user
             template.save()
             messages.success(request, f'Template "{template.display_name}" criado com sucesso.')
-            return redirect('whatsapp:template_list')
+            return redirect('whatsapp:template_edit', pk=template.pk)
     else:
         form = WhatsAppTemplateForm()
 
@@ -115,6 +116,7 @@ def template_edit_view(request, pk):
             return redirect('whatsapp:template_edit', pk=pk)
         form = WhatsAppTemplateForm(request.POST, instance=template)
         if form.is_valid():
+            template._current_user = request.user
             form.save()
             messages.success(request, f'Template "{template.display_name}" atualizado.')
             # Notificar seguidores da atualização
@@ -129,7 +131,7 @@ def template_edit_view(request, pk):
                 )
             except Exception:
                 pass
-            return redirect('whatsapp:template_list')
+            return redirect('whatsapp:template_edit', pk=pk)
     else:
         form = WhatsAppTemplateForm(instance=template)
 
@@ -219,11 +221,20 @@ def template_submit_view(request, pk):
             'message': f'Template já está em estado "{template.get_status_display()}" — não é possível submeter novamente.'
         }, status=400)
 
+    # Ensure owner_company is set — assign from active session if missing
+    if template.owner_company is None:
+        from apps.core.multi_company import get_active_company
+        active_company = get_active_company(request)
+        if active_company:
+            template.owner_company = active_company
+            template.save(update_fields=['owner_company'])
+
     success, data = submit_template_to_meta(template)
 
     if success:
         template.wa_template_uid = data.get('id', '')
         template.status = WhatsAppTemplate.STATUS_PENDING
+        template._current_user = request.user
         template.save(update_fields=['wa_template_uid', 'status'])
         return JsonResponse({
             'ok': True,
@@ -242,6 +253,7 @@ def template_submit_view(request, pk):
 def template_archive_view(request, pk):
     template = get_object_or_404(WhatsAppTemplate, pk=pk)
     template.is_active = False
+    template._current_user = request.user
     template.save(update_fields=['is_active', 'updated_at'])
     return JsonResponse({'success': True})
 
@@ -251,6 +263,7 @@ def template_archive_view(request, pk):
 def template_unarchive_view(request, pk):
     template = get_object_or_404(WhatsAppTemplate, pk=pk)
     template.is_active = True
+    template._current_user = request.user
     template.save(update_fields=['is_active', 'updated_at'])
     return JsonResponse({'success': True})
 
@@ -259,6 +272,10 @@ def template_unarchive_view(request, pk):
 @require_http_methods(['POST'])
 def template_delete_view(request, pk):
     template = get_object_or_404(WhatsAppTemplate, pk=pk)
+    from .api import delete_template_from_meta
+    ok, err = delete_template_from_meta(template)
+    if not ok:
+        return JsonResponse({'success': False, 'error': f'Erro ao eliminar na Meta: {err}'})
     template.delete()
     return JsonResponse({'success': True})
 
@@ -281,8 +298,23 @@ def bulk_action_view(request):
         qs.update(is_active=True)
         msg = f'{n} template(s) desarquivado(s) com sucesso.'
     elif action == 'delete':
-        qs.delete()
-        msg = f'{n} template(s) eliminado(s) permanentemente.'
+        from .api import delete_template_from_meta
+        errors = []
+        deleted = 0
+        for tmpl in qs:
+            ok, err = delete_template_from_meta(tmpl)
+            if ok:
+                tmpl.delete()
+                deleted += 1
+            else:
+                errors.append(f'"{tmpl.name}": {err}')
+        if errors:
+            return JsonResponse({
+                'success': False,
+                'count': deleted,
+                'message': f'{deleted} eliminado(s). Erros Meta: {" | ".join(errors)}',
+            })
+        msg = f'{deleted} template(s) eliminado(s) permanentemente.'
     else:
         return JsonResponse({'success': False, 'error': 'Ação inválida'}, status=400)
 

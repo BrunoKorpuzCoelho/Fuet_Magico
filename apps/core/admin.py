@@ -6,6 +6,7 @@ from .models import (
     ActivityType, ScheduledActivity, ActivityWorkflow,
     ActivityChain, ActivityChainStep, ActivityChainInstance, ActivityLog,
     Notification, ChatterFollower, CompanyWhatsAppConfig, GenericActivity,
+    CompanyEmailConfig, EmailLayout, EmailTemplate, EmailTemplateAttachment,
 )
 
 
@@ -471,3 +472,96 @@ class GenericActivityAdmin(admin.ModelAdmin):
     list_filter  = ['activity_type', 'is_done', 'content_type', 'owner_company']
     search_fields = ['summary', 'object_id']
     raw_id_fields = ['assigned_to', 'scheduled_activity']
+
+
+@admin.register(CompanyEmailConfig)
+class CompanyEmailConfigAdmin(admin.ModelAdmin):
+    list_display   = ['company', 'email_address', 'provider', 'is_active', 'updated_at']
+    list_filter    = ['is_active', 'provider']
+    search_fields  = ['company__name', 'email_address']
+    readonly_fields = ['created_at', 'updated_at', 'password_status']
+    fieldsets = (
+        ('Empresa', {'fields': ('company', 'is_active')}),
+        ('SMTP', {
+            'fields': ('email_address', 'provider', 'raw_password_input', 'password_status'),
+            'description': 'A App Password é encriptada automaticamente. Deixa em branco para manter a existente.',
+        }),
+        ('Timestamps', {'fields': ('created_at', 'updated_at')}),
+    )
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields['raw_password_input'] = forms.CharField(
+            label='Nova App Password',
+            required=(obj is None),
+            widget=forms.PasswordInput(render_value=False, attrs={'autocomplete': 'new-password', 'size': 40}),
+            help_text='Cola aqui a App Password. Será encriptada automaticamente. '
+                      'Deixa em branco para manter a password guardada.',
+        )
+        return form
+
+    def password_status(self, obj):
+        if obj and obj.app_password:
+            return format_html('<span style="color:green">✓ Password guardada (encriptada)</span>')
+        return format_html('<span style="color:red">✗ Sem password</span>')
+    password_status.short_description = 'Estado da password'
+
+    def save_model(self, request, obj, form, change):
+        raw = form.cleaned_data.get('raw_password_input', '').strip()
+        if raw:
+            obj.set_encrypted_password(raw)
+        elif not obj.app_password and change:
+            from .models import CompanyEmailConfig as EmailCfg
+            try:
+                original = EmailCfg.objects.get(pk=obj.pk)
+                obj.app_password = original.app_password
+            except EmailCfg.DoesNotExist:
+                pass
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(EmailLayout)
+class EmailLayoutAdmin(admin.ModelAdmin):
+    list_display = ['__str__', 'updated_by', 'updated_at']
+    readonly_fields = ['created_at', 'updated_at']
+    fieldsets = (
+        (None, {'fields': ('html_content',)}),
+        ('Info', {'fields': ('updated_by', 'created_at', 'updated_at')}),
+    )
+
+    def has_add_permission(self, request):
+        # Apenas um registo global — não permitir criar mais
+        if EmailLayout.objects.exists():
+            return False
+        return super().has_add_permission(request)
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class EmailTemplateAttachmentInline(admin.TabularInline):
+    model = EmailTemplateAttachment
+    extra = 0
+    fields = ['attachment_type', 'file', 'report_type', 'filename']
+
+
+@admin.register(EmailTemplate)
+class EmailTemplateAdmin(admin.ModelAdmin):
+    list_display = ['name', 'module', 'language', 'is_active', 'owner_company', 'updated_at']
+    list_filter = ['module', 'is_active', 'language', 'owner_company']
+    search_fields = ['name', 'subject']
+    readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
+    inlines = [EmailTemplateAttachmentInline]
+    fieldsets = (
+        (None, {'fields': ('name', 'module', 'language', 'is_active')}),
+        ('Conteúdo', {'fields': ('subject', 'body_html')}),
+        ('Placeholders', {'fields': ('available_placeholders',)}),
+        ('Empresa', {'fields': ('owner_company',)}),
+        ('Auditoria', {'fields': ('created_by', 'updated_by', 'created_at', 'updated_at')}),
+    )
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by = request.user
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)

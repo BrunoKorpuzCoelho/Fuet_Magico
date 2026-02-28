@@ -40,8 +40,7 @@
                 <!-- Botões de Ação (Form Actions) -->
                 {% if show_form_actions %}
                 <div class="flex items-center gap-3 ml-2" 
-                     id="form-action-buttons"
-                     {% if contact %}style="display: none;"{% endif %}>
+                     id="form-action-buttons">
                     <!-- Botão Descartar (Vermelho) -->
                     <a href="{% if contact %}{% url 'contacts:contact_edit' contact.id %}{% else %}{% url 'contacts:contact_list' %}{% endif %}" 
                        class="flex items-center justify-center hover:opacity-80 transition-opacity" 

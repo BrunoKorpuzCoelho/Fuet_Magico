@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+
+{% block title %}WhatsApp DevTools{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8" x-data="whatsappDevTools()">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- Header -->
+        <div class="flex items-start justify-between mb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">WhatsApp DevTools</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Ferramentas de diagnóstico e manutenção para o módulo WhatsApp Business API</p>
+            </div>
+            <a href="/whatsapp/" class="text-sm text-primary hover:underline mt-1">Ver Templates →</a>
+        </div>
+
+        <!-- Tool Card: Sync Templates -->
+        <div class="bg-gray-900 rounded-lg shadow-xl border border-gray-700 overflow-hidden mb-6">
+
+            <!-- Card Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+                <div>
+                    <h2 class="text-sm font-semibold text-white uppercase tracking-wider">Sincronizar Estado de Templates</h2>
+                    <p class="text-xs text-gray-400 mt-0.5">
+                        Consulta a Meta API e actualiza localmente o estado de todos os templates com estado
+                        <code class="text-yellow-400 bg-yellow-400/10 px-1 rounded">PENDING</code>.
+                        Templates em outros estados não são afectados.
+                    </p>
+                </div>
+                <button
+                    @click="sync()"
+                    :disabled="loading"
+                    class="ml-6 flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-primary hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-opacity text-sm"
+                >
+                    <svg x-show="!loading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    <svg x-show="loading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span x-text="loading ? 'A verificar...' : 'Verificar Estado'"></span>
+                </button>
+            </div>
+
+            <!-- Error State -->
+            <div x-show="synced && error" x-transition class="px-6 py-4 border-b border-gray-700 bg-red-950/40">
+                <div class="flex items-start gap-3 text-sm">
+                    <svg class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div>
+                        <p class="font-semibold text-red-400">Erro ao comunicar com a Meta API</p>
+                        <p class="text-red-300/80 mt-0.5" x-text="error"></p>
+                        <p class="text-gray-500 text-xs mt-2">
+                            Verifica as variáveis <code class="text-gray-400">WHATSAPP_ACCESS_TOKEN</code> e <code class="text-gray-400">WHATSAPP_WABA_ID</code> no ficheiro <code class="text-gray-400">.env</code>.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Bar (after successful sync) -->
+            <div x-show="synced && !error" x-transition class="px-6 py-3 border-b border-gray-700 bg-gray-800/50 flex items-center gap-6 text-sm">
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-500">Verificados:</span>
+                    <span class="font-mono font-bold text-white" x-text="totalChecked"></span>
+                </div>
+                <div class="w-px h-4 bg-gray-700"></div>
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-500">Actualizados:</span>
+                    <span class="font-mono font-bold" :class="totalChanged > 0 ? 'text-green-400' : 'text-gray-500'" x-text="totalChanged"></span>
+                </div>
+                <div class="w-px h-4 bg-gray-700"></div>
+                <div class="flex items-center gap-2 text-gray-500 text-xs">
+                    Última verificação: <span class="text-gray-400 font-mono" x-text="lastSyncTime"></span>
+                </div>
+            </div>
+
+            <!-- Results Table -->
+            <div x-show="synced && !error && results.length > 0">
+                <table class="w-full text-sm font-mono">
+                    <thead>
+                        <tr class="border-b border-gray-700 text-xs uppercase tracking-wider text-gray-500">
+                            <th class="px-6 py-3 text-left font-medium">Nome Apresentado</th>
+                            <th class="px-6 py-3 text-left font-medium">Nome Técnico</th>
+                            <th class="px-6 py-3 text-center font-medium w-32">Anterior</th>
+                            <th class="px-6 py-3 text-center font-medium w-32">Actual</th>
+                            <th class="px-6 py-3 text-center font-medium w-28">Resultado</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-800">
+                        <template x-for="r in results" :key="r.name">
+                            <tr class="hover:bg-gray-800/60 transition-colors">
+                                <td class="px-6 py-3 text-gray-200 font-sans" x-text="r.display_name"></td>
+                                <td class="px-6 py-3 text-gray-500 text-xs" x-text="r.name"></td>
+                                <td class="px-6 py-3 text-center">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" :class="badgeClass(r.old_status)" x-text="r.old_status"></span>
+                                </td>
+                                <td class="px-6 py-3 text-center">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" :class="badgeClass(r.new_status)" x-text="r.new_status"></span>
+                                </td>
+                                <td class="px-6 py-3 text-center">
+                                    <template x-if="r.changed">
+                                        <span class="text-green-400 text-xs font-semibold">✓ actualizado</span>
+                                    </template>
+                                    <template x-if="!r.changed && !r.note">
+                                        <span class="text-gray-600 text-xs">sem alteração</span>
+                                    </template>
+                                    <template x-if="r.note">
+                                        <span class="text-yellow-500 text-xs" x-text="r.note"></span>
+                                    </template>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty state -->
+            <div x-show="synced && !error && results.length === 0" class="px-6 py-12 text-center">
+                <p class="text-gray-500 text-sm">Nenhum template com estado <code class="text-yellow-400">PENDING</code> encontrado. Nada a verificar.</p>
+            </div>
+
+            <!-- Idle state -->
+            <div x-show="!synced" class="px-6 py-10 text-center">
+                <p class="text-gray-600 text-sm">Clica em <span class="text-gray-400">"Verificar Estado"</span> para consultar a Meta API.</p>
+            </div>
+
+        </div>
+
+        <!-- Reference: Status Lifecycle -->
+        <div class="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-700">
+                <h2 class="text-sm font-semibold text-white uppercase tracking-wider">Ciclo de Vida dos Estados</h2>
+            </div>
+            <div class="divide-y divide-gray-800">
+                <div class="px-6 py-3 flex items-start gap-4 text-sm">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-gray-700 text-gray-300 w-24 justify-center flex-shrink-0">DRAFT</span>
+                    <p class="text-gray-400">Template criado localmente. Ainda não foi submetido à Meta para revisão.</p>
+                </div>
+                <div class="px-6 py-3 flex items-start gap-4 text-sm">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 w-24 justify-center flex-shrink-0">PENDING</span>
+                    <p class="text-gray-400">Submetido à Meta. Em revisão. Templates da categoria <code class="text-gray-300 bg-gray-800 px-1 rounded">UTILITY</code> são aprovados automaticamente em 1–5 minutos.</p>
+                </div>
+                <div class="px-6 py-3 flex items-start gap-4 text-sm">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-green-500/10 text-green-400 border border-green-500/20 w-24 justify-center flex-shrink-0">APPROVED</span>
+                    <p class="text-gray-400">Aprovado pela Meta. Pode ser usado para enviar mensagens a clientes que ainda não iniciaram conversa.</p>
+                </div>
+                <div class="px-6 py-3 flex items-start gap-4 text-sm">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-red-500/10 text-red-400 border border-red-500/20 w-24 justify-center flex-shrink-0">REJECTED</span>
+                    <p class="text-gray-400">Rejeitado pela Meta. O template pode ser corrigido e re-submetido. Verificar motivo na consola Meta Business Suite.</p>
+                </div>
+                <div class="px-6 py-3 flex items-start gap-4 text-sm">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20 w-24 justify-center flex-shrink-0">PAUSED</span>
+                    <p class="text-gray-400">Pausado pela Meta por degradação de qualidade ou excesso de bloqueios por parte dos destinatários.</p>
+                </div>
+                <div class="px-6 py-3 flex items-start gap-4 text-sm">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-gray-700/50 text-gray-500 w-24 justify-center flex-shrink-0">DISABLED</span>
+                    <p class="text-gray-400">Desactivado pela Meta. Requer intervenção manual na consola Meta Business Suite.</p>
+                </div>
+            </div>
+            <div class="px-6 py-3 border-t border-gray-700 bg-gray-800/30">
+                <p class="text-xs text-gray-600">
+                    Em produção (HTTPS público), os estados actualizam-se automaticamente via webhook da Meta.
+                    Em ambiente de desenvolvimento (localhost), utiliza o botão acima para verificar manualmente.
+                </p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+function whatsappDevTools() {
+    return {
+        loading: false,
+        synced: false,
+        error: null,
+        results: [],
+        totalChecked: 0,
+        totalChanged: 0,
+        lastSyncTime: '',
+
+        async sync() {
+            this.loading = true;
+            this.error = null;
+            this.synced = false;
+
+            try {
+                const resp = await fetch('/devtools/whatsapp/sync-templates/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCsrf(),
+                        'Content-Type': 'application/json',
+                    },
+                });
+                const data = await resp.json();
+
+                if (!resp.ok || !data.ok) {
+                    this.error = data.error || 'Erro desconhecido.';
+                } else {
+                    this.results = data.results || [];
+                    this.totalChecked = data.total_checked;
+                    this.totalChanged = data.total_changed;
+                    this.lastSyncTime = new Date().toLocaleTimeString('pt-PT');
+                }
+            } catch (e) {
+                this.error = 'Erro de rede: ' + e.message;
+            } finally {
+                this.loading = false;
+                this.synced = true;
+            }
+        },
+
+        badgeClass(status) {
+            const map = {
+                'DRAFT':    'bg-gray-700 text-gray-300',
+                'PENDING':  'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20',
+                'APPROVED': 'bg-green-500/10 text-green-400 border border-green-500/20',
+                'REJECTED': 'bg-red-500/10 text-red-400 border border-red-500/20',
+                'PAUSED':   'bg-orange-500/10 text-orange-400 border border-orange-500/20',
+                'DISABLED': 'bg-gray-700/50 text-gray-500',
+            };
+            return map[status] || 'bg-gray-700 text-gray-400';
+        },
+
+        getCsrf() {
+            return document.cookie.split('; ')
+                .find(r => r.startsWith('csrftoken='))
+                ?.split('=')[1] || '';
+        },
+    };
+}
+</script>
+{% endblock %}

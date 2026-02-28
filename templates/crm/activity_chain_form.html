@@ -305,11 +305,7 @@ function chainForm(initialSteps) {
         },
 
         markDirty() {
-            if (!this._isDirty) {
-                this._isDirty = true;
-                const btns = document.getElementById('form-action-buttons');
-                if (btns) btns.style.display = '';
-            }
+            // No-op: buttons are always visible
         },
 
         addStep() {

@@ -36,6 +36,35 @@ def audit_logs_view(request):
 
 @require_http_methods(["GET"])
 @role_required('ADMIN')
+def devtools_whatsapp_view(request):
+    """DevTools — WhatsApp: página com botão de sync de templates pendentes."""
+    return render(request, 'devtools/whatsapp.html')
+
+
+@require_http_methods(["POST"])
+@role_required('ADMIN')
+def devtools_whatsapp_sync_view(request):
+    """
+    DevTools — POST /devtools/whatsapp/sync-templates/
+    Verifica o estado actual de todos os templates PENDING na Meta API e actualiza a DB.
+    """
+    from apps.whatsapp.api import sync_pending_templates
+    success, results = sync_pending_templates()
+    if not success:
+        # results is {'error': '...'}
+        return JsonResponse({'ok': False, 'error': results.get('error', 'Erro desconhecido.')}, status=400)
+
+    changed = [r for r in results if r['changed']]
+    return JsonResponse({
+        'ok': True,
+        'total_checked': len(results),
+        'total_changed': len(changed),
+        'results': results,
+    })
+
+
+@require_http_methods(["GET"])
+@role_required('ADMIN')
 def audit_logs_api(request):
     page = int(request.GET.get('page', 1))
     limit = int(request.GET.get('limit', 300))

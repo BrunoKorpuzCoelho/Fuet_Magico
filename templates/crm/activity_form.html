@@ -324,52 +324,6 @@
     setIconColor(initialColor);
     renderPreview();
     updateLabels();
-
-    // ── Dirty state (edit only) ────────────────────────────────────
-    {% if is_edit %}
-    const actionButtons = document.getElementById('form-action-buttons');
-    const initialState = {
-        name:          nameInput  ? nameInput.value  : '',
-        type:          typeSelect ? typeSelect.value : '',
-        summary:       document.querySelector('[name="summary"]')  ? document.querySelector('[name="summary"]').value  : '',
-        description:   document.querySelector('[name="description"]') ? document.querySelector('[name="description"]').value : '',
-        icon_svg:      svgTextarea  ? svgTextarea.value  : '',
-        icon_color:    colorHidden  ? colorHidden.value  : '',
-        applicable_models: JSON.stringify(
-            Array.from(document.querySelectorAll('[name="applicable_models"]')).map(e => e.value).sort()
-        ),
-    };
-
-    function isDirty() {
-        if (nameInput  && nameInput.value  !== initialState.name)        return true;
-        if (typeSelect && typeSelect.value !== initialState.type)        return true;
-        const sum = document.querySelector('[name="summary"]');
-        if (sum  && sum.value  !== initialState.summary)                 return true;
-        const desc = document.querySelector('[name="description"]');
-        if (desc && desc.value !== initialState.description)             return true;
-        if (svgTextarea && svgTextarea.value !== initialState.icon_svg)  return true;
-        if (colorHidden && colorHidden.value !== initialState.icon_color) return true;
-        const currentAM = JSON.stringify(
-            Array.from(document.querySelectorAll('[name="applicable_models"]')).map(e => e.value).sort()
-        );
-        if (currentAM !== initialState.applicable_models)               return true;
-        return false;
-    }
-
-    function checkDirty() {
-        if (actionButtons) actionButtons.style.display = isDirty() ? '' : 'none';
-    }
-
-    // Hook dirty check into every field
-    document.querySelectorAll('#activity-form input, #activity-form select, #activity-form textarea').forEach(function (el) {
-        el.addEventListener('input',  checkDirty);
-        el.addEventListener('change', checkDirty);
-    });
-
-    // Also hook into setIconColor (called by color picker and presets)
-    const _origSetIconColor = window.setIconColor;
-    window.setIconColor = function (hex) { _origSetIconColor(hex); checkDirty(); };
-    {% endif %}
 })();
 
 function moduleSelector() {

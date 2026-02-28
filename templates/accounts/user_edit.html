@@ -945,18 +945,6 @@ document.querySelectorAll('input[name="role"]').forEach(radio => {
     });
 });
 
-// Detecção de alterações — mostra botões guardar/descartar na sub-navbar
-// Usa delegação no <form> para apanhar mudanças em qualquer elemento incluso
-// modais Alpine (os checkboxes estão dentro do form, os eventos fazem bubble).
-(function () {
-    const form = document.getElementById('user-edit-form');
-    const actionButtons = document.getElementById('form-action-buttons');
-    if (!form || !actionButtons) return;
-    function showSave() { actionButtons.style.display = 'flex'; }
-    form.addEventListener('change', showSave);
-    form.addEventListener('input',  showSave);
-})();
-
 {% if not is_self %}
 function handleSendReset() {
     {% if target_user.email %}

@@ -11,6 +11,7 @@ from .views import (
     company_bulk_archive, company_bulk_unarchive, company_bulk_delete,
     company_create_view, company_edit_view,
     company_user_add_view, company_user_remove_view, company_users_search_api,
+    company_smtp_test,
 )
 
 app_name = 'accounts'
@@ -41,6 +42,7 @@ urlpatterns = [
     path('companies/<uuid:pk>/users/add/', company_user_add_view, name='company_user_add'),
     path('companies/<uuid:pk>/users/<int:user_id>/remove/', company_user_remove_view, name='company_user_remove'),
     path('companies/<uuid:pk>/users/search/', company_users_search_api, name='company_users_search'),
+    path('companies/<uuid:pk>/smtp/test/', company_smtp_test, name='company_smtp_test'),
     path('companies/bulk-archive/', company_bulk_archive, name='company_bulk_archive'),
     path('companies/bulk-unarchive/', company_bulk_unarchive, name='company_bulk_unarchive'),
     path('companies/bulk-delete/', company_bulk_delete, name='company_bulk_delete'),

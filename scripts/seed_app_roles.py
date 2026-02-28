@@ -29,24 +29,30 @@ django.setup()
 from apps.accounts.models import CustomUser, AppRole, APP_REGISTRY
 from apps.accounts.views import apply_default_app_roles
 
-ROLE_LABEL = {
-    CustomUser.ADMIN:    f'admin   → {AppRole.ADMIN}',
-    CustomUser.MANAGER:  f'manager → {AppRole.MANAGER}',
-    CustomUser.EMPLOYEE: f'employee→ {AppRole.USER}',
-}
 
-users = CustomUser.objects.prefetch_related('companies').all()
-print(f"Found {users.count()} user(s).\n")
+def run():
+    ROLE_LABEL = {
+        CustomUser.ADMIN:    f'admin   → {AppRole.ADMIN}',
+        CustomUser.MANAGER:  f'manager → {AppRole.MANAGER}',
+        CustomUser.EMPLOYEE: f'employee→ {AppRole.USER}',
+    }
 
-for user in users:
-    companies = list(user.companies.all())
-    label = ROLE_LABEL.get(user.role, f'unknown role ({user.role})')
-    print(f"  [{label}]  {user.username}  —  {len(companies)} empresa(s)")
-    if not companies:
-        print("           ⚠ sem empresas associadas, nada a criar.")
-        continue
-    apply_default_app_roles(user)
-    count = AppRole.objects.filter(user=user).count()
-    print(f"           ✓ {count} AppRole(s) criados/actualizados.")
+    users = CustomUser.objects.prefetch_related('companies').all()
+    print(f"Found {users.count()} user(s).\n")
 
-print("\nConcluído.")
+    for user in users:
+        companies = list(user.companies.all())
+        label = ROLE_LABEL.get(user.role, f'unknown role ({user.role})')
+        print(f"  [{label}]  {user.username}  —  {len(companies)} empresa(s)")
+        if not companies:
+            print("           ⚠ sem empresas associadas, nada a criar.")
+            continue
+        apply_default_app_roles(user)
+        count = AppRole.objects.filter(user=user).count()
+        print(f"           ✓ {count} AppRole(s) criados/actualizados.")
+
+    print("\nConcluído.")
+
+
+if __name__ == '__main__':
+    run()

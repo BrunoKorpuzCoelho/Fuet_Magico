@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ subject }}</title>
+</head>
+<body style="margin: 0; padding: 40px 0; background-color: #111827; font-family: 'Segoe UI', Verdana, Arial, sans-serif;">
+
+<!-- EMAIL CONTAINER -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center"
+       style="width: 100%; max-width: 640px; margin: 0 auto; background-color: #1f2937; border-radius: 12px; overflow: hidden; border: 1px solid #374151;">
+
+    <!-- HEADER -->
+    <tr>
+        <td style="padding: 0;">
+            <!-- Gold accent bar -->
+            <div style="height: 4px; background: linear-gradient(90deg, #dbc693 0%, #c9b580 100%);"></div>
+
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width: 100%; padding: 28px 32px 24px 32px;">
+                <tr>
+                    <!-- Logo / Initial -->
+                    <td style="width: 56px; vertical-align: top; padding-right: 16px;">
+                        {% if company_logo_url %}
+                        <img src="{{ company_logo_url }}" alt="{{ company_name }}" style="width: 52px; height: 52px; border-radius: 10px; object-fit: cover; border: 1px solid #4b5563;">
+                        {% else %}
+                        <div style="width: 52px; height: 52px; border-radius: 10px; background-color: #374151; border: 1px solid #4b5563; overflow: hidden;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width: 52px; height: 52px;">
+                                <tr>
+                                    <td align="center" valign="middle" style="font-size: 22px; font-weight: bold; color: #dbc693; font-family: 'Segoe UI', Arial, sans-serif;">
+                                        {{ company_initial }}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        {% endif %}
+                    </td>
+                    <!-- Company Info -->
+                    <td style="vertical-align: top;">
+                        <div style="font-size: 18px; font-weight: 700; color: #f3f4f6; line-height: 1.3;">
+                            {{ company_name }}
+                        </div>
+                        <div style="font-size: 12px; color: #9ca3af; line-height: 1.5; margin-top: 4px;">
+                            {{ company_address }}
+                        </div>
+                    </td>
+                    <!-- Record reference -->
+                    {% if record_label %}
+                    <td style="vertical-align: top; text-align: right; white-space: nowrap;">
+                        <div style="font-size: 11px; color: #6b7280; line-height: 1.4;">
+                            {{ record_label }}<br>
+                            <span style="color: #9ca3af;">{{ date_sent }}</span>
+                        </div>
+                    </td>
+                    {% endif %}
+                </tr>
+            </table>
+        </td>
+    </tr>
+
+    <!-- Separator -->
+    <tr>
+        <td style="padding: 0 32px;">
+            <div style="height: 1px; background-color: #374151;"></div>
+        </td>
+    </tr>
+
+    <!-- BODY — Conteúdo do utilizador -->
+    <tr>
+        <td style="padding: 28px 32px 32px 32px;">
+            <div style="font-size: 14px; color: #e5e7eb; line-height: 1.7;">
+                {{ body_content }}
+            </div>
+        </td>
+    </tr>
+
+    <!-- Separator -->
+    <tr>
+        <td style="padding: 0 32px;">
+            <div style="height: 1px; background-color: #374151;"></div>
+        </td>
+    </tr>
+
+    <!-- FOOTER — Assinatura do utilizador -->
+    <tr>
+        <td style="padding: 24px 32px 12px 32px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width: 100%;">
+                <tr>
+                    <!-- Avatar -->
+                    <td style="width: 44px; vertical-align: top; padding-right: 14px;">
+                        <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #dbc693; overflow: hidden;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width: 40px; height: 40px;">
+                                <tr>
+                                    <td align="center" valign="middle" style="font-size: 15px; font-weight: 700; color: #1f2937; font-family: 'Segoe UI', Arial, sans-serif;">
+                                        {{ sender_initials }}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                    <!-- Sender info -->
+                    <td style="vertical-align: top;">
+                        <div style="font-size: 13px; font-weight: 600; color: #e5e7eb; line-height: 1.3;">
+                            {{ sender_name }}
+                        </div>
+                        {% if sender_role %}
+                        <div style="font-size: 12px; color: #9ca3af; line-height: 1.5; margin-top: 2px;">
+                            {{ sender_role }} · {{ company_name }}
+                        </div>
+                        {% endif %}
+                        <div style="font-size: 12px; color: #6b7280; line-height: 1.5; margin-top: 2px;">
+                            {{ sender_email }}{% if sender_phone %} · {{ sender_phone }}{% endif %}
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+
+    <!-- Company footer -->
+    <tr>
+        <td style="padding: 16px 32px 20px 32px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width: 100%;">
+                <tr>
+                    <td style="font-size: 11px; color: #6b7280; line-height: 1.5;">
+                        <strong style="color: #9ca3af;">{{ company_name }}</strong><br>
+                        {{ company_full_address }}<br>
+                        {% if company_phone %}
+                        <a href="tel:{{ company_phone }}" style="color: #6b7280; text-decoration: none;">{{ company_phone }}</a>
+                        &nbsp;|&nbsp;
+                        {% endif %}
+                        {% if company_email %}
+                        <a href="mailto:{{ company_email }}" style="color: #6b7280; text-decoration: none;">{{ company_email }}</a>
+                        &nbsp;|&nbsp;
+                        {% endif %}
+                        {% if company_website %}
+                        <a href="{{ company_website }}" style="color: #6b7280; text-decoration: none;">{{ company_website_display }}</a>
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+
+    <!-- Powered by -->
+    <tr>
+        <td style="padding: 0;">
+            <div style="background-color: #111827; padding: 12px 32px; border-top: 1px solid #374151;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width: 100%;">
+                    <tr>
+                        <td style="font-size: 10px; color: #e5e7eb; line-height: 1.4;">
+                            Powered by <a href="https://cubix.pt" style="color: #ed2109; text-decoration: none; font-weight: 600;">Cubix</a>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </td>
+    </tr>
+
+</table>
+
+<!-- Spacing bottom -->
+<div style="height: 40px;"></div>
+
+</body>
+</html>

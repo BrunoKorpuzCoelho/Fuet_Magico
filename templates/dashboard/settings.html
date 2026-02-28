@@ -10,8 +10,11 @@
 {% endblock %}
 
 {% block sub_navbar %}
+{% include 'components/settings_navbar.html' %}
+
+<!-- ── Action bar (Guardar / Descartar / Search) ── -->
 <div class="bg-[#1a2332] border-b border-gray-700" x-data="settingsApp()" x-init="init()" id="settings-root">
-    <div class="max-w-full px-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center gap-3 h-12">
 
             <!-- Left: Guardar + Descartar -->
@@ -58,7 +61,7 @@
     </div>
 
 <!-- ===================== MAIN LAYOUT ===================== -->
-<div class="flex" style="height: calc(100vh - 108px); min-height:0;">
+<div class="flex" style="height: calc(100vh - 152px); min-height:0;">
 
     <!-- SIDEBAR -->
     <aside class="w-64 flex-shrink-0 bg-[#141d27] border-r border-gray-800 overflow-y-auto">
@@ -112,166 +115,102 @@
             <input type="hidden" name="section" x-bind:value="activeSection">
             <input type="hidden" name="logo_base64" id="logo_base64_input">
 
-        <!-- ===== SECTION: GERAL ===== -->
+        <!-- ===== SECTION: GERAL (Empresas — Odoo-style) ===== -->
         <section class="settings-section" data-section="geral">
 
-            <!-- Empresa -->
-            <div class="settings-group" data-group="Empresa">
-                <div class="px-8 pt-8 pb-2">
+            <!-- Empresas -->
+            <div class="settings-group" data-group="Empresas">
+                <div class="px-8 pt-8 pb-8">
                     <div class="flex items-center gap-2 mb-6">
                         <div class="h-6 w-0.5 bg-primary rounded-full"></div>
-                        <h2 class="text-base font-semibold text-gray-200">Empresa</h2>
+                        <h2 class="text-base font-semibold text-gray-200">Empresas</h2>
                     </div>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-5 max-w-4xl">
 
-                        <!-- Logo -->
-                        <div class="lg:col-span-2 flex items-start gap-6">
-                            <div class="relative group cursor-pointer" onclick="document.getElementById('logo-upload-settings').click()">
-                                <div class="w-20 h-20 rounded-xl border-2 border-dashed border-gray-700 group-hover:border-primary transition-colors bg-gray-800 flex items-center justify-center overflow-hidden">
-                                    {% if company.logo %}
-                                    <img id="logo-preview-settings" src="{{ company.logo.url }}" class="w-full h-full object-cover">
-                                    {% else %}
-                                    <img id="logo-preview-settings" src="" class="w-full h-full object-cover hidden">
-                                    {% endif %}
-                                    <div id="logo-placeholder-settings" class="flex flex-col items-center gap-1 text-gray-600 group-hover:text-gray-400 transition-colors {% if company.logo %}hidden{% endif %}">
-                                        <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                        </svg>
-                                        <span class="text-[10px]">Logo</span>
-                                    </div>
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+                        <!-- ── Card 1: Minha Empresa ── -->
+                        <div class="p-6 rounded-xl border border-gray-800 bg-gray-900/20">
+                            <div class="flex items-start gap-4 mb-5">
+                                {% if company.logo %}
+                                <img src="{{ company.logo.url }}" alt="{{ company.name }}"
+                                     class="w-14 h-14 rounded-xl object-cover border border-gray-700 flex-shrink-0">
+                                {% else %}
+                                <div class="w-14 h-14 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center flex-shrink-0">
+                                    <svg class="h-7 w-7 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    </svg>
                                 </div>
-                                <input type="file" id="logo-upload-settings" accept="image/*" class="hidden" onchange="handleLogoUploadSettings(this)">
+                                {% endif %}
+                                <div class="min-w-0">
+                                    <h3 class="text-sm font-semibold text-gray-200 truncate">{{ company.name }}{% if company.city %} ({{ company.city }}){% endif %}</h3>
+                                    {% if company.address %}
+                                    <p class="text-xs text-gray-500 mt-1">{{ company.address }}</p>
+                                    {% endif %}
+                                    {% if company.postal_code or company.city %}
+                                    <p class="text-xs text-gray-500">{{ company.postal_code }}{% if company.postal_code and company.city %} - {% endif %}{{ company.city }}</p>
+                                    {% endif %}
+                                    {% if company.country %}
+                                    <p class="text-xs text-gray-500">{{ company.country }}</p>
+                                    {% endif %}
+                                </div>
                             </div>
-                            <div class="text-sm text-gray-500 mt-2">
-                                <p class="text-gray-400 font-medium mb-1">Logotipo da empresa</p>
-                                <p>PNG ou JPG. Recomendado: 400×400px.</p>
-                                <button type="button" onclick="document.getElementById('logo-upload-settings').click()"
-                                        class="mt-2 text-primary hover:text-primary/80 transition-colors">Alterar logo</button>
+                            <a href="{% url 'accounts:company_edit' company.pk %}"
+                               class="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+                                Atualizar Info
+                            </a>
+                        </div>
+
+                        <!-- ── Card 2: X Empresas ── -->
+                        <div class="p-6 rounded-xl border border-gray-800 bg-gray-900/20">
+                            <h3 class="text-sm font-semibold text-gray-200 mb-3">{{ company_count }} Empresa{{ company_count|pluralize:"s" }}</h3>
+                            <a href="{% url 'accounts:company_list' %}"
+                               class="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+                                Gerir Empresas
+                            </a>
+                        </div>
+
+                        <!-- ── Card 3: Document Layout ── -->
+                        <div class="p-6 rounded-xl border border-gray-800 bg-gray-900/20">
+                            <div class="flex items-center gap-2 mb-1">
+                                <h3 class="text-sm font-semibold text-gray-200">Document Layout</h3>
+                                <span class="inline-flex items-center justify-center w-6 h-6 rounded bg-gray-800 text-xs">📄</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mb-5">Definir o aspeto dos documentos da empresa.</p>
+
+                            <div class="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3">Layout</div>
+                            <div class="space-y-2">
+                                <a href="#" class="block text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+                                    Configurar Layout do Documento
+                                </a>
+                                <a href="#" class="block text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+                                    Editar Layout
+                                </a>
+                                <a href="#" class="block text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+                                    Pré-visualizar Documento
+                                </a>
                             </div>
                         </div>
 
-                        <!-- Nome -->
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Nome da Empresa</label>
-                            <input type="text" name="name" value="{{ company.name|default:'' }}"
-                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+                        <!-- ── Card 4: Email Templates ── -->
+                        <div class="p-6 rounded-xl border border-gray-800 bg-gray-900/20">
+                            <div class="flex items-center gap-2 mb-1">
+                                <h3 class="text-sm font-semibold text-gray-200">Email Templates</h3>
+                                <span class="inline-flex items-center justify-center w-6 h-6 rounded bg-gray-800 text-xs">📧</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mb-5">Personalizar o aspeto dos emails automáticos.</p>
+
+                            <div class="space-y-2">
+                                <a href="{% url 'dashboard:email_layout' %}" class="block text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+                                    Atualizar Layout de E-mail
+                                </a>
+                                <a href="{% url 'dashboard:email_template_list' %}" class="block text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+                                    Rever Todos os Templates
+                                </a>
+                            </div>
                         </div>
 
-                        <!-- Denominação Social -->
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Denominação Social</label>
-                            <input type="text" name="legal_name" value="{{ company.legal_name|default:'' }}"
-                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
-                        </div>
-
-                        <!-- NIF -->
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">NIF / VAT</label>
-                            <input type="text" name="vat" value="{{ company.vat|default:'' }}"
-                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
-                        </div>
-
-                        <!-- Email -->
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Email</label>
-                            <input type="email" name="email" value="{{ company.email|default:'' }}"
-                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
-                        </div>
-
-                        <!-- Telefone -->
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Telefone</label>
-                            <input type="text" name="phone" value="{{ company.phone|default:'' }}"
-                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
-                        </div>
-
-                        <!-- Website -->
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Website</label>
-                            <input type="text" name="website" value="{{ company.website|default:'' }}"
-                                   onblur="autoHttpsSettings(this)"
-                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-
-            <div class="mx-8 border-t border-gray-800"></div>
-
-            <!-- Morada -->
-            <div class="settings-group" data-group="Morada">
-                <div class="px-8 pt-6 pb-2">
-                    <div class="flex items-center gap-2 mb-6">
-                        <div class="h-6 w-0.5 bg-primary rounded-full"></div>
-                        <h2 class="text-base font-semibold text-gray-200">Morada</h2>
-                    </div>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-5 max-w-4xl">
-
-                        <div class="lg:col-span-2">
-                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Rua / Número / Andar</label>
-                            <input type="text" name="address" value="{{ company.address|default:'' }}"
-                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Cidade</label>
-                            <input type="text" name="city" value="{{ company.city|default:'' }}"
-                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Código Postal</label>
-                            <input type="text" name="postal_code" value="{{ company.postal_code|default:'' }}"
-                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">País</label>
-                            <input type="text" name="country" value="{{ company.country|default:'Portugal' }}"
-                                   class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-
-            <div class="mx-8 border-t border-gray-800"></div>
-
-            <!-- Moeda -->
-            <div class="settings-group" data-group="Moeda e Região">
-                <div class="px-8 pt-6 pb-8">
-                    <div class="flex items-center gap-2 mb-6">
-                        <div class="h-6 w-0.5 bg-primary rounded-full"></div>
-                        <h2 class="text-base font-semibold text-gray-200">Moeda e Região</h2>
-                    </div>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-5 max-w-4xl">
-
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Moeda Padrão</label>
-                            <select name="currency"
-                                    class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
-                                <option value="EUR" {% if company.currency == 'EUR' or not company.currency %}selected{% endif %}>EUR — Euro</option>
-                                <option value="USD" {% if company.currency == 'USD' %}selected{% endif %}>USD — Dólar Americano</option>
-                                <option value="GBP" {% if company.currency == 'GBP' %}selected{% endif %}>GBP — Libra Esterlina</option>
-                                <option value="CHF" {% if company.currency == 'CHF' %}selected{% endif %}>CHF — Franco Suíço</option>
-                                <option value="BRL" {% if company.currency == 'BRL' %}selected{% endif %}>BRL — Real Brasileiro</option>
-                            </select>
-                            <p class="mt-1.5 text-xs text-gray-600">Moeda usada em documentos e relatórios financeiros.</p>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Fuso Horário</label>
-                            <select name="timezone" class="w-full h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332] text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
-                                <option value="Europe/Lisbon" selected>Europe/Lisbon (UTC+0/+1)</option>
-                                <option value="Europe/London">Europe/London</option>
-                                <option value="Europe/Paris">Europe/Paris (UTC+1/+2)</option>
-                                <option value="America/Sao_Paulo">America/São Paulo (UTC-3)</option>
-                            </select>
-                            <p class="mt-1.5 text-xs text-gray-600">Fuso horário para datas e horas no sistema.</p>
-                        </div>
-
-                    </div>
+                    </div><!-- /grid -->
                 </div>
             </div>
 
@@ -1025,6 +964,20 @@ function confirmGenerateLeads() {
 // Close modal on Escape
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape') closeGenerateLeadsModal();
+});
+
+// ── Email Template color swatches ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const btnTextInput = document.querySelector('input[name="email_btn_text_color"]');
+    const btnColorInput = document.querySelector('input[name="email_btn_color"]');
+    const btnTextSwatch = document.getElementById('email-btn-text-swatch');
+    const btnColorSwatch = document.getElementById('email-btn-color-swatch');
+    if (btnTextInput && btnTextSwatch) {
+        btnTextInput.addEventListener('input', e => btnTextSwatch.style.background = e.target.value);
+    }
+    if (btnColorInput && btnColorSwatch) {
+        btnColorInput.addEventListener('input', e => btnColorSwatch.style.background = e.target.value);
+    }
 });
 // ─────────────────────────────────────────────────────────────────────────────
 </script>

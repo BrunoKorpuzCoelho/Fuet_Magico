@@ -183,6 +183,164 @@ def _send_via_smtp(config, to_email: str, subject: str, body: str,
 
 
 # ---------------------------------------------------------------------------
+# Email Layout — envelope wrapper
+# ---------------------------------------------------------------------------
+
+def _get_initials(name: str) -> str:
+    """Retorna as iniciais de um nome (máximo 2 caracteres)."""
+    parts = name.strip().split()
+    if len(parts) >= 2:
+        return (parts[0][0] + parts[-1][0]).upper()
+    return name[0].upper() if name else '?'
+
+
+def _build_company_address(company) -> str:
+    """Constrói a morada curta para o header (Rua · Código Postal Cidade)."""
+    parts = []
+    if company.address:
+        # Primeira linha da morada
+        parts.append(company.address.split('\n')[0].strip())
+    if company.postal_code or company.city:
+        location = ' '.join(filter(None, [company.postal_code, company.city]))
+        if location:
+            parts.append(location)
+    if company.country:
+        parts.append(company.country)
+    return ' · '.join(parts) if parts else ''
+
+
+def _build_company_full_address(company) -> str:
+    """Constrói a morada completa para o footer."""
+    parts = []
+    if company.address:
+        parts.append(company.address.replace('\n', ' · ').strip())
+    location = ' '.join(filter(None, [company.postal_code, company.city]))
+    if location:
+        parts.append(location)
+    if company.country:
+        parts.append(company.country)
+    return ' · '.join(parts) if parts else ''
+
+
+def _get_record_label(record) -> str:
+    """Gera um label legível para o registo (ex: 'Lead: Proposta Website')."""
+    model_name = record.__class__.__name__
+    display = str(record)
+    # Truncar se muito longo
+    if len(display) > 40:
+        display = display[:37] + '...'
+    return f'{model_name}: {display}'
+
+
+def _strip_website_protocol(url: str) -> str:
+    """Remove https:// ou http:// do URL para exibição."""
+    if not url:
+        return ''
+    return url.replace('https://', '').replace('http://', '').rstrip('/')
+
+
+def wrap_email_with_layout(body_html: str, user, record=None, subject: str = '') -> str:
+    """
+    Envolve o conteúdo HTML do email com o layout (envelope) global.
+
+    Lê o HTML do EmailLayout guardado na BD e substitui os placeholders
+    Django template com os dados reais do utilizador, empresa e registo.
+
+    Se não existir layout na BD, devolve o body_html original (sem envelope).
+
+    Args:
+        body_html: Conteúdo HTML do email (corpo).
+        user:      Utilizador que envia o email.
+        record:    Instância do modelo ligado (Lead, Contact, etc.) — opcional.
+        subject:   Assunto do email.
+
+    Returns:
+        HTML completo com o envelope aplicado.
+    """
+    from django.template import Template, Context
+    from django.utils import timezone
+    from apps.core.models import EmailLayout
+
+    layout = EmailLayout.get_layout()
+    if not layout:
+        logger.warning('EmailLayout não encontrado na BD. Email enviado sem envelope.')
+        return body_html
+
+    # ── Dados da empresa ──
+    company = getattr(user, 'default_company', None)
+    if not company:
+        companies = getattr(user, 'companies', None)
+        if companies:
+            company = companies.first()
+
+    company_name = company.name if company else ''
+    company_initial = company_name[0].upper() if company_name else '?'
+    company_address = _build_company_address(company) if company else ''
+    company_full_address = _build_company_full_address(company) if company else ''
+
+    company_logo_url = ''
+    if company and company.logo:
+        try:
+            company_logo_url = company.logo.url
+        except ValueError:
+            pass
+
+    # ── Dados do remetente ──
+    sender_name = user.get_full_name() or user.username
+    sender_initials = _get_initials(sender_name)
+    sender_email = ''
+    try:
+        sender_email = user.email_config.email_address
+    except Exception:
+        sender_email = user.email or ''
+
+    sender_phone = getattr(user, 'phone', '') or ''
+    sender_role = ''
+    if hasattr(user, 'get_role_display'):
+        sender_role = user.get_role_display()
+
+    # ── Dados do registo ──
+    record_label = _get_record_label(record) if record else ''
+    date_sent = timezone.now().strftime('%d/%m/%Y')
+
+    # ── Dados do website da empresa ──
+    company_website = company.website if company else ''
+    company_website_display = _strip_website_protocol(company_website)
+
+    # ── Contexto para o template ──
+    context = Context({
+        'subject': subject,
+        'body_content': body_html,
+        # Empresa
+        'company_name': company_name,
+        'company_initial': company_initial,
+        'company_logo_url': company_logo_url,
+        'company_address': company_address,
+        'company_full_address': company_full_address,
+        'company_email': company.email if company else '',
+        'company_phone': company.phone if company else '',
+        'company_website': company_website,
+        'company_website_display': company_website_display,
+        # Remetente
+        'sender_name': sender_name,
+        'sender_initials': sender_initials,
+        'sender_email': sender_email,
+        'sender_phone': sender_phone,
+        'sender_role': sender_role,
+        # Registo
+        'record_label': record_label,
+        'date_sent': date_sent,
+    })
+
+    try:
+        template = Template(layout.html_content)
+        return template.render(context)
+    except Exception as e:
+        logger.error('Erro ao renderizar EmailLayout: %s', e)
+        return body_html
+
+
+# ---------------------------------------------------------------------------
 # API pública
 # ---------------------------------------------------------------------------
 
@@ -236,12 +394,22 @@ def send_email_for_record(
 
     sender_name = user.get_full_name() or user.username
 
+    # ── Envolver o HTML com o layout (envelope) ──
+    wrapped_html = body_html
+    if body_html:
+        wrapped_html = wrap_email_with_layout(
+            body_html=body_html,
+            user=user,
+            record=record,
+            subject=subject,
+        )
+
     success, error, msg_id = _send_via_smtp(
         config=config,
         to_email=to_email,
         subject=subject,
         body=body,
-        body_html=body_html,
+        body_html=wrapped_html,
         to_name=to_name,
         sender_name=sender_name,
         attachments=attachments or [],

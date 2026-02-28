@@ -437,11 +437,6 @@ function generateWebhookToken() {
     document.getElementById('wa_webhook_verify_token').value = token;
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    const actionButtons = document.getElementById('form-action-buttons');
-    if (actionButtons) actionButtons.style.display = 'flex';
-});
-
 function autoHttps(input) {
     const v = input.value.trim();
     if (v && !/^https?:\/\//i.test(v)) {

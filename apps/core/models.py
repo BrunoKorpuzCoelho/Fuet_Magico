@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 from django.db import models
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -1586,3 +1587,359 @@ class CompanyWhatsAppConfig(models.Model):
     def set_encrypted_token(self, raw_token: str):
         from apps.core.email_utils import encrypt_password
         self.access_token = encrypt_password(raw_token)
+
+
+class CompanyEmailConfig(models.Model):
+    """
+    SMTP configuration for a Company.
+    Mirrors UserEmailConfig but linked to a Company instead of a User.
+    App password is stored Fernet-encrypted.
+    """
+    PROVIDER_GMAIL   = 'gmail'
+    PROVIDER_OUTLOOK = 'outlook'
+    PROVIDER_CHOICES = [
+        (PROVIDER_GMAIL,   'Gmail'),
+        (PROVIDER_OUTLOOK, 'Outlook / Microsoft 365'),
+    ]
+
+    company = models.OneToOneField(
+        'Company',
+        on_delete=models.CASCADE,
+        related_name='email_config',
+        verbose_name='Empresa',
+    )
+    email_address = models.EmailField(
+        verbose_name='Email de envio (SMTP)',
+    )
+    app_password = models.TextField(
+        verbose_name='App Password (encriptada)',
+        help_text='Gmail App Password ou senha de aplicação — guardada cifrada',
+    )
+    provider = models.CharField(
+        max_length=10,
+        choices=PROVIDER_CHOICES,
+        default=PROVIDER_GMAIL,
+        verbose_name='Fornecedor',
+    )
+    is_active = models.BooleanField(default=True, verbose_name='Ativo')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name         = 'Configuração Email'
+        verbose_name_plural  = 'Configurações Email'
+
+    def __str__(self):
+        return f"SMTP — {self.company.name} ({self.email_address})"
+
+    @property
+    def has_smtp_configured(self):
+        return bool(self.email_address and self.app_password)
+
+    def set_encrypted_password(self, raw_password: str):
+        from apps.core.email_utils import encrypt_password
+        self.app_password = encrypt_password(raw_password)
+
+    def get_decrypted_password(self):
+        from apps.core.email_utils import decrypt_password
+        return decrypt_password(self.app_password)
+
+
+# ═══════════════════════════════════════════════════════════════
+# Email Templates — templates reutilizáveis por módulo
+# ═══════════════════════════════════════════════════════════════
+
+class EmailTemplate(AbstractBaseModel):
+    """
+    Template de email reutilizável associado a um módulo de negócio.
+    O subject e body_html suportam placeholders Django template ({{ var }}).
+    Quando usado, o body renderizado é inserido no EmailLayout (envelope).
+    """
+
+    # --- Tipos ---
+    TYPE_BASE = 'BASE'
+    TYPE_CUSTOM = 'CUSTOM'
+    TYPE_CHOICES = [
+        (TYPE_BASE, 'Base (sistema)'),
+        (TYPE_CUSTOM, 'Personalizado'),
+    ]
+
+    # --- Módulos disponíveis ---
+    MODULE_CRM = 'CRM'
+    MODULE_SALES = 'SALES'
+    MODULE_PURCHASES = 'PURCHASES'
+    MODULE_INVOICING = 'INVOICING'
+    MODULE_CONTACTS = 'CONTACTS'
+    MODULE_MARKETING = 'MARKETING'
+    MODULE_GENERAL = 'GENERAL'
+    MODULE_CHOICES = [
+        (MODULE_CRM, 'CRM'),
+        (MODULE_SALES, 'Vendas'),
+        (MODULE_PURCHASES, 'Compras'),
+        (MODULE_INVOICING, 'Faturação'),
+        (MODULE_CONTACTS, 'Contactos'),
+        (MODULE_MARKETING, 'Marketing'),
+        (MODULE_GENERAL, 'Geral'),
+    ]
+
+    # --- Idiomas ---
+    LANGUAGE_CHOICES = [
+        ('pt_PT', 'Português (Portugal)'),
+        ('pt_BR', 'Português (Brasil)'),
+        ('en_US', 'Inglês (EUA)'),
+        ('en_GB', 'Inglês (Reino Unido)'),
+        ('fr', 'Francês'),
+        ('es', 'Espanhol'),
+    ]
+
+    template_type = models.CharField(
+        max_length=10,
+        choices=TYPE_CHOICES,
+        default=TYPE_CUSTOM,
+        db_index=True,
+        verbose_name='Tipo',
+        help_text='BASE = template do sistema (não eliminável). CUSTOM = criado pelo utilizador.',
+    )
+    name = models.CharField(
+        max_length=255,
+        verbose_name='Nome do template',
+        help_text='Nome legível (ex: Envio de Orçamento, Follow-up Comercial).',
+    )
+    module = models.CharField(
+        max_length=20,
+        choices=MODULE_CHOICES,
+        default=MODULE_GENERAL,
+        db_index=True,
+        verbose_name='Módulo',
+        help_text='Módulo onde este template fica disponível.',
+    )
+    language = models.CharField(
+        max_length=10,
+        choices=LANGUAGE_CHOICES,
+        default='pt_PT',
+        verbose_name='Idioma',
+    )
+    subject = models.CharField(
+        max_length=500,
+        verbose_name='Assunto',
+        help_text='Assunto do email. Suporta placeholders: {{ contact_name }}, {{ lead_title }}, etc.',
+    )
+    body_html = models.TextField(
+        verbose_name='Corpo HTML',
+        help_text='Conteúdo HTML do email. Suporta placeholders Django template.',
+    )
+    # Mapeamento de variáveis dinâmicas
+    available_placeholders = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='Placeholders disponíveis',
+        help_text=(
+            'Mapa de placeholders e suas descrições. Exemplo:\n'
+            '{"contact_name": "Nome do contacto", "lead_title": "Título da lead"}'
+        ),
+    )
+    owner_company = models.ForeignKey(
+        'core.Company',
+        on_delete=models.CASCADE,
+        null=True, blank=True,
+        related_name='email_templates',
+        verbose_name='Empresa',
+        help_text='Deixar vazio para templates globais (disponíveis a todas as empresas).',
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='email_templates_created',
+        verbose_name='Criado por',
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='email_templates_updated',
+        verbose_name='Atualizado por',
+    )
+    default_body_path = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        verbose_name='Ficheiro default do body',
+        help_text=(
+            'Caminho relativo dentro de templates/emails/ para o '
+            'ficheiro default do body. Ex: defaults/crm_thankyou.html. '
+            'Vazio = sem default (template personalizado).'
+        ),
+    )
+
+    class Meta:
+        ordering = ['module', 'name']
+        verbose_name = 'Template de Email'
+        verbose_name_plural = 'Templates de Email'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['name', 'owner_company'],
+                name='unique_email_template_name_per_company',
+            ),
+            models.UniqueConstraint(
+                fields=['name'],
+                condition=models.Q(owner_company__isnull=True),
+                name='unique_global_email_template_name',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.name} ({self.get_module_display()})'
+
+    # ── Default body ──────────────────────────────────────────────
+    _DEFAULTS_DIR = Path(__file__).resolve().parent.parent.parent / 'templates' / 'emails'
+
+    def get_default_body(self):
+        """
+        Devolve o conteúdo HTML do ficheiro default deste template.
+        Se não tiver default_body_path definido, devolve string vazia.
+        """
+        if not self.default_body_path:
+            return ''
+        try:
+            path = self._DEFAULTS_DIR / self.default_body_path
+            return path.read_text(encoding='utf-8')
+        except FileNotFoundError:
+            return ''
+
+    def has_default_body(self):
+        """Verifica se este template tem ficheiro default associado."""
+        return bool(self.default_body_path)
+
+    def reset_body_to_default(self, user=None):
+        """Restaura o body_html para o conteúdo default do ficheiro."""
+        default = self.get_default_body()
+        if not default:
+            return  # sem default, nada a restaurar
+        self.body_html = default
+        if user:
+            self.updated_by = user
+        self.save(update_fields=['body_html', 'updated_by', 'updated_at'])
+
+
+class EmailTemplateAttachment(models.Model):
+    """
+    Anexo associado a um EmailTemplate.
+    Pode ser um ficheiro estático (PDF, imagem) ou um relatório
+    gerado dinamicamente (fase futura).
+    """
+
+    TYPE_STATIC = 'STATIC'
+    TYPE_REPORT = 'REPORT'
+    TYPE_CHOICES = [
+        (TYPE_STATIC, 'Ficheiro estático'),
+        (TYPE_REPORT, 'Relatório dinâmico'),
+    ]
+
+    # --- Tipos de relatório (para geração dinâmica futura) ---
+    REPORT_QUOTE = 'QUOTE'
+    REPORT_INVOICE = 'INVOICE'
+    REPORT_PURCHASE_ORDER = 'PURCHASE_ORDER'
+    REPORT_DELIVERY_NOTE = 'DELIVERY_NOTE'
+    REPORT_CHOICES = [
+        (REPORT_QUOTE, 'Orçamento'),
+        (REPORT_INVOICE, 'Fatura'),
+        (REPORT_PURCHASE_ORDER, 'Ordem de Compra'),
+        (REPORT_DELIVERY_NOTE, 'Guia de Remessa'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    template = models.ForeignKey(
+        EmailTemplate,
+        on_delete=models.CASCADE,
+        related_name='attachments',
+        verbose_name='Template',
+    )
+    attachment_type = models.CharField(
+        max_length=10,
+        choices=TYPE_CHOICES,
+        default=TYPE_STATIC,
+        verbose_name='Tipo de anexo',
+    )
+    file = models.FileField(
+        upload_to='email_templates/attachments/%Y/%m/',
+        blank=True,
+        verbose_name='Ficheiro',
+        help_text='Ficheiro estático a anexar (PDF, imagem, etc.).',
+    )
+    report_type = models.CharField(
+        max_length=30,
+        choices=REPORT_CHOICES,
+        blank=True,
+        verbose_name='Tipo de relatório',
+        help_text='Tipo de documento a gerar automaticamente (fase futura).',
+    )
+    filename = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name='Nome do ficheiro',
+        help_text='Nome com que o anexo será enviado. Suporta placeholders (ex: orcamento_{{ lead_title }}.pdf).',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = 'Anexo de Template'
+        verbose_name_plural = 'Anexos de Template'
+
+    def __str__(self):
+        return self.filename or self.file.name or f'Anexo ({self.get_attachment_type_display()})'
+
+
+class EmailLayout(models.Model):
+    """
+    Layout global de email (envelope) que envolve todos os emails enviados.
+    Registo único — sem FK de empresa. É o mesmo para todo o sistema.
+    O campo html_content contém o HTML com placeholders Django template.
+    """
+    html_content = models.TextField(
+        verbose_name='Conteúdo HTML',
+        help_text='HTML do envelope de email com placeholders Django template.',
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        verbose_name='Atualizado por',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Layout de Email'
+        verbose_name_plural = 'Layout de Email'
+
+    def __str__(self):
+        return f'Email Layout (atualizado: {self.updated_at:%Y-%m-%d %H:%M})'
+
+    @classmethod
+    def get_layout(cls):
+        """Devolve o layout global. Retorna None se não existir."""
+        return cls.objects.first()
+
+    @classmethod
+    def reset_to_default(cls, user=None):
+        """
+        Restaura o layout para o ficheiro default em
+        templates/emails/base_layout.html.
+        """
+        import os
+        from django.conf import settings as dj_settings
+        default_path = os.path.join(
+            dj_settings.BASE_DIR, 'templates', 'emails', 'base_layout.html'
+        )
+        with open(default_path, 'r', encoding='utf-8') as f:
+            default_html = f.read()
+        layout = cls.objects.first()
+        if layout:
+            layout.html_content = default_html
+            layout.updated_by = user
+            layout.save()
+        else:
+            layout = cls.objects.create(html_content=default_html, updated_by=user)
+        return layout

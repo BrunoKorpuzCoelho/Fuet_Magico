@@ -1,0 +1,867 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if template %}Editar Template{% else %}Novo Template{% endif %} — Email Templates{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Ace editor overrides ── */
+    .ace-editor-container {
+        width: 100%;
+        height: 100%;
+    }
+    .ace-editor-container .ace_gutter {
+        background: #0d1117;
+        border-right: 1px solid #1e293b;
+        color: #4b5563;
+    }
+    .ace-editor-container .ace_gutter-active-line {
+        background: #161b22;
+    }
+    .ace-editor-container .ace_active-line {
+        background: #161b2280 !important;
+    }
+    .ace-editor-container .ace_cursor {
+        color: #e5e7eb;
+    }
+
+    /* ── Preview iframe ── */
+    .preview-frame {
+        background: #111827;
+        border: none;
+        width: 100%;
+        height: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block sub_navbar %}
+<div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center h-12">
+            <!-- Left: Nav links -->
+            <div class="flex items-center space-x-6">
+                <a href="{% url 'dashboard:settings' %}"
+                   class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+                    Definições Gerais
+                </a>
+            </div>
+
+            <!-- Action buttons: Discard + Save -->
+            <div class="flex items-center gap-3 ml-4">
+                <!-- Descartar (Vermelho) -->
+                <a href="{% url 'dashboard:email_template_list' %}"
+                   class="flex items-center justify-center hover:opacity-80 transition-opacity"
+                   title="Descartar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 text-red-500">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                        <line x1="10" x2="10" y1="11" y2="17"></line>
+                        <line x1="14" x2="14" y1="11" y2="17"></line>
+                    </svg>
+                </a>
+                <!-- Guardar (Verde) -->
+                <button type="submit"
+                        form="template-form"
+                        class="flex items-center justify-center hover:opacity-80 transition-opacity"
+                        title="Guardar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 text-green-500">
+                        <path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"></path>
+                        <path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"></path>
+                        <path d="M7 3v4a1 1 0 0 0 1 1h7"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#1f2937]" x-data="emailTemplateForm()">
+    <form method="post" id="template-form" @submit="syncEditors()">
+        {% csrf_token %}
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+            <!-- ════════════════════════════════════════════════════ -->
+            <!-- TOP SECTION — Name (hero) + fields                  -->
+            <!-- ════════════════════════════════════════════════════ -->
+
+            <!-- Nome (GIGANTE) -->
+            <div class="mb-6">
+                <label class="sr-only" for="id_name">Nome</label>
+                <input class="flex w-full px-3 py-2 h-14 border-0 border-b-2 border-gray-600 bg-transparent text-3xl font-light text-gray-400 placeholder:text-gray-600 focus-visible:border-primary focus-visible:ring-0 rounded-none focus-visible:outline-none"
+                       id="id_name"
+                       name="name"
+                       placeholder="Nome do template"
+                       value="{% if template %}{{ template.name }}{% endif %}"
+                       required>
+            </div>
+
+            <!-- Fields grid -->
+            <div class="grid grid-cols-1 gap-x-12 gap-y-5 lg:grid-cols-2 mb-6">
+                <!-- Assunto -->
+                <div>
+                    <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                            <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"></path>
+                            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                        </svg>
+                        Assunto
+                    </label>
+                    <input class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                           name="subject"
+                           placeholder="Ex: Obrigado pelo seu interesse, {{ contact_name }}!"
+                           value="{% if template %}{{ template.subject }}{% endif %}"
+                           required>
+                </div>
+
+                <!-- Módulo -->
+                <div>
+                    <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                            <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path>
+                            <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path>
+                            <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path>
+                            <path d="M10 6h4"></path>
+                            <path d="M10 10h4"></path>
+                            <path d="M10 14h4"></path>
+                            <path d="M10 18h4"></path>
+                        </svg>
+                        Módulo
+                    </label>
+                    <select name="module" class="flex h-9 w-full rounded-md border border-gray-700 bg-[#1a2332] px-3 text-sm text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                        {% for value, label in module_choices %}
+                        <option value="{{ value }}" {% if template and template.module == value %}selected{% elif not template and value == 'GENERAL' %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Idioma -->
+                <div>
+                    <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                            <path d="m5 8 6 6"></path>
+                            <path d="m4 14 6-6 2-3"></path>
+                            <path d="M2 5h12"></path>
+                            <path d="M7 2h1"></path>
+                            <path d="m22 22-5-10-5 10"></path>
+                            <path d="M14 18h6"></path>
+                        </svg>
+                        Idioma
+                    </label>
+                    <select name="language" class="flex h-9 w-full rounded-md border border-gray-700 bg-[#1a2332] px-3 text-sm text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                        {% for value, label in language_choices %}
+                        <option value="{{ value }}" {% if template and template.language == value %}selected{% elif not template and value == 'pt_PT' %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Tipo (read-only badge) -->
+                <div>
+                    <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"></path>
+                        </svg>
+                        Tipo
+                    </label>
+                    <div class="flex items-center h-9">
+                        {% if template and template.template_type == 'BASE' %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-900/30 text-amber-300 border border-amber-700/50">
+                            <svg class="h-3 w-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                            Base (sistema)
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-900/30 text-blue-300 border border-blue-700/50">
+                            Personalizado
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════════════════════════════════════════════════ -->
+            <!-- METADATA BAR — Info + Preview/Reset Buttons          -->
+            <!-- ════════════════════════════════════════════════════ -->
+            {% if template %}
+            <div class="bg-[#1a2332] rounded-lg border border-gray-700/50 p-6 mb-6">
+                <div class="flex items-start justify-between">
+                    <!-- Left: Metadata fields -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-x-16 gap-y-4">
+                        <div class="flex items-center gap-4">
+                            <label class="text-sm font-semibold text-gray-400 whitespace-nowrap min-w-[140px]">Atualizado por</label>
+                            <span class="text-sm text-gray-300">{{ template.updated_by.get_full_name|default:"Sistema" }}</span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <label class="text-sm font-semibold text-gray-400 whitespace-nowrap min-w-[140px]">Data de criação</label>
+                            <span class="text-sm text-gray-300">{{ template.created_at|date:"d/m/Y H:i" }}</span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <label class="text-sm font-semibold text-gray-400 whitespace-nowrap min-w-[140px]">Última atualização</label>
+                            <span class="text-sm text-gray-300">{{ template.updated_at|date:"d/m/Y H:i" }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Right: Action buttons -->
+                    <div class="flex items-center gap-2 ml-6 flex-shrink-0">
+                        <!-- Preview button -->
+                        <button type="button" @click="togglePreview()"
+                                class="flex items-center gap-1.5 px-4 h-9 rounded-lg text-sm font-medium transition-colors"
+                                :class="showPreview
+                                    ? 'bg-primary text-white'
+                                    : 'bg-gray-800 text-gray-300 border border-gray-600 hover:bg-gray-700'">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            Pré-visualizar
+                        </button>
+
+                        {% if template.default_body_path %}
+                        <!-- Reset to default -->
+                        <button type="button" @click="confirmReset()"
+                                class="flex items-center gap-1.5 px-4 h-9 rounded-lg text-sm font-medium bg-gray-800 text-gray-300 border border-gray-600 hover:bg-gray-700 transition-colors">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            Restaurar Default
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <!-- For new templates: just preview button -->
+            <div class="flex items-center justify-end gap-2 mb-6">
+                <button type="button" @click="togglePreview()"
+                        class="flex items-center gap-1.5 px-4 h-9 rounded-lg text-sm font-medium transition-colors"
+                        :class="showPreview
+                            ? 'bg-primary text-white'
+                            : 'bg-gray-800 text-gray-300 border border-gray-600 hover:bg-gray-700'">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                    Pré-visualizar
+                </button>
+            </div>
+            {% endif %}
+
+            <!-- ════════════════════════════════════════════════════ -->
+            <!-- TABS — Conteúdo / Placeholders / Anexos              -->
+            <!-- ════════════════════════════════════════════════════ -->
+            <div class="border-b border-gray-700">
+                <nav class="flex gap-1">
+                    <button type="button"
+                            @click="switchTab('conteudo')"
+                            :class="activeTab === 'conteudo' ? 'border-primary text-primary' : 'border-transparent text-gray-400 hover:text-gray-300'"
+                            class="border-b-2 px-4 py-3 text-sm font-medium transition-colors">
+                        Conteúdo
+                    </button>
+                    <button type="button"
+                            @click="switchTab('placeholders')"
+                            :class="activeTab === 'placeholders' ? 'border-primary text-primary' : 'border-transparent text-gray-400 hover:text-gray-300'"
+                            class="border-b-2 px-4 py-3 text-sm font-medium transition-colors">
+                        Placeholders
+                    </button>
+                    <button type="button"
+                            @click="switchTab('anexos')"
+                            :class="activeTab === 'anexos' ? 'border-primary text-primary' : 'border-transparent text-gray-400 hover:text-gray-300'"
+                            class="border-b-2 px-4 py-3 text-sm font-medium transition-colors">
+                        Anexos
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Tab Content Container -->
+            <div class="mt-0 rounded-b-lg border border-t-0 border-gray-700 overflow-hidden"
+                 style="height: calc(100vh - 420px); min-height: 400px;">
+
+                <!-- ── TAB: Conteúdo — Code Editor / Preview ── -->
+                <div x-show="activeTab === 'conteudo'" class="h-full" x-transition>
+                    <!-- Code Editor (default view) -->
+                    <div x-show="!showPreview" class="h-full">
+                        <textarea name="body_html" x-ref="bodyTextarea" class="hidden">{% if template %}{{ template.body_html }}{% endif %}</textarea>
+                        <div id="ace-body-editor" x-ref="bodyEditorContainer" class="ace-editor-container"></div>
+                    </div>
+                    <!-- Preview (rendered HTML wrapped in layout) -->
+                    <div x-show="showPreview" class="h-full" style="display: none;">
+                        <iframe x-ref="previewFrame" class="preview-frame" sandbox="allow-same-origin"></iframe>
+                    </div>
+                </div>
+
+                <!-- ── TAB: Placeholders — Variable Builder ── -->
+                <div x-show="activeTab === 'placeholders'" class="h-full overflow-y-auto" x-transition style="display: none;">
+                    <div class="py-6 space-y-5">
+
+                        <!-- Hidden field that stores the JSON (synced by Alpine) -->
+                        <textarea name="available_placeholders" x-ref="placeholdersTextarea" class="hidden">{{ placeholders_json }}</textarea>
+
+                        <!-- Header -->
+                        <div class="flex items-center justify-between">
+                            <label class="font-medium flex items-center gap-2 text-xs text-gray-500">
+                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                                Mapeamento de Variáveis
+                            </label>
+                            <button type="button" @click="showVarsHelp = true"
+                                    class="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#dbc693] transition-colors">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Como usar
+                            </button>
+                        </div>
+
+                        <!-- Variables Table -->
+                        <div class="border border-gray-700 rounded-lg overflow-visible">
+                            <!-- Table Header -->
+                            <div style="display:grid; grid-template-columns: 72px 1fr 1fr 1fr 36px;" class="bg-[#0d1625] border-b border-gray-700 px-3 py-2 gap-2">
+                                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Var</span>
+                                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Campo</span>
+                                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Fallback</span>
+                                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Variável</span>
+                                <span></span>
+                            </div>
+
+                            <!-- Empty state -->
+                            <template x-if="varRows.length === 0">
+                                <div class="px-3 py-4 text-center text-xs text-gray-600 italic border-b border-gray-700/50">
+                                    Ainda sem variáveis. Clica em "+ Adicionar linha" abaixo.
+                                </div>
+                            </template>
+
+                            <!-- Rows -->
+                            <template x-for="(row, idx) in varRows" :key="row._id">
+                                <div style="display:grid; grid-template-columns: 72px 1fr 1fr 1fr 36px; align-items:center; gap:8px;" class="border-b border-gray-700/40 px-3 py-2 hover:bg-white/[0.02]">
+
+                                    <!-- Variable badge (short) -->
+                                    <div class="flex items-center">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded bg-[#dbc693]/15 text-[#dbc693] text-xs font-mono font-semibold"
+                                              x-text="shortVar(row.num)"></span>
+                                    </div>
+
+                                    <!-- Field input with autocomplete -->
+                                    <div class="relative">
+                                        <input type="text"
+                                               :data-var-field-input="idx"
+                                               x-model="row.field"
+                                               @input="onVarFieldInput(idx)"
+                                               @focus="onVarFieldFocus(idx)"
+                                               @blur="onVarFieldBlur(idx)"
+                                               placeholder="ex: lead.title"
+                                               class="w-full bg-[#111827] border border-gray-700 rounded px-2 py-1.5 text-xs text-gray-200 font-mono placeholder-gray-600 focus:outline-none focus:border-[#dbc693]">
+                                        <!-- Autocomplete dropdown -->
+                                        <div x-show="row.showDropdown && row.suggestions.length > 0"
+                                             x-cloak
+                                             class="absolute left-0 top-full mt-1 z-40 w-80 max-h-52 overflow-y-auto bg-[#1f2937] border border-gray-600 rounded-lg shadow-xl"
+                                             style="display:none;">
+                                            <template x-for="s in row.suggestions" :key="s.path">
+                                                <div @mousedown.prevent="selectVarField(idx, s.path)"
+                                                     class="flex items-center justify-between gap-3 px-3 py-2 hover:bg-[#dbc693]/10 cursor-pointer border-b border-gray-700/40 last:border-b-0">
+                                                    <div class="min-w-0">
+                                                        <p class="text-xs font-mono text-gray-200 truncate" x-text="s.path"></p>
+                                                        <p class="text-[10px] text-gray-500 truncate" x-text="s.label"></p>
+                                                    </div>
+                                                    <span class="text-[10px] text-gray-600 shrink-0 max-w-[90px] truncate" x-text="s.sample || ''"></span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+
+                                    <!-- Fallback -->
+                                    <input type="text"
+                                           x-model="row.fallback"
+                                           @input="syncVars()"
+                                           placeholder="Fallback..."
+                                           class="w-full bg-[#111827] border border-gray-700 rounded px-2 py-1.5 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-[#dbc693]">
+
+                                    <!-- Variable (full Jinja2, read-only, copyable) -->
+                                    <div class="flex items-center gap-1">
+                                        <code class="flex-1 bg-[#111827] border border-gray-700/50 rounded px-2 py-1.5 text-xs text-[#dbc693] font-mono truncate select-all cursor-pointer"
+                                              :title="fullVar(row.field)"
+                                              @click="copyVariable(row.field)"
+                                              x-text="fullVar(row.field)"></code>
+                                    </div>
+
+                                    <!-- Remove -->
+                                    <button type="button" @click="removeVarRow(idx)"
+                                            class="flex items-center justify-center w-7 h-7 rounded text-gray-600 hover:text-red-400 hover:bg-red-900/20 transition-colors">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    </button>
+
+                                </div>
+                            </template>
+
+                            <!-- Add row button -->
+                            <button type="button" @click="addVarRow()"
+                                    class="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-gray-500 hover:text-[#dbc693] hover:bg-[#dbc693]/5 transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                Adicionar linha
+                            </button>
+                        </div>
+
+                        <p class="text-xs text-gray-600">
+                            Usa <code class="bg-gray-700/50 px-1 rounded text-gray-400">{{1}}</code>, <code class="bg-gray-700/50 px-1 rounded text-gray-400">{{2}}</code>... ou a variável completa
+                            <code class="bg-gray-700/50 px-1 rounded text-[#dbc693]">{{ lead.title }}</code> no corpo do email.
+                            No envio, são substituídas pelo valor real. Se o campo estiver vazio, é usado o fallback.
+                        </p>
+
+                    </div>
+                </div>
+
+                <!-- Help Modal -->
+                <div x-show="showVarsHelp" x-transition.opacity x-cloak
+                     class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                     style="display: none;" @keydown.escape.window="showVarsHelp = false">
+                    <div class="bg-[#1a2332] rounded-xl border border-gray-700 shadow-2xl p-6 max-w-lg w-full mx-4"
+                         @click.outside="showVarsHelp = false">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="flex items-center justify-center w-10 h-10 rounded-full bg-[#dbc693]/10">
+                                <svg class="h-5 w-5 text-[#dbc693]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-200">Como Usar Variáveis</h3>
+                        </div>
+                        <div class="space-y-3 text-sm text-gray-400">
+                            <p><strong class="text-gray-200">1.</strong> Escolhe o <strong class="text-gray-200">Módulo</strong> no formulário (CRM, Contactos, etc.) para definir os campos disponíveis.</p>
+                            <p><strong class="text-gray-200">2.</strong> Clica em <strong class="text-gray-200">+ Adicionar linha</strong> e escolhe um campo no dropdown (ex: <code class="bg-gray-700/50 px-1 rounded text-[#dbc693]">lead.title</code>).</p>
+                            <p><strong class="text-gray-200">3.</strong> Define um <strong class="text-gray-200">Fallback</strong> — valor usado se o campo estiver vazio na BD.</p>
+                            <p><strong class="text-gray-200">4.</strong> No corpo do email, usa a variável de duas formas:</p>
+                            <ul class="list-disc list-inside ml-4 space-y-1 text-gray-500">
+                                <li>Variável curta: <code class="bg-gray-700/50 px-1 rounded text-gray-400">{{1}}</code> — rápida, numérica</li>
+                                <li>Variável completa: <code class="bg-gray-700/50 px-1 rounded text-[#dbc693]">{{ lead.title }}</code> — descritiva</li>
+                            </ul>
+                            <p class="text-xs text-gray-600 pt-2">Os números nunca são renumerados. Se apagares a variável 3, a próxima será a 4 na mesma.</p>
+                        </div>
+                        <div class="flex justify-end mt-6">
+                            <button type="button" @click="showVarsHelp = false"
+                                    class="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 border border-gray-600 hover:bg-gray-700 transition-colors">
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── TAB: Anexos — Placeholder ── -->
+                <div x-show="activeTab === 'anexos'" class="h-full flex items-center justify-center" x-transition style="display: none;">
+                    <div class="text-center py-12">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                        <h3 class="mt-4 text-sm font-medium text-gray-400">Sem anexos</h3>
+                        <p class="mt-2 text-xs text-gray-500">A gestão de anexos será disponibilizada em breve.</p>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </form>
+
+    <!-- ── Reset confirmation modal ── -->
+    {% if template and template.default_body_path %}
+    <div x-show="showResetModal" x-transition.opacity
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+         style="display: none;" @keydown.escape.window="showResetModal = false">
+        <div class="bg-[#1a2332] rounded-xl border border-gray-700 shadow-2xl p-6 max-w-md w-full mx-4"
+             @click.outside="showResetModal = false">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="flex items-center justify-center w-10 h-10 rounded-full bg-red-900/30">
+                    <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-200">Restaurar Corpo Default</h3>
+            </div>
+            <p class="text-sm text-gray-400 mb-6">
+                Tens a certeza que queres restaurar o corpo do template para o conteúdo default?
+                Todas as alterações feitas ao HTML serão perdidas.
+            </p>
+            <div class="flex justify-end gap-3">
+                <button type="button" @click="showResetModal = false"
+                        class="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 border border-gray-600 hover:bg-gray-700 transition-colors">
+                    Cancelar
+                </button>
+                <form method="post" action="{% url 'dashboard:email_template_reset_body' template_id=template.pk %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors">
+                        Restaurar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Ace Editor CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ace.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/mode-html.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/theme-dracula.min.js"></script>
+<script>
+// Data from server
+const _previewContext = JSON.parse('{{ preview_context|escapejs }}');
+</script>
+<script id="layout-html-data" type="text/plain">{{ layout_html|safe }}</script>
+{% verbatim %}
+<script>
+const _layoutHtml = document.getElementById('layout-html-data').textContent;
+let _bodyEditor = null;
+
+// ── Field map keyed by module ──────────────────────────────────────────
+const _FIELD_MAP = {
+    'CRM': [
+        {path: 'lead.title',                    label: 'Título da oportunidade',       sample: 'Proposta Comercial 2026'},
+        {path: 'lead.contact_name',             label: 'Nome do contacto (direto)',    sample: 'João Silva'},
+        {path: 'lead.email_from',               label: 'Email (direto)',               sample: 'joao@empresa.pt'},
+        {path: 'lead.phone',                    label: 'Telefone (direto)',            sample: '+351 912 345 678'},
+        {path: 'lead.description',              label: 'Descrição',                    sample: 'Oportunidade de negócio...'},
+        {path: 'lead.estimated_value',          label: 'Receita esperada',             sample: '5 000 €'},
+        {path: 'lead.probability',              label: 'Probabilidade (%)',            sample: '75'},
+        {path: 'lead.source',                   label: 'Origem',                       sample: 'Website'},
+        {path: 'lead.expected_close_date',      label: 'Data de fecho prevista',       sample: '28/02/2026'},
+        {path: 'lead.priority',                 label: 'Prioridade',                   sample: 'HIGH'},
+        {path: 'lead.stage.name',               label: 'Estágio',                      sample: 'Proposta'},
+        {path: 'lead.contact.name',             label: 'Contacto → Nome',              sample: 'João Silva'},
+        {path: 'lead.contact.email',            label: 'Contacto → Email',             sample: 'joao@empresa.pt'},
+        {path: 'lead.contact.phone',            label: 'Contacto → Telefone',          sample: '+351 912 345 678'},
+        {path: 'lead.contact.whatsapp',         label: 'Contacto → WhatsApp',          sample: '+351 912 345 678'},
+        {path: 'lead.contact.position',         label: 'Contacto → Cargo',             sample: 'Diretor Comercial'},
+        {path: 'lead.contact.city',             label: 'Contacto → Cidade',            sample: 'Lisboa'},
+        {path: 'lead.contact.country',          label: 'Contacto → País',              sample: 'Portugal'},
+        {path: 'lead.contact.nif',              label: 'Contacto → NIF',               sample: '123456789'},
+        {path: 'lead.contact.company.name',     label: 'Contacto → Empresa → Nome',    sample: 'Empresa X Lda'},
+        {path: 'lead.assigned_to.first_name',   label: 'Vendedor → Primeiro nome',     sample: 'Bruno'},
+        {path: 'lead.assigned_to.last_name',    label: 'Vendedor → Apelido',           sample: 'Coelho'},
+        {path: 'lead.assigned_to.email',        label: 'Vendedor → Email',             sample: 'bruno@fuetmagico.pt'},
+    ],
+    'CONTACTS': [
+        {path: 'contact.name',                  label: 'Nome',                         sample: 'João Silva'},
+        {path: 'contact.email',                 label: 'Email',                        sample: 'joao@empresa.pt'},
+        {path: 'contact.phone',                 label: 'Telefone',                     sample: '+351 912 345 678'},
+        {path: 'contact.whatsapp',              label: 'WhatsApp',                     sample: '+351 912 345 678'},
+        {path: 'contact.position',              label: 'Cargo',                        sample: 'Diretor Comercial'},
+        {path: 'contact.address',               label: 'Morada',                       sample: 'Rua da Liberdade, 123'},
+        {path: 'contact.city',                  label: 'Cidade',                       sample: 'Lisboa'},
+        {path: 'contact.district',              label: 'Distrito',                     sample: 'Lisboa'},
+        {path: 'contact.postal_code',           label: 'Código Postal',                sample: '1000-001'},
+        {path: 'contact.country',               label: 'País',                         sample: 'Portugal'},
+        {path: 'contact.website',               label: 'Website',                      sample: 'https://empresa.pt'},
+        {path: 'contact.nif',                   label: 'NIF / Tax ID',                 sample: '123456789'},
+        {path: 'contact.language',              label: 'Idioma',                       sample: 'pt_PT'},
+        {path: 'contact.company.name',          label: 'Empresa → Nome',               sample: 'Empresa X Lda'},
+        {path: 'contact.company.email',         label: 'Empresa → Email',              sample: 'geral@empresa.pt'},
+        {path: 'contact.company.phone',         label: 'Empresa → Telefone',           sample: '+351 210 000 000'},
+        {path: 'contact.company.nif',           label: 'Empresa → NIF',                sample: '500000000'},
+    ],
+    'GENERAL': [
+        {path: 'company_name',                  label: 'Nome da empresa',              sample: 'Fuet Mágico'},
+        {path: 'sender_name',                   label: 'Nome do remetente',            sample: 'Bruno Coelho'},
+        {path: 'sender_email',                  label: 'Email do remetente',           sample: 'bruno@fuetmagico.pt'},
+        {path: 'date_sent',                     label: 'Data de envio',                sample: '28/02/2026'},
+    ],
+};
+// Alias modules that haven't got their own map yet — fall back to GENERAL
+_FIELD_MAP['SALES']      = _FIELD_MAP['GENERAL'];
+_FIELD_MAP['PURCHASES']  = _FIELD_MAP['GENERAL'];
+_FIELD_MAP['INVOICING']  = _FIELD_MAP['GENERAL'];
+_FIELD_MAP['MARKETING']  = _FIELD_MAP['GENERAL'];
+
+function emailTemplateForm() {
+    return {
+        activeTab: 'conteudo',
+        showPreview: false,
+        showResetModal: false,
+        showVarsHelp: false,
+
+        // ── Variables table state ──
+        varRows: [],
+        _varIdCounter: 0,
+        _varNumCounter: 0,
+
+        init() {
+            this.$nextTick(() => {
+                this.initBodyEditor();
+                this._loadVars();
+            });
+        },
+
+        // ── Variables: load from hidden textarea ──
+        _loadVars() {
+            const raw = (this.$refs.placeholdersTextarea.value || '').trim();
+            if (!raw || raw === '{}') return;
+
+            try {
+                const data = JSON.parse(raw);
+                const keys = Object.keys(data).sort((a, b) => parseInt(a) - parseInt(b));
+
+                this.varRows = keys.map(k => {
+                    const v = data[k];
+                    const n = parseInt(k);
+                    if (n > this._varNumCounter) this._varNumCounter = n;
+
+                    // Support old format {"key": "description"} and new format {"1": {"field":..., "fallback":...}}
+                    if (typeof v === 'string') {
+                        // Old format — key is the field name, value is description
+                        return {
+                            _id: ++this._varIdCounter,
+                            num: n,
+                            field: k,
+                            fallback: v,
+                            showDropdown: false,
+                            suggestions: [],
+                        };
+                    }
+                    return {
+                        _id: ++this._varIdCounter,
+                        num: n,
+                        field: v.field || '',
+                        fallback: v.fallback || v.sample || '',
+                        showDropdown: false,
+                        suggestions: [],
+                    };
+                });
+            } catch(e) {
+                this.varRows = [];
+            }
+        },
+
+        // ── Get current module from the form select ──
+        _currentModule() {
+            const sel = document.querySelector('[name="module"]');
+            return sel ? sel.value : 'GENERAL';
+        },
+
+        get varFieldMap() {
+            return _FIELD_MAP[this._currentModule()] || _FIELD_MAP['GENERAL'] || [];
+        },
+
+        onVarFieldInput(idx) {
+            const q = (this.varRows[idx].field || '').toLowerCase();
+            this.varRows[idx].suggestions = q.length === 0
+                ? this.varFieldMap
+                : this.varFieldMap.filter(f =>
+                    f.path.toLowerCase().includes(q) || f.label.toLowerCase().includes(q)
+                  );
+            this.varRows[idx].showDropdown = true;
+            this.syncVars();
+        },
+
+        onVarFieldFocus(idx) {
+            const q = (this.varRows[idx].field || '').toLowerCase();
+            this.varRows[idx].suggestions = q.length === 0
+                ? this.varFieldMap
+                : this.varFieldMap.filter(f =>
+                    f.path.toLowerCase().includes(q) || f.label.toLowerCase().includes(q)
+                  );
+            this.varRows[idx].showDropdown = this.varFieldMap.length > 0;
+        },
+
+        onVarFieldBlur(idx) {
+            setTimeout(() => { this.varRows[idx].showDropdown = false; }, 160);
+        },
+
+        selectVarField(idx, path) {
+            this.varRows[idx].field = path;
+            this.varRows[idx].showDropdown = false;
+            // Auto-fill fallback with sample if still empty
+            if (!this.varRows[idx].fallback) {
+                const entry = this.varFieldMap.find(f => f.path === path);
+                if (entry) this.varRows[idx].fallback = entry.sample;
+            }
+            this.syncVars();
+        },
+
+        addVarRow() {
+            this.varRows.push({
+                _id: ++this._varIdCounter,
+                num: ++this._varNumCounter,
+                field: '',
+                fallback: '',
+                showDropdown: false,
+                suggestions: [],
+            });
+            // Focus the new row's field input
+            this.$nextTick(() => {
+                const inputs = this.$el.querySelectorAll('[data-var-field-input]');
+                if (inputs.length) inputs[inputs.length - 1].focus();
+            });
+        },
+
+        removeVarRow(idx) {
+            this.varRows.splice(idx, 1);
+            this.syncVars();
+        },
+
+        // ── Helpers to build {{ }} strings (avoids Django template clash) ──
+        shortVar(num) {
+            return '{' + '{' + num + '}' + '}';
+        },
+
+        fullVar(field) {
+            if (!field) return '\u2014';
+            return '{' + '{ ' + field + ' }' + '}';
+        },
+
+        copyVariable(field) {
+            if (!field) return;
+            const text = '{' + '{ ' + field + ' }' + '}';
+            navigator.clipboard.writeText(text).catch(() => {});
+        },
+
+        syncVars() {
+            const data = {};
+            this.varRows.forEach(row => {
+                data[String(row.num)] = {
+                    field: row.field,
+                    fallback: row.fallback,
+                };
+            });
+            this.$refs.placeholdersTextarea.value = JSON.stringify(data);
+        },
+
+        // ── Body editor (Ace) ──
+        initBodyEditor() {
+            if (_bodyEditor) return;
+            const container = this.$refs.bodyEditorContainer;
+            if (!container) return;
+
+            _bodyEditor = ace.edit(container);
+            _bodyEditor.setTheme('ace/theme/dracula');
+            _bodyEditor.session.setMode('ace/mode/html');
+            _bodyEditor.setValue(this.$refs.bodyTextarea.value, -1);
+
+            _bodyEditor.setOptions({
+                fontSize: '13px',
+                fontFamily: "'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace",
+                showPrintMargin: false,
+                wrap: false,
+                tabSize: 4,
+                useSoftTabs: true,
+                scrollPastEnd: 0.5,
+                highlightActiveLine: true,
+                showGutter: true,
+            });
+
+            _bodyEditor.session.on('change', () => {
+                this.$refs.bodyTextarea.value = _bodyEditor.getValue();
+            });
+        },
+
+        switchTab(tab) {
+            this.activeTab = tab;
+            this.showPreview = false;
+            this.$nextTick(() => {
+                if (tab === 'conteudo') {
+                    this.initBodyEditor();
+                    if (_bodyEditor) _bodyEditor.resize();
+                }
+            });
+        },
+
+        togglePreview() {
+            this.showPreview = !this.showPreview;
+            if (this.showPreview) {
+                this.$nextTick(() => this.renderPreview());
+            } else {
+                this.$nextTick(() => {
+                    if (_bodyEditor) _bodyEditor.resize();
+                });
+            }
+        },
+
+        renderPreview() {
+            const iframe = this.$refs.previewFrame;
+            if (!iframe) return;
+
+            // Get the body content from the editor
+            let bodyContent = _bodyEditor ? _bodyEditor.getValue() : this.$refs.bodyTextarea.value;
+
+            // Build sample data from the variables table
+            const varSamples = {};
+            this.varRows.forEach(row => {
+                if (row.field) {
+                    // Map both {{N}} and {{ field.path }} to the fallback/sample value
+                    const val = row.fallback || row.field;
+                    varSamples[row.field] = val;
+                    varSamples[String(row.num)] = val;
+                }
+            });
+
+            // Replace {{N}} (short vars, no spaces) in body
+            bodyContent = bodyContent.replace(/\{\{(\d+)\}\}/g, function(match, num) {
+                return varSamples[num] || match;
+            });
+            // Replace {{ field.path }} (full vars, with spaces) in body
+            for (const [key, value] of Object.entries(varSamples)) {
+                if (!/^\d+$/.test(key)) {
+                    const regex = new RegExp('\\{\\{\\s*' + key.replace(/\./g, '\\.') + '\\s*\\}\\}', 'g');
+                    bodyContent = bodyContent.replace(regex, value);
+                }
+            }
+
+            // Start with the layout HTML and inject the body into it
+            let html = _layoutHtml || '{{ body_content }}';
+
+            // Build layout-level sample data from preview context
+            const sampleData = Object.assign({}, _previewContext);
+            sampleData['subject'] = document.querySelector('[name="subject"]')?.value || 'Assunto do Email';
+            sampleData['body_content'] = bodyContent;
+            sampleData['record_label'] = 'Template: ' + (document.querySelector('[name="name"]')?.value || 'Novo Template');
+
+            // Replace {{ var }} placeholders in layout
+            for (const [key, value] of Object.entries(sampleData)) {
+                const regex = new RegExp('\\{\\{\\s*' + key + '\\s*\\}\\}', 'g');
+                html = html.replace(regex, value);
+            }
+
+            // Process {% if var %}...{% else %}...{% endif %} blocks
+            html = html.replace(
+                /\{%\s*if\s+(\w+)\s*%\}([\s\S]*?)(?:\{%\s*else\s*%\}([\s\S]*?))?\{%\s*endif\s*%\}/g,
+                function(match, varName, ifBlock, elseBlock) {
+                    const val = sampleData[varName];
+                    if (val !== undefined && val !== null && val !== '') {
+                        return ifBlock;
+                    }
+                    return elseBlock || '';
+                }
+            );
+
+            // Inject custom scrollbar CSS
+            const scrollbarCSS = '<style>' +
+                '::-webkit-scrollbar { width: 6px !important; height: 6px !important; }' +
+                '::-webkit-scrollbar-track { background: transparent !important; }' +
+                '::-webkit-scrollbar-thumb { background: #dbc693 !important; border-radius: 3px; }' +
+                '::-webkit-scrollbar-thumb:hover { background: #c9b580 !important; }' +
+                '* { scrollbar-width: thin !important; scrollbar-color: #dbc693 transparent !important; }' +
+                '</style>';
+            html = html.replace('</head>', scrollbarCSS + '</head>');
+
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            doc.open();
+            doc.write(html);
+            doc.close();
+        },
+
+        confirmReset() {
+            this.showResetModal = true;
+        },
+
+        syncEditors() {
+            // Sync body editor to hidden textarea before form submission
+            if (_bodyEditor) {
+                this.$refs.bodyTextarea.value = _bodyEditor.getValue();
+            }
+            // Variables are already synced via syncVars()
+            this.syncVars();
+        }
+    };
+}
+</script>
+{% endverbatim %}
+{% endblock %}

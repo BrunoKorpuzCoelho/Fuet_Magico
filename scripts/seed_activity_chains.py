@@ -158,36 +158,42 @@ CHAINS = [
 
 
 # ─── Execução ─────────────────────────────────────────────────────────────────
-created = 0
-updated = 0
 
-for chain_def in CHAINS:
-    name = chain_def["name"]
+def run():
+    created = 0
+    updated = 0
 
-    # Apaga se já existir (pode ter ficado com encoding errado)
-    deleted, _ = ActivityChain.objects.filter(name__icontains=name[:10]).delete()
-    if deleted:
-        updated += 1
+    for chain_def in CHAINS:
+        name = chain_def["name"]
 
-    chain = ActivityChain.objects.create(
-        name=name,
-        description=chain_def["description"],
-        applicable_model=chain_def["applicable_model"],
-        owner_company=None,  # disponível para todas as empresas
-        is_active=True,
-    )
+        # Apaga se já existir (pode ter ficado com encoding errado)
+        deleted, _ = ActivityChain.objects.filter(name__icontains=name[:10]).delete()
+        if deleted:
+            updated += 1
 
-    for order, (bp_key, delay, fail_key, fail_delay) in enumerate(chain_def["steps"], start=1):
-        ActivityChainStep.objects.create(
-            chain=chain,
-            activity_id=BP[bp_key],
-            order=order,
-            delay_days=delay,
-            on_failure_activity_id=BP[fail_key] if fail_key else None,
-            on_failure_delay_days=fail_delay,
+        chain = ActivityChain.objects.create(
+            name=name,
+            description=chain_def["description"],
+            applicable_model=chain_def["applicable_model"],
+            owner_company=None,  # disponível para todas as empresas
+            is_active=True,
         )
 
-    print(f"  [OK] Criada: {name} ({len(chain_def['steps'])} passos)")
-    created += 1
+        for order, (bp_key, delay, fail_key, fail_delay) in enumerate(chain_def["steps"], start=1):
+            ActivityChainStep.objects.create(
+                chain=chain,
+                activity_id=BP[bp_key],
+                order=order,
+                delay_days=delay,
+                on_failure_activity_id=BP[fail_key] if fail_key else None,
+                on_failure_delay_days=fail_delay,
+            )
 
-print(f"\nConcluído: {created} criadas, {updated} recriadas (encoding corrigido).")
+        print(f"  [OK] Criada: {name} ({len(chain_def['steps'])} passos)")
+        created += 1
+
+    print(f"\nConcluído: {created} criadas, {updated} recriadas (encoding corrigido).")
+
+
+if __name__ == '__main__':
+    run()

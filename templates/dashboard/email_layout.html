@@ -1,0 +1,340 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Email Layout{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Ace editor overrides ── */
+    #ace-editor {
+        width: 100%;
+        height: 100%;
+    }
+    #ace-editor .ace_gutter {
+        background: #0d1117;
+        border-right: 1px solid #1e293b;
+        color: #4b5563;
+    }
+    #ace-editor .ace_gutter-active-line {
+        background: #161b22;
+    }
+    #ace-editor .ace_active-line {
+        background: #161b2280 !important;
+    }
+    #ace-editor .ace_cursor {
+        color: #e5e7eb;
+    }
+
+    /* ── Preview iframe ── */
+    .preview-frame {
+        background: #111827;
+        border: none;
+        width: 100%;
+        height: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block sub_navbar %}
+<div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center h-12">
+            <!-- Left: Nav links -->
+            <div class="flex items-center space-x-6">
+                <a href="{% url 'dashboard:settings' %}"
+                   class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+                    Definições Gerais
+                </a>
+            </div>
+
+            <!-- Action buttons: Discard + Save -->
+            <div class="flex items-center gap-3 ml-4">
+                <!-- Descartar (Vermelho) -->
+                <a href="{% url 'dashboard:email_layout' %}"
+                   class="flex items-center justify-center hover:opacity-80 transition-opacity"
+                   title="Descartar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 text-red-500">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                        <line x1="10" x2="10" y1="11" y2="17"></line>
+                        <line x1="14" x2="14" y1="11" y2="17"></line>
+                    </svg>
+                </a>
+                <!-- Guardar (Verde) -->
+                <button type="submit"
+                        form="layout-form"
+                        class="flex items-center justify-center hover:opacity-80 transition-opacity"
+                        title="Guardar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 text-green-500">
+                        <path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"></path>
+                        <path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"></path>
+                        <path d="M7 3v4a1 1 0 0 0 1 1h7"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#1f2937]" x-data="emailLayoutEditor()">
+    <form method="post" id="layout-form">
+        {% csrf_token %}
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+            <!-- ════════════════════════════════════════════════════ -->
+            <!-- TOP SECTION — Metadata + Actions                    -->
+            <!-- ════════════════════════════════════════════════════ -->
+            <div class="bg-[#1a2332] rounded-lg border border-gray-700/50 p-6 mb-6">
+
+                <div class="flex items-start justify-between">
+                    <!-- Left: Metadata fields -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-x-16 gap-y-4">
+                        <!-- Atualizado por -->
+                        <div class="flex items-center gap-4">
+                            <label class="text-sm font-semibold text-gray-400 whitespace-nowrap min-w-[140px]">Atualizado por</label>
+                            <span class="text-sm text-gray-300">{{ layout.updated_by.get_full_name|default:"Sistema" }}</span>
+                        </div>
+
+                        <!-- Data de criação -->
+                        <div class="flex items-center gap-4">
+                            <label class="text-sm font-semibold text-gray-400 whitespace-nowrap min-w-[140px]">Data de criação</label>
+                            <span class="text-sm text-gray-300">{{ layout.created_at|date:"d/m/Y H:i" }}</span>
+                        </div>
+
+                        <!-- Última atualização -->
+                        <div class="flex items-center gap-4">
+                            <label class="text-sm font-semibold text-gray-400 whitespace-nowrap min-w-[140px]">Última atualização</label>
+                            <span class="text-sm text-gray-300">{{ layout.updated_at|date:"d/m/Y H:i" }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Right: Action buttons -->
+                    <div class="flex items-center gap-2 ml-6 flex-shrink-0">
+                        <!-- Preview button -->
+                        <button type="button" @click="togglePreview()"
+                                class="flex items-center gap-1.5 px-4 h-9 rounded-lg text-sm font-medium transition-colors"
+                                :class="showPreview
+                                    ? 'bg-primary text-white'
+                                    : 'bg-gray-800 text-gray-300 border border-gray-600 hover:bg-gray-700'">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            Pré-visualizar
+                        </button>
+
+                        <!-- Reset to default -->
+                        <button type="button" @click="confirmReset()"
+                                class="flex items-center gap-1.5 px-4 h-9 rounded-lg text-sm font-medium bg-gray-800 text-gray-300 border border-gray-600 hover:bg-gray-700 transition-colors">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            Restaurar Default
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════════════════════════════════════════════════ -->
+            <!-- ARCHITECTURE SECTION — Code Editor / Preview        -->
+            <!-- ════════════════════════════════════════════════════ -->
+
+            <!-- Tab-style header -->
+            <div class="border-b border-gray-700">
+                <nav class="flex gap-1">
+                    <button type="button"
+                            class="border-b-2 border-primary text-primary px-4 py-3 text-sm font-medium transition-colors">
+                        Arquitetura
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Editor / Preview container -->
+            <div class="mt-0 rounded-b-lg border border-t-0 border-gray-700 overflow-hidden"
+                 style="height: calc(100vh - 290px);">
+
+                <!-- ── Code Editor (default view) ── -->
+                <div x-show="!showPreview" class="h-full" x-transition>
+                    <!-- Hidden textarea for form submission -->
+                    <textarea name="html_content" x-ref="hiddenTextarea" class="hidden">{{ layout.html_content }}</textarea>
+                    <!-- Ace Editor container -->
+                    <div id="ace-editor" x-ref="aceContainer"></div>
+                </div>
+
+                <!-- ── Preview (rendered HTML) ── -->
+                <div x-show="showPreview" class="h-full" x-transition style="display: none;">
+                    <iframe x-ref="previewFrame" class="preview-frame" sandbox="allow-same-origin"></iframe>
+                </div>
+
+            </div>
+
+        </div>
+    </form>
+
+    <!-- ── Reset confirmation modal ── -->
+    <div x-show="showResetModal" x-transition.opacity
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+         style="display: none;" @keydown.escape.window="showResetModal = false">
+        <div class="bg-[#1a2332] rounded-xl border border-gray-700 shadow-2xl p-6 max-w-md w-full mx-4"
+             @click.outside="showResetModal = false">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="flex items-center justify-center w-10 h-10 rounded-full bg-red-900/30">
+                    <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-200">Restaurar Layout Default</h3>
+            </div>
+            <p class="text-sm text-gray-400 mb-6">
+                Tens a certeza que queres restaurar o layout para o ficheiro default?
+                Todas as alterações feitas serão perdidas.
+            </p>
+            <div class="flex justify-end gap-3">
+                <button type="button" @click="showResetModal = false"
+                        class="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 border border-gray-600 hover:bg-gray-700 transition-colors">
+                    Cancelar
+                </button>
+                <form method="post" action="{% url 'dashboard:email_layout_reset' %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors">
+                        Restaurar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Ace Editor CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ace.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/mode-html.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/theme-dracula.min.js"></script>
+<script>
+// Preview context data from server
+const _previewContext = JSON.parse('{{ preview_context|escapejs }}');
+</script>
+{% verbatim %}
+<script>
+let _aceEditor = null;
+
+function emailLayoutEditor() {
+    return {
+        showPreview: false,
+        showResetModal: false,
+        htmlContent: '',
+
+        init() {
+            this.htmlContent = this.$refs.hiddenTextarea.value;
+
+            this.$nextTick(() => {
+                // Initialize Ace Editor
+                _aceEditor = ace.edit('ace-editor');
+                _aceEditor.setTheme('ace/theme/dracula');
+                _aceEditor.session.setMode('ace/mode/html');
+                _aceEditor.setValue(this.htmlContent, -1);
+
+                // Editor options
+                _aceEditor.setOptions({
+                    fontSize: '13px',
+                    fontFamily: "'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace",
+                    showPrintMargin: false,
+                    wrap: false,
+                    tabSize: 4,
+                    useSoftTabs: true,
+                    scrollPastEnd: 0.5,
+                    enableBasicAutocompletion: false,
+                    enableLiveAutocompletion: false,
+                    highlightActiveLine: true,
+                    showGutter: true,
+                });
+
+                // Sync changes back to hidden textarea for form submission
+                _aceEditor.session.on('change', () => {
+                    this.htmlContent = _aceEditor.getValue();
+                    this.$refs.hiddenTextarea.value = this.htmlContent;
+                });
+            });
+        },
+
+        togglePreview() {
+            this.showPreview = !this.showPreview;
+            if (this.showPreview) {
+                this.$nextTick(() => this.renderPreview());
+            } else {
+                // Resize Ace when coming back to editor
+                this.$nextTick(() => {
+                    if (_aceEditor) _aceEditor.resize();
+                });
+            }
+        },
+
+        renderPreview() {
+            const iframe = this.$refs.previewFrame;
+            if (!iframe) return;
+
+            let html = this.htmlContent;
+            const sampleData = Object.assign({}, _previewContext);
+
+            // Add sample body content
+            sampleData['subject'] = sampleData['subject'] || 'Proposta Comercial — Website Redesign';
+            sampleData['body_content'] = '<p style="margin: 0 0 16px 0;">Olá <strong style="color: #f9fafb;">João Silva</strong>,</p>' +
+                '<p style="margin: 0 0 16px 0;">Espero que esteja bem. Conforme conversámos, envio em anexo a proposta comercial para os serviços de consultoria que discutimos na reunião de ontem.</p>' +
+                '<p style="margin: 0 0 16px 0;">Os principais pontos incluem:</p>' +
+                '<ul style="margin: 0 0 16px 0; padding-left: 20px; color: #d1d5db;">' +
+                '<li style="margin-bottom: 6px;">Análise completa do processo atual</li>' +
+                '<li style="margin-bottom: 6px;">Implementação do novo sistema em 3 fases</li>' +
+                '<li style="margin-bottom: 6px;">Formação da equipa incluída</li></ul>' +
+                '<p style="margin: 0;">Com os melhores cumprimentos,</p>';
+            sampleData['record_label'] = 'Lead: Proposta Website';
+
+            // Replace {{ var }} placeholders
+            for (const [key, value] of Object.entries(sampleData)) {
+                const regex = new RegExp('\\{\\{\\s*' + key + '\\s*\\}\\}', 'g');
+                html = html.replace(regex, value);
+            }
+
+            // Process {% if var %}...{% else %}...{% endif %} blocks
+            // Keeps the true branch if var is truthy, else branch otherwise
+            html = html.replace(
+                /\{%\s*if\s+(\w+)\s*%\}([\s\S]*?)(?:\{%\s*else\s*%\}([\s\S]*?))?\{%\s*endif\s*%\}/g,
+                function(match, varName, ifBlock, elseBlock) {
+                    const val = sampleData[varName];
+                    if (val !== undefined && val !== null && val !== '') {
+                        return ifBlock;
+                    }
+                    return elseBlock || '';
+                }
+            );
+
+            // Inject custom scrollbar CSS to match the system
+            const scrollbarCSS = '<style>' +
+                '::-webkit-scrollbar { width: 6px !important; height: 6px !important; }' +
+                '::-webkit-scrollbar-track { background: transparent !important; }' +
+                '::-webkit-scrollbar-thumb { background: #dbc693 !important; border-radius: 3px; }' +
+                '::-webkit-scrollbar-thumb:hover { background: #c9b580 !important; }' +
+                '* { scrollbar-width: thin !important; scrollbar-color: #dbc693 transparent !important; }' +
+                '</style>';
+            html = html.replace('</head>', scrollbarCSS + '</head>');
+
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            doc.open();
+            doc.write(html);
+            doc.close();
+        },
+
+        confirmReset() {
+            this.showResetModal = true;
+        }
+    };
+}
+</script>
+{% endverbatim %}
+{% endblock %}

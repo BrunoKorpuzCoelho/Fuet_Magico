@@ -8,7 +8,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
-from django.db.models import Q, F, Sum, Count, Avg
+from django.db.models import Q, F, Sum, Count, Avg, Prefetch
 from django.utils import timezone
 from datetime import timedelta
 from django.http import JsonResponse
@@ -627,25 +627,40 @@ def lead_pipeline_view(request):
             leads = leads.filter(search_filters.get(search_field, Q(title__icontains=search_query)))
         
         leads = leads.select_related('contact', 'assigned_to', 'stage')
+        leads = leads.prefetch_related(
+            Prefetch(
+                'activities',
+                queryset=Activity.objects.filter(is_done=False).select_related('scheduled_activity').order_by('due_date'),
+                to_attr='pending_activities',
+            )
+        )
         leads = leads.order_by('-created_at')
         
-        # Annotate overdue status (routing_in_days > 0 and lead stuck too long)
+        # Annotate overdue status
+        # Priority: 1) expected_close_date past due  2) routing_in_days exceeded
         leads_list = list(leads)
+        today = now.date()
         for lead in leads_list:
+            lead.is_overdue = False
+            lead.is_warning = False
+
+            # Check expected_close_date first (takes priority)
+            if lead.expected_close_date:
+                days_past = (today - lead.expected_close_date).days
+                if days_past > 0:
+                    lead.is_overdue = True
+                    continue
+                elif days_past == 0:
+                    lead.is_warning = True
+                    continue
+
+            # Fallback to routing_in_days (stage-based timer)
             if stage.routing_in_days > 0:
                 days_in_stage = (now - lead.stage_updated_at).days
                 if days_in_stage > stage.routing_in_days:
                     lead.is_overdue = True
-                    lead.is_warning = False
                 elif days_in_stage == stage.routing_in_days:
-                    lead.is_overdue = False
                     lead.is_warning = True
-                else:
-                    lead.is_overdue = False
-                    lead.is_warning = False
-            else:
-                lead.is_overdue = False
-                lead.is_warning = False
         
         # Calculate totals for this column
         stage_stats = leads.aggregate(

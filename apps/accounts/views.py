@@ -1037,6 +1037,12 @@ def company_edit_view(request, pk):
     except Exception:
         wa_cfg = None
 
+    try:
+        from apps.core.models import CompanyEmailConfig
+        smtp_cfg = company.email_config
+    except Exception:
+        smtp_cfg = None
+
     if request.method == 'POST':
         form = CompanyCreateForm(request.POST, instance=company)
         if form.is_valid():
@@ -1070,6 +1076,22 @@ def company_edit_view(request, pk):
                 except Exception:
                     pass
 
+            # Save / update SMTP (email) config
+            smtp_email = request.POST.get('smtp_email_address', '').strip()
+            if smtp_email:
+                try:
+                    from apps.core.models import CompanyEmailConfig
+                    smtp_obj, _ = CompanyEmailConfig.objects.get_or_create(company=updated)
+                    smtp_obj.email_address = smtp_email
+                    smtp_obj.provider = request.POST.get('smtp_provider', 'gmail').strip()
+                    smtp_obj.is_active = bool(request.POST.get('smtp_is_active'))
+                    raw_pw = request.POST.get('smtp_app_password', '').strip()
+                    if raw_pw:
+                        smtp_obj.set_encrypted_password(raw_pw)
+                    smtp_obj.save()
+                except Exception:
+                    pass
+
             messages.success(request, 'Empresa atualizada com sucesso.')
             return redirect('accounts:company_edit', pk=company.pk)
     else:
@@ -1095,8 +1117,45 @@ def company_edit_view(request, pk):
         'form': form,
         'company': company,
         'wa_cfg': wa_cfg,
+        'smtp_cfg': smtp_cfg,
         'company_users_json': users_data,
     })
+
+
+@admin_required
+@require_http_methods(['POST'])
+def company_smtp_test(request, pk):
+    """Envia um email de teste usando a configuração SMTP da empresa."""
+    from django.shortcuts import get_object_or_404
+    from apps.core.models import CompanyEmailConfig
+    from apps.core.email_utils import _send_via_smtp
+
+    company = get_object_or_404(Company, pk=pk)
+    try:
+        config = company.email_config
+    except CompanyEmailConfig.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'SMTP não configurado para esta empresa.'})
+
+    if not config.has_smtp_configured:
+        return JsonResponse({'success': False, 'error': 'SMTP incompleto — preenche o email e a app password.'})
+
+    success, error, _msg_id = _send_via_smtp(
+        config=config,
+        to_email=config.email_address,
+        to_name=company.name,
+        subject=f'Teste de email — {company.name}',
+        body=(
+            f'Olá,\n\n'
+            f'Este é um email de teste enviado pelo Fuet Mágico CRM '
+            f'para confirmar que a configuração SMTP da empresa "{company.name}" está correta.\n\n'
+            'Tudo certo!'
+        ),
+        body_html=None,
+        sender_name=company.name,
+    )
+    if success:
+        return JsonResponse({'success': True})
+    return JsonResponse({'success': False, 'error': error})
 
 
 @admin_required
