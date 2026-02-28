@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'apps.contacts',
     'apps.crm',
     'apps.whatsapp',
+    'apps.documents',
+    'apps.inventory',
 ]
 
 MIDDLEWARE = [

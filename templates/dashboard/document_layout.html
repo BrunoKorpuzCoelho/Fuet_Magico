@@ -1,0 +1,967 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Layout de Documentos{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Style selector cards ── */
+    .style-card {
+        cursor: pointer;
+        border: 2px solid transparent;
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.2s;
+        background: #1a2332;
+    }
+    .style-card:hover { border-color: rgba(219, 198, 147, 0.4); }
+    .style-card.selected { border-color: #dbc693; box-shadow: 0 0 0 1px #dbc693; }
+    .style-card .card-preview {
+        background: #fff;
+        margin: 8px;
+        border-radius: 6px;
+        overflow: hidden;
+        min-height: 120px;
+    }
+
+    /* ── Document preview ── */
+    .doc-preview {
+        background: #fff;
+        color: #1f2937;
+        font-size: 11px;
+        max-width: 595px;
+        margin: 0 auto;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .doc-preview .doc-body {
+        padding: 20px 28px;
+    }
+    .doc-preview h3 { font-size: 14px; margin-bottom: 6px; }
+    .doc-preview .doc-ref { font-size: 11px; color: #6b7280; margin-bottom: 4px; }
+    .doc-preview .doc-client { font-size: 11px; color: #374151; margin-bottom: 14px; }
+
+    /* ── Mini-preview for layout style cards ── */
+    .mini-header { padding: 10px 14px; font-size: 8px; }
+    .mini-footer { padding: 6px 14px; font-size: 7px; }
+
+    /* ── Color picker wrapper ── */
+    .color-picker-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .color-picker-wrap input[type="color"] {
+        -webkit-appearance: none;
+        border: 1px solid #374151;
+        border-radius: 8px;
+        width: 36px;
+        height: 36px;
+        padding: 2px;
+        cursor: pointer;
+        background: transparent;
+    }
+    .color-picker-wrap input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+    .color-picker-wrap input[type="color"]::-webkit-color-swatch { border: none; border-radius: 4px; }
+
+    /* Section headers */
+    .section-header {
+        font-size: 14px;
+        font-weight: 700;
+        color: #dbc693;
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(219, 198, 147, 0.2);
+    }
+
+    /* ── Sample table for preview ── */
+    .sample-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 10px; }
+    .sample-table th, .sample-table td { padding: 6px 8px; text-align: left; }
+    .sample-table th:last-child, .sample-table td:last-child { text-align: right; }
+    .sample-table th { font-weight: 700; border-bottom: 1px solid #d1d5db; color: #1f2937; }
+    .sample-table td { border-bottom: 1px solid #f3f4f6; color: #374151; }
+
+    .placeholder-line { height: 6px; background: #e5e7eb; border-radius: 3px; margin-bottom: 4px; }
+    .placeholder-line.short { width: 60%; }
+    .placeholder-line.medium { width: 80%; }
+
+    /* ── Fullscreen modal ── */
+    .preview-modal-overlay {
+        position: fixed; inset: 0; z-index: 9999;
+        background: rgba(0,0,0,0.75);
+        display: flex; align-items: center; justify-content: center;
+        backdrop-filter: blur(4px);
+    }
+    .preview-modal-paper {
+        background: #fff; color: #1f2937;
+        width: 595px; min-height: 842px;
+        box-shadow: 0 20px 80px rgba(0,0,0,0.5);
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+        display: flex; flex-direction: column;
+    }
+    .preview-modal-paper .doc-body { padding: 28px 36px; flex: 1; }
+    .preview-modal-paper h3 { font-size: 18px; margin-bottom: 8px; }
+    .preview-modal-paper .doc-ref { font-size: 13px; color: #6b7280; margin-bottom: 6px; }
+    .preview-modal-paper .doc-client { font-size: 13px; color: #374151; margin-bottom: 18px; }
+    .preview-modal-paper .sample-table-lg { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 14px; }
+    .preview-modal-paper .sample-table-lg th,
+    .preview-modal-paper .sample-table-lg td { padding: 8px 10px; text-align: left; }
+    .preview-modal-paper .sample-table-lg th:last-child,
+    .preview-modal-paper .sample-table-lg td:last-child { text-align: right; }
+    .preview-modal-close {
+        position: absolute; top: 12px; right: 12px; z-index: 10;
+        width: 32px; height: 32px; border-radius: 50%;
+        background: rgba(0,0,0,0.08); border: none; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        transition: background 0.15s;
+    }
+    .preview-modal-close:hover { background: rgba(0,0,0,0.15); }
+    .preview-modal-close svg { width: 16px; height: 16px; color: #374151; }
+
+    /* Click hint on mini preview */
+    .doc-preview { cursor: pointer; position: relative; transition: box-shadow 0.2s; }
+    .doc-preview:hover { box-shadow: 0 8px 40px rgba(219,198,147,0.25); }
+</style>
+{% endblock %}
+
+{% block sub_navbar %}
+<div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center h-12">
+            <!-- Left: Nav links -->
+            <div class="flex items-center space-x-6">
+                <a href="{% url 'dashboard:settings' %}"
+                   class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+                    Definições Gerais
+                </a>
+            </div>
+
+            <!-- Action buttons: Discard + Save -->
+            <div class="flex items-center gap-3 ml-4">
+                <!-- Descartar (Vermelho) -->
+                <a href="{% url 'dashboard:document_layout' %}"
+                   class="flex items-center justify-center hover:opacity-80 transition-opacity"
+                   title="Descartar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 text-red-500">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                        <line x1="10" x2="10" y1="11" y2="17"></line>
+                        <line x1="14" x2="14" y1="11" y2="17"></line>
+                    </svg>
+                </a>
+                <!-- Guardar (Verde) -->
+                <button type="submit"
+                        form="doc-layout-form"
+                        class="flex items-center justify-center hover:opacity-80 transition-opacity"
+                        title="Guardar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 text-green-500">
+                        <path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"></path>
+                        <path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"></path>
+                        <path d="M7 3v4a1 1 0 0 0 1 1h7"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#1f2937]" x-data="documentLayoutEditor()">
+    <form method="post" id="doc-layout-form">
+        {% csrf_token %}
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+            <!-- ═══ TOP: Metadata ═══ -->
+            <div class="bg-[#1a2332] rounded-lg border border-gray-700/50 p-4 mb-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-8 text-sm">
+                        <div>
+                            <span class="text-gray-500 font-semibold">Empresa:</span>
+                            <span class="text-gray-300 ml-2">{{ company.name }}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500 font-semibold">Layout:</span>
+                            <span class="text-gray-300 ml-2">{{ doc_layout.layout_style.name }}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500 font-semibold">Tabela:</span>
+                            <span class="text-gray-300 ml-2">{{ doc_layout.table_style.name }}</span>
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-500">
+                        Última atualização: {{ doc_layout.updated_at|date:"d/m/Y H:i" }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                <!-- ═══════════════════════════════════════════════════ -->
+                <!-- LEFT: Configuration Panel (2/3)                     -->
+                <!-- ═══════════════════════════════════════════════════ -->
+                <div class="lg:col-span-2 space-y-6">
+
+                    <!-- ── 1. Layout Styles ── -->
+                    <div class="bg-[#1a2332] rounded-lg border border-gray-700/50 p-6">
+                        <h3 class="section-header">📄 Estilo de Layout (Header & Footer)</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            {% for ls in layout_styles %}
+                            <label class="style-card" :class="{ 'selected': selectedLayoutStyle === '{{ ls.pk }}' }"
+                                   @click="selectedLayoutStyle = '{{ ls.pk }}'">
+                                <input type="radio" name="layout_style" value="{{ ls.pk }}"
+                                       {% if ls.pk == doc_layout.layout_style.pk %}checked{% endif %}
+                                       class="hidden"
+                                       x-model="selectedLayoutStyle">
+                                <div class="card-preview">
+                                    {% if ls.slug == 'split' %}
+                                    <!-- Split: two halves header -->
+                                    <div class="mini-header" style="display: flex; padding: 0; overflow: hidden;">
+                                        <div style="flex: 1; background: #1f2937; padding: 8px 6px; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                            <div style="width: 14px; height: 14px; background: #dbc693; border-radius: 3px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 6px;">{{ company.name|make_list|first }}</div>
+                                            <span style="color: #fff; font-size: 7px; font-weight: 700;">{{ company.name|truncatechars:10 }}</span>
+                                        </div>
+                                        <div style="flex: 1; padding: 8px 6px; display: flex; align-items: center; justify-content: flex-end;">
+                                            <span style="font-size: 6px; color: #6b7280;">info</span>
+                                        </div>
+                                    </div>
+                                    {% elif ls.slug == 'arc' %}
+                                    <!-- Arc: centered gradient with curve -->
+                                    <div class="mini-header" style="position: relative; overflow: hidden; padding: 0;">
+                                        <div style="background: linear-gradient(135deg, #dbc693, #c4a96e); text-align: center; padding: 10px 6px 18px;">
+                                            <div style="width: 16px; height: 16px; background: rgba(255,255,255,0.25); border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 7px; margin-bottom: 2px;">{{ company.name|make_list|first }}</div>
+                                            <div style="color: #fff; font-size: 8px; font-weight: 700;">{{ company.name|truncatechars:14 }}</div>
+                                        </div>
+                                        <div style="position: absolute; bottom: 0; left: -10%; width: 120%; height: 10px; background: #fff; border-radius: 50% 50% 0 0;"></div>
+                                    </div>
+                                    {% elif ls.slug == 'edge' %}
+                                    <!-- Edge: triangle corner + gradient line -->
+                                    <div class="mini-header" style="position: relative; padding: 8px 10px; overflow: hidden;">
+                                        <div style="position: absolute; top: 0; left: 0; width: 0; height: 0; border-style: solid; border-width: 22px 44px 0 0; border-color: #dbc693 transparent transparent transparent;"></div>
+                                        <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 1.5px; background: linear-gradient(90deg, #dbc693, transparent 70%);"></div>
+                                        <div style="font-weight: 700; font-size: 9px; position: relative; z-index: 1;">{{ company.name|truncatechars:16 }}</div>
+                                    </div>
+                                    {% else %}
+                                    <!-- Standard: clean, bold, stripe, frame -->
+                                    <div class="mini-header" style="background: {% if ls.slug == 'bold' %}#1f2937{% else %}#fff{% endif %}; color: {% if ls.slug == 'bold' %}#fff{% else %}#1f2937{% endif %}; {% if ls.slug == 'stripe' %}border-left: 4px solid #dbc693;{% elif ls.slug == 'frame' %}border: 1.5px solid #dbc693; border-bottom: none; margin: 6px 6px 0; border-radius: 4px 4px 0 0; text-align: center;{% elif ls.slug == 'clean' %}border-bottom: 1px solid #e5e7eb;{% endif %} padding: 8px 10px;">
+                                        <div style="font-weight: 700; font-size: 9px;">{{ company.name|truncatechars:20 }}</div>
+                                    </div>
+                                    {% endif %}
+                                    <!-- Mini body -->
+                                    <div style="padding: 8px 10px; flex: 1;">
+                                        <div class="placeholder-line medium"></div>
+                                        <div class="placeholder-line short"></div>
+                                        <div class="placeholder-line"></div>
+                                    </div>
+                                    {% if ls.slug == 'split' %}
+                                    <!-- Split footer: two halves -->
+                                    <div class="mini-footer" style="display: flex; padding: 0; overflow: hidden;">
+                                        <div style="flex: 1; background: #1f2937; padding: 4px 6px; font-size: 6px; color: #dbc693;">www</div>
+                                        <div style="flex: 1; padding: 4px 6px; text-align: right; font-size: 6px; color: #9ca3af;">1/1</div>
+                                    </div>
+                                    {% elif ls.slug == 'arc' %}
+                                    <!-- Arc footer: curve on top -->
+                                    <div class="mini-footer" style="position: relative; padding: 12px 6px 5px; text-align: center; overflow: hidden;">
+                                        <div style="position: absolute; top: 0; left: -10%; width: 120%; height: 8px; background: #dbc693; border-radius: 0 0 50% 50%; opacity: 0.3;"></div>
+                                        <span style="color: #9ca3af; font-size: 6px;">{{ company.website|default:"www.example.com"|truncatechars:25 }}</span>
+                                    </div>
+                                    {% elif ls.slug == 'edge' %}
+                                    <!-- Edge footer: gradient line + triangle -->
+                                    <div class="mini-footer" style="position: relative; padding: 5px 6px; text-align: right; overflow: hidden;">
+                                        <div style="position: absolute; top: 0; left: 0; right: 0; height: 1.5px; background: linear-gradient(90deg, transparent 30%, #dbc693);"></div>
+                                        <div style="position: absolute; bottom: 0; right: 0; width: 0; height: 0; border-style: solid; border-width: 0 0 16px 32px; border-color: transparent transparent #dbc693 transparent; opacity: 0.2;"></div>
+                                        <span style="color: #9ca3af; font-size: 6px;">1/1</span>
+                                    </div>
+                                    {% else %}
+                                    <!-- Standard footer -->
+                                    <div class="mini-footer" style="background: {% if ls.slug == 'bold' %}#1f2937{% else %}transparent{% endif %}; color: #9ca3af; {% if ls.slug == 'clean' %}border-top: 1px solid #e5e7eb;{% elif ls.slug == 'stripe' %}border-left: 4px solid #dbc693;{% elif ls.slug == 'frame' %}border: 1.5px solid #dbc693; border-top: none; margin: 0 6px 6px; border-radius: 0 0 4px 4px;{% endif %} text-align: center;">
+                                        {{ company.website|default:"www.example.com"|truncatechars:25 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="p-2 pt-0">
+                                    <div class="text-xs font-semibold text-gray-200 text-center">{{ ls.name }}</div>
+                                </div>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- ── 2. Table Styles ── -->
+                    <div class="bg-[#1a2332] rounded-lg border border-gray-700/50 p-6">
+                        <h3 class="section-header">📊 Estilo de Tabela</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            {% for ts in table_styles %}
+                            <label class="style-card" :class="{ 'selected': selectedTableStyle === '{{ ts.pk }}' }"
+                                   @click="selectedTableStyle = '{{ ts.pk }}'">
+                                <input type="radio" name="table_style" value="{{ ts.pk }}"
+                                       {% if ts.pk == doc_layout.table_style.pk %}checked{% endif %}
+                                       class="hidden"
+                                       x-model="selectedTableStyle">
+                                <div class="card-preview" style="padding: 8px;">
+                                    <!-- Mini table preview -->
+                                    <table style="width: 100%; border-collapse: {% if ts.slug == 'card' %}separate; border-spacing: 0 3px{% else %}collapse{% endif %}; font-size: 7px;">
+                                        <thead>
+                                            <tr>
+                                                <th style="padding: 3px 4px; text-align: left; {% if ts.slug == 'grid' or ts.slug == 'compact' %}background: #374151; color: #fff;{% elif ts.slug == 'accent' %}border-bottom: 2px solid #dbc693;{% elif ts.slug == 'zebra' %}border-bottom: 1.5px solid #1f2937;{% elif ts.slug == 'card' %}text-transform: uppercase; font-size: 6px; color: #6b7280;{% else %}color: #1f2937;{% endif %} font-weight: 700; {% if ts.slug == 'minimal' %}border-bottom: 1px solid #d1d5db;{% endif %}">Item</th>
+                                                <th style="padding: 3px 4px; text-align: right; {% if ts.slug == 'grid' or ts.slug == 'compact' %}background: #374151; color: #fff;{% elif ts.slug == 'accent' %}border-bottom: 2px solid #dbc693;{% elif ts.slug == 'zebra' %}border-bottom: 1.5px solid #1f2937;{% elif ts.slug == 'card' %}text-transform: uppercase; font-size: 6px; color: #6b7280;{% else %}color: #1f2937;{% endif %} font-weight: 700; {% if ts.slug == 'minimal' %}border-bottom: 1px solid #d1d5db;{% endif %}">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr{% if ts.slug == 'zebra' %} style="background: #f9fafb;"{% endif %}>
+                                                <td style="padding: 3px 4px; color: #374151; {% if ts.slug == 'minimal' %}border-bottom: 1px solid #f3f4f6;{% elif ts.slug == 'grid' %}border: 1px solid #d1d5db;{% elif ts.slug == 'accent' %}border-bottom: 1px solid #e5e7eb;{% elif ts.slug == 'compact' %}border-bottom: 1px solid #e5e7eb;{% elif ts.slug == 'card' %}background: #fff; border: 1px solid #e5e7eb; border-radius: 4px 0 0 4px;{% endif %}">Fuet Premium</td>
+                                                <td style="padding: 3px 4px; text-align: right; color: #374151; {% if ts.slug == 'minimal' %}border-bottom: 1px solid #f3f4f6;{% elif ts.slug == 'grid' %}border: 1px solid #d1d5db;{% elif ts.slug == 'accent' %}border-bottom: 1px solid #e5e7eb;{% elif ts.slug == 'compact' %}border-bottom: 1px solid #e5e7eb;{% elif ts.slug == 'card' %}background: #fff; border: 1px solid #e5e7eb; border-radius: 0 4px 4px 0;{% endif %}">€ 62,50</td>
+                                            </tr>
+                                            <tr{% if ts.slug == 'accent' %} style="background: rgba(219,198,147,0.07);"{% endif %}>
+                                                <td style="padding: 3px 4px; color: #374151; {% if ts.slug == 'minimal' %}border-bottom: 1px solid #f3f4f6;{% elif ts.slug == 'grid' %}border: 1px solid #d1d5db;{% elif ts.slug == 'accent' %}border-bottom: 1px solid #e5e7eb;{% elif ts.slug == 'compact' %}border-bottom: 1px solid #e5e7eb;{% elif ts.slug == 'card' %}background: #fff; border: 1px solid #e5e7eb; border-radius: 4px 0 0 4px;{% endif %}">Queijo Curado</td>
+                                                <td style="padding: 3px 4px; text-align: right; color: #374151; {% if ts.slug == 'minimal' %}border-bottom: 1px solid #f3f4f6;{% elif ts.slug == 'grid' %}border: 1px solid #d1d5db;{% elif ts.slug == 'accent' %}border-bottom: 1px solid #e5e7eb;{% elif ts.slug == 'compact' %}border-bottom: 1px solid #e5e7eb;{% elif ts.slug == 'card' %}background: #fff; border: 1px solid #e5e7eb; border-radius: 0 4px 4px 0;{% endif %}">€ 54,00</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="p-2 pt-0">
+                                    <div class="text-xs font-semibold text-gray-200 text-center">{{ ts.name }}</div>
+                                </div>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- ── 3. Appearance ── -->
+                    <div class="bg-[#1a2332] rounded-lg border border-gray-700/50 p-6">
+                        <h3 class="section-header">🎨 Aparência</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+                            <!-- Font -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-400 mb-2">Fonte</label>
+                                <select name="font"
+                                        x-model="font"
+                                        class="w-full bg-[#0d1117] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:border-[#dbc693] focus:ring-1 focus:ring-[#dbc693] focus:outline-none">
+                                    {% for value, label in font_choices %}
+                                    <option value="{{ value }}" {% if value == doc_layout.font %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Paper Format -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-400 mb-2">Formato do Papel</label>
+                                <select name="paper_format"
+                                        class="w-full bg-[#0d1117] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:border-[#dbc693] focus:ring-1 focus:ring-[#dbc693] focus:outline-none">
+                                    {% for value, label in paper_choices %}
+                                    <option value="{{ value }}" {% if value == doc_layout.paper_format %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Primary Color -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-400 mb-2">Cor Principal</label>
+                                <div class="color-picker-wrap">
+                                    <input type="color" name="primary_color"
+                                           x-model="primaryColor"
+                                           value="{{ doc_layout.primary_color }}">
+                                    <input type="text" x-model="primaryColor"
+                                           class="w-24 bg-[#0d1117] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 font-mono focus:border-[#dbc693] focus:ring-1 focus:ring-[#dbc693] focus:outline-none"
+                                           maxlength="7">
+                                </div>
+                            </div>
+
+                            <!-- Secondary Color -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-400 mb-2">Cor Secundária</label>
+                                <div class="color-picker-wrap">
+                                    <input type="color" name="secondary_color"
+                                           x-model="secondaryColor"
+                                           value="{{ doc_layout.secondary_color }}">
+                                    <input type="text" x-model="secondaryColor"
+                                           class="w-24 bg-[#0d1117] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 font-mono focus:border-[#dbc693] focus:ring-1 focus:ring-[#dbc693] focus:outline-none"
+                                           maxlength="7">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── 4. Texts ── -->
+                    <div class="bg-[#1a2332] rounded-lg border border-gray-700/50 p-6">
+                        <h3 class="section-header">📝 Textos</h3>
+                        <div class="grid grid-cols-1 gap-4">
+                            <!-- Tagline -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-400 mb-2">Slogan / Tagline</label>
+                                <input type="text" name="tagline" value="{{ doc_layout.tagline }}"
+                                       placeholder="ex: O melhor fuet do mundo..."
+                                       class="w-full bg-[#0d1117] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:border-[#dbc693] focus:ring-1 focus:ring-[#dbc693] focus:outline-none">
+                            </div>
+
+                            <!-- NIF -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-400 mb-2">NIF / CNPJ</label>
+                                <input type="text" name="tax_id" value="{{ doc_layout.tax_id }}"
+                                       placeholder="ex: PT501234567"
+                                       class="w-full bg-[#0d1117] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:border-[#dbc693] focus:ring-1 focus:ring-[#dbc693] focus:outline-none">
+                            </div>
+
+                            <!-- Footer Text -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-400 mb-2">Texto do Rodapé</label>
+                                <textarea name="footer_text" rows="2"
+                                          placeholder="ex: Pág. {page} / {pages} · IBAN PT50..."
+                                          class="w-full bg-[#0d1117] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:border-[#dbc693] focus:ring-1 focus:ring-[#dbc693] focus:outline-none resize-none">{{ doc_layout.footer_text }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════ -->
+                <!-- RIGHT: Live Preview (1/3)                           -->
+                <!-- ═══════════════════════════════════════════════════ -->
+                <div class="lg:col-span-1">
+                    <div class="sticky top-6">
+                        <div class="bg-[#1a2332] rounded-lg border border-gray-700/50 p-4">
+                            <h3 class="section-header">👁 Pré-visualização</h3>
+
+                            <div class="doc-preview" :style="'font-family: ' + font + ', sans-serif'" @click="showFullPreview = true" title="Clique para ampliar">
+
+                                <!-- ═══ HEADER: Standard (clean, bold, stripe, frame) ═══ -->
+                                <div x-show="!['split','arc','edge'].includes(layoutSlug)" :style="headerStyle">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        {% if company.logo %}
+                                        <img src="{{ company.logo.url }}" alt="" style="height: 28px; width: auto;">
+                                        {% else %}
+                                        <div :style="'width: 28px; height: 28px; background:' + primaryColor + '; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 11px;'">
+                                            {{ company.name|make_list|first }}
+                                        </div>
+                                        {% endif %}
+                                        <span :style="'font-size: 13px; font-weight: 700; color:' + companyNameColor">{{ company.name }}</span>
+                                    </div>
+                                    <div :style="'text-align: right; font-size: 8px; line-height: 1.5; color:' + addressColor">
+                                        {% if company.address %}{{ company.address|truncatechars:30 }}<br>{% endif %}
+                                        {% if company.city %}{{ company.postal_code }} {{ company.city }}{% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- ═══ HEADER: Split ═══ -->
+                                <div x-show="layoutSlug === 'split'" style="display: flex; min-height: 50px;">
+                                    <div :style="'flex: 1; background:' + secondaryColor + '; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px;'">
+                                        {% if company.logo %}
+                                        <img src="{{ company.logo.url }}" alt="" style="height: 24px; width: auto;">
+                                        {% else %}
+                                        <div :style="'width: 24px; height: 24px; background:' + primaryColor + '; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 10px;'">
+                                            {{ company.name|make_list|first }}
+                                        </div>
+                                        {% endif %}
+                                        <span style="color: #fff; font-size: 11px; font-weight: 700;">{{ company.name }}</span>
+                                    </div>
+                                    <div style="flex: 1; display: flex; align-items: center; justify-content: flex-end; padding: 10px 14px;">
+                                        <div style="text-align: right; font-size: 7px; color: #6b7280; line-height: 1.5;">
+                                            {% if company.address %}{{ company.address|truncatechars:22 }}<br>{% endif %}
+                                            {% if company.city %}{{ company.postal_code }} {{ company.city }}{% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ═══ HEADER: Arc ═══ -->
+                                <div x-show="layoutSlug === 'arc'" style="position: relative; overflow: hidden;">
+                                    <div :style="'padding: 16px 18px 26px; background: linear-gradient(135deg, ' + primaryColor + ', ' + primaryColor + 'aa); text-align: center;'">
+                                        {% if company.logo %}
+                                        <img src="{{ company.logo.url }}" alt="" style="height: 28px; width: auto; margin: 0 auto 4px;">
+                                        {% else %}
+                                        <div style="width: 28px; height: 28px; background: rgba(255,255,255,0.25); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 11px; margin-bottom: 4px; backdrop-filter: blur(4px);">
+                                            {{ company.name|make_list|first }}
+                                        </div>
+                                        {% endif %}
+                                        <div style="font-size: 12px; font-weight: 700; color: #fff;">{{ company.name }}</div>
+                                        <div style="font-size: 7px; color: rgba(255,255,255,0.75); margin-top: 2px;">
+                                            {% if company.address %}{{ company.address|truncatechars:30 }}{% endif %}
+                                            {% if company.city %} · {{ company.postal_code }} {{ company.city }}{% endif %}
+                                        </div>
+                                    </div>
+                                    <div style="position: absolute; bottom: 0; left: -10%; width: 120%; height: 16px; background: #fff; border-radius: 50% 50% 0 0;"></div>
+                                </div>
+
+                                <!-- ═══ HEADER: Edge ═══ -->
+                                <div x-show="layoutSlug === 'edge'" style="position: relative; padding: 14px 18px; display: flex; justify-content: space-between; align-items: flex-start; overflow: hidden;">
+                                    <div :style="'position: absolute; top: 0; left: 0; width: 0; height: 0; border-style: solid; border-width: 40px 80px 0 0; border-color: ' + primaryColor + ' transparent transparent transparent;'"></div>
+                                    <div :style="'position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, ' + primaryColor + ', transparent 70%);'"></div>
+                                    <div style="display: flex; align-items: center; gap: 8px; position: relative; z-index: 1;">
+                                        {% if company.logo %}
+                                        <img src="{{ company.logo.url }}" alt="" style="height: 24px; width: auto;">
+                                        {% else %}
+                                        <div :style="'width: 24px; height: 24px; background:' + secondaryColor + '; border-radius: 3px; display: flex; align-items: center; justify-content: center; color:' + primaryColor + '; font-weight: 900; font-size: 9px;'">
+                                            {{ company.name|make_list|first }}
+                                        </div>
+                                        {% endif %}
+                                        <span style="font-size: 11px; font-weight: 700; color: #1f2937;">{{ company.name }}</span>
+                                    </div>
+                                    <div style="text-align: right; font-size: 7px; color: #6b7280; line-height: 1.5;">
+                                        {% if company.address %}{{ company.address|truncatechars:22 }}<br>{% endif %}
+                                        {% if company.city %}{{ company.postal_code }} {{ company.city }}{% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- ── Body ── -->
+                                <div class="doc-body">
+                                    <h3 :style="'color:' + secondaryColor">Orçamento ORÇ/2026/0042</h3>
+                                    <div class="doc-ref">Data: 28/02/2026 · Validade: 30/03/2026</div>
+                                    <div class="doc-client">Cliente: Acme Corporation · NIF: 501234567</div>
+
+                                    <!-- ── Table (reactive per table slug) ── -->
+                                    <table :style="tableContainerStyle">
+                                        <thead>
+                                            <tr>
+                                                <th :style="thStyle">Descrição</th>
+                                                <th :style="thStyleCenter">Qtd</th>
+                                                <th :style="thStyleRight">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td :style="tdFirst(0)">Fuet Artesanal Premium</td>
+                                                <td :style="tdCenter(0)">5</td>
+                                                <td :style="tdLast(0)">€ 62,50</td>
+                                            </tr>
+                                            <tr>
+                                                <td :style="tdFirst(1)">Queijo Curado de Ovelha</td>
+                                                <td :style="tdCenter(1)">3</td>
+                                                <td :style="tdLast(1)">€ 54,00</td>
+                                            </tr>
+                                            <tr>
+                                                <td :style="tdFirst(2)">Presunto Ibérico Bolota</td>
+                                                <td :style="tdCenter(2)">2</td>
+                                                <td :style="tdLast(2)">€ 90,00</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                    <!-- Totals -->
+                                    <div :style="totalsWrapStyle">
+                                        <div style="display: flex; justify-content: space-between; padding: 2px 0;"><span>Subtotal</span><span>€ 206,50</span></div>
+                                        <div style="display: flex; justify-content: space-between; padding: 2px 0;"><span>IVA 23%</span><span>€ 47,50</span></div>
+                                        <div :style="totalLineStyle"><span>Total</span><span>€ 254,00</span></div>
+                                    </div>
+                                </div>
+
+                                <!-- ═══ FOOTER: Standard (clean, bold, stripe, frame) ═══ -->
+                                <div x-show="!['split','arc','edge'].includes(layoutSlug)" :style="footerStyle">
+                                    {{ company.phone }} · {{ company.email }} · {{ company.website }}
+                                </div>
+
+                                <!-- ═══ FOOTER: Split ═══ -->
+                                <div x-show="layoutSlug === 'split'" style="display: flex;">
+                                    <div :style="'flex: 1; background:' + secondaryColor + '; padding: 6px 12px; font-size: 7px; color:' + primaryColor + ';'">
+                                        {{ company.website|default:"www.example.com" }}
+                                    </div>
+                                    <div style="flex: 1; padding: 6px 12px; text-align: right; font-size: 7px; color: #9ca3af;">
+                                        Pág. 1/1
+                                    </div>
+                                </div>
+
+                                <!-- ═══ FOOTER: Arc ═══ -->
+                                <div x-show="layoutSlug === 'arc'" style="position: relative; padding: 18px 18px 8px; text-align: center; font-size: 8px; color: #9ca3af; overflow: hidden;">
+                                    <div :style="'position: absolute; top: 0; left: -10%; width: 120%; height: 14px; background:' + primaryColor + '; border-radius: 0 0 50% 50%; opacity: 0.3;'"></div>
+                                    {{ company.phone }} · {{ company.email }} · {{ company.website }}
+                                </div>
+
+                                <!-- ═══ FOOTER: Edge ═══ -->
+                                <div x-show="layoutSlug === 'edge'" style="position: relative; padding: 8px 18px; text-align: right; font-size: 8px; color: #9ca3af; overflow: hidden;">
+                                    <div :style="'position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent 30%, ' + primaryColor + ');'"></div>
+                                    <div :style="'position: absolute; bottom: 0; right: 0; width: 0; height: 0; border-style: solid; border-width: 0 0 28px 56px; border-color: transparent transparent ' + primaryColor + ' transparent; opacity: 0.2;'"></div>
+                                    {{ company.phone }} · {{ company.email }} · {{ company.website }} · Pág. 1/1
+                                </div>
+                            </div>
+
+                            <p class="text-xs text-gray-500 text-center mt-3">
+                                Clique na pré-visualização para ampliar em tamanho A4.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </form>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- FULLSCREEN A4 MODAL                                 -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <template x-if="showFullPreview">
+        <div class="preview-modal-overlay"
+             @click.self="showFullPreview = false"
+             @keydown.escape.window="showFullPreview = false">
+            <div class="preview-modal-paper" :style="'font-family: ' + font + ', sans-serif'">
+                <!-- Close button -->
+                <button class="preview-modal-close" @click="showFullPreview = false" title="Fechar (ESC)">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </button>
+
+                <!-- ═══ A4 HEADER: Standard (clean, bold, stripe, frame) ═══ -->
+                <div x-show="!['split','arc','edge'].includes(layoutSlug)" :style="headerStyleLg">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        {% if company.logo %}
+                        <img src="{{ company.logo.url }}" alt="" style="height: 40px; width: auto;">
+                        {% else %}
+                        <div :style="'width: 40px; height: 40px; background:' + primaryColor + '; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 16px;'">
+                            {{ company.name|make_list|first }}
+                        </div>
+                        {% endif %}
+                        <span :style="'font-size: 18px; font-weight: 700; color:' + companyNameColor">{{ company.name }}</span>
+                    </div>
+                    <div :style="'text-align: right; font-size: 11px; line-height: 1.6; color:' + addressColor">
+                        {% if company.address %}{{ company.address }}<br>{% endif %}
+                        {% if company.city %}{{ company.postal_code }} {{ company.city }}{% endif %}
+                        {% if company.phone %}<br>{{ company.phone }}{% endif %}
+                    </div>
+                </div>
+
+                <!-- ═══ A4 HEADER: Split ═══ -->
+                <div x-show="layoutSlug === 'split'" style="display: flex; min-height: 70px;">
+                    <div :style="'flex: 1; background:' + secondaryColor + '; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 18px;'">
+                        {% if company.logo %}
+                        <img src="{{ company.logo.url }}" alt="" style="height: 36px; width: auto;">
+                        {% else %}
+                        <div :style="'width: 36px; height: 36px; background:' + primaryColor + '; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 15px;'">
+                            {{ company.name|make_list|first }}
+                        </div>
+                        {% endif %}
+                        <span style="color: #fff; font-size: 16px; font-weight: 700;">{{ company.name }}</span>
+                    </div>
+                    <div style="flex: 1; display: flex; align-items: center; justify-content: flex-end; padding: 14px 24px;">
+                        <div style="text-align: right; font-size: 11px; color: #6b7280; line-height: 1.6;">
+                            {% if company.address %}{{ company.address }}<br>{% endif %}
+                            {% if company.city %}{{ company.postal_code }} {{ company.city }}{% endif %}
+                            {% if company.phone %}<br>{{ company.phone }}{% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ A4 HEADER: Arc ═══ -->
+                <div x-show="layoutSlug === 'arc'" style="position: relative; overflow: hidden;">
+                    <div :style="'padding: 24px 36px 38px; background: linear-gradient(135deg, ' + primaryColor + ', ' + primaryColor + 'aa); text-align: center;'">
+                        {% if company.logo %}
+                        <img src="{{ company.logo.url }}" alt="" style="height: 40px; width: auto; margin: 0 auto 6px;">
+                        {% else %}
+                        <div style="width: 42px; height: 42px; background: rgba(255,255,255,0.25); border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 17px; margin-bottom: 6px; backdrop-filter: blur(4px);">
+                            {{ company.name|make_list|first }}
+                        </div>
+                        {% endif %}
+                        <div style="font-size: 18px; font-weight: 700; color: #fff;">{{ company.name }}</div>
+                        <div style="font-size: 11px; color: rgba(255,255,255,0.75); margin-top: 3px;">
+                            {% if company.address %}{{ company.address }}{% endif %}
+                            {% if company.city %} · {{ company.postal_code }} {{ company.city }}{% endif %}
+                        </div>
+                    </div>
+                    <div style="position: absolute; bottom: 0; left: -10%; width: 120%; height: 24px; background: #fff; border-radius: 50% 50% 0 0;"></div>
+                </div>
+
+                <!-- ═══ A4 HEADER: Edge ═══ -->
+                <div x-show="layoutSlug === 'edge'" style="position: relative; padding: 22px 36px; display: flex; justify-content: space-between; align-items: flex-start; overflow: hidden;">
+                    <div :style="'position: absolute; top: 0; left: 0; width: 0; height: 0; border-style: solid; border-width: 60px 120px 0 0; border-color: ' + primaryColor + ' transparent transparent transparent;'"></div>
+                    <div :style="'position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, ' + primaryColor + ', transparent 70%);'"></div>
+                    <div style="display: flex; align-items: center; gap: 12px; position: relative; z-index: 1;">
+                        {% if company.logo %}
+                        <img src="{{ company.logo.url }}" alt="" style="height: 36px; width: auto;">
+                        {% else %}
+                        <div :style="'width: 34px; height: 34px; background:' + secondaryColor + '; border-radius: 4px; display: flex; align-items: center; justify-content: center; color:' + primaryColor + '; font-weight: 900; font-size: 14px;'">
+                            {{ company.name|make_list|first }}
+                        </div>
+                        {% endif %}
+                        <span style="font-size: 16px; font-weight: 700; color: #1f2937;">{{ company.name }}</span>
+                    </div>
+                    <div style="text-align: right; font-size: 11px; color: #6b7280; line-height: 1.6;">
+                        {% if company.address %}{{ company.address }}<br>{% endif %}
+                        {% if company.city %}{{ company.postal_code }} {{ company.city }}{% endif %}
+                        {% if company.phone %}<br>{{ company.phone }}{% endif %}
+                    </div>
+                </div>
+
+                <!-- Body -->
+                <div class="doc-body">
+                    <h3 :style="'color:' + secondaryColor">Orçamento ORÇ/2026/0042</h3>
+                    <div class="doc-ref">Data: 28/02/2026 · Validade: 30/03/2026</div>
+                    <div class="doc-client">Cliente: Acme Corporation · NIF: 501234567<br>Rua do Exemplo, 123 · 1000-001 Lisboa</div>
+
+                    <table class="sample-table-lg" :style="tableContainerStyleLg">
+                        <thead>
+                            <tr>
+                                <th :style="thStyleLg">Descrição</th>
+                                <th :style="thStyleLgCenter">Qtd</th>
+                                <th :style="thStyleLgCenter">Preço Un.</th>
+                                <th :style="thStyleLgCenter">IVA</th>
+                                <th :style="thStyleLgRight">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td :style="tdFirstLg(0)">Fuet Artesanal Premium</td>
+                                <td :style="tdCenterLg(0)">5</td>
+                                <td :style="tdCenterLg(0)">€ 12,50</td>
+                                <td :style="tdCenterLg(0)">23%</td>
+                                <td :style="tdLastLg(0)">€ 62,50</td>
+                            </tr>
+                            <tr>
+                                <td :style="tdFirstLg(1)">Queijo Curado de Ovelha</td>
+                                <td :style="tdCenterLg(1)">3</td>
+                                <td :style="tdCenterLg(1)">€ 18,00</td>
+                                <td :style="tdCenterLg(1)">23%</td>
+                                <td :style="tdLastLg(1)">€ 54,00</td>
+                            </tr>
+                            <tr>
+                                <td :style="tdFirstLg(2)">Presunto Ibérico Bolota</td>
+                                <td :style="tdCenterLg(2)">2</td>
+                                <td :style="tdCenterLg(2)">€ 45,00</td>
+                                <td :style="tdCenterLg(2)">23%</td>
+                                <td :style="tdLastLg(2)">€ 90,00</td>
+                            </tr>
+                            <tr>
+                                <td :style="tdFirstLg(3)">Azeite Extra Virgem 750ml</td>
+                                <td :style="tdCenterLg(3)">4</td>
+                                <td :style="tdCenterLg(3)">€ 9,50</td>
+                                <td :style="tdCenterLg(3)">23%</td>
+                                <td :style="tdLastLg(3)">€ 38,00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Totals -->
+                    <div :style="totalsWrapStyleLg">
+                        <div style="display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px;"><span>Subtotal</span><span>€ 244,50</span></div>
+                        <div style="display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px;"><span>IVA 23%</span><span>€ 56,24</span></div>
+                        <div :style="totalLineStyleLg"><span>Total</span><span>€ 300,74</span></div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #6b7280;">
+                        <strong style="color: #374151;">Notas:</strong><br>
+                        Pagamento a 30 dias. IBAN: PT50 0000 0000 0000 0000 0000 1.
+                    </div>
+                </div>
+
+                <!-- ═══ A4 FOOTER: Standard (clean, bold, stripe, frame) ═══ -->
+                <div x-show="!['split','arc','edge'].includes(layoutSlug)" :style="footerStyleLg" style="margin-top: auto;">
+                    {{ company.phone }} · {{ company.email }} · {{ company.website }}
+                </div>
+
+                <!-- ═══ A4 FOOTER: Split ═══ -->
+                <div x-show="layoutSlug === 'split'" style="display: flex; margin-top: auto;">
+                    <div :style="'flex: 1; background:' + secondaryColor + '; padding: 10px 20px; font-size: 10px; color:' + primaryColor + ';'">
+                        {{ company.website|default:"www.example.com" }}
+                    </div>
+                    <div style="flex: 1; padding: 10px 20px; text-align: right; font-size: 10px; color: #9ca3af;">
+                        Pág. 1/1
+                    </div>
+                </div>
+
+                <!-- ═══ A4 FOOTER: Arc ═══ -->
+                <div x-show="layoutSlug === 'arc'" style="position: relative; padding: 24px 36px 12px; text-align: center; font-size: 10px; color: #9ca3af; overflow: hidden; margin-top: auto;">
+                    <div :style="'position: absolute; top: 0; left: -10%; width: 120%; height: 20px; background:' + primaryColor + '; border-radius: 0 0 50% 50%; opacity: 0.3;'"></div>
+                    {{ company.phone }} · {{ company.email }} · {{ company.website }}
+                </div>
+
+                <!-- ═══ A4 FOOTER: Edge ═══ -->
+                <div x-show="layoutSlug === 'edge'" style="position: relative; padding: 12px 36px; text-align: right; font-size: 10px; color: #9ca3af; overflow: hidden; margin-top: auto;">
+                    <div :style="'position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent 30%, ' + primaryColor + ');'"></div>
+                    <div :style="'position: absolute; bottom: 0; right: 0; width: 0; height: 0; border-style: solid; border-width: 0 0 40px 80px; border-color: transparent transparent ' + primaryColor + ' transparent; opacity: 0.2;'"></div>
+                    {{ company.phone }} · {{ company.email }} · {{ company.website }} · Pág. 1/1
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function documentLayoutEditor() {
+    const layoutSlugMap = { {% for ls in layout_styles %}'{{ ls.pk }}': '{{ ls.slug }}',{% endfor %} };
+    const tableSlugMap  = { {% for ts in table_styles %}'{{ ts.pk }}': '{{ ts.slug }}',{% endfor %} };
+
+    return {
+        selectedLayoutStyle: '{{ doc_layout.layout_style.pk }}',
+        selectedTableStyle: '{{ doc_layout.table_style.pk }}',
+        primaryColor: '{{ doc_layout.primary_color }}',
+        secondaryColor: '{{ doc_layout.secondary_color }}',
+        font: '{{ doc_layout.font }}',
+        showFullPreview: false,
+
+        /* ── slug getters ── */
+        get layoutSlug() { return layoutSlugMap[this.selectedLayoutStyle] || 'clean'; },
+        get tableSlug()  { return tableSlugMap[this.selectedTableStyle]  || 'minimal'; },
+
+        /* ═══════════════════════════════════════════
+           LAYOUT STYLES — Header (standard only: clean, bold, stripe, frame)
+           Split, Arc, Edge have their own HTML blocks.
+           ═══════════════════════════════════════════ */
+        get headerStyle() {
+            const s = this.layoutSlug;
+            const pc = this.primaryColor;
+            const sc = this.secondaryColor;
+            const base = 'padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; ';
+            switch (s) {
+                case 'bold':   return base + 'background: ' + sc + '; color: #fff;';
+                case 'stripe': return base + 'border-left: 5px solid ' + pc + '; background: #fff;';
+                case 'frame':  return base + 'border: 2px solid ' + pc + '; border-bottom: none; margin: 8px 8px 0; border-radius: 6px 6px 0 0; background: #fff;';
+                default:       return base + 'border-bottom: 1px solid #e5e7eb; background: #fff;';
+            }
+        },
+        get companyNameColor() {
+            return this.layoutSlug === 'bold' ? '#ffffff' : this.secondaryColor;
+        },
+        get addressColor() {
+            return this.layoutSlug === 'bold' ? 'rgba(255,255,255,0.7)' : '#6b7280';
+        },
+
+        /* ── Footer (standard only) ── */
+        get footerStyle() {
+            const s = this.layoutSlug;
+            const pc = this.primaryColor;
+            const sc = this.secondaryColor;
+            const base = 'padding: 8px 18px; text-align: center; font-size: 8px; ';
+            switch (s) {
+                case 'bold':   return base + 'background: ' + sc + '; color: rgba(255,255,255,0.6);';
+                case 'stripe': return base + 'border-left: 5px solid ' + pc + '; color: #9ca3af; background: #fff; text-align: left;';
+                case 'frame':  return base + 'border: 2px solid ' + pc + '; border-top: none; margin: 0 8px 8px; border-radius: 0 0 6px 6px; color: #9ca3af; background: #fff;';
+                default:       return base + 'border-top: 1px solid #e5e7eb; color: #9ca3af; background: #fff;';
+            }
+        },
+
+        /* ═══════════════════════════════════════════
+           TABLE STYLES
+           ═══════════════════════════════════════════ */
+        get tableContainerStyle() {
+            const s = this.tableSlug;
+            const base = 'width: 100%; font-size: 10px; margin-top: 10px; ';
+            if (s === 'card') return base + 'border-collapse: separate; border-spacing: 0 4px;';
+            return base + 'border-collapse: collapse;';
+        },
+
+        /* TH styles */
+        get thStyle() {
+            const s = this.tableSlug;
+            const pc = this.primaryColor;
+            const sc = this.secondaryColor;
+            const base = 'padding: 6px 8px; text-align: left; font-weight: 700; ';
+            switch (s) {
+                case 'minimal': return base + 'border-bottom: 1px solid #d1d5db; color: ' + sc + ';';
+                case 'grid':    return base + 'background: #374151; color: #fff; border: 1px solid #4b5563;';
+                case 'accent':  return base + 'border-bottom: 2px solid ' + pc + '; color: ' + sc + ';';
+                case 'zebra':   return base + 'border-bottom: 2px solid ' + sc + '; color: ' + sc + ';';
+                case 'compact': return base + 'background: #374151; color: #fff; font-size: 9px;';
+                case 'card':    return base + 'text-transform: uppercase; font-size: 8px; color: #6b7280; letter-spacing: 0.05em;';
+                case 'flat':    return base + 'color: ' + sc + '; font-size: 9px; border: none;';
+                default:        return base + 'border-bottom: 1px solid #d1d5db; color: ' + sc + ';';
+            }
+        },
+        get thStyleCenter() {
+            return this.thStyle.replace('text-align: left', 'text-align: center');
+        },
+        get thStyleRight() {
+            return this.thStyle.replace('text-align: left', 'text-align: right');
+        },
+
+        /* TD styles (row-index aware for zebra/accent) */
+        _tdBase(i) {
+            const s = this.tableSlug;
+            const pc = this.primaryColor;
+            const base = 'padding: 6px 8px; color: #374151; ';
+            switch (s) {
+                case 'minimal': return base + 'border-bottom: 1px solid #f3f4f6;';
+                case 'grid':    return base + 'border: 1px solid #d1d5db;';
+                case 'accent':  return base + 'border-bottom: 1px solid #e5e7eb;' + (i % 2 ? ' background: rgba(219,198,147,0.07);' : '');
+                case 'zebra':   return base + (i % 2 === 0 ? 'background: #f9fafb; ' : '') + 'border-bottom: 1px solid #f3f4f6;';
+                case 'compact': return base + 'border-bottom: 1px solid #e5e7eb; font-size: 9px;';
+                case 'card':    return base + 'background: #fff; border: 1px solid #e5e7eb;';
+                case 'flat':    return base + 'font-size: 9px; border: none;';
+                default:        return base + 'border-bottom: 1px solid #f3f4f6;';
+            }
+        },
+        tdFirst(i) {
+            const style = this._tdBase(i);
+            if (this.tableSlug === 'card') return style + ' border-radius: 4px 0 0 4px;';
+            return style;
+        },
+        tdCenter(i) {
+            return this._tdBase(i) + ' text-align: center;';
+        },
+        tdLast(i) {
+            const style = this._tdBase(i) + ' text-align: right;';
+            if (this.tableSlug === 'card') return style + ' border-radius: 0 4px 4px 0;';
+            return style;
+        },
+
+        /* ── Totals block ── */
+        get totalsWrapStyle() {
+            const s = this.tableSlug;
+            let base = 'width: 160px; margin-left: auto; margin-top: 12px; font-size: 9px;';
+            if (s === 'grid' || s === 'compact') base += ' background: #f9fafb; padding: 6px 8px; border-radius: 4px;';
+            if (s === 'card') base += ' background: #fff; border: 1px solid #e5e7eb; padding: 6px 8px; border-radius: 6px;';
+            return base;
+        },
+        get totalLineStyle() {
+            return 'display: flex; justify-content: space-between; padding: 4px 0; border-top: 2px solid ' + this.secondaryColor + '; font-weight: 700; font-size: 10px;';
+        },
+
+        /* ═══════════════════════════════════════════
+           LARGE (A4 modal) variants
+           ═══════════════════════════════════════════ */
+        get headerStyleLg() {
+            return this.headerStyle
+                .replace('padding: 14px 18px', 'padding: 22px 36px')
+                .replace('font-size: 8px', 'font-size: 11px');
+        },
+        get footerStyleLg() {
+            return this.footerStyle
+                .replace('padding: 8px 18px', 'padding: 12px 36px')
+                .replace('font-size: 8px', 'font-size: 10px');
+        },
+        get tableContainerStyleLg() {
+            return this.tableContainerStyle
+                .replace('font-size: 10px', 'font-size: 12px');
+        },
+        get thStyleLg() {
+            return this.thStyle
+                .replace('padding: 6px 8px', 'padding: 8px 10px')
+                .replace('font-size: 9px', 'font-size: 11px')
+                .replace('font-size: 8px', 'font-size: 10px');
+        },
+        get thStyleLgCenter() { return this.thStyleLg.replace('text-align: left', 'text-align: center'); },
+        get thStyleLgRight()  { return this.thStyleLg.replace('text-align: left', 'text-align: right'); },
+
+        _tdBaseLg(i) {
+            return this._tdBase(i)
+                .replace('padding: 6px 8px', 'padding: 8px 10px')
+                .replace('font-size: 9px', 'font-size: 11px');
+        },
+        tdFirstLg(i) {
+            const style = this._tdBaseLg(i);
+            if (this.tableSlug === 'card') return style + ' border-radius: 4px 0 0 4px;';
+            return style;
+        },
+        tdCenterLg(i) { return this._tdBaseLg(i) + ' text-align: center;'; },
+        tdLastLg(i) {
+            const style = this._tdBaseLg(i) + ' text-align: right;';
+            if (this.tableSlug === 'card') return style + ' border-radius: 0 4px 4px 0;';
+            return style;
+        },
+
+        get totalsWrapStyleLg() {
+            const s = this.tableSlug;
+            let base = 'width: 200px; margin-left: auto; margin-top: 16px; font-size: 12px;';
+            if (s === 'grid' || s === 'compact') base += ' background: #f9fafb; padding: 8px 12px; border-radius: 4px;';
+            if (s === 'card') base += ' background: #fff; border: 1px solid #e5e7eb; padding: 8px 12px; border-radius: 6px;';
+            return base;
+        },
+        get totalLineStyleLg() {
+            return 'display: flex; justify-content: space-between; padding: 5px 0; border-top: 2px solid ' + this.secondaryColor + '; font-weight: 700; font-size: 14px;';
+        },
+    }
+}
+</script>
+{% endblock %}

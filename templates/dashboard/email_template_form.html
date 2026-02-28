@@ -41,9 +41,9 @@
         <div class="flex items-center h-12">
             <!-- Left: Nav links -->
             <div class="flex items-center space-x-6">
-                <a href="{% url 'dashboard:settings' %}"
+                <a href="{% url 'dashboard:email_template_list' %}"
                    class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
-                    Definições Gerais
+                    Templates
                 </a>
             </div>
 
@@ -503,6 +503,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ace.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/mode-html.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/theme-dracula.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ext-language_tools.min.js"></script>
 <script>
 // Data from server
 const _previewContext = JSON.parse('{{ preview_context|escapejs }}');
@@ -736,6 +737,27 @@ function emailTemplateForm() {
             _bodyEditor.session.setMode('ace/mode/html');
             _bodyEditor.setValue(this.$refs.bodyTextarea.value, -1);
 
+            // ── Custom completer: variáveis de template (do _FIELD_MAP) ──
+            const templateVarCompleter = {
+                getCompletions(editor, session, pos, prefix, callback) {
+                    const completions = [];
+                    for (const [module, fields] of Object.entries(_FIELD_MAP)) {
+                        for (const f of fields) {
+                            completions.push({
+                                caption: `{{ ${f.path} }}`,
+                                value: `{{ ${f.path} }}`,
+                                meta: `${f.label} (${module})`,
+                                score: 1000,
+                            });
+                        }
+                    }
+                    callback(null, completions);
+                },
+            };
+
+            const langTools = ace.require('ace/ext/language_tools');
+            langTools.addCompleter(templateVarCompleter);
+
             _bodyEditor.setOptions({
                 fontSize: '13px',
                 fontFamily: "'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace",
@@ -744,6 +766,9 @@ function emailTemplateForm() {
                 tabSize: 4,
                 useSoftTabs: true,
                 scrollPastEnd: 0.5,
+                enableBasicAutocompletion: true,
+                enableLiveAutocompletion: true,
+                enableSnippets: true,
                 highlightActiveLine: true,
                 showGutter: true,
             });

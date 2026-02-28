@@ -217,6 +217,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ace.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/mode-html.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/theme-dracula.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ext-language_tools.min.js"></script>
 <script>
 // Preview context data from server
 const _previewContext = JSON.parse('{{ preview_context|escapejs }}');
@@ -241,6 +242,35 @@ function emailLayoutEditor() {
                 _aceEditor.session.setMode('ace/mode/html');
                 _aceEditor.setValue(this.htmlContent, -1);
 
+                // ── Custom completer: variáveis de layout ──
+                const layoutVarCompleter = {
+                    getCompletions(editor, session, pos, prefix, callback) {
+                        const layoutVars = [
+                            {name: 'subject',       desc: 'Assunto do email'},
+                            {name: 'body_content',  desc: 'Conteúdo HTML do template'},
+                            {name: 'company_name',  desc: 'Nome da empresa'},
+                            {name: 'company_email', desc: 'Email da empresa'},
+                            {name: 'company_phone', desc: 'Telefone da empresa'},
+                            {name: 'company_logo',  desc: 'URL do logótipo'},
+                            {name: 'sender_name',   desc: 'Nome do remetente'},
+                            {name: 'sender_email',  desc: 'Email do remetente'},
+                            {name: 'date_sent',     desc: 'Data de envio'},
+                            {name: 'year',           desc: 'Ano atual'},
+                        ];
+                        const completions = layoutVars.map(v => ({
+                            caption: `{{ ${v.name} }}`,
+                            value: `{{ ${v.name} }}`,
+                            meta: v.desc,
+                            score: 1000,
+                        }));
+                        callback(null, completions);
+                    },
+                };
+
+                // Registar completer customizado
+                const langTools = ace.require('ace/ext/language_tools');
+                langTools.addCompleter(layoutVarCompleter);
+
                 // Editor options
                 _aceEditor.setOptions({
                     fontSize: '13px',
@@ -250,8 +280,9 @@ function emailLayoutEditor() {
                     tabSize: 4,
                     useSoftTabs: true,
                     scrollPastEnd: 0.5,
-                    enableBasicAutocompletion: false,
-                    enableLiveAutocompletion: false,
+                    enableBasicAutocompletion: true,
+                    enableLiveAutocompletion: true,
+                    enableSnippets: true,
                     highlightActiveLine: true,
                     showGutter: true,
                 });

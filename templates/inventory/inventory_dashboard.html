@@ -1,0 +1,494 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Inventário — Visão Geral — Fuet Mágico{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ─── Page base ─────────────────────────────────────────────────────── */
+.inv-bg {
+    background: linear-gradient(160deg, #0a1120 0%, #0f172a 40%, #0c1220 100%);
+    min-height: 100vh;
+}
+
+/* ─── Section label ──────────────────────────────────────────────────── */
+.section-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #dbc693;
+    opacity: 0.7;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.section-label::after {
+    content:''; flex:1; height:1px;
+    background: linear-gradient(90deg, rgba(219,198,147,0.2), transparent);
+}
+
+/* ─── Gradient text ──────────────────────────────────────────────────── */
+.text-gold {
+    background: linear-gradient(135deg, #dbc693 0%, #f5e6c8 50%, #c9a96e 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ─── Operation Card (Odoo-style) ────────────────────────────────────── */
+.op-card {
+    background: rgba(15,23,42,0.7);
+    border: 1px solid rgba(219,198,147,0.12);
+    border-radius: 20px;
+    backdrop-filter: blur(16px);
+    position: relative;
+    overflow: hidden;
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+    display: flex;
+    flex-direction: column;
+}
+.op-card:hover {
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(219,198,147,0.2);
+    transform: translateY(-2px);
+}
+.op-card::after {
+    content:'';
+    position:absolute; bottom:0; left:0; right:0; height:1px;
+    background: linear-gradient(90deg, transparent, rgba(219,198,147,0.15), transparent);
+}
+
+.op-card-header {
+    padding: 1.5rem 1.5rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.op-card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+.op-card-icon {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+
+.op-card-body {
+    padding: 1.25rem 1.5rem;
+    flex: 1;
+}
+
+/* ─── Status badges ──────────────────────────────────────────────────── */
+.op-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 5px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.op-badge:hover {
+    filter: brightness(1.2);
+    transform: scale(1.03);
+}
+.op-badge-teal {
+    background: rgba(20,184,166,0.15);
+    color: #2dd4bf;
+    border: 1px solid rgba(20,184,166,0.3);
+}
+.op-badge-amber {
+    background: rgba(245,158,11,0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245,158,11,0.3);
+}
+.op-badge-red {
+    background: rgba(239,68,68,0.12);
+    color: #f87171;
+    border: 1px solid rgba(239,68,68,0.25);
+}
+.op-badge-indigo {
+    background: rgba(99,102,241,0.15);
+    color: #a5b4fc;
+    border: 1px solid rgba(99,102,241,0.3);
+}
+.op-badge-emerald {
+    background: rgba(34,197,94,0.15);
+    color: #4ade80;
+    border: 1px solid rgba(34,197,94,0.3);
+}
+
+/* ─── Status rows ────────────────────────────────────────────────────── */
+.op-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+}
+.op-status-label {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    font-weight: 500;
+}
+.op-status-value {
+    font-size: 0.85rem;
+    font-weight: 700;
+    min-width: 24px;
+    text-align: right;
+}
+
+/* ─── Mini bar chart (CSS-only sparkline) ─────────────────────────────── */
+.mini-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 60px;
+    padding: 0 1.5rem 1.25rem;
+}
+.mini-bar {
+    flex: 1;
+    border-radius: 3px 3px 0 0;
+    min-height: 4px;
+    transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+}
+.mini-bar::after {
+    content: attr(data-label);
+    position: absolute;
+    bottom: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.55rem;
+    color: #475569;
+    white-space: nowrap;
+}
+
+/* ─── Card footer ────────────────────────────────────────────────────── */
+.op-card-footer {
+    border-top: 1px solid rgba(219,198,147,0.08);
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.op-card-footer a {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #dbc693;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.op-card-footer a:hover {
+    opacity: 1;
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:#0f172a; }
+::-webkit-scrollbar-thumb { background:#374151; border-radius:10px; }
+
+/* ─── Pulse animation for live dot ────────────────────────────────────── */
+@keyframes pulse-glow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+.pulse-dot {
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+</style>
+{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/inventory_navbar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="inv-bg">
+<div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- ── Page Header ──────────────────────────────────────────────── -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div>
+            <h1 class="text-3xl font-extrabold text-gold tracking-tight">Visão Geral</h1>
+            <p class="text-sm text-slate-400 mt-1">Operações de inventário · Estado em tempo real</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 text-xs text-slate-500 bg-slate-800/50 rounded-lg px-3 py-2 border border-slate-700/50">
+                <span class="w-2 h-2 rounded-full bg-green-400 pulse-dot"></span>
+                Dados em tempo real
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Operation Cards ──────────────────────────────────────────── -->
+    <div class="section-label">Operações</div>
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-10">
+
+        <!-- ─── Card: Recepções ────────────────────────────────────── -->
+        <div class="op-card">
+            <div class="op-card-header">
+                <h3 class="op-card-title text-teal-300">Recepções</h3>
+                <div class="op-card-icon" style="background:rgba(20,184,166,0.12); border:1px solid rgba(20,184,166,0.25);">
+                    <svg class="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="op-card-body">
+                <div class="flex flex-wrap gap-2 mb-5">
+                    <span class="op-badge op-badge-teal">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                        {{ receipts_to_process }} Para Receber
+                    </span>
+                </div>
+                <div class="space-y-1">
+                    <div class="op-status-row">
+                        <span class="op-status-label">A aguardar</span>
+                        <span class="op-status-value text-amber-400">{{ receipts_waiting }}</span>
+                    </div>
+                    <div class="op-status-row">
+                        <span class="op-status-label">Atrasadas</span>
+                        <span class="op-status-value text-red-400">{{ receipts_late }}</span>
+                    </div>
+                    <div class="op-status-row">
+                        <span class="op-status-label">Processadas hoje</span>
+                        <span class="op-status-value text-emerald-400">{{ receipts_done_today }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mini bar chart: últimos 7 dias -->
+            <div class="mini-bars">
+                {% for bar in receipts_weekly %}
+                <div class="mini-bar" 
+                     style="height:{{ bar.pct }}%; background: linear-gradient(180deg, #2dd4bf, #0d9488);"
+                     data-label="{{ bar.label }}"></div>
+                {% endfor %}
+            </div>
+
+            <div class="op-card-footer">
+                <a href="#">
+                    Ver todas
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </a>
+                <span class="text-xs text-slate-600">Últimos 7 dias</span>
+            </div>
+        </div>
+
+        <!-- ─── Card: Ordens de Entrega ────────────────────────────── -->
+        <div class="op-card">
+            <div class="op-card-header">
+                <h3 class="op-card-title text-amber-300">Ordens de Entrega</h3>
+                <div class="op-card-icon" style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.25);">
+                    <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="op-card-body">
+                <div class="flex flex-wrap gap-2 mb-5">
+                    <span class="op-badge op-badge-amber">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+                        {{ deliveries_to_process }} Para Entregar
+                    </span>
+                </div>
+                <div class="space-y-1">
+                    <div class="op-status-row">
+                        <span class="op-status-label">A aguardar</span>
+                        <span class="op-status-value text-amber-400">{{ deliveries_waiting }}</span>
+                    </div>
+                    <div class="op-status-row">
+                        <span class="op-status-label">Atrasadas</span>
+                        <span class="op-status-value text-red-400">{{ deliveries_late }}</span>
+                    </div>
+                    <div class="op-status-row">
+                        <span class="op-status-label">Entregues hoje</span>
+                        <span class="op-status-value text-emerald-400">{{ deliveries_done_today }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mini bar chart: últimos 7 dias -->
+            <div class="mini-bars">
+                {% for bar in deliveries_weekly %}
+                <div class="mini-bar" 
+                     style="height:{{ bar.pct }}%; background: linear-gradient(180deg, #fbbf24, #d97706);"
+                     data-label="{{ bar.label }}"></div>
+                {% endfor %}
+            </div>
+
+            <div class="op-card-footer">
+                <a href="#">
+                    Ver todas
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </a>
+                <span class="text-xs text-slate-600">Últimos 7 dias</span>
+            </div>
+        </div>
+
+        <!-- ─── Card: Erros de Processamento ──────────────────────── -->
+        <div class="op-card">
+            <div class="op-card-header">
+                <h3 class="op-card-title text-red-300">Erros de Processamento</h3>
+                <div class="op-card-icon" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.25);">
+                    <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="op-card-body">
+                <div class="flex flex-wrap gap-2 mb-5">
+                    <span class="op-badge op-badge-red">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        {{ errors_to_resolve }} Para Resolver
+                    </span>
+                </div>
+                <div class="space-y-1">
+                    <div class="op-status-row">
+                        <span class="op-status-label">Produtos em falta</span>
+                        <span class="op-status-value text-red-400">{{ errors_missing_products }}</span>
+                    </div>
+                    <div class="op-status-row">
+                        <span class="op-status-label">Erros de documento</span>
+                        <span class="op-status-value text-amber-400">{{ errors_documents }}</span>
+                    </div>
+                    <div class="op-status-row">
+                        <span class="op-status-label">Resolvidos hoje</span>
+                        <span class="op-status-value text-emerald-400">{{ errors_resolved_today }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mini bar chart: últimos 7 dias -->
+            <div class="mini-bars">
+                {% for bar in errors_weekly %}
+                <div class="mini-bar" 
+                     style="height:{{ bar.pct }}%; background: linear-gradient(180deg, #f87171, #b91c1c);"
+                     data-label="{{ bar.label }}"></div>
+                {% endfor %}
+            </div>
+
+            <div class="op-card-footer">
+                <a href="#">
+                    Ver todos
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </a>
+                <span class="text-xs text-slate-600">Últimos 7 dias</span>
+            </div>
+        </div>
+
+        <!-- ─── Card: Operações Hoje ──────────────────────────────── -->
+        <div class="op-card">
+            <div class="op-card-header">
+                <h3 class="op-card-title text-emerald-300">Operações Hoje</h3>
+                <div class="op-card-icon" style="background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.25);">
+                    <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="op-card-body">
+                <div class="flex flex-wrap gap-2 mb-5">
+                    <span class="op-badge op-badge-emerald">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        {{ ops_today }} Processadas
+                    </span>
+                </div>
+                <div class="space-y-1">
+                    <div class="op-status-row">
+                        <span class="op-status-label">Recepções</span>
+                        <span class="op-status-value text-teal-400">{{ ops_today_receipts }}</span>
+                    </div>
+                    <div class="op-status-row">
+                        <span class="op-status-label">Entregas</span>
+                        <span class="op-status-value text-amber-400">{{ ops_today_deliveries }}</span>
+                    </div>
+                    <div class="op-status-row">
+                        <span class="op-status-label">Ajustes</span>
+                        <span class="op-status-value text-indigo-400">{{ ops_today_adjustments }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mini bar chart: últimos 7 dias -->
+            <div class="mini-bars">
+                {% for bar in ops_today_weekly %}
+                <div class="mini-bar" 
+                     style="height:{{ bar.pct }}%; background: linear-gradient(180deg, #4ade80, #16a34a);"
+                     data-label="{{ bar.label }}"></div>
+                {% endfor %}
+            </div>
+
+            <div class="op-card-footer">
+                <a href="#">
+                    Ver todas
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </a>
+                <span class="text-xs text-slate-600">Últimos 7 dias</span>
+            </div>
+        </div>
+
+        <!-- ─── Card: Pendentes ───────────────────────────────────── -->
+        <div class="op-card">
+            <div class="op-card-header">
+                <h3 class="op-card-title text-indigo-300">Pendentes</h3>
+                <div class="op-card-icon" style="background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.25);">
+                    <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="op-card-body">
+                <div class="flex flex-wrap gap-2 mb-5">
+                    <span class="op-badge op-badge-indigo">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        {{ total_pending }} A Processar
+                    </span>
+                </div>
+                <div class="space-y-1">
+                    <div class="op-status-row">
+                        <span class="op-status-label">Recepções pendentes</span>
+                        <span class="op-status-value text-teal-400">{{ pending_receipts }}</span>
+                    </div>
+                    <div class="op-status-row">
+                        <span class="op-status-label">Entregas pendentes</span>
+                        <span class="op-status-value text-amber-400">{{ pending_deliveries }}</span>
+                    </div>
+                    <div class="op-status-row">
+                        <span class="op-status-label">Outros</span>
+                        <span class="op-status-value text-slate-400">{{ pending_other }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mini bar chart: últimos 7 dias -->
+            <div class="mini-bars">
+                {% for bar in pending_weekly %}
+                <div class="mini-bar" 
+                     style="height:{{ bar.pct }}%; background: linear-gradient(180deg, #a5b4fc, #4f46e5);"
+                     data-label="{{ bar.label }}"></div>
+                {% endfor %}
+            </div>
+
+            <div class="op-card-footer">
+                <a href="#">
+                    Ver todas
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </a>
+                <span class="text-xs text-slate-600">Últimos 7 dias</span>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+</div>
+{% endblock %}

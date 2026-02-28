@@ -17,4 +17,5 @@ urlpatterns = [
     path('settings/email-templates/bulk-archive/', views.email_template_bulk_archive, name='email_template_bulk_archive'),
     path('settings/email-templates/bulk-unarchive/', views.email_template_bulk_unarchive, name='email_template_bulk_unarchive'),
     path('settings/email-templates/bulk-delete/', views.email_template_bulk_delete, name='email_template_bulk_delete'),
+    path('settings/document-layout/', views.document_layout_view, name='document_layout'),
 ]

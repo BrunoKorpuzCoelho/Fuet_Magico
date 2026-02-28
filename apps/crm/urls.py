@@ -100,6 +100,7 @@ urlpatterns = [
     path('leads/<uuid:lead_id>/emails/', views.lead_emails_list, name='lead_emails_list'),
     path('leads/<uuid:lead_id>/emails/send/', views.lead_send_email, name='lead_send_email'),
     path('leads/<uuid:lead_id>/emails/poll/', views.lead_poll_inbox, name='lead_poll_inbox'),
+    path('leads/<uuid:lead_id>/email-templates/', views.lead_email_templates, name='lead_email_templates'),
 
     # Lead Followers (Chatter)
     path('leads/<uuid:lead_id>/followers/', views.lead_followers_api, name='lead_followers_api'),

@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load l10n %}
+
+{% block title %}{% if uom %}{{ uom.name }} — Editar UdM{% else %}Nova Unidade de Medida{% endif %} — Fuet Mágico{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/uom_form_navbar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#1f2937]">
+    <form method="post" id="uom-form">
+        {% csrf_token %}
+
+        <div class="mx-auto max-w-7xl p-6">
+
+            <!-- Nome (GIGANTE) — like contacts -->
+            <div class="mb-8">
+                <label class="sr-only" for="id_name">Nome</label>
+                <input class="flex w-full px-3 py-2 h-14 border-0 border-b-2 border-gray-600 bg-transparent text-3xl font-light text-gray-400 placeholder:text-gray-600 focus-visible:border-primary focus-visible:ring-0 rounded-none focus-visible:outline-none"
+                       id="id_name"
+                       name="name"
+                       placeholder="Nome da unidade de medida"
+                       value="{{ form.name.value|default:'' }}"
+                       required
+                       maxlength="64">
+            </div>
+
+            <!-- Grid 2 Colunas -->
+            <div class="grid grid-cols-1 gap-x-12 gap-y-6 lg:grid-cols-2">
+
+                <!-- Coluna ESQUERDA -->
+                <div class="space-y-5">
+
+                    <!-- Símbolo -->
+                    <div>
+                        <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                                <polyline points="4 7 4 4 20 4 20 7"></polyline>
+                                <line x1="9" x2="15" y1="20" y2="20"></line>
+                                <line x1="12" x2="12" y1="4" y2="20"></line>
+                            </svg>
+                            Símbolo
+                        </label>
+                        <input class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                               id="id_symbol"
+                               name="symbol"
+                               placeholder="Ex: kg, g, L, mL"
+                               value="{{ form.symbol.value|default:'' }}"
+                               required
+                               maxlength="16">
+                    </div>
+
+                    <!-- Categoria -->
+                    <div>
+                        <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                                <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                            </svg>
+                            Categoria
+                        </label>
+                        <select id="id_category"
+                                name="category"
+                                class="flex h-9 w-full rounded-md border border-gray-700 bg-[#1a2332] px-3 text-sm text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                required>
+                            <option value="">— Selecionar categoria —</option>
+                            {% for cat in form.category.field.queryset %}
+                            <option value="{{ cat.pk }}" {% if form.category.value|stringformat:"s" == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Tipo -->
+                    <div>
+                        <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                                <path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path>
+                            </svg>
+                            Tipo
+                        </label>
+                        <select id="id_uom_type"
+                                name="uom_type"
+                                class="flex h-9 w-full rounded-md border border-gray-700 bg-[#1a2332] px-3 text-sm text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                            <option value="reference" {% if form.uom_type.value == 'reference' or not form.uom_type.value %}selected{% endif %}>Referência</option>
+                            <option value="bigger" {% if form.uom_type.value == 'bigger' %}selected{% endif %}>Maior que a referência</option>
+                            <option value="smaller" {% if form.uom_type.value == 'smaller' %}selected{% endif %}>Menor que a referência</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Coluna DIREITA -->
+                <div class="space-y-5">
+
+                    <!-- Factor -->
+                    <div>
+                        <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                                <line x1="19" x2="5" y1="5" y2="19"></line>
+                                <circle cx="6.5" cy="6.5" r="2.5"></circle>
+                                <circle cx="17.5" cy="17.5" r="2.5"></circle>
+                            </svg>
+                            Factor
+                            <span class="text-[10px] text-gray-600">(relativo à referência)</span>
+                        </label>
+                        <input class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                               id="id_factor"
+                               name="factor"
+                               type="number"
+                               step="any"
+                               placeholder="Ex: 1000 (1 kg = 1000 g)"
+                               value="{{ form.factor.value|unlocalize|default:'1' }}"
+                               required>
+                    </div>
+
+                    <!-- Precisão de Arredondamento -->
+                    <div>
+                        <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            Precisão de Arredondamento
+                        </label>
+                        <input class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                               id="id_rounding"
+                               name="rounding"
+                               type="number"
+                               step="any"
+                               placeholder="Ex: 0.01"
+                               value="{{ form.rounding.value|unlocalize|default:'0.01' }}"
+                               required>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

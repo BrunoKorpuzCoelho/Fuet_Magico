@@ -119,6 +119,15 @@ SEEDS: list[SeedEntry] = [
         dependencies=['email_layout'],
     ),
 
+    SeedEntry(
+        key='default_warehouse',
+        name='Armazém Padrão',
+        category=SeedCategory.ESSENTIAL,
+        order=80,
+        runner='scripts.seed_warehouse',
+        description='Cria o armazém "Armazém Principal" (code=WH) se não existir.',
+    ),
+
     # ╔══════════════════════════════════════════════════════════════════╗
     # ║  DEMO — Dados de teste / demonstração                         ║
     # ╚══════════════════════════════════════════════════════════════════╝

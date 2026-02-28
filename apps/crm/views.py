@@ -3863,6 +3863,87 @@ def lead_poll_inbox(request, lead_id):
 
 
 # ---------------------------------------------------------------------------
+# Lead Email Templates (chatter — botão "Email Template")
+# ---------------------------------------------------------------------------
+
+@login_required
+@require_http_methods(['GET'])
+def lead_email_templates(request, lead_id):
+    """
+    Devolve templates de email filtrados para o módulo CRM.
+    Inclui templates globais (owner_company=NULL) e da empresa do utilizador.
+
+    GET /crm/leads/<id>/email-templates/
+
+    Query params opcionais:
+        ?q=texto   — filtrar por nome
+
+    Resposta: { "templates": [ { id, name, subject, body_html, placeholders }, ... ] }
+    """
+    from apps.core.models import EmailTemplate
+
+    lead = get_object_or_404(Lead, id=lead_id)
+
+    # Templates disponíveis: globais + da empresa do utilizador
+    qs = EmailTemplate.objects.filter(module='CRM')
+
+    user_company = getattr(request.user, 'company', None)
+    if user_company:
+        qs = qs.filter(Q(owner_company__isnull=True) | Q(owner_company=user_company))
+    else:
+        qs = qs.filter(owner_company__isnull=True)
+
+    # Filtro por nome (opcional)
+    q = request.GET.get('q', '').strip()
+    if q:
+        qs = qs.filter(name__icontains=q)
+
+    qs = qs.order_by('name')
+
+    # Resolver placeholders com dados reais da lead
+    def resolve_placeholders(text, placeholders):
+        """Substitui {{1}}, {{2}}, etc. pelos valores reais da lead."""
+        if not text or not placeholders:
+            return text
+        result = text
+        for key, cfg in placeholders.items():
+            placeholder = '{{' + key + '}}'
+            if placeholder not in result:
+                continue
+            # Navegar pelo field path (ex: "lead.contact.name")
+            field_path = cfg.get('field', '')
+            fallback = cfg.get('fallback', '')
+            value = fallback
+            if field_path.startswith('lead.'):
+                parts = field_path[5:].split('.')  # remove "lead." prefix
+                obj = lead
+                try:
+                    for part in parts:
+                        obj = getattr(obj, part, None)
+                        if obj is None:
+                            break
+                    if obj is not None:
+                        value = str(obj)
+                except Exception:
+                    pass
+            result = result.replace(placeholder, value)
+        return result
+
+    templates = []
+    for tmpl in qs:
+        placeholders = tmpl.available_placeholders or {}
+        templates.append({
+            'id':           str(tmpl.id),
+            'name':         tmpl.name,
+            'subject':      resolve_placeholders(tmpl.subject, placeholders),
+            'body_html':    resolve_placeholders(tmpl.body_html, placeholders),
+            'placeholders': placeholders,
+        })
+
+    return JsonResponse({'templates': templates})
+
+
+# ---------------------------------------------------------------------------
 # Lead Followers (Chatter)
 # ---------------------------------------------------------------------------
 

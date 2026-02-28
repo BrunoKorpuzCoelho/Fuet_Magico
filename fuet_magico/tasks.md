@@ -19,15 +19,15 @@
 
 - **Fase 1:** 131/131 tarefas (100%) - Setup Ambiente e Infraestrutura ✅ COMPLETA!
 - **Fase 2:** 90/90 tarefas (100%) - Frontend - Website Institucional ✅ COMPLETA!
-- **Fase 3:** 503/503 tarefas (100%) - Backend - Estrutura Base Django ✅ COMPLETA!
+- **Fase 3:** 531/531 tarefas (100%) - Backend - Estrutura Base Django ✅ COMPLETA!
 - **Fase 4:** 297/499 tarefas (60%) - App: Contactos 🔄 parcial
-- **Fase 5:** 637/927 tarefas (69%) - App: CRM (Customer Relationship Management) 🔄 parcial
-- **Fase 6:** 0/212 tarefas (0%) - App: Inventário (Produtos e Stock)
+- **Fase 5:** 659/949 tarefas (69%) - App: CRM (Customer Relationship Management) 🔄 parcial
+- **Fase 6:** 195/~600 tarefas (~33%) - App: Inventário (Produtos, Stock, Armazéns, Movimentos) 🔄 parcial
 - **Fase 7:** 0/152 tarefas (0%) - App: Compras
 - **Fase 8:** 0/247 tarefas (0%) - App: Vendas
 - **Fase 9:** 0/94 tarefas (0%) - App: Financeiro
 - **Fase 10:** 0/358 tarefas (0%) - BOM (Bill of Materials) - Sistema de Receitas
-- **Fase 11:** 0/61 tarefas (0%) - Sistema de PDFs (Documentos)
+- **Fase 11:** 138/190 tarefas (73%) - Sistema de PDFs (Documentos) 🔄 parcial
 - **Fase 12:** 203/511 tarefas (40%) - App: WhatsApp Templates & Activities 🔄 parcial
 - **Fase 13:** 0/44 tarefas (0%) - Stock Management Avançado
 - **Fase 14:** 0/52 tarefas (0%) - PDF Scanning (Entrada de Compras)
@@ -36,7 +36,7 @@
 - **Fase 17:** 0/53 tarefas (0%) - Integração Final e Deployment
 - **Fase 18:** 96/410 tarefas (23%) - Testes Automatizados UI (Playwright) 🔄 parcial
 
-**TOTAL:** 1985/4701 tarefas (42.2%)
+**TOTAL:** 2263/4955 tarefas (45.7%)
 
 ---
 
@@ -5556,6 +5556,47 @@ Adicionar a aba "Anexos" ao formulário de template de email no Dashboard. O mod
 
 ---
 
+### 5.12.16 Email Template Picker no Chatter ✅ COMPLETO
+
+Botão no compose modal do chatter (Quill) que permite ao utilizador escolher um email template pré-definido e aplicar automaticamente o assunto e corpo ao email.
+
+**Backend:**
+- [x] View `lead_email_templates` em `apps/crm/views.py` — GET `/crm/leads/<uuid>/email-templates/`
+  - [x] Filtra templates do módulo CRM + GENERAL, ativos
+  - [x] Resolve placeholders usando `compile_email_template()` para cada template
+  - [x] Retorna JSON: `[{id, name, subject, body_html}]`
+- [x] URL em `apps/crm/urls.py` — `leads/<uuid:lead_id>/email-templates/`
+
+**Frontend (em `templates/crm/lead_create.html`):**
+- [x] Botão de template (ícone documento) no footer do compose modal Quill
+- [x] Dropdown picker com lista de templates disponíveis
+- [x] `loadTemplates()` — fetch lazy ao abrir (cache após 1ª chamada)
+- [x] `applyTemplate(tpl)` — preenche subject + seta `quillModal.root.innerHTML`
+- [x] Estado Alpine: `showTemplatePicker`, `emailTemplates`, `loadingTemplates`
+- [x] Fix: cor do texto do botão "Enviar" — `text-gray-900` → `text-white` (modal + inline)
+
+**Seeds:**
+- [x] 3 novos templates criados via `seed_email_templates.py`: Boas-vindas, Follow-up, Enviar Proposta
+- [x] Ficheiros default: `crm_welcome.html`, `crm_followup.html`, `crm_proposal.html`
+
+---
+
+### 5.12.17 Email Layout — Correções de Renderização ✅ COMPLETO
+
+Correções ao envelope de email (`EmailLayout`) para que o body HTML, logo, título e links renderizem corretamente.
+
+- [x] **Body HTML não renderizava** — `body_content` passado sem `mark_safe()` → Django auto-escapava tags HTML. Corrigido em `wrap_email_with_layout()`.
+- [x] **Logo da empresa não aparecia** — URLs localhost não acessíveis por clientes de email. Implementado CID inline image (`cid:company_logo`) via `MIMEImage` no MIME `multipart/related`.
+  - [x] `wrap_email_with_layout()` agora retorna tupla `(html, inline_images)` com logo bytes
+  - [x] `_send_via_smtp()` aceita `inline_images` e reestrutura MIME: `mixed → related → alternative + CID images`
+  - [x] `send_email_for_record()` desempacota tupla e passa `inline_images`
+- [x] **Título da lead truncado** — Removida truncação de 40 chars em `_get_record_label()` + `white-space: nowrap` → `max-width: 200px; word-wrap: break-word`
+- [x] **Email do remetente em azul** — Cor default dos links. Adicionado `<a style="color: #dbc693">` no footer do layout.
+- [x] **Iniciais do avatar escuras** — `color: #1f2937` → `color: #ffffff` no `sender_initials` TD do `base_layout.html`.
+- [x] DB layout resetado via `EmailLayout.reset_to_default()`
+
+---
+
 ## 5.13 Sistema de Prospectos (Pré-Pipeline) ✅ COMPLETO
 
 Criar vista dedicada para leads não qualificadas (prospectos) que ainda não entraram no pipeline principal. Permite qualificar manualmente cada prospecto antes de o promover.
@@ -5691,12 +5732,12 @@ Criar página de relatórios dedicada para o módulo CRM com KPIs em tempo real 
 
 Criar app Django para gestão de inventário.
 
-- [ ] **Criar app**
-  - [ ] Executar `python manage.py startapp inventory apps/inventory`
-  - [ ] Adicionar 'apps.inventory' ao INSTALLED_APPS
+- [x] **Criar app**
+  - [x] Executar `python manage.py startapp inventory apps/inventory`
+  - [x] Adicionar 'apps.inventory' ao INSTALLED_APPS
 
-- [ ] **Criar estrutura de arquivos**
-  - [ ] Criar models.py, views.py, forms.py, urls.py
+- [x] **Criar estrutura de arquivos**
+  - [x] Criar models.py, views.py, forms.py, urls.py
 
 ---
 
@@ -5704,340 +5745,1024 @@ Criar app Django para gestão de inventário.
 
 Criar categorias para produtos.
 
-- [ ] **Criar modelo Category**
-  - [ ] Herdar de BaseModel
-  - [ ] Campos: name, description, parent (self FK para subcategorias)
-  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True) - NULL=global, com valor=privado
-  - [ ] Método __str__
-  - [ ] Filtrar por owner_company na CategoryListView usando filter_by_company()
-  - [ ] Auto-preencher owner_company na create view com get_active_company()
+- [x] **Criar modelo Category**
+  - [x] Herdar de BaseModel
+  - [x] Campos: name, description, parent (self FK para subcategorias)
+  - [x] Campo: **owner_company** (FK para Company, null=True, blank=True) - NULL=global, com valor=privado
+  - [x] Método __str__
+  - [x] Filtrar por owner_company na CategoryListView usando filter_by_company()
+  - [x] Auto-preencher owner_company na create view com get_active_company()
 
-- [ ] **Criar migrations**
-  - [ ] makemigrations e migrate
+- [x] **Criar migrations**
+  - [x] makemigrations e migrate
 
-- [ ] **Registrar no Admin**
-  - [ ] Criar CategoryAdmin com list_display
+- [x] **Registrar no Admin**
+  - [x] Criar CategoryAdmin com list_display
 
-- [ ] **Testing - Category**
-  - [ ] Test: criar categoria funciona
-  - [ ] Test: hierarquia de categorias funciona
-
----
-
-## 6.3 Modelo Product
-
-Criar modelo de produtos.
-
-- [ ] **Criar modelo Product**
-  - [ ] Herdar de BaseModel
-  - [ ] Campos: code (único), name, description, category (FK)
-  - [ ] Campos: unit_type (KG, UN, L, etc.)
-  - [ ] Campos: cost_price, sale_price, tax_rate
-  - [ ] Campos: image (ImageField)
-  - [ ] Campos: supplier (FK para Contact)
-  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True) - NULL=global, com valor=privado
-  - [ ] Método __str__, método get_profit_margin()
-  - [ ] Filtrar por owner_company na ProductListView usando filter_by_company()
-  - [ ] Auto-preencher owner_company na create view com get_active_company()
-
-- [ ] **Criar migrations**
-  - [ ] makemigrations e migrate
-
-- [ ] **Registrar no Admin**
-  - [ ] Criar ProductAdmin
-  - [ ] list_display: code, name, category, cost_price, sale_price
-  - [ ] search_fields, list_filter
-
-- [ ] **Testing - Product**
-  - [ ] Test: criar produto via admin funciona
-  - [ ] Test: upload de imagem funciona
-  - [ ] Test: cálculo de margem funciona
+- [x] **Testing - Category**
+  - [x] Test: criar categoria funciona
+  - [x] Test: hierarquia de categorias funciona
 
 ---
 
-## 6.4 Modelo StockMovement
+## 6.2.1 Dashboard de Inventário ✅
 
-Criar modelo para movimentações de stock (entrada/saída).
+Criar dashboard premium com cards de operações e sub-navbar de inventário.
+
+- [x] **Criar dashboard principal**
+  - [x] View `inventory_dashboard` com KPIs placeholder
+  - [x] Template `inventory_dashboard.html` com layout dark premium
+  - [x] 5 operation cards: Recepções, Entregas, Erros, Operações Hoje, Pendentes
+  - [x] CSS sparklines (barras semanais) em cada card
+  - [x] Rota: `path('', inventory_dashboard, name='inventory_dashboard')`
+
+- [x] **Criar sub-navbar de inventário**
+  - [x] Template `components/inventory_navbar.html`
+  - [x] Menus: Dashboard, Operações (dropdown), Produtos (dropdown com Categorias), Relatórios, Configuração (dropdown)
+  - [x] Links funcionais para dashboard e category_list
+
+---
+
+## 6.2.2 Lista de Categorias de Produtos ✅
+
+Criar página de listagem de categorias com pesquisa, paginação e ações em massa.
+
+- [x] **Criar view `category_list`**
+  - [x] Pesquisa por nome, descrição, categoria pai
+  - [x] Filtro por status (ativas/arquivadas)
+  - [x] Paginação com page_size configurável
+  - [x] `filter_by_company()` aplicado
+  - [x] `select_related('parent', 'owner_company')` + `annotate(children_count)`
+
+- [x] **Criar template `category_list.html`**
+  - [x] Tabela com colunas: checkbox, Nome, Categoria Pai, Descrição, Subcategorias
+  - [x] Barra de pesquisa com dropdown de campo
+  - [x] Paginação completa
+  - [x] Versão mobile responsive
+  - [x] Botão "Novo" → link para category_create
+  - [x] Click na linha → navega para category_edit
+
+- [x] **Ações em massa (bulk actions)**
+  - [x] Checkbox select all / individual
+  - [x] Alpine.js `selectedItems` tracking
+  - [x] View `bulk_archive_categories` (POST JSON, set is_active=False)
+  - [x] View `bulk_unarchive_categories` (POST JSON, set is_active=True)
+  - [x] View `bulk_delete_categories` (POST JSON, CASCADE delete)
+  - [x] Modal de confirmação para delete
+  - [x] Notificações toast (success/error/warning)
+  - [x] Rotas: `bulk-archive/`, `bulk-unarchive/`, `bulk-delete/`
+
+---
+
+## 6.2.3 Formulário de Categoria (Criar/Editar) ✅
+
+Criar formulário de criação e edição de categorias.
+
+- [x] **Criar `CategoryForm` (Django ModelForm)**
+  - [x] Fields: name, description, parent
+  - [x] Parent queryset filtrado por company
+  - [x] Prevenção de referências circulares (`_get_descendants()`)
+  - [x] Empty label: "— Sem categoria pai (raiz) —"
+
+- [x] **Criar navbar dedicado para formulário**
+  - [x] Template `components/category_form_navbar.html`
+  - [x] Link "Categorias de Produtos" → category_list
+  - [x] Botões de ação: Descartar (vermelho) + Guardar (verde)
+  - [x] Guardar como `type="submit" form="category-form"`
+
+- [x] **Criar template `category_form.html`**
+  - [x] Layout dark `bg-[#1f2937]` consistente com contacts
+  - [x] Nome grande `text-3xl font-light` com border-bottom
+  - [x] Dropdown de categoria pai com estilo `bg-[#1a2332]`
+  - [x] Ícone placeholder (pasta) no lugar do avatar
+  - [x] Metadata (datas criação/atualização, contagem subcategorias) no modo edição
+  - [x] Validação de erros com bloco visual
+
+- [x] **Criar views**
+  - [x] `category_create(request)` — GET/POST, auto-fill owner_company, redirect to edit
+  - [x] `category_edit(request, pk)` — GET/POST, get_object_or_404, messages.success
+  - [x] Rotas: `categories/create/`, `categories/<uuid:pk>/edit/`
+
+- [x] **Tabs do formulário**
+  - [x] Tab "Notas Internas" — textarea para descrição/observações
+  - [x] Tab "Produtos" (modo edição) — tabela inline estilo company_edit/utilizadores
+  - [x] Alpine.js `categoryProductsTab()` com search, add, remove (placeholder até Product existir)
+  - [x] Badge de contagem de produtos no tab header
+  - [x] Tab Produtos ativa por defeito no modo edição
+
+---
+
+## 6.2.4 Seed Data - Categorias Demo ✅
+
+Script para popular categorias demo para padaria/pastelaria.
+
+- [x] **Criar script `scripts/seed_product_categories.py`**
+  - [x] 92 categorias em hierarquia de 3 níveis
+  - [x] Grupos: Matérias-Primas, Produtos Acabados, Embalagem, Decoração, Utensílios & Equipamento
+  - [x] Associadas à empresa "Fuet Mágico"
+  - [x] Idempotente (verifica existência antes de criar)
+
+---
+
+## 6.2.5 Modelos UoMCategory e UoM ✅
+
+Criar modelos de Categorias de Unidades de Medida e Unidades de Medida com sistema de conversão.
+
+- [x] **Criar modelo UoMCategory**
+  - [x] Herdar de AbstractBaseModel (UUID PK, timestamps, is_active)
+  - [x] Campos: name, owner_company (FK para Company)
+  - [x] Método __str__
+  - [x] Meta: ordering = ['name']
+
+- [x] **Criar modelo UoM**
+  - [x] Herdar de AbstractBaseModel
+  - [x] Campos: name, symbol (max 16), category (FK para UoMCategory)
+  - [x] Campos: uom_type (choices: reference/bigger/smaller), factor (Decimal 20,10), rounding (Decimal 12,6)
+  - [x] Campo: owner_company (FK para Company)
+  - [x] Método `convert_to(qty, target_uom)` para conversão entre unidades
+  - [x] Método __str__
+  - [x] Meta: ordering = ['category__name', 'name']
+
+- [x] **Criar migrations**
+  - [x] makemigrations e migrate
+
+- [x] **Registrar no Admin**
+  - [x] UoMCategoryAdmin com list_display
+  - [x] UoMAdmin com list_display, list_filter
+
+---
+
+## 6.2.6 Lista de Unidades de Medida ✅
+
+Criar página de listagem de UoMs com pesquisa, paginação e ações em massa.
+
+- [x] **Criar view `uom_list`**
+  - [x] Pesquisa por nome, símbolo, categoria
+  - [x] Dropdown de campo de pesquisa (Nome, Símbolo, Categoria)
+  - [x] Filtro por status (ativas/arquivadas)
+  - [x] Paginação com page_size configurável (default 50)
+  - [x] `filter_by_company()` aplicado
+  - [x] `select_related('category')`
+
+- [x] **Criar template `uom_list.html`**
+  - [x] Tabela com colunas: checkbox, Nome, Símbolo, Categoria, Tipo, Factor
+  - [x] Barra de pesquisa com dropdown de campo
+  - [x] Paginação completa (desktop + mobile)
+  - [x] Botão "Novo" → link para uom_create
+  - [x] Click na linha → navega para uom_edit
+  - [x] Empty state com ícone e mensagem
+
+- [x] **Ações em massa (bulk actions)**
+  - [x] Checkbox select all / individual
+  - [x] Alpine.js `selectedItems` tracking
+  - [x] View `bulk_archive_uoms` (POST JSON, set is_active=False)
+  - [x] View `bulk_unarchive_uoms` (POST JSON, set is_active=True)
+  - [x] View `bulk_delete_uoms` (POST JSON, CASCADE delete)
+  - [x] Modal de confirmação para delete
+  - [x] Notificações toast (success/error/warning)
+  - [x] Rotas: `uom/bulk-archive/`, `uom/bulk-unarchive/`, `uom/bulk-delete/`
+
+- [x] **Adicionar link na navbar de inventário**
+  - [x] "Unidades de Medida" no dropdown Configuração → Produtos
+
+---
+
+## 6.2.7 Formulário de UoM (Criar/Editar) ✅
+
+Criar formulário de criação e edição de unidades de medida.
+
+- [x] **Criar `UoMForm` (Django ModelForm)**
+  - [x] Fields: name, symbol, category, uom_type, factor, rounding
+  - [x] Category queryset filtrado por company
+  - [x] Labels em português
+
+- [x] **Criar navbar dedicado para formulário**
+  - [x] Template `components/uom_form_navbar.html`
+  - [x] Link "Unidades de Medida" → uom_list
+  - [x] Botões: Descartar (vermelho/trash) + Guardar (verde/save)
+  - [x] Guardar como `type="submit" form="uom-form"`
+
+- [x] **Criar template `uom_form.html`**
+  - [x] Layout dark `bg-[#1f2937]` consistente com contacts
+  - [x] Nome grande `text-3xl font-light` com border-bottom
+  - [x] Grid 2 colunas: Esquerda (Símbolo, Categoria, Tipo) / Direita (Factor, Arredondamento)
+  - [x] Inputs `bg-[#1a2332]` com ícones descritivos
+  - [x] Dropdown para Categoria e Tipo
+  - [x] Fix localização: `{% load l10n %}` + `|unlocalize` em campos numéricos (pt usa vírgulas)
+
+- [x] **Criar views**
+  - [x] `uom_create(request)` — GET/POST, auto-fill owner_company, redirect to edit
+  - [x] `uom_edit(request, pk)` — GET/POST, get_object_or_404, messages.success
+  - [x] Rotas: `uom/create/`, `uom/<uuid:pk>/edit/`
+
+---
+
+## 6.2.8 Seed Data - Unidades de Medida ✅
+
+Script para popular UoMs demo com 4 categorias e 21 unidades.
+
+- [x] **Criar script `scripts/seed_uom.py`**
+  - [x] 4 categorias: Peso, Volume, Unidade, Tempo
+  - [x] 21 unidades com factores de conversão corretos
+  - [x] Inclui unidades imperiais (Onça, Libra, Galão)
+  - [x] Idempotente (get_or_create)
+  - [x] Encoding UTF-8 para caracteres portugueses (ç, ú, ã)
+
+---
+
+## 6.2.9 Lista de Categorias de UdM ✅
+
+Criar página de listagem de categorias de unidades de medida.
+
+- [x] **Criar view `uom_category_list`**
+  - [x] Pesquisa por nome
+  - [x] Filtro por status (ativas/arquivadas)
+  - [x] Paginação com page_size configurável (default 50)
+  - [x] `filter_by_company()` aplicado
+  - [x] `annotate(uom_count=Count('uom'))` para contar UdMs por categoria
+
+- [x] **Criar template `uom_category_list.html`**
+  - [x] Tabela com colunas: checkbox, Nome (com ícone), Unidades (badge count)
+  - [x] Barra de pesquisa
+  - [x] Filtro por status (Ativos/Arquivados)
+  - [x] Paginação completa (desktop + mobile)
+  - [x] Botão "Novo" → link para uom_category_create
+  - [x] Click na linha → navega para uom_category_edit
+  - [x] Empty state com ícone e mensagem
+
+- [x] **Ações em massa (bulk actions)**
+  - [x] Checkbox select all / individual
+  - [x] Alpine.js `selectedItems` tracking
+  - [x] View `bulk_archive_uom_categories` (POST JSON)
+  - [x] View `bulk_unarchive_uom_categories` (POST JSON)
+  - [x] View `bulk_delete_uom_categories` (POST JSON, aviso CASCADE UdMs)
+  - [x] Modal de confirmação para delete com checkbox obrigatório
+  - [x] Notificações toast
+  - [x] Rotas: `uom-categories/bulk-archive/`, `uom-categories/bulk-unarchive/`, `uom-categories/bulk-delete/`
+
+- [x] **Adicionar link na navbar de inventário**
+  - [x] "Categorias de UdM" no dropdown Configuração → Produtos, abaixo de "Unidades de Medida"
+
+---
+
+## 6.2.10 Formulário de Categoria de UdM (Criar/Editar) ✅
+
+Criar formulário de criação e edição de categorias de UdM com tab de unidades associadas.
+
+- [x] **Criar `UoMCategoryForm` (Django ModelForm)**
+  - [x] Fields: name (único campo)
+  - [x] Labels em português
+
+- [x] **Criar navbar dedicado para formulário**
+  - [x] Template `components/uom_category_form_navbar.html`
+  - [x] Link "Categorias de UdM" → uom_category_list
+  - [x] Botões: Descartar (vermelho/trash) + Guardar (verde/save)
+  - [x] Guardar como `type="submit" form="uom-category-form"`
+
+- [x] **Criar template `uom_category_form.html`**
+  - [x] Layout dark `bg-[#1f2937]` consistente com contacts
+  - [x] Nome grande `text-3xl font-light` com border-bottom
+  - [x] Tab "Unidades de Medida" (modo edição) — padrão empresa/utilizadores
+  - [x] Badge de contagem de UdMs no tab header
+  - [x] Tabela inline com colunas: Nome (ícone símbolo), Símbolo (code), Tipo (badge cor), Factor, Estado (Ativo/Arquivado)
+  - [x] Click na linha → navega para uom_edit
+  - [x] Link "Adicionar unidade de medida" → uom_create
+  - [x] Tab só visível em modo edição (não em criação)
+
+- [x] **Criar views**
+  - [x] `uom_category_create(request)` — GET/POST, auto-fill owner_company, redirect to edit
+  - [x] `uom_category_edit(request, pk)` — GET/POST, passa queryset `uoms` + `uom_count`
+  - [x] Rotas: `uom-categories/create/`, `uom-categories/<uuid:pk>/edit/`
+
+---
+
+## 6.3 Modelo Product ✅
+
+Criar modelo de produtos com sistema de UoM integrado.
+
+- [x] **Criar modelo Product**
+  - [x] Herdar de AbstractBaseModel (UUID PK, timestamps, is_active)
+  - [x] Campos identificação: name, internal_reference (único por empresa), reference (texto livre), barcode (único por empresa), description, image
+  - [x] Campo classificação: product_type (storable/consumable/service), category (FK → Category)
+  - [x] Campos UoM: uom (FK → UoM, PROTECT), uom_purchase (FK → UoM, opcional — UdM de compra diferente)
+  - [x] Campos preços: sale_price (Decimal 10,2), cost_price (Decimal 10,2), tax_rate (Decimal 5,2, default 23%)
+  - [x] Campo fornecedor: supplier (FK → Contact, SET_NULL)
+  - [x] Campo: **owner_company** (FK para Company, null=True, blank=True) - NULL=global, com valor=privado
+  - [x] Constraints: unique internal_reference + owner_company (quando não vazio), unique barcode + owner_company (quando não vazio)
+  - [x] Método __str__ (com referência interna se existir)
+  - [x] Método get_profit_margin() — margem em percentagem
+  - [x] Método get_sale_price_with_tax() — preço com IVA
+  - [x] Helper `product_image_path()` para upload em `media/products/<uuid>/`
+
+- [x] **Criar migrations**
+  - [x] makemigrations → `0003_product.py`
+  - [x] migrate → OK
+
+- [x] **Registrar no Admin**
+  - [x] Criar ProductAdmin
+  - [x] list_display: name, internal_reference, category, product_type, uom, sale_price, cost_price, is_active
+  - [x] search_fields: name, internal_reference, reference, barcode, description
+  - [x] list_filter: is_active, product_type, category, owner_company
+  - [x] Fieldsets organizados: Identificação, Classificação, UdMs, Preços, Compras, Multi-Company, Sistema
+
+---
+
+## 6.3.1 Vistas de Produtos ✅
+
+Criar lista, formulário (criação/edição) e ações em massa para produtos.
+
+- [x] **ProductForm** em forms.py
+  - [x] 13 campos: name, internal_reference, reference, barcode, product_type, category, uom, uom_purchase, sale_price, cost_price, tax_rate, description, image
+  - [x] Querysets filtrados por empresa (category, uom, uom_purchase)
+  - [x] Empty labels em português
+
+- [x] **Vistas (views.py)**
+  - [x] product_list — pesquisa por nome/referência/barcode/categoria/fornecedor, paginação, filtro status
+  - [x] product_create — com request.FILES para imagem, owner_company automático
+  - [x] product_edit — com get_object_or_404
+  - [x] bulk_archive_products, bulk_unarchive_products, bulk_delete_products
+
+- [x] **Templates**
+  - [x] product_list.html — tabela com imagem/nome, ref. interna, categoria, tipo (badge), UdM, preço venda/custo; ações em massa; pesquisa com dropdown de campo; paginação
+  - [x] product_form.html — formulário dark theme 2 colunas; nome gigante; campos numéricos com |unlocalize; upload de imagem com preview Alpine.js; descrição textarea
+  - [x] product_form_navbar.html — link "Produtos" + botões Descartar/Guardar (form="product-form")
+
+- [x] **URLs** em urls.py (6 rotas)
+  - [x] products/, products/create/, products/<uuid>/edit/
+  - [x] products/bulk-archive/, products/bulk-unarchive/, products/bulk-delete/
+
+- [x] **Navbar** — link "Produtos" atualizado em inventory_navbar.html
+
+---
+
+## 6.3.2 Smart Buttons - Formulário de Produto ✅ (Contadores ⏳ Futuro)
+
+Criar smart buttons no sub-navbar do formulário de produto (`product_form_navbar.html`), seguindo o mesmo layout dos contactos. Os botões estão criados com contadores a zero — serão ligados a dados reais quando os módulos respetivos existirem.
+
+- [x] **Redesenhar `product_form_navbar.html`** — layout igual ao `contacts_navbar_with_stats.html`
+  - [x] Link "Produtos" + dropdown "Configuração" (Categorias, UdM, Categorias UdM)
+  - [x] Botões Descartar (vermelho) + Guardar (verde)
+  - [x] Smart buttons à direita com ícones, contadores e cores distintas
+
+- [x] **Smart Button: BOM** (roxo)
+  - [x] Ícone: documento com linhas (file-text)
+  - [x] Contador: `bom_count` (atualmente 0)
+  - [ ] ⏳ Conectar a dados reais — **depende de:** Fase 10 (modelo BillOfMaterials + BOMLine)
+  - [ ] ⏳ Contador real: `BillOfMaterials.objects.filter(product=product).count()`
+  - [ ] ⏳ Link: redirecionar para lista de BOMs filtrada pelo produto
+
+- [x] **Smart Button: Previsão** (azul)
+  - [x] Ícone: gráfico de pulso (activity)
+  - [x] Contador: `forecast_count` (atualmente 0)
+  - [ ] ⏳ Conectar a dados reais — **depende de:** Fase 6.4/6.5 (modelos StockMovement + Stock) e Fase 13 (Stock Management Avançado)
+  - [ ] ⏳ Contador real: previsão de stock baseada em movimentos pendentes
+  - [ ] ⏳ Link: redirecionar para vista de previsão do produto
+
+- [x] **Smart Button: Vendidas** (verde)
+  - [x] Ícone: saco de compras (shopping-bag)
+  - [x] Contador: `sold_count` (atualmente 0)
+  - [ ] ⏳ Conectar a dados reais — **depende de:** Fase 8 (modelo SaleOrder + SaleOrderLine)
+  - [ ] ⏳ Contador real: `SaleOrderLine.objects.filter(product=product, order__state='confirmed').aggregate(Sum('quantity'))`
+  - [ ] ⏳ Link: redirecionar para lista de vendas filtrada pelo produto
+
+- [x] **Smart Button: Em Stock** (laranja)
+  - [x] Ícone: cubo 3D (package/box)
+  - [x] Contador: `on_hand_count` (atualmente 0)
+  - [ ] ⏳ Conectar a dados reais — **depende de:** Fase 6.5 (modelo Stock) e Fase 13 (Stock Management Avançado)
+  - [ ] ⏳ Contador real: `Stock.objects.get(product=product).quantity` ou 0
+  - [ ] ⏳ Link: redirecionar para vista de stock do produto
+
+- [x] **View `product_edit`** — passa contadores ao template
+  - [x] `bom_count`, `forecast_count`, `sold_count`, `on_hand_count` (todos 0 por agora)
+
+- [ ] **Testing - Smart Buttons Produto** ⏳
+  - [ ] Test: smart buttons renderizam no formulário de edição
+  - [ ] Test: smart buttons mostram 0 quando não há dados
+  - [ ] Test: BOM contador mostra valor correto quando modelo BOM existir
+  - [ ] Test: Vendidas contador mostra total de unidades vendidas
+  - [ ] Test: Em Stock mostra quantidade em stock atual
+  - [ ] Test: Previsão mostra previsão calculada
+
+---
+
+## 📦 ARQUITETURA DO SISTEMA DE INVENTÁRIO (Simplificado)
+
+> **FILOSOFIA:** Sistema de inventário prático e maioritariamente AUTOMÁTICO.
+> A pessoa não vai gerir armazéns, localizações ou rotas — o armazém é a casa dela.
+> O foco é: controlar stock, saber custo/lucro, e automatizar compras/vendas.
+> O sistema de PDF scanning (Fase 14) vai auto-criar documentos de compra.
+> A pessoa raramente interage manualmente com o inventário.
+
+### 🏗️ Como funciona o Sistema de Inventário (explicação simples)
+
+**Conceito:** O stock é controlado por **movimentos**. Cada movimento é um documento
+que diz "entrou X" ou "saiu Y" ou "ajustei Z". O saldo atual (StockQuant) é calculado
+automaticamente a partir dos movimentos validados.
+
+**5 modelos:**
+
+1. **Warehouse (Armazém)** — Simples: "Armazém Principal" = casa/empresa da pessoa.
+   - Auto-criado ao fazer setup. A pessoa raramente cria outro.
+   - Sem localizações internas (não há prateleiras para nomear).
+
+2. **StockMovement (Movimento de Stock — cabeçalho)** — O "documento" de stock.
+   - 3 tipos: **Receção** (entrou), **Expedição** (saiu), **Ajuste** (correção).
+   - Estados simples: `draft` (rascunho) → `done` (validado) ou `cancelled`.
+   - **Origin:** referência ao documento que gerou (ex: "PO-00001", "SO-00001").
+   - Geralmente criado AUTOMATICAMENTE pelas Compras (Fase 7) ou Vendas (Fase 8).
+
+3. **StockMovementLine (Linha — detalhe)** — Cada produto num movimento.
+   - Produto, quantidade, preço unitário (para calcular custo na receção).
+   - Um movimento pode ter muitas linhas (ex: uma fatura do Recheio com 20 produtos).
+
+4. **StockQuant (Stock Atual)** — Quantidade real de cada produto no armazém.
+   - Produto + Armazém + Quantidade = "tens 50 kg de farinha no armazém".
+   - Atualizado AUTOMATICAMENTE quando um movimento é validado (done).
+   - Nunca editado manualmente — é sempre resultado dos movimentos.
+
+5. **ProductSupplierInfo (Info Fornecedor)** — Dados de compra por produto.
+   - Múltiplos fornecedores por produto (Recheio vende farinha a €2, Makro a €1.80).
+   - Preço, quantidade mínima, prazo de entrega.
+   - Usado pelo sistema para saber a quem comprar e a que preço.
+   - Aparece no tab "Compras" do formulário do produto.
+
+### 🔄 Fluxos de Operação
+
+**FLUXO DE COMPRA (automático via PDF ou manual):**
+```
+1. Opção A — AUTOMÁTICO (Fase 14): Pessoa mete fatura na impressora
+   → Sistema lê PDF → cria PurchaseOrder → cria StockMovement receção → valida → stock atualizado
+   Opção B — MANUAL: Criar PurchaseOrder na app Compras (Fase 7)
+2. PO confirmado → sistema cria StockMovement (tipo=RECEIPT)
+3. Ao validar → StockQuant incrementado para cada produto
+4. Preço de custo atualizado no produto (se mudou)
+```
+
+**FLUXO DE VENDA (semi-automático):**
+```
+1. Criar orçamento/venda (Fase 8) → cliente + produtos
+2. Confirmar venda → sistema verifica stock:
+   - Se tem stock → cria StockMovement (tipo=DELIVERY)
+   - Se NÃO tem stock → ALERTA + opção de auto-gerar PurchaseOrder
+3. Ao entregar → valida StockMovement → StockQuant decrementado
+4. Lucro calculado: sale_price - cost_price por produto
+```
+
+**AJUSTE MANUAL (raro):**
+```
+1. Pessoa nota que tem menos/mais stock que o sistema diz
+2. Cria ajuste: produto, quantidade real, motivo
+3. Sistema calcula diferença e cria StockMovement (tipo=ADJUSTMENT)
+4. Valida → StockQuant atualizado
+```
+
+### 🔗 Dependências entre Fases
+
+| Fase | O que faz | Interação com Inventário |
+|------|-----------|--------------------------|
+| 6 | Inventário | Modelos de stock, movimentos, quants |
+| 7 | Compras | Confirmar compra → auto-cria receção de stock |
+| 8 | Vendas | Confirmar venda → verifica stock → auto-cria expedição |
+| 10 | BOM | Produção → consome ingredientes, produz produto acabado |
+| 14 | PDF Scan | Digitalizar fatura → auto-cria compra + receção de stock |
+
+---
+
+## 6.4 Modelo Warehouse (Armazém) ✅
+
+Modelo simples — representa o local de armazenamento. Auto-criado ao setup, 1 por empresa.
+
+- [x] **Criar modelo Warehouse**
+  - [x] Herdar de AbstractBaseModel
+  - [x] Campos: name (CharField, ex: "Armazém Principal")
+  - [x] Campos: code (CharField, 5 chars, único, ex: "WH")
+  - [x] Campos: address (TextField, opcional)
+  - [x] Campo: is_default (BooleanField, default=False) — 1 default por company
+  - [x] Campo: **owner_company** (FK para Company, null=True, blank=True)
+  - [x] Método __str__: retorna name
+
+- [x] **Criar migrations**
+  - [x] makemigrations e migrate
+
+- [x] **Registrar no Admin**
+  - [x] Criar WarehouseAdmin
+  - [x] list_display: name, code, is_default, owner_company
+
+- [x] **Auto-criação: Armazém Padrão**
+  - [x] Signal post_migrate ou seed script: cria "Armazém Principal" (code="WH", is_default=True)
+  - [x] Associar à company ativa
+
+- [x] **Testing - Warehouse**
+  - [x] Test: criar armazém funciona
+  - [x] Test: apenas 1 armazém default por company
+  - [x] Test: armazém padrão auto-criado no setup
+
+---
+
+## 6.4.1 Vista de Lista de Armazéns ✅
+
+Lista de armazéns com search, paginação e bulk actions — segue o padrão da lista de contactos.
+
+- [x] **View `warehouse_list`** em views.py
+  - [x] Search por campo: name, code, address, company
+  - [x] Filtro de status: ativos / arquivados
+  - [x] Paginação: 50 por página (configurável)
+  - [x] select_related('owner_company')
+
+- [x] **Template `warehouse_list.html`** — layout igual à lista de contactos
+  - [x] Navbar: `inventory_navbar.html` (sub_navbar)
+  - [x] Search bar com dropdown: status filter + pesquisa por campo (Nome, Código, Morada, Empresa)
+  - [x] Botão "Novo" → link para warehouse_create
+  - [x] Paginação desktop + mobile
+  - [x] Sem toggle Kanban — apenas vista de lista
+  - [x] Tabela: Checkbox, Nome (com ícone), Código, Morada, Padrão (badge), Empresa
+  - [x] Checkbox → Bulk Actions: Arquivar, Desarquivar, Eliminar
+  - [x] Modal de confirmação de eliminação (com checkbox de confirmação)
+  - [x] Versão mobile responsiva completa
+
+- [x] **Bulk Action Views**
+  - [x] `bulk_archive_warehouses` — POST, JSON body com warehouse_ids
+  - [x] `bulk_unarchive_warehouses` — POST, JSON body com warehouse_ids
+  - [x] `bulk_delete_warehouses` — POST, JSON body com warehouse_ids, transaction.atomic
+
+- [x] **URLs** em urls.py (4 rotas)
+  - [x] warehouses/, warehouses/bulk-archive/, warehouses/bulk-unarchive/, warehouses/bulk-delete/
+
+- [x] **Navbar** — link "Armazéns" atualizado em inventory_navbar.html (Configuração dropdown)
+
+---
+
+## 6.4.2 Formulário de Armazém (Criar/Editar) ✅
+
+Formulário simples de criação e edição de armazéns — layout igual aos contactos.
+
+- [x] **WarehouseForm** em forms.py
+  - [x] Campos: name, code, address, is_default
+  - [x] ModelForm com validação automática
+
+- [x] **Views** em views.py
+  - [x] `warehouse_create` — GET mostra form vazio, POST salva + redirect para edit
+  - [x] `warehouse_edit` — GET mostra form preenchido, POST atualiza + redirect para edit
+  - [x] owner_company atribuída automaticamente
+
+- [x] **Template `warehouse_form.html`** — layout igual aos contactos
+  - [x] Ícone de armazém (160x160) à esquerda
+  - [x] Nome gigante (3xl, border-bottom) + Código com ícone dourado
+  - [x] Grid 2 colunas: Morada (textarea) | Armazém Padrão (toggle switch) + Empresa (read-only)
+
+- [x] **Navbar `warehouse_form_navbar.html`**
+  - [x] Link "Armazéns" → volta para warehouse_list
+  - [x] Botão Descartar (vermelho) + Guardar (verde)
+  - [x] form="warehouse-form"
+
+- [x] **URLs** em urls.py (2 rotas novas)
+  - [x] warehouses/create/, warehouses/<uuid:pk>/edit/
+
+- [x] **Lista atualizada** — botão "Novo" e click na row apontam para o formulário
+
+---
+
+## 6.5 Modelo StockMovement (Documento de Movimento de Stock)
+
+O documento central do inventário. Criado automaticamente por Compras/Vendas ou manualmente para ajustes.
 
 - [ ] **Criar modelo StockMovement**
-  - [ ] Herdar de BaseModel
-  - [ ] Campos: product (FK), quantity, movement_type (IN, OUT, ADJUSTMENT)
-  - [ ] Campos: reference_doc (opcional, para compras/vendas)
-  - [ ] Campos: reason, user (FK), timestamp
-  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True) - Herdar de product.owner_company
-  - [ ] Método __str__
+  - [ ] Herdar de AbstractBaseModel
+  - [ ] Campo: reference (CharField, único, auto-gerado, ex: "WH/IN/00001", "WH/OUT/00001", "ADJ/00001")
+  - [ ] Campo: movement_type (CharField, choices):
+    - [ ] `receipt` — Receção de mercadoria (compra/entrada)
+    - [ ] `delivery` — Expedição/entrega (venda/saída)
+    - [ ] `adjustment` — Ajuste de inventário (correção manual)
+  - [ ] Campo: warehouse (FK Warehouse, default=armazém padrão)
+  - [ ] Campo: partner (FK Contact, null=True, blank=True) — fornecedor (receção) ou cliente (expedição)
+  - [ ] Campo: state (CharField, choices):
+    - [ ] `draft` — Rascunho, editável
+    - [ ] `done` — Validado, stock atualizado
+    - [ ] `cancelled` — Cancelado
+  - [ ] Campo: date (DateTimeField, default=now) — data do movimento
+  - [ ] Campo: origin (CharField, null=True, blank=True) — ref ao documento que gerou (ex: "PO-00001", "SO-00001")
+  - [ ] Campo: notes (TextField, null=True, blank=True)
+  - [ ] Campo: responsible (FK User) — quem criou/validou
+  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True)
+  - [ ] Método __str__: retorna reference
+  - [ ] Método generate_reference(): gera ref baseado no tipo ("WH/IN/", "WH/OUT/", "ADJ/") + sequência
+  - [ ] Método action_validate(): muda para done, atualiza StockQuant para cada linha
+  - [ ] Método action_cancel(): muda para cancelled (apenas se draft)
+  - [ ] Property total_value: soma de (line.quantity * line.unit_price) de todas as linhas
 
 - [ ] **Criar migrations**
   - [ ] makemigrations e migrate
 
 - [ ] **Registrar no Admin**
-  - [ ] Criar StockMovementAdmin
-  - [ ] Apenas visualização (não edição)
+  - [ ] Criar StockMovementAdmin com inline de StockMovementLine
+  - [ ] list_display: reference, movement_type, partner, state, date, total_value
+  - [ ] list_filter: state, movement_type
 
 - [ ] **Testing - StockMovement**
-  - [ ] Test: criar movimentação funciona
-  - [ ] Test: histórico é registrado
+  - [ ] Test: criar movimento funciona
+  - [ ] Test: referência auto-gerada com prefix correto por tipo
+  - [ ] Test: validar muda estado para done
+  - [ ] Test: cancelar só funciona se draft
+  - [ ] Test: total_value calcula soma das linhas
 
 ---
 
-## 6.5 Modelo Stock (Saldo Atual)
+## 6.6 Modelo StockMovementLine (Linhas de Movimento)
 
-Criar modelo para stock atual de cada produto.
+Cada produto dentro de um movimento. Contém quantidade e preço unitário (para cálculo de custo).
 
-- [ ] **Criar modelo Stock**
-  - [ ] Campos: product (OneToOne), quantity, last_updated
-  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True) - Herdar de product.owner_company
-  - [ ] Método update_stock(quantity, movement_type)
-
-- [ ] **Criar signal para atualização automática**
-  - [ ] Signal post_save de StockMovement atualiza Stock
-  - [ ] Entrada: quantity += quantidade
-  - [ ] Saída: quantity -= quantidade
+- [ ] **Criar modelo StockMovementLine**
+  - [ ] Herdar de AbstractBaseModel
+  - [ ] Campo: stock_movement (FK StockMovement, on_delete=CASCADE, related_name='lines')
+  - [ ] Campo: product (FK Product, on_delete=PROTECT)
+  - [ ] Campo: quantity (DecimalField) — quantidade movida
+  - [ ] Campo: unit_price (DecimalField, default=0) — preço unitário (custo na receção, sale_price na expedição)
+  - [ ] Campo: uom (FK UoM, null=True, blank=True) — herda do produto se vazio
+  - [ ] Campo: notes (TextField, null=True, blank=True)
+  - [ ] Método save(): se uom vazio, herdar de product.uom
+  - [ ] Property line_total: quantity × unit_price
 
 - [ ] **Criar migrations**
   - [ ] makemigrations e migrate
 
-- [ ] **Testing - Stock**
-  - [ ] Test: criar StockMovement atualiza Stock automaticamente
-  - [ ] Test: saldo é calculado corretamente
+- [ ] **Testing - StockMovementLine**
+  - [ ] Test: criar linha funciona
+  - [ ] Test: uom herda do produto se não definido
+  - [ ] Test: line_total calcula corretamente
 
 ---
 
-## 6.6 Views de Listagem de Produtos
+## 6.7 Modelo StockQuant (Stock Atual)
 
-Criar views para listar produtos.
+Quantidade real de cada produto no armazém. Atualizado automaticamente quando um StockMovement é validado.
 
-- [ ] **Criar ProductListView**
-  - [ ] Listar todos os produtos
-  - [ ] Busca por code/name
-  - [ ] Filtro por categoria
-  - [ ] Mostrar stock atual
+- [ ] **Criar modelo StockQuant**
+  - [ ] Herdar de AbstractBaseModel
+  - [ ] Campo: product (FK Product, on_delete=CASCADE, related_name='quants')
+  - [ ] Campo: warehouse (FK Warehouse, on_delete=CASCADE, related_name='quants')
+  - [ ] Campo: quantity (DecimalField, default=0) — quantidade em mão
+  - [ ] Constraint: unique_together (product, warehouse) — 1 quant por produto/armazém
 
-- [ ] **Criar template**
-  - [ ] `templates/inventory/product_list.html` (standalone)
-  - [ ] Tabela com: code, name, category, cost, sale, stock, actions
+- [ ] **Métodos de classe (helpers)**
+  - [ ] get_on_hand(product, warehouse=None): retorna quantidade em armazém (ou total se warehouse=None)
+  - [ ] update_quantity(product, warehouse, qty, mode='add'): add/subtract quantity (get_or_create)
 
-- [ ] **Configurar rota**
-  - [ ] `path('inventory/products/', ProductListView, name='product_list')`
+- [ ] **Integração com StockMovement.action_validate()**
+  - [ ] Ao validar um movimento:
+    - [ ] Se receipt: para cada linha → StockQuant.update_quantity(product, warehouse, qty, 'add')
+    - [ ] Se delivery: para cada linha → StockQuant.update_quantity(product, warehouse, qty, 'subtract')
+    - [ ] Se adjustment: calcular diferença (positiva = add, negativa = subtract)
+  - [ ] Se ao subtrair o stock fica negativo → permitir mas alertar (stock negativo = algo errado)
 
-- [ ] **Testing - Product List**
-  - [ ] Test: listar produtos funciona
-  - [ ] Test: busca funciona
-  - [ ] Test: stock é exibido
+- [ ] **Criar migrations**
+  - [ ] makemigrations e migrate
 
----
+- [ ] **Registrar no Admin**
+  - [ ] Criar StockQuantAdmin
+  - [ ] list_display: product, warehouse, quantity
+  - [ ] list_filter: warehouse
 
-## 6.7 Views de Criação/Edição de Produtos
-
-Criar views para CRUD de produtos.
-
-- [ ] **Criar ProductCreateView**
-  - [ ] Form com todos os campos
-  - [ ] Upload de imagem
-
-- [ ] **Criar ProductUpdateView**
-  - [ ] Form pré-preenchido
-  - [ ] Substituir imagem
-
-- [ ] **Criar ProductDetailView**
-  - [ ] Mostrar todas as informações
-  - [ ] Mostrar histórico de stock
-
-- [ ] **Criar templates**
-  - [ ] `templates/inventory/product_create.html` (standalone)
-  - [ ] `templates/inventory/product_update.html` (standalone)
-  - [ ] `templates/inventory/product_detail.html` (standalone)
-
-- [ ] **Configurar rotas**
-  - [ ] `/inventory/products/new/`
-  - [ ] `/inventory/products/<uuid:pk>/edit/`
-  - [ ] `/inventory/products/<uuid:pk>/`
-
-- [ ] **Testing - Product CRUD**
-  - [ ] Test: criar produto funciona
-  - [ ] Test: editar produto funciona
-  - [ ] Test: visualizar detalhes funciona
+- [ ] **Testing - StockQuant**
+  - [ ] Test: criar quant funciona
+  - [ ] Test: unique_together impede duplicados (product, warehouse)
+  - [ ] Test: validar receção incrementa quantidade
+  - [ ] Test: validar expedição decrementa quantidade
+  - [ ] Test: validar ajuste positivo/negativo funciona
+  - [ ] Test: stock negativo é permitido (mas gera alerta/log)
 
 ---
 
-## 6.8 View de Stock Atual
+## 6.8 Modelo ProductSupplierInfo (Info Fornecedor por Produto)
 
-Criar view para visualizar stock de todos os produtos.
+Informações de compra por fornecedor. Permite múltiplos fornecedores por produto.
 
-- [ ] **Criar StockListView**
-  - [ ] Listar todos os produtos com stock
-  - [ ] Mostrar: product, quantity, last_updated
-  - [ ] Filtro por categoria
-  - [ ] Destacar produtos com stock baixo (configurável)
+- [ ] **Criar modelo ProductSupplierInfo**
+  - [ ] Herdar de AbstractBaseModel
+  - [ ] Campo: product (FK Product, on_delete=CASCADE, related_name='supplier_infos')
+  - [ ] Campo: supplier (FK Contact, on_delete=CASCADE, related_name='supplied_products')
+  - [ ] Campo: supplier_product_code (CharField, blank=True) — ref do produto no fornecedor (ex: código Makro)
+  - [ ] Campo: price (DecimalField) — preço unitário de compra
+  - [ ] Campo: min_quantity (DecimalField, default=1) — quantidade mínima de compra
+  - [ ] Campo: lead_time (IntegerField, default=0) — prazo de entrega em dias
+  - [ ] Campo: is_preferred (BooleanField, default=False) — fornecedor preferido
+  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True)
+  - [ ] Constraint: unique_together (product, supplier)
+  - [ ] Método de classe get_best_supplier(product): retorna (supplier, price) do fornecedor preferido ou mais barato
+  - [ ] Ordering: ['-is_preferred', 'price']
 
-- [ ] **Criar template**
-  - [ ] `templates/inventory/stock_list.html` (standalone)
-  - [ ] Tabela com alertas visuais
+- [ ] **Atualizar tab "Compras" do formulário Product**
+  - [ ] No tab "Compras" do product_form.html, mostrar tabela com:
+    - [ ] Colunas: Fornecedor, Código, Preço, Qtd Mín, Prazo (dias), Preferido, Ações
+    - [ ] Botão "Adicionar Fornecedor" (AJAX modal ou inline)
+    - [ ] Edição inline (similar a category products tab)
+  - [ ] Se produto tem campo `supplier` antigo: data migration para ProductSupplierInfo
 
-- [ ] **Configurar rota**
-  - [ ] `path('inventory/stock/', StockListView, name='stock_list')`
+- [ ] **Criar migrations**
+  - [ ] makemigrations e migrate
 
-- [ ] **Testing - Stock List**
-  - [ ] Test: visualizar stock funciona
-  - [ ] Test: alertas de stock baixo aparecem
+- [ ] **Registrar no Admin**
+  - [ ] Criar ProductSupplierInfoAdmin
+  - [ ] list_display: product, supplier, price, min_quantity, lead_time, is_preferred
 
----
-
-## 6.9 Ajustes de Stock Manual
-
-Criar view para ajustes manuais de stock.
-
-- [ ] **Criar StockAdjustmentView**
-  - [ ] Form: product, quantity, reason, is_loss (checkbox)
-  - [ ] Se is_loss=True, registrar perda financeira
-
-- [ ] **Criar template**
-  - [ ] `templates/inventory/stock_adjustment.html` (standalone)
-  - [ ] Form com validações
-
-- [ ] **Criar StockMovement ao salvar**
-  - [ ] movement_type = ADJUSTMENT
-  - [ ] Registrar reason
-
-- [ ] **Configurar rota**
-  - [ ] `path('inventory/stock/adjust/', StockAdjustmentView, name='stock_adjustment')`
-
-- [ ] **Testing - Stock Adjustment**
-  - [ ] Test: ajuste de stock funciona
-  - [ ] Test: stock é atualizado
-  - [ ] Test: perda é registrada se marcado
+- [ ] **Testing - ProductSupplierInfo**
+  - [ ] Test: criar funciona
+  - [ ] Test: unique_together impede duplicados
+  - [ ] Test: get_best_supplier retorna preferido, ou mais barato
+  - [ ] Test: tab "Compras" mostra fornecedores
 
 ---
 
-## 6.10 Relatório de Movimentações de Stock
+## 6.9 Adicionar Campos de Stock ao Produto
 
-Criar view para histórico de movimentações.
+Campos e métodos no modelo Product para alimentar smart buttons e tabs.
 
-- [ ] **Criar StockMovementListView**
-  - [ ] Listar todas as movimentações
-  - [ ] Filtros: data, produto, tipo de movimento
-  - [ ] Paginação
+- [ ] **Novos campos em Product (migration)**
+  - [ ] Campo: min_stock (DecimalField, default=0) — stock mínimo para alertas
+  - [ ] Campo: weight (DecimalField, null=True, blank=True) — peso em kg (opcional)
 
-- [ ] **Criar template**
-  - [ ] `templates/inventory/stock_movements.html` (standalone)
-  - [ ] Tabela com: data, produto, tipo, quantidade, user, reason
+- [ ] **Métodos novos em Product**
+  - [ ] get_on_hand_quantity(warehouse=None): StockQuant.get_on_hand(self, warehouse)
+  - [ ] get_incoming_quantity(): soma qty de StockMovementLines em movimentos receipt/draft
+  - [ ] get_outgoing_quantity(): soma qty de StockMovementLines em movimentos delivery/draft
+  - [ ] get_forecasted_quantity(): on_hand + incoming - outgoing
+  - [ ] get_profit_margin(): já existe — sale_price - cost_price
+  - [ ] get_stock_value(): on_hand × cost_price (valor do inventário deste produto)
 
-- [ ] **Configurar rota**
-  - [ ] `path('inventory/movements/', StockMovementListView, name='stock_movements')`
+- [ ] **Atualizar tab "Inventário" do formulário Product**
+  - [ ] No tab "Inventário" do product_form.html, mostrar (read-only):
+    - [ ] Em Mão: get_on_hand_quantity()
+    - [ ] A Receber: get_incoming_quantity() (movimentos de receção pendentes)
+    - [ ] A Expedir: get_outgoing_quantity() (movimentos de expedição pendentes)
+    - [ ] Previsão: get_forecasted_quantity()
+    - [ ] Valor em Stock: get_stock_value()
+    - [ ] Margem de Lucro: get_profit_margin() / sale_price × 100 (em %)
+  - [ ] Campos editáveis: min_stock, weight
 
-- [ ] **Testing - Stock Movements**
-  - [ ] Test: visualizar histórico funciona
+- [ ] **Criar migrations**
+  - [ ] makemigrations e migrate
+
+- [ ] **Testing - Product Stock Fields**
+  - [ ] Test: get_on_hand_quantity retorna valor correto de StockQuant
+  - [ ] Test: get_forecasted_quantity = on_hand + incoming - outgoing
+  - [ ] Test: get_stock_value = on_hand × cost_price
+  - [ ] Test: tab Inventário mostra valores
+
+---
+
+## 6.10 Views de Movimentos de Stock
+
+Criar views para listar e gerir movimentos de stock. Vista principal = lista com tabs por tipo.
+
+- [ ] **StockMovementListView (lista principal)**
+  - [ ] Listar movimentos com filtros:
+    - [ ] Tabs: Todos, Receções, Expedições, Ajustes
+    - [ ] Filtros: estado, data, parceiro, produto (via linha)
+    - [ ] Busca por referência ou nome do parceiro
+  - [ ] Colunas: Referência, Tipo, Parceiro, Data, Estado, Valor Total, Nº Produtos
+  - [ ] Paginação server-side (50/page)
+  - [ ] Bulk actions: validar em massa, cancelar em massa
+
+- [ ] **StockMovementCreateView (criar movimento manual)**
+  - [ ] Form: movement_type (pré-selecionado se veio de tab), warehouse, partner, date, notes
+  - [ ] Tabela de linhas (Alpine.js dinâmico):
+    - [ ] Produto (seletor com busca), Quantidade, Preço Unitário, UdM (auto do produto)
+    - [ ] Botão "Adicionar Linha" e "Remover"
+    - [ ] Total por linha e total geral (calculados em real-time)
+  - [ ] Botões: "Guardar Rascunho" e "Validar" (guardar + validar de uma vez)
+
+- [ ] **StockMovementEditView (editar rascunho)**
+  - [ ] Apenas se estado = draft
+  - [ ] Mesmo form que create, pré-preenchido
+  - [ ] Botões: "Guardar", "Validar", "Cancelar"
+
+- [ ] **StockMovementDetailView (ver movimento validado)**
+  - [ ] Mostrar cabeçalho e linhas (read-only se done)
+  - [ ] Informação: referência, tipo, parceiro, data, valor total
+  - [ ] Tabela de linhas: produto, quantidade, preço, total linha
+  - [ ] Se draft: botões "Editar", "Validar", "Cancelar"
+  - [ ] Se done: apenas visualização + link para parceiro
+
+- [ ] **Templates**
+  - [ ] `templates/inventory/stock_movement_list.html` — lista com tabs
+  - [ ] `templates/inventory/stock_movement_form.html` — form create/edit com linhas dinâmicas
+  - [ ] `templates/inventory/stock_movement_detail.html` — detalhe read-only
+  - [ ] `templates/components/stock_movement_navbar.html` — navbar
+
+- [ ] **Rotas**
+  - [ ] `path('inventory/movements/', ..., name='stock_movement_list')`
+  - [ ] `path('inventory/movements/new/', ..., name='stock_movement_create')`
+  - [ ] `path('inventory/movements/<uuid:pk>/', ..., name='stock_movement_detail')`
+  - [ ] `path('inventory/movements/<uuid:pk>/edit/', ..., name='stock_movement_edit')`
+  - [ ] `path('inventory/movements/<uuid:pk>/validate/', ..., name='stock_movement_validate')`
+  - [ ] `path('inventory/movements/<uuid:pk>/cancel/', ..., name='stock_movement_cancel')`
+  - [ ] `path('inventory/movements/bulk-action/', ..., name='stock_movement_bulk_action')`
+
+- [ ] **Testing - StockMovement Views**
+  - [ ] Test: listar movimentos funciona
+  - [ ] Test: tabs filtram por tipo
+  - [ ] Test: criar movimento com linhas funciona
+  - [ ] Test: validar atualiza StockQuant
+  - [ ] Test: cancelar funciona se draft
+  - [ ] Test: editar apenas em draft
+
+---
+
+## 6.11 View de Stock Atual (Overview)
+
+Vista principal para ver o stock de todos os produtos.
+
+- [ ] **StockOverviewView**
+  - [ ] Listar produtos com informação de stock:
+    - [ ] Colunas: Produto, Categoria, Em Mão, Previsão, Custo Unit., Valor em Stock, Margem %
+  - [ ] Filtros: categoria, busca por nome, armazém
+  - [ ] Destaque visual: vermelho (stock=0), laranja (stock < min_stock), verde (stock OK)
+  - [ ] Totais no footer: valor total do inventário
+  - [ ] Paginação server-side (50/page)
+  - [ ] Click no produto → vai para product_edit (tab Inventário)
+
+- [ ] **Template**
+  - [ ] `templates/inventory/stock_overview.html`
+
+- [ ] **Rota**
+  - [ ] `path('inventory/stock/', ..., name='stock_overview')`
+
+- [ ] **Testing - Stock Overview**
+  - [ ] Test: overview mostra quantidades corretas
+  - [ ] Test: valor do inventário calculado
+  - [ ] Test: alertas visuais para stock baixo
   - [ ] Test: filtros funcionam
 
 ---
 
-## 6.11 Alertas de Stock Mínimo
+## 6.12 Ajustes de Inventário (Simplificado)
 
-Implementar sistema de alertas de stock baixo.
+Form dedicado para ajustes rápidos de stock. Cria StockMovement de tipo adjustment automaticamente.
 
-- [ ] **Adicionar campo min_stock em Product**
-  - [ ] Criar migration para adicionar campo
+- [ ] **InventoryAdjustmentView**
+  - [ ] Form simplificado:
+    - [ ] Armazém (default: principal)
+    - [ ] Tabela de produtos:
+      - [ ] Produto (seletor com busca), Stock Sistema (read-only, auto-preenchido), Stock Real (input), Motivo
+    - [ ] Ao guardar: para cada produto com diferença:
+      - [ ] Cria StockMovement (type=adjustment) + StockMovementLine
+      - [ ] Valida automaticamente (done)
+      - [ ] StockQuant atualizado
+  - [ ] Flash message: "Ajuste validado: X produtos atualizados"
 
-- [ ] **Criar view de alertas**
-  - [ ] Listar produtos com stock < min_stock
-  - [ ] Destacar em vermelho
+- [ ] **Template**
+  - [ ] `templates/inventory/inventory_adjustment.html`
 
-- [ ] **Adicionar no Dashboard**
-  - [ ] Widget com contagem de produtos com stock baixo
+- [ ] **Rota**
+  - [ ] `path('inventory/adjustments/new/', ..., name='inventory_adjustment_create')`
 
-- [ ] **Testing - Stock Alerts**
-  - [ ] Test: produtos com stock baixo aparecem em alerta
-  - [ ] Test: dashboard mostra contagem
+- [ ] **Testing - Adjustment**
+  - [ ] Test: ajuste positivo incrementa stock
+  - [ ] Test: ajuste negativo decrementa stock
+  - [ ] Test: StockMovement criado com tipo adjustment
+  - [ ] Test: movimento é auto-validado
 
 ---
 
-## 6.12 Importação de Produtos (CSV)
+## 6.13 Relatório de Valorização de Stock
 
-Permitir importar produtos via CSV.
+Relatório simples para a pessoa saber quanto vale o seu inventário.
 
-- [ ] **Criar ProductImportView**
+- [ ] **StockValuationView**
+  - [ ] Mostrar por produto:
+    - [ ] Produto, Quantidade, Custo Unitário, Valor Total (qty × cost), Preço Venda, Lucro Potencial
+  - [ ] Filtros: categoria, apenas com stock > 0
+  - [ ] Totais: valor total do inventário, lucro potencial total
+  - [ ] Notas: "Lucro Potencial = (sale_price - cost_price) × quantidade em stock"
+
+- [ ] **Template**
+  - [ ] `templates/inventory/stock_valuation.html`
+
+- [ ] **Rota**
+  - [ ] `path('inventory/reports/valuation/', ..., name='stock_valuation_report')`
+
+- [ ] **Testing - Valuation**
+  - [ ] Test: valorização calcula valor correto
+  - [ ] Test: lucro potencial calcula corretamente
+  - [ ] Test: filtro por categoria funciona
+
+---
+
+## 6.14 Smart Buttons com Dados Reais
+
+Conectar os smart buttons do formulário de produto (já criados em 6.3.2) aos dados reais.
+
+- [ ] **Atualizar product_edit view (views.py)**
+  - [ ] Passar contadores reais ao template:
+    - [ ] `on_hand_count`: product.get_on_hand_quantity() (smart button laranja "Em Stock")
+    - [ ] `forecast_count`: product.get_forecasted_quantity() (smart button azul "Previsão")
+    - [ ] `bom_count`: 0 (placeholder até Fase 10)
+    - [ ] `sold_count`: 0 (placeholder até Fase 8)
+
+- [ ] **Clicks dos smart buttons**
+  - [ ] **Em Stock** (laranja): click → vai para stock_overview filtrado por este produto
+  - [ ] **Previsão** (azul): click → vai para stock_overview filtrado por este produto
+  - [ ] **BOM** (roxo): click → ⏳ futuro (Fase 10)
+  - [ ] **Vendidas** (verde): click → ⏳ futuro (Fase 8)
+
+- [ ] **Método Product.get_stats() (helper completo)**
+  - [ ] Retorna dict com todos os contadores:
+    - [ ] on_hand_qty, forecasted_qty, incoming_qty, outgoing_qty
+    - [ ] stock_value (on_hand × cost_price)
+    - [ ] profit_margin_pct
+    - [ ] supplier_count (product.supplier_infos.count())
+    - [ ] bom_count: 0 (Fase 10)
+    - [ ] sales_count: 0 (Fase 8)
+
+- [ ] **Testing - Smart Buttons**
+  - [ ] Test: smart buttons mostram valores corretos
+  - [ ] Test: get_stats() retorna contadores corretos
+  - [ ] Test: click Em Stock navega para stock_overview
+
+---
+
+## 6.15 Alertas de Stock e Dashboard Widget
+
+Alertas visuais para produtos com stock baixo.
+
+- [ ] **Alertas na stock_overview (6.11)**
+  - [ ] Cores: vermelho (stock = 0), laranja (stock < min_stock), verde (stock >= min_stock)
+  - [ ] Badge/counter no topo: "X produtos com stock baixo"
+
+- [ ] **Widget no Dashboard**
+  - [ ] Adicionar widget "Stock" no dashboard principal:
+    - [ ] Total de produtos
+    - [ ] Produtos com stock baixo (< min_stock)
+    - [ ] Valor total do inventário
+    - [ ] Link rápido para stock_overview
+
+- [ ] **Testing - Alerts**
+  - [ ] Test: produtos com stock < min_stock destacados
+  - [ ] Test: dashboard widget mostra contagem
+
+---
+
+## 6.16 Importação de Produtos (CSV)
+
+Importar produtos em massa via ficheiro CSV.
+
+- [ ] **ProductImportView**
   - [ ] Upload CSV
-  - [ ] Validar estrutura
-  - [ ] Criar produtos em batch
+  - [ ] Validar colunas (obrigatórias: name, product_type, sale_price)
+  - [ ] Preview: mostrar 5 primeiras linhas antes de importar
+  - [ ] Importar em batch
+  - [ ] Resultado: "X criados, Y erros (com detalhes)"
 
-- [ ] **Criar template**
-  - [ ] `templates/inventory/product_import.html` (standalone)
+- [ ] **Template**
+  - [ ] `templates/inventory/product_import.html`
 
-- [ ] **Configurar rota**
-  - [ ] `path('inventory/products/import/', ProductImportView, name='product_import')`
+- [ ] **Rota**
+  - [ ] `path('inventory/products/import/', ..., name='product_import')`
 
-- [ ] **Testing - Product Import**
+- [ ] **Testing - Import**
   - [ ] Test: importar CSV funciona
   - [ ] Test: validações funcionam
+  - [ ] Test: preview mostra dados
 
 ---
 
-## 6.13 Relações e Smart Buttons - Módulo Produtos
+## 6.17 Atualização de Menus e Navegação
 
-**OBJETIVO:** Documentar todas as relações FK que Produtos terão com outros módulos + criar smart buttons bidirecionais + vistas de listagem.
+Atualizar o navbar do inventário com os novos links.
 
-- [ ] **Relações FK Recebidas (outros módulos → Product)**
-  - [ ] **Vendas** (Fase 7):
-    - [ ] Modelo `SaleOrderLine` terá campo `product = ForeignKey(Product, on_delete=PROTECT, related_name='sale_lines')`
-    - [ ] Smart button: "Vendas" no formulário de Product (contador de quantas vendas incluíram este produto)
-    - [ ] Vista: `product_sales_list(product_id)` usando template base
-    - [ ] Rota: `/products/<uuid:pk>/sales/`
-    - [ ] Colunas tabela: Nº Venda, Cliente, Data, Quantidade Vendida, Total Linha
-    - [ ] Se 1 venda → redireciona para `sale_detail(pk)`
-    - [ ] Se múltiplas → mostra lista clicável
-  - [ ] **Compras** (Fase 6):
-    - [ ] Modelo `PurchaseOrderLine` terá campo `product = ForeignKey(Product, on_delete=PROTECT, related_name='purchase_lines')`
-    - [ ] Smart button: "Compras" no formulário de Product
-    - [ ] Vista: `product_purchases_list(product_id)` usando template base
-    - [ ] Rota: `/products/<uuid:pk>/purchases/`
-    - [ ] Colunas tabela: Nº Compra, Fornecedor, Data, Quantidade Comprada, Custo Unitário
-    - [ ] Se 1 compra → redireciona para `purchase_detail(pk)`
-    - [ ] Se múltiplas → mostra lista clicável
-  - [ ] **Movimentos Stock** (Fase 5 - mesma fase):
-    - [ ] Modelo `StockMovement` já tem campo `product = ForeignKey(Product, on_delete=CASCADE, related_name='stock_movements')`
-    - [ ] Smart button: "Movimentos" no formulário de Product
-    - [ ] Vista: `product_movements_list(product_id)` usando template base
-    - [ ] Rota: `/products/<uuid:pk>/movements/`
-    - [ ] Colunas tabela: Data, Tipo (IN/OUT/ADJUSTMENT), Quantidade, Referência Doc, User
-    - [ ] Sempre mostra lista (mesmo se 1 movimento)
-  - [ ] **BOMs (Bill of Materials)** (Fase 9):
-    - [ ] **Relação BIDIRECIONAL MAS ASSIMÉTRICA:**
-      - [ ] Modelo `BOM` terá campo `product = ForeignKey(Product, on_delete=CASCADE, related_name='bom')` (produto finalizado que TEM uma BOM)
-      - [ ] Modelo `BOMLine` terá campo `component = ForeignKey(Product, on_delete=PROTECT, related_name='used_in_boms')` (ingrediente usado EM outras BOMs)
-    - [ ] Smart button "BOM" no formulário de Product:
-      - [ ] Se `product.bom.exists()` → mostrar botão "BOM (1)" que vai direto para `bom_detail(bom_id)`
-      - [ ] Se não tem BOM → botão fica disabled com "BOM (0)" ou oculto
-    - [ ] Smart button "Usado em BOMs" NO formulário de Product:
-      - [ ] **EXCEÇÃO:** NÃO criar este botão! (seria "Usado em 50 bolos" - info demasiada)
-      - [ ] Razão: Um ingrediente como "Farinha" pode estar em 50+ BOMs, não faz sentido mostrar
-    - [ ] Vista dentro da BOM:
-      - [ ] Ao abrir `bom_detail(bom_id)`, mostra tabela de ingredientes (BOMLines)
-      - [ ] Cada linha tem link para `product_detail(component_id)` do ingrediente
-      - [ ] Mas ingrediente NÃO tem botão "Ver BOMs onde sou usado"
+- [ ] **Navbar principal de inventário**
+  - [ ] Links diretos:
+    - [ ] "Produtos" → product_list
+    - [ ] "Stock" → stock_overview
+    - [ ] "Movimentos" → stock_movement_list
+  - [ ] Dropdown "Configuração":
+    - [ ] Categorias, UdM, Categorias UdM (existentes)
+    - [ ] Armazéns (admin link ou view simples)
 
-- [ ] **Método Helper para Contadores**
-  - [ ] Adicionar método `Product.get_stats()` no modelo Product:
-    ```python
-    def get_stats(self):
-        from django.db.models import Sum, Count
-        return {
-            'sales_count': self.sale_lines.values('sale_order').distinct().count(),
-            'purchases_count': self.purchase_lines.values('purchase_order').distinct().count(),
-            'movements_count': self.stock_movements.count(),
-            'has_bom': self.bom.exists(),
-            'total_sold': self.sale_lines.aggregate(Sum('quantity'))['quantity__sum'] or 0,
-            'current_stock': self.current_stock or 0,  # campo direto no Product
-        }
-    ```
-  - [ ] No template do formulário Product, chamar `product.get_stats` para popular os smart buttons
+- [ ] **Navbar do StockMovement (stock_movement_navbar)**
+  - [ ] Links: "Movimentos" (lista), Tabs rápidas (Receções, Expedições, Ajustes)
+  - [ ] Botões: Descartar, Guardar, Validar
 
-- [ ] **Testing - Product Relations**
-  - [ ] Test: `product.get_stats()` retorna contadores corretos
-  - [ ] Test: smart button Vendas conta distintas vendas (não linhas)
-  - [ ] Test: smart button Compras conta distintas compras
-  - [ ] Test: smart button BOM só aparece se produto TEM bom
-  - [ ] Test: ingrediente NÃO mostra botão "Usado em BOMs"
-  - [ ] Test: vistas usam template base corretamente
+---
+
+## 6.18 Notas para Fase 7 (Compras) e Fase 8 (Vendas)
+
+> **NOTA:** Implementar estas integrações quando chegarmos à Fase 7/8.
+
+- [ ] **Fase 7 — Receção automática de compra**
+  - [ ] Ao confirmar PurchaseOrder:
+    - [ ] Auto-criar StockMovement (type=receipt, partner=supplier, origin="PO-XXXXX")
+    - [ ] Auto-criar StockMovementLines a partir das PurchaseOrderLines
+  - [ ] "Receber" = validar o StockMovement → stock incrementado
+  - [ ] Atualizar cost_price do produto (se preço de compra mudou)
+
+- [ ] **Fase 8 — Expedição automática de venda**
+  - [ ] Ao confirmar SaleOrder:
+    - [ ] Verificar stock (StockQuant.get_on_hand para cada produto)
+    - [ ] Se stock suficiente → auto-criar StockMovement (type=delivery, partner=client, origin="SO-XXXXX")
+    - [ ] Se stock insuficiente → ALERTA ao utilizador:
+      - [ ] Opção 1: "Criar Pedido de Compra" → auto-gera PurchaseOrder com os produtos em falta
+      - [ ] Opção 2: "Continuar sem stock" → cria expedição na mesma (stock fica negativo)
+  - [ ] "Entregar" = validar o StockMovement → stock decrementado
 
 ---
 
@@ -7460,137 +8185,315 @@ Criar testes completos do sistema BOM.
 
 # 🚀 FASE 11: SISTEMA DE PDFs (DOCUMENTOS)
 
-**⏱ Tempo estimado:** 4-5 dias
-**🎯 Objetivo:** Criar sistema de geração de PDFs para documentos (orçamentos, faturas, etc.)
-**📦 Dependências:** Fase 7 (compras), Fase 8 (vendas)
+**⏱ Tempo estimado:** 6-8 dias
+**🎯 Objetivo:** Criar sistema de Document Layout configurável + geração de PDFs para documentos (orçamentos, faturas, etc.)
+**📦 Dependências:** Fase 3 (core), Fase 4 (contactos), Fase 7 (compras), Fase 8 (vendas)
 
 ---
 
 ## 11.1 Criação da App 'documents'
 
-Criar app Django para geração de PDFs.
+Criar app Django para gestão de layouts e geração de PDFs.
 
-- [ ] **Criar app**
-  - [ ] Executar `python manage.py startapp documents apps/documents`
-  - [ ] Adicionar 'apps.documents' ao INSTALLED_APPS
-
----
-
-## 11.2 Template Base para PDFs
-
-Criar template base HTML para PDFs.
-
-- [ ] **Criar template base**
-  - [ ] Criar `templates/documents/pdf_base.html`
-  - [ ] Definir header fixo (logo, empresa)
-  - [ ] Definir footer fixo (página, termos)
-  - [ ] Área de conteúdo variável
-
-- [ ] **Estilização**
-  - [ ] CSS inline para PDF
-  - [ ] Garantir compatibilidade com ReportLab
+- [x] **Criar app**
+  - [x] Executar `python manage.py startapp documents apps/documents`
+  - [x] Adicionar 'apps.documents' ao INSTALLED_APPS
+  - [ ] Criar `apps/documents/urls.py` com namespace `documents`
+  - [ ] Incluir URLs no `config/urls.py`
 
 ---
 
-## 11.3 Template para Orçamento PDF
+## 11.2 Modelos — Document Layout System
 
-Criar template específico para orçamentos.
+Arquitectura de 3 tabelas para layouts configuráveis de documentos PDF.
 
-- [ ] **Criar template**
-  - [ ] Criar `templates/documents/pdf_quotation.html`
-  - [ ] Header: dados da empresa
-  - [ ] Dados do cliente
-  - [ ] Tabela de produtos/serviços
-  - [ ] Totais e condições
+### 11.2.1 Modelo `LayoutStyle` — Estilos de Envelope
+
+Cada estilo define o HTML do header e footer do documento. A empresa escolhe um.
+
+- [x] **Criar modelo `LayoutStyle`**
+  - [x] Campo `id` (UUIDField PK)
+  - [x] Campo `name` (CharField, max_length=100, unique) — nome amigável
+  - [x] Campo `slug` (SlugField, unique) — identificador técnico
+  - [x] Campo `description` (TextField, blank) — descrição do visual
+  - [x] Campo `header_html` (TextField) — HTML do header com placeholders Django template
+  - [x] Campo `footer_html` (TextField) — HTML do footer com placeholders Django template
+  - [x] Campo `preview_image` (ImageField, upload_to='documents/previews/', blank) — thumbnail de pré-visualização
+  - [x] Campo `is_active` (BooleanField, default=True)
+  - [x] Campo `sort_order` (IntegerField, default=0) — ordenação na UI
+  - [x] Campos de auditoria (created_at, updated_at, created_by, updated_by)
+  - [x] `__str__` → `name`
+  - [x] `class Meta: ordering = ['sort_order', 'name']`
+
+- [x] **Admin — `LayoutStyleAdmin`**
+  - [x] `list_display`: name, slug, is_active, sort_order
+  - [x] `list_editable`: is_active, sort_order
+  - [x] `prepopulated_fields`: slug from name
+
+### 11.2.2 Modelo `TableStyle` — Estilos de Tabelas de Dados
+
+Cada estilo define como as tabelas de linhas (produtos, serviços, etc.) aparecem no corpo do documento.
+
+- [x] **Criar modelo `TableStyle`**
+  - [x] Campo `id` (UUIDField PK)
+  - [x] Campo `name` (CharField, max_length=100, unique)
+  - [x] Campo `slug` (SlugField, unique)
+  - [x] Campo `description` (TextField, blank)
+  - [x] Campo `css_styles` (TextField) — CSS inline para a tabela (bordas, cores, alternação de linhas)
+  - [x] Campo `header_row_html` (TextField, blank) — HTML template da row do header da tabela
+  - [x] Campo `data_row_html` (TextField, blank) — HTML template de cada row de dados
+  - [x] Campo `totals_row_html` (TextField, blank) — HTML template da row de totais
+  - [x] Campo `preview_image` (ImageField, upload_to='documents/previews/', blank)
+  - [x] Campo `is_active` (BooleanField, default=True)
+  - [x] Campo `sort_order` (IntegerField, default=0)
+  - [x] Campos de auditoria
+  - [x] `__str__` → `name`
+
+- [x] **Admin — `TableStyleAdmin`**
+  - [x] `list_display`: name, slug, is_active, sort_order
+  - [x] `list_editable`: is_active, sort_order
+
+### 11.2.3 Modelo `DocumentLayout` — Configuração Ativa da Empresa
+
+Cada empresa tem 1 DocumentLayout que combina um LayoutStyle + TableStyle + cores + fonte + textos.
+
+- [x] **Criar modelo `DocumentLayout`**
+  - [x] Campo `id` (UUIDField PK)
+  - [x] Campo `company` (OneToOneField → Company, CASCADE) — 1 por empresa
+  - [x] Campo `layout_style` (FK → LayoutStyle, PROTECT)
+  - [x] Campo `table_style` (FK → TableStyle, PROTECT)
+  - [x] Campo `font` (CharField, max_length=100, default='Lato') — fonte dos documentos
+  - [x] Campo `primary_color` (CharField, max_length=7, default='#dbc693') — cor principal (headers, destaques)
+  - [x] Campo `secondary_color` (CharField, max_length=7, default='#1f2937') — cor secundária (texto, borders)
+  - [x] Campo `tagline` (CharField, max_length=255, blank) — slogan da empresa
+  - [x] Campo `footer_text` (TextField, blank) — texto livre do footer (telefone, email, website)
+  - [x] Campo `paper_format` (CharField, choices: A4, US_LETTER, default='A4')
+  - [x] Campo `tax_id` (CharField, max_length=50, blank) — NIF / CNPJ
+  - [x] Campos de auditoria
+  - [x] `__str__` → `f'Layout de {company.name}'`
+  - [x] Método `get_context()` — retorna dict completo para renderização (logo, morada, cores, etc. via Company)
+
+- [x] **Admin — `DocumentLayoutAdmin`**
+  - [x] `list_display`: company, layout_style, table_style, font, paper_format
+  - [x] `list_select_related`: company, layout_style, table_style
+
+- [x] **Migrations**
+  - [x] Criar migration para os 3 modelos
+  - [x] Executar `python manage.py migrate`
 
 ---
 
-## 11.4 Template para Fatura PDF
+## 11.3 Layout Styles — Criação dos 7 Estilos
 
-Criar template específico para faturas.
+Criar 7 estilos de layout com HTML para header e footer. Cada um tem uma personalidade visual distinta.
 
-- [ ] **Criar template**
-  - [ ] Criar `templates/documents/pdf_invoice.html`
-  - [ ] Similar ao orçamento
-  - [ ] Adicionar informações fiscais
-  - [ ] Condições de pagamento
+### 11.3.1 Layout Style: **Clean** (Limpo)
+- [x] Header: logo alinhado à esquerda, dados da empresa à direita, separador fino
+- [x] Footer: linha fina + texto centrado (telefone, email, website, nº de página)
+- [x] Visual: minimalista, muito espaço em branco, sem fundos coloridos
+- [x] HTML armazenado no seed (`scripts/seed_document_styles.py`)
+- [x] ~~Criar ficheiro `templates/documents/layouts/clean_header.html`~~ (inline no BD)
+
+### 11.3.2 Layout Style: **Bold** (Forte)
+- [x] Header: barra escura no topo, logo e nome à esquerda, dados da empresa à direita
+- [x] Footer: barra escura inferior + texto centrado
+- [x] Visual: impactante, cores fortes, presença forte da marca
+- [x] HTML armazenado no seed
+
+### 11.3.3 Layout Style: **Stripe** (Faixa)
+- [x] Header: faixa lateral colorida à esquerda (5px), logo e dados alinhados à esquerda com recuo
+- [x] Footer: faixa lateral a repetir + texto alinhado à esquerda
+- [x] Visual: profissional, subtil, toque de cor lateral
+- [x] HTML armazenado no seed
+
+### 11.3.4 Layout Style: **Frame** (Moldura)
+- [x] Header: bordas finas formando moldura no topo, logo centrado dentro da moldura
+- [x] Footer: moldura inferior com dados centrados
+- [x] Visual: clássico, formal, elegante
+- [x] HTML armazenado no seed
+
+### 11.3.5 Layout Style: **Split** (Dividido)
+- [x] Header: dividido verticalmente — metade esquerda com fundo escuro (logo branco), metade direita limpa (dados)
+- [x] Footer: metade esquerda escura (website), metade direita limpa (footer_text)
+- [x] Visual: moderno, assimétrico, dinâmico
+- [x] HTML armazenado no seed
+
+### 11.3.6 Layout Style: **Arc** (Arco)
+- [x] Header: forma curva/onda no fundo do header com gradiente da primary_color, logo sobre a curva
+- [x] Footer: curva invertida subtil + dados
+- [x] Visual: suave, orgânico, moderno
+- [x] HTML armazenado no seed
+
+### 11.3.7 Layout Style: **Edge** (Aresta)
+- [x] Header: triângulos e linhas geométricas angulares, logo no canto, dados no lado oposto
+- [x] Footer: gradiente linear + triângulo decorativo
+- [x] Visual: técnico, sharp, contemporâneo
+- [x] HTML armazenado no seed
 
 ---
 
-## 11.5 Função de Geração de PDF
+## 11.4 Table Styles — Criação dos 7 Estilos
 
-Criar função utilitária para gerar PDFs.
+Criar 7 estilos de tabela com CSS/HTML distintos.
 
-- [ ] **Criar utils**
-  - [ ] Criar `apps/documents/utils.py`
-  - [ ] Função `generate_pdf(template, context, filename)`
-  - [ ] Usar ReportLab para conversão HTML → PDF
-  - [ ] Salvar em /media/documents/
+### 11.4.1 Table Style: **Minimal** (Mínimo)
+- [x] Sem bordas externas, apenas separadores horizontais subtis entre linhas
+- [x] Header da tabela em bold, sem fundo
+- [x] Totais em bloco independente abaixo da tabela
+- [x] CSS e HTML no seed
 
-- [ ] **Testing - PDF Generation**
+### 11.4.2 Table Style: **Grid** (Grelha)
+- [x] Bordas completas em todas as células (grelha visível)
+- [x] Header com fundo secondary_color e texto branco
+- [x] Totais em bloco independente
+- [x] CSS e HTML no seed
+
+### 11.4.3 Table Style: **Accent** (Destaque)
+- [x] Sem bordas verticais, header sublinhado com primary_color
+- [x] Linhas pares com fundo levemente colorido (primary_color 7% opacidade)
+- [x] CSS e HTML no seed
+
+### 11.4.4 Table Style: **Zebra** (Zebra)
+- [x] Linhas alternadas com fundo cinza claro / branco
+- [x] Sem bordas horizontais (a cor faz a separação)
+- [x] Header em bold com borda inferior grossa
+- [x] CSS e HTML no seed
+
+### 11.4.5 Table Style: **Compact** (Compacto)
+- [x] Padding reduzido em todas as células
+- [x] Fonte ligeiramente menor (10px)
+- [x] Bordas horizontais finas, header com fundo escuro
+- [x] CSS e HTML no seed
+
+### 11.4.6 Table Style: **Card** (Cartão)
+- [x] Cada linha como "cartão" com bordas arredondadas e sombra subtil
+- [x] Espaçamento entre linhas (border-spacing)
+- [x] Header sem fundo, texto em uppercase
+- [x] CSS e HTML no seed
+
+### 11.4.7 Table Style: **Flat** (Liso)
+- [x] Zero linhas, zero bordas — apenas texto alinhado em colunas
+- [x] A versão mais invisível — foca-se 100% nos dados
+- [x] CSS e HTML no seed
+
+---
+
+## 11.5 Seeds — Dados Iniciais
+
+- [x] **Criar `scripts/seed_document_styles.py`** (seed unificado)
+  - [x] Criar os 7 LayoutStyles com HTML inline (header + footer com placeholders Django template)
+  - [x] Criar os 7 TableStyles com CSS/HTML inline
+  - [x] Comando: `python manage.py shell -c "exec(open('scripts/seed_document_styles.py', encoding='utf-8').read())"`
+  - [x] Usa `update_or_create` por slug — idempotente
+
+- [ ] **Criar `scripts/seed_document_layout.py`** (opcional)
+  - [ ] Criar DocumentLayout default para empresas existentes (Clean + Minimal + cores default)
+
+---
+
+## 11.6 UI — Configurar Document Layout no Dashboard
+
+Página no dashboard para a empresa configurar o layout dos seus documentos (similar ao screenshot do Odoo).
+
+- [x] **View `document_layout_view`** em `apps/dashboard/views.py`
+  - [x] GET `/dashboard/settings/document-layout/` — mostra configuração atual com pré-visualização
+  - [x] POST — guarda alterações (layout_style, table_style, font, cores, tagline, footer, paper_format, tax_id)
+  - [x] Busca Company do utilizador para logo e morada
+  - [x] Auto-create DocumentLayout se não existir (Clean + Minimal)
+
+- [x] **Template `templates/dashboard/document_layout.html`**
+  - [x] Selector visual de Layout Styles (radio cards com mini-previews)
+  - [x] Selector visual de Table Styles (radio cards com mini-tables)
+  - [x] Dropdown de fontes (10 Google Fonts)
+  - [x] Color pickers para primary_color e secondary_color (input[type=color] + hex)
+  - [x] Campos: tagline, footer_text, paper_format, tax_id
+  - [x] Preview ao vivo do documento (sidebar sticky, Alpine.js reactivo)
+  - [x] Botões: Guardar, Descartar (na sub_navbar)
+  - [x] Cards de mini-preview com design específico por layout (Split duas metades, Arc curva gradiente, Edge triângulo + linha, Standard inline)
+  - [x] Alpine.js `documentLayoutEditor()` com computed getters reactivos (`headerStyle`, `footerStyle`, `thStyle`, `_tdBase(i)`, etc.) — preview atualiza em tempo real ao trocar estilo/cor/fonte
+  - [x] Modal fullscreen A4 (click na pré-visualização abre modal 595×842px com preview completo, ESC/click-outside/X para fechar)
+  - [x] Layouts Split, Arc e Edge com elementos HTML dedicados (divs para curvas, triângulos e linhas gradiente — pseudo-elements não funcionam com Alpine.js inline styles)
+  - [x] Link "Configurar Layout do Documento" na página de Definições (`settings.html`) conectado via `{% url 'dashboard:document_layout' %}`
+
+- [x] **URLs** em `apps/dashboard/urls.py`
+  - [x] `settings/document-layout/` → name='document_layout'
+
+---
+
+## 11.7 Motor de Geração de PDF
+
+Função utilitária que junta Layout + Tabela + dados e converte para PDF.
+
+- [ ] **Criar `apps/documents/renderer.py`**
+  - [ ] `render_document_html(document_layout, template_name, context)` — monta HTML completo (header + body + footer)
+  - [ ] Resolve placeholders: `{{ company_logo }}`, `{{ company_name }}`, `{{ company_address }}`, `{{ primary_color }}`, `{{ secondary_color }}`, `{{ font }}`, `{{ tagline }}`, `{{ footer_text }}`, `{{ tax_id }}`, `{{ page_number }}`
+
+- [ ] **Criar `apps/documents/pdf_generator.py`**
+  - [ ] `generate_pdf(html, filename)` — HTML → PDF via WeasyPrint ou xhtml2pdf
+  - [ ] Salvar em `/media/documents/`
+  - [ ] Retornar path do ficheiro gerado
+
+- [ ] **Testing**
+  - [ ] Test: renderizar HTML completo funciona
   - [ ] Test: gerar PDF funciona
   - [ ] Test: PDF é salvo corretamente
 
 ---
 
-## 11.6 Views de Geração de PDF para Vendas
+## 11.8 Templates de Documentos Específicos
 
-Integrar geração de PDF nas vendas.
+Templates do corpo do documento (entre header e footer) para cada tipo.
 
-- [ ] **Criar SaleOrderPDFView**
-  - [ ] Gerar PDF de orçamento/fatura
-  - [ ] Retornar PDF para download ou visualização
+- [ ] **Template para Orçamento PDF**
+  - [ ] Criar `templates/documents/body_quotation.html`
+  - [ ] Dados do cliente (nome, morada, NIF)
+  - [ ] Referência e data do orçamento
+  - [ ] Tabela de produtos/serviços (usa TableStyle)
+  - [ ] Subtotais, impostos, total
+  - [ ] Condições e validade
 
-- [ ] **Adicionar links nos templates**
-  - [ ] Link "Download PDF" no SaleOrderDetailView
-  - [ ] Link "Visualizar PDF" (abrir em nova aba)
+- [ ] **Template para Fatura PDF**
+  - [ ] Criar `templates/documents/body_invoice.html`
+  - [ ] Similar ao orçamento
+  - [ ] Informações fiscais adicionais
+  - [ ] Condições de pagamento
 
-- [ ] **Configurar rota**
-  - [ ] `path('sales/<uuid:pk>/pdf/', SaleOrderPDFView, name='sale_pdf')`
+- [ ] **Template para Encomenda de Compra PDF**
+  - [ ] Criar `templates/documents/body_purchase_order.html`
+  - [ ] Dados do fornecedor
+  - [ ] Tabela de items encomendados
+  - [ ] Prazo de entrega
 
-- [ ] **Testing - Sale PDF**
+- [ ] **Template para Nota de Entrega PDF**
+  - [ ] Criar `templates/documents/body_delivery_note.html`
+  - [ ] Dados do destinatário
+  - [ ] Lista de items entregues
+  - [ ] Campo de assinatura
+
+---
+
+## 11.9 Views de Geração de PDF
+
+Integrar geração de PDF nos módulos existentes.
+
+- [ ] **Criar `DocumentPDFView`** em `apps/documents/views.py`
+  - [ ] Genérico — recebe `document_type` + `object_id`
+  - [ ] Busca dados, renderiza HTML, gera PDF
+  - [ ] Retorna PDF para download ou inline preview
+
+- [ ] **Rotas para Vendas**
+  - [ ] `path('sales/<uuid:pk>/pdf/', ..., name='sale_pdf')`
+  - [ ] Link "Download PDF" na vista de detalhe
+
+- [ ] **Rotas para Compras**
+  - [ ] `path('purchases/<uuid:pk>/pdf/', ..., name='purchase_pdf')`
+  - [ ] Link "Download PDF" na vista de detalhe
+
+- [ ] **Testing**
   - [ ] Test: gerar PDF de orçamento funciona
   - [ ] Test: gerar PDF de fatura funciona
-  - [ ] Test: PDF contém todos os dados
-
----
-
-## 11.7 Views de Geração de PDF para Compras
-
-Integrar geração de PDF nas compras.
-
-- [ ] **Criar PurchaseOrderPDFView**
-  - [ ] Gerar PDF de encomenda de compra
-
-- [ ] **Adicionar link no template**
-  - [ ] Link no PurchaseOrderDetailView
-
-- [ ] **Configurar rota**
-  - [ ] `path('purchases/<uuid:pk>/pdf/', PurchaseOrderPDFView, name='purchase_pdf')`
-
-- [ ] **Testing - Purchase PDF**
   - [ ] Test: gerar PDF de compra funciona
-
----
-
-## 11.8 Personalização de Templates de PDF
-
-Permitir customizar templates via admin.
-
-- [ ] **Criar modelo PDFTemplate**
-  - [ ] Campos: name, template_type (QUOTATION, INVOICE, PURCHASE)
-  - [ ] Campos: header_html, footer_html
-  - [ ] Campo: is_default
-
-- [ ] **Registrar no Admin**
-  - [ ] Criar PDFTemplateAdmin
-
-- [ ] **Atualizar generate_pdf**
-  - [ ] Usar PDFTemplate customizado se existir
-
-- [ ] **Testing - Custom Templates**
-  - [ ] Test: customizar template funciona
-  - [ ] Test: PDF usa template customizado
+  - [ ] Test: PDF reflete o layout escolhido pela empresa
 
 ---
 
@@ -8715,18 +9618,22 @@ Criar views de relatórios de campanhas.
 # 🚀 FASE 13: STOCK MANAGEMENT AVANÇADO
 
 **⏱ Tempo estimado:** 3-4 dias
-**🎯 Objetivo:** Implementar funcionalidades avançadas de stock (ajustes com motivos, perdas fiscais)
-**📦 Dependências:** Fase 6 (inventory), Fase 9 (finance)
+**🎯 Objetivo:** Implementar funcionalidades avançadas de stock (motivos de ajuste com impacto financeiro, perdas fiscais, histórico detalhado)
+**📦 Dependências:** Fase 6 (inventory — nova arquitetura com Warehouse/Location/StockMovement/StockQuant), Fase 9 (finance)
+
+> **NOTA:** Com a nova arquitetura de inventário (Fase 6.4+), os ajustes de stock já são feitos via StockMovement
+> de tipo "adjustment" (ver 6.18). Esta fase adiciona a camada de MOTIVOS (StockAdjustmentReason) e a
+> integração financeira para perdas. O modelo StockMovement já tem operation_kind='adjustment'.
 
 ---
 
 ## 13.1 Modelo StockAdjustmentReason
 
-Criar modelo para motivos de ajuste.
+Criar modelo para motivos de ajuste. Associado aos StockMovements de tipo adjustment.
 
 - [ ] **Criar modelo**
   - [ ] Campos: name, is_loss, description
-  - [ ] Ex: "Quebra", "Vencimento", "Erro de contagem"
+  - [ ] Ex: "Quebra", "Vencimento", "Erro de contagem", "Roubo", "Amostra"
 
 - [ ] **Registrar no Admin**
   - [ ] Criar StockAdjustmentReasonAdmin
@@ -8735,24 +9642,28 @@ Criar modelo para motivos de ajuste.
 
 ## 13.2 Atualizar StockMovement com Reason
 
-Adicionar campo reason ao StockMovement.
+Adicionar campo reason ao StockMovement (apenas usado quando operation_kind='adjustment').
 
 - [ ] **Criar migration**
-  - [ ] Adicionar campo reason (FK para StockAdjustmentReason)
-  - [ ] Adicionar campo is_loss (Boolean)
+  - [ ] Adicionar campo reason (FK para StockAdjustmentReason, null=True, blank=True)
+  - [ ] Adicionar campo is_loss (Boolean, default=False)
+  - [ ] Validação: reason obrigatório apenas se operation_kind='adjustment'
 
-- [ ] **Atualizar forms e views**
-  - [ ] Incluir seleção de reason em ajustes
+- [ ] **Atualizar InventoryAdjustmentCreateView (6.18)**
+  - [ ] Adicionar seletor de reason no formulário de ajuste
+  - [ ] Se reason.is_loss=True, marcar is_loss automaticamente
 
 ---
 
 ## 13.3 Integração com Financeiro para Perdas
 
-Quando ajuste é perda, deduzir no lucro.
+Quando ajuste é perda, registar impacto financeiro.
 
-- [ ] **Atualizar signal de StockMovement**
-  - [ ] Se is_loss=True, criar Transaction (LOSS)
-  - [ ] amount = product.cost_price * quantity
+- [ ] **Hook no action_validate() do StockMovement**
+  - [ ] Se is_loss=True e operation_kind='adjustment', ao validar:
+    - [ ] Para cada StockMovementLine: criar Transaction (LOSS)
+    - [ ] amount = line.product.cost_price * line.quantity_done
+  - [ ] Usar signal post_save ou override do action_validate()
 
 - [ ] **Testing - Loss Integration**
   - [ ] Test: ajuste com perda cria transação financeira
@@ -8782,11 +9693,12 @@ Criar relatório específico de perdas.
 
 ## 13.5 Histórico de Stock por Produto
 
-Criar view de histórico completo de stock.
+Criar view de histórico completo de stock com saldo calculado (complementa 6.17 ProductStockDetailView).
 
 - [ ] **Criar ProductStockHistoryView**
-  - [ ] Listar todas as movimentações de um produto
-  - [ ] Mostrar saldo após cada movimentação
+  - [ ] Listar todos os StockMovementLines de um produto (dos movimentos em estado 'done')
+  - [ ] Mostrar saldo acumulado após cada movimentação (running total)
+  - [ ] Filtros: localização, período, tipo de operação
 
 - [ ] **Criar template**
   - [ ] `templates/inventory/product_stock_history.html` (standalone)
@@ -8799,14 +9711,15 @@ Criar view de histórico completo de stock.
 
 ---
 
-## 13.6 Alertas e Notificações de Stock
+## 13.6 Alertas e Notificações de Stock (Avançado)
 
-Criar sistema de alertas de stock baixo.
+Sistema avançado de alertas — complementa 6.20 (alertas básicos) com regras mais sofisticadas.
 
 - [ ] **Criar Celery task periódica**
   - [ ] Task que roda diariamente
-  - [ ] Verificar produtos com stock < min_stock
-  - [ ] Enviar email/notificação para admins
+  - [ ] Verificar: StockQuant.quantity < Product.min_stock (por armazém)
+  - [ ] Verificar: ReorderingRules ativas e acionar auto-reabastecimento (ver 6.11)
+  - [ ] Enviar email/notificação para admins com resumo
 
 - [ ] **Adicionar no Dashboard**
   - [ ] Widget de alertas de stock

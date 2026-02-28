@@ -46,7 +46,7 @@
                     </td>
                     <!-- Record reference -->
                     {% if record_label %}
-                    <td style="vertical-align: top; text-align: right; white-space: nowrap;">
+                    <td style="vertical-align: top; text-align: right; max-width: 200px; word-wrap: break-word; overflow-wrap: break-word;">
                         <div style="font-size: 11px; color: #6b7280; line-height: 1.4;">
                             {{ record_label }}<br>
                             <span style="color: #9ca3af;">{{ date_sent }}</span>
@@ -91,7 +91,7 @@
                         <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #dbc693; overflow: hidden;">
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width: 40px; height: 40px;">
                                 <tr>
-                                    <td align="center" valign="middle" style="font-size: 15px; font-weight: 700; color: #1f2937; font-family: 'Segoe UI', Arial, sans-serif;">
+                                    <td align="center" valign="middle" style="font-size: 15px; font-weight: 700; color: #ffffff; font-family: 'Segoe UI', Arial, sans-serif;">
                                         {{ sender_initials }}
                                     </td>
                                 </tr>
@@ -109,7 +109,7 @@
                         </div>
                         {% endif %}
                         <div style="font-size: 12px; color: #6b7280; line-height: 1.5; margin-top: 2px;">
-                            {{ sender_email }}{% if sender_phone %} · {{ sender_phone }}{% endif %}
+                            <a href="mailto:{{ sender_email }}" style="color: #dbc693; text-decoration: none;">{{ sender_email }}</a>{% if sender_phone %} · {{ sender_phone }}{% endif %}
                         </div>
                     </td>
                 </tr>

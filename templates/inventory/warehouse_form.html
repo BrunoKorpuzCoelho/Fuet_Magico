@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if warehouse %}{{ warehouse.name }} — Editar Armazém{% else %}Novo Armazém{% endif %} — Fuet Mágico{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/warehouse_form_navbar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#1f2937]">
+    <form method="post" id="warehouse-form">
+        {% csrf_token %}
+
+        <div class="mx-auto max-w-7xl p-6">
+
+            <!-- ═══════════════════════════════════════════════════ -->
+            <!-- TOPO: Ícone + Nome                                 -->
+            <!-- ═══════════════════════════════════════════════════ -->
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <!-- Ícone do Armazém -->
+                <div class="lg:col-span-1 flex justify-center items-center">
+                    <div class="rounded-lg overflow-hidden w-[160px] h-[160px] bg-[#1a2332] border-2 border-dashed border-gray-600 flex items-center justify-center">
+                        <svg class="h-16 w-16 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Nome + Código -->
+                <div class="lg:col-span-2">
+                    <div class="space-y-6">
+                        <!-- Nome (GIGANTE) -->
+                        <div>
+                            <label class="sr-only" for="id_name">Nome</label>
+                            <input class="flex w-full px-3 py-2 h-14 border-0 border-b-2 border-gray-600 bg-transparent text-3xl font-light text-gray-400 placeholder:text-gray-600 focus-visible:border-primary focus-visible:ring-0 rounded-none focus-visible:outline-none"
+                                   id="id_name"
+                                   name="name"
+                                   placeholder="Nome do armazém"
+                                   value="{{ form.name.value|default:'' }}"
+                                   required
+                                   maxlength="128">
+                        </div>
+
+                        <!-- Código com ícone DOURADO -->
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-primary">
+                                    <path d="M4 9V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"></path>
+                                    <path d="M20 15v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4"></path>
+                                    <line x1="12" x2="12" y1="3" y2="21"></line>
+                                </svg>
+                                <input class="flex w-full px-3 py-2 h-9 border-0 border-b border-gray-700 bg-transparent text-gray-400 placeholder:text-gray-600 focus-visible:border-primary focus-visible:ring-0 rounded-none focus-visible:outline-none"
+                                       id="id_code"
+                                       name="code"
+                                       placeholder="Código curto (ex: WH)"
+                                       value="{{ form.code.value|default:'' }}"
+                                       required
+                                       maxlength="5">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════ -->
+            <!-- SECÇÃO SECUNDÁRIA: Grid 2 Colunas                  -->
+            <!-- ═══════════════════════════════════════════════════ -->
+            <div class="mt-8 grid grid-cols-1 gap-x-12 gap-y-6 lg:grid-cols-2">
+
+                <!-- Coluna ESQUERDA - Morada -->
+                <div class="space-y-5">
+                    <!-- Morada -->
+                    <div>
+                        <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                                <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"></path>
+                                <circle cx="12" cy="10" r="3"></circle>
+                            </svg>
+                            Morada
+                        </label>
+                        <textarea class="flex w-full rounded-md border px-3 py-2 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary resize-none"
+                                  id="id_address"
+                                  name="address"
+                                  rows="4"
+                                  placeholder="Morada completa do armazém...">{{ form.address.value|default:'' }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Coluna DIREITA - Configurações -->
+                <div class="space-y-5">
+                    <!-- Armazém Padrão -->
+                    <div>
+                        <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                            </svg>
+                            Armazém Padrão
+                        </label>
+                        <div class="flex items-center gap-3 mt-2">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox"
+                                       id="id_is_default"
+                                       name="is_default"
+                                       {% if form.is_default.value %}checked{% endif %}
+                                       class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                            </label>
+                            <span class="text-sm text-gray-400">
+                                Definir como armazém padrão da empresa
+                            </span>
+                        </div>
+                        <p class="mt-1 text-xs text-gray-600">
+                            Apenas 1 armazém pode ser padrão por empresa. Ao ativar, o armazém padrão atual será desativado.
+                        </p>
+                    </div>
+
+                    <!-- Empresa (read-only, informativo) -->
+                    {% if warehouse and warehouse.owner_company %}
+                    <div>
+                        <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                                <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path>
+                                <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path>
+                                <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path>
+                                <path d="M10 6h4"></path>
+                                <path d="M10 10h4"></path>
+                                <path d="M10 14h4"></path>
+                                <path d="M10 18h4"></path>
+                            </svg>
+                            Empresa
+                        </label>
+                        <div class="flex h-9 w-full items-center rounded-md border border-gray-700 bg-[#1a2332]/50 px-3 text-sm text-gray-400">
+                            {{ warehouse.owner_company.name }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </form>
+</div>
+{% endblock %}

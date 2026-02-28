@@ -70,6 +70,159 @@ TEMPLATES = [
 </p>''',
     },
 
+    # ══════════════════════════════════════
+    # 2. Email de Boas-vindas (CRM)
+    # ══════════════════════════════════════
+    {
+        'name': 'Email de Boas-vindas',
+        'module': 'CRM',
+        'language': 'pt_PT',
+        'default_body_path': 'defaults/crm_welcome.html',
+        'subject': 'Bem-vindo(a), {{1}}!',
+        'available_placeholders': {
+            '1': {'field': 'lead.contact.name',           'fallback': 'Cliente'},
+            '2': {'field': 'lead.title',                  'fallback': 'a sua oportunidade'},
+            '3': {'field': 'lead.assigned_to.first_name', 'fallback': 'a equipa'},
+            '4': {'field': 'lead.contact.company.name',   'fallback': 'a nossa empresa'},
+        },
+        'body_html': '''<p style="margin: 0 0 16px 0;">Olá <strong style="color: #f9fafb;">{{1}}</strong>,</p>
+
+<p style="margin: 0 0 16px 0;">
+    Seja muito bem-vindo(a)! Estamos verdadeiramente felizes por tê-lo(a) connosco.
+    A <strong style="color: #dbc693;">{{4}}</strong> está empenhada em oferecer-lhe
+    a melhor experiência possível desde o primeiro momento.
+</p>
+
+<p style="margin: 0 0 16px 0;">
+    Aqui está o que pode esperar de nós:
+</p>
+
+<ul style="margin: 0 0 16px 0; padding-left: 20px; color: #d1d5db;">
+    <li style="margin-bottom: 8px;">Um acompanhamento personalizado e dedicado às suas necessidades</li>
+    <li style="margin-bottom: 8px;">Respostas rápidas a todas as suas questões e solicitações</li>
+    <li style="margin-bottom: 8px;">Acesso a soluções e serviços pensados para o seu sucesso</li>
+</ul>
+
+<p style="margin: 0 0 16px 0;">
+    O meu nome é <strong style="color: #f9fafb;">{{3}}</strong> e serei o seu ponto de contacto.
+    Não hesite em contactar-me sempre que precisar — estou aqui para ajudar.
+</p>
+
+<p style="margin: 0 0 16px 0;">
+    Entretanto, convido-o(a) a explorar os nossos serviços e a conhecer melhor
+    tudo o que temos para lhe oferecer.
+</p>
+
+<p style="margin: 0;">
+    Com os melhores cumprimentos,
+</p>''',
+    },
+
+    # ══════════════════════════════════════
+    # 3. Email de Follow-up (CRM)
+    # ══════════════════════════════════════
+    {
+        'name': 'Email de Follow-up',
+        'module': 'CRM',
+        'language': 'pt_PT',
+        'default_body_path': 'defaults/crm_followup.html',
+        'subject': 'Seguimento: {{2}}',
+        'available_placeholders': {
+            '1': {'field': 'lead.contact.name',           'fallback': 'Cliente'},
+            '2': {'field': 'lead.title',                  'fallback': 'a sua oportunidade'},
+            '3': {'field': 'lead.assigned_to.first_name', 'fallback': 'a equipa'},
+            '4': {'field': 'lead.contact.company.name',   'fallback': 'a nossa empresa'},
+        },
+        'body_html': '''<p style="margin: 0 0 16px 0;">Olá <strong style="color: #f9fafb;">{{1}}</strong>,</p>
+
+<p style="margin: 0 0 16px 0;">
+    Espero que esteja tudo bem consigo. Estou a escrever-lhe para dar seguimento
+    à nossa conversa sobre <strong style="color: #dbc693;">{{2}}</strong>.
+</p>
+
+<p style="margin: 0 0 16px 0;">
+    Gostaria de saber se teve oportunidade de analisar a informação que partilhámos
+    e se surgiu alguma questão que possamos esclarecer.
+</p>
+
+<p style="margin: 0 0 16px 0;">
+    Fazemos questão de relembrar os principais benefícios que discutimos:
+</p>
+
+<ul style="margin: 0 0 16px 0; padding-left: 20px; color: #d1d5db;">
+    <li style="margin-bottom: 8px;">Soluções adaptadas às suas necessidades específicas</li>
+    <li style="margin-bottom: 8px;">Condições competitivas e flexíveis</li>
+    <li style="margin-bottom: 8px;">Suporte dedicado durante todo o processo</li>
+</ul>
+
+<p style="margin: 0 0 16px 0;">
+    Estou disponível para agendar uma reunião ou chamada nos próximos dias,
+    no horário que lhe for mais conveniente. Basta responder a este email
+    ou contactar-me diretamente.
+</p>
+
+<p style="margin: 0 0 16px 0;">
+    Fico ao seu inteiro dispor.
+</p>
+
+<p style="margin: 0;">
+    Com os melhores cumprimentos,
+</p>''',
+    },
+
+    # ══════════════════════════════════════
+    # 4. Enviar Proposta por Email (CRM)
+    # ══════════════════════════════════════
+    {
+        'name': 'Enviar Proposta por Email',
+        'module': 'CRM',
+        'language': 'pt_PT',
+        'default_body_path': 'defaults/crm_proposal.html',
+        'subject': 'Proposta: {{2}}',
+        'available_placeholders': {
+            '1': {'field': 'lead.contact.name',           'fallback': 'Cliente'},
+            '2': {'field': 'lead.title',                  'fallback': 'a sua oportunidade'},
+            '3': {'field': 'lead.assigned_to.first_name', 'fallback': 'a equipa'},
+            '4': {'field': 'lead.contact.company.name',   'fallback': 'a nossa empresa'},
+        },
+        'body_html': '''<p style="margin: 0 0 16px 0;">Olá <strong style="color: #f9fafb;">{{1}}</strong>,</p>
+
+<p style="margin: 0 0 16px 0;">
+    Conforme combinado, temos o prazer de lhe enviar a nossa proposta relativa a
+    <strong style="color: #dbc693;">{{2}}</strong>.
+</p>
+
+<p style="margin: 0 0 16px 0;">
+    Preparámos esta proposta com base nas necessidades que identificámos em conjunto
+    e acreditamos que representa a melhor solução para si.
+</p>
+
+<p style="margin: 0 0 16px 0;">
+    Resumo dos pontos principais da proposta:
+</p>
+
+<ul style="margin: 0 0 16px 0; padding-left: 20px; color: #d1d5db;">
+    <li style="margin-bottom: 8px;">Âmbito do projeto definido de acordo com as suas especificações</li>
+    <li style="margin-bottom: 8px;">Cronograma detalhado de execução e entregas</li>
+    <li style="margin-bottom: 8px;">Condições comerciais transparentes e competitivas</li>
+    <li style="margin-bottom: 8px;">Garantia de qualidade e suporte pós-implementação</li>
+</ul>
+
+<p style="margin: 0 0 16px 0;">
+    Encontrará todos os detalhes no documento em anexo. Caso tenha alguma questão
+    ou deseje ajustar algum ponto, não hesite em contactar-me. Terei todo o gosto
+    em agendar uma reunião para analisarmos a proposta em conjunto.
+</p>
+
+<p style="margin: 0 0 16px 0;">
+    Aguardamos o seu feedback e estamos ao seu dispor para avançar com os próximos passos.
+</p>
+
+<p style="margin: 0;">
+    Com os melhores cumprimentos,
+</p>''',
+    },
+
 ]
 
 

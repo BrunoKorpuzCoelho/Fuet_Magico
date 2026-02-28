@@ -12,7 +12,7 @@ from apps.accounts.models import AppRole
 _APP_TILES = [
     {'slug': 'crm',       'name': 'CRM',          'icon': '🤝', 'url_name': 'crm:crm_home'},
     {'slug': 'contacts',  'name': 'Contactos',     'icon': '👥', 'url_name': None, 'url': '/contacts/'},
-    {'slug': 'inventory', 'name': 'Inventário',    'icon': '📦', 'url_name': None, 'url': '#'},
+    {'slug': 'inventory', 'name': 'Inventário',    'icon': '📦', 'url_name': 'inventory:inventory_dashboard'},
     {'slug': 'purchases', 'name': 'Compras',       'icon': '🛒', 'url_name': None, 'url': '#'},
     {'slug': 'sales',     'name': 'Vendas',        'icon': '💰', 'url_name': None, 'url': '#'},
     {'slug': 'website',   'name': 'Website',       'icon': '🌐', 'url_name': None, 'url': '/'},
@@ -684,3 +684,133 @@ def _build_email_preview_context(request):
         ctx['company_full_address'] = ' · '.join(parts)
 
     return ctx
+
+
+# ─── Document Layout ─────────────────────────────────────────────────────────
+
+FONT_CHOICES = [
+    ('Lato', 'Lato'),
+    ('Inter', 'Inter'),
+    ('Roboto', 'Roboto'),
+    ('Open Sans', 'Open Sans'),
+    ('Montserrat', 'Montserrat'),
+    ('Poppins', 'Poppins'),
+    ('Merriweather', 'Merriweather'),
+    ('Playfair Display', 'Playfair Display'),
+    ('Source Sans Pro', 'Source Sans Pro'),
+    ('Nunito', 'Nunito'),
+]
+
+
+@admin_required
+@require_http_methods(['GET', 'POST'])
+def document_layout_view(request):
+    """Vista de configuração do Document Layout por empresa."""
+    from apps.documents.models import LayoutStyle, TableStyle, DocumentLayout
+
+    # Resolve active company
+    company = None
+    active_company_id = request.session.get('active_company_id')
+    if active_company_id:
+        company = Company.objects.filter(pk=active_company_id).first()
+    if not company:
+        company = getattr(request.user, 'default_company', None)
+    if not company:
+        company = Company.objects.order_by('name').first()
+
+    if not company:
+        messages.error(request, 'Nenhuma empresa encontrada. Crie uma empresa primeiro.')
+        return redirect('dashboard:settings')
+
+    # Get or create DocumentLayout for this company
+    layout_styles = LayoutStyle.objects.filter(is_active=True)
+    table_styles = TableStyle.objects.filter(is_active=True)
+
+    try:
+        doc_layout = DocumentLayout.objects.select_related(
+            'layout_style', 'table_style'
+        ).get(company=company)
+    except DocumentLayout.DoesNotExist:
+        # Auto-create with defaults
+        default_ls = layout_styles.first()
+        default_ts = table_styles.first()
+        if default_ls and default_ts:
+            doc_layout = DocumentLayout.objects.create(
+                company=company,
+                layout_style=default_ls,
+                table_style=default_ts,
+                created_by=request.user,
+                updated_by=request.user,
+            )
+        else:
+            messages.error(request, 'Execute o seed de estilos primeiro: scripts/seed_document_styles.py')
+            return redirect('dashboard:settings')
+
+    if request.method == 'POST':
+        layout_style_id = request.POST.get('layout_style')
+        table_style_id = request.POST.get('table_style')
+        font = request.POST.get('font', 'Lato')
+        primary_color = request.POST.get('primary_color', '#dbc693')
+        secondary_color = request.POST.get('secondary_color', '#1f2937')
+        tagline = request.POST.get('tagline', '').strip()
+        footer_text = request.POST.get('footer_text', '').strip()
+        paper_format = request.POST.get('paper_format', 'A4')
+        tax_id = request.POST.get('tax_id', '').strip()
+
+        try:
+            doc_layout.layout_style = LayoutStyle.objects.get(pk=layout_style_id)
+            doc_layout.table_style = TableStyle.objects.get(pk=table_style_id)
+        except (LayoutStyle.DoesNotExist, TableStyle.DoesNotExist):
+            messages.error(request, 'Estilo inválido.')
+            return redirect('dashboard:document_layout')
+
+        doc_layout.font = font
+        doc_layout.primary_color = primary_color
+        doc_layout.secondary_color = secondary_color
+        doc_layout.tagline = tagline
+        doc_layout.footer_text = footer_text
+        doc_layout.paper_format = paper_format
+        doc_layout.tax_id = tax_id
+        doc_layout.updated_by = request.user
+        doc_layout.save()
+
+        messages.success(request, 'Layout de documentos atualizado com sucesso.')
+        return redirect('dashboard:document_layout')
+
+    # Build company preview context
+    company_initials = ''.join([p[0] for p in company.name.split()[:2]]).upper() if company.name else 'E'
+    address_parts = []
+    if company.address:
+        address_parts.append(company.address.split('\n')[0].strip())
+    loc = ' '.join(filter(None, [company.postal_code, company.city]))
+    if loc:
+        address_parts.append(loc)
+    if company.country:
+        address_parts.append(company.country)
+
+    preview_context = {
+        'company_name': company.name,
+        'company_initials': company_initials,
+        'company_logo': request.build_absolute_uri(company.logo.url) if company.logo else '',
+        'company_address': ' · '.join(address_parts) if address_parts else '',
+        'company_phone': company.phone or '',
+        'company_email': company.email or '',
+        'company_website': company.website or '',
+        'primary_color': doc_layout.primary_color,
+        'secondary_color': doc_layout.secondary_color,
+        'font': doc_layout.font,
+        'tagline': doc_layout.tagline,
+        'footer_text': doc_layout.footer_text,
+        'tax_id': doc_layout.tax_id or company.vat or '',
+    }
+
+    return render(request, 'dashboard/document_layout.html', {
+        'company': company,
+        'doc_layout': doc_layout,
+        'layout_styles': layout_styles,
+        'table_styles': table_styles,
+        'font_choices': FONT_CHOICES,
+        'paper_choices': DocumentLayout.PAPER_CHOICES,
+        'preview_context': json.dumps(preview_context),
+    })
+

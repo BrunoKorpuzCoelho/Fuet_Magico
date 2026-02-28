@@ -17,6 +17,7 @@ import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
+from email.mime.image import MIMEImage
 from email.utils import formataddr, make_msgid
 from email import encoders
 
@@ -94,12 +95,14 @@ def decrypt_password(encrypted_password: str) -> str:
 def _send_via_smtp(config, to_email: str, subject: str, body: str,
                    body_html, to_name: str, sender_name: str, attachments=None,
                    cc: str = '', bcc: str = '',
-                   in_reply_to: str = '', references: str = ''):
+                   in_reply_to: str = '', references: str = '',
+                   inline_images=None):
     """
     Envia o email e devolve (success: bool, error: str, message_id: str).
     Não escreve nada na BD.
 
     attachments: lista de dicts [{"filename": "...", "content": <bytes>, "mime_type": "image/jpeg"}]
+    inline_images: lista de dicts [{"cid": "company_logo", "content": <bytes>, "mime_type": "image/png"}]
     """
     provider = SMTP_PROVIDERS.get(config.provider, SMTP_PROVIDERS['gmail'])
     smtp_host = provider['host']
@@ -111,17 +114,39 @@ def _send_via_smtp(config, to_email: str, subject: str, body: str,
         return False, str(e), ''
 
     msg_id = make_msgid(domain=config.email_address.split('@')[-1])
+    inline_images = inline_images or []
 
     # Estrutura da mensagem
-    if attachments:
-        # com anexos: mixed → alternative + ficheiros
+    # Com inline images (CID): mixed → related → alternative + images   (+ attachments)
+    # Sem inline images:       mixed → alternative + attachments  (ou alternative simples)
+    if attachments or inline_images:
         msg = MIMEMultipart('mixed')
-        alt = MIMEMultipart('alternative')
-        alt.attach(MIMEText(body, 'plain', 'utf-8'))
-        if body_html:
-            alt.attach(MIMEText(body_html, 'html', 'utf-8'))
-        msg.attach(alt)
-        for att in attachments:
+
+        if inline_images:
+            # related wraps alternative + inline images
+            related = MIMEMultipart('related')
+            alt = MIMEMultipart('alternative')
+            alt.attach(MIMEText(body, 'plain', 'utf-8'))
+            if body_html:
+                alt.attach(MIMEText(body_html, 'html', 'utf-8'))
+            related.attach(alt)
+            # Attach inline CID images
+            for img in inline_images:
+                maintype, subtype = img['mime_type'].split('/', 1)
+                mime_img = MIMEImage(img['content'], _subtype=subtype)
+                mime_img.add_header('Content-ID', f'<{img["cid"]}>')
+                mime_img.add_header('Content-Disposition', 'inline', filename=f'{img["cid"]}.{subtype}')
+                related.attach(mime_img)
+            msg.attach(related)
+        else:
+            alt = MIMEMultipart('alternative')
+            alt.attach(MIMEText(body, 'plain', 'utf-8'))
+            if body_html:
+                alt.attach(MIMEText(body_html, 'html', 'utf-8'))
+            msg.attach(alt)
+
+        # Ficheiros anexos normais
+        for att in (attachments or []):
             part = MIMEBase(*att['mime_type'].split('/', 1))
             part.set_payload(att['content'])
             encoders.encode_base64(part)
@@ -226,9 +251,6 @@ def _get_record_label(record) -> str:
     """Gera um label legível para o registo (ex: 'Lead: Proposta Website')."""
     model_name = record.__class__.__name__
     display = str(record)
-    # Truncar se muito longo
-    if len(display) > 40:
-        display = display[:37] + '...'
     return f'{model_name}: {display}'
 
 
@@ -259,6 +281,7 @@ def wrap_email_with_layout(body_html: str, user, record=None, subject: str = '')
     """
     from django.template import Template, Context
     from django.utils import timezone
+    from django.utils.safestring import mark_safe
     from apps.core.models import EmailLayout
 
     layout = EmailLayout.get_layout()
@@ -279,11 +302,24 @@ def wrap_email_with_layout(body_html: str, user, record=None, subject: str = '')
     company_full_address = _build_company_full_address(company) if company else ''
 
     company_logo_url = ''
+    inline_images = []
     if company and company.logo:
         try:
-            company_logo_url = company.logo.url
-        except ValueError:
-            pass
+            # Ler bytes do logo para embutir como inline CID no email
+            logo_path = company.logo.path
+            import mimetypes as _mt
+            mime = _mt.guess_type(logo_path)[0] or 'image/png'
+            with open(logo_path, 'rb') as f:
+                logo_bytes = f.read()
+            if logo_bytes:
+                company_logo_url = 'cid:company_logo'
+                inline_images.append({
+                    'cid': 'company_logo',
+                    'content': logo_bytes,
+                    'mime_type': mime,
+                })
+        except (ValueError, FileNotFoundError, OSError) as e:
+            logger.warning('Não foi possível ler o logo da empresa: %s', e)
 
     # ── Dados do remetente ──
     sender_name = user.get_full_name() or user.username
@@ -310,7 +346,7 @@ def wrap_email_with_layout(body_html: str, user, record=None, subject: str = '')
     # ── Contexto para o template ──
     context = Context({
         'subject': subject,
-        'body_content': body_html,
+        'body_content': mark_safe(body_html),
         # Empresa
         'company_name': company_name,
         'company_initial': company_initial,
@@ -334,10 +370,11 @@ def wrap_email_with_layout(body_html: str, user, record=None, subject: str = '')
 
     try:
         template = Template(layout.html_content)
-        return template.render(context)
+        rendered = template.render(context)
+        return rendered, inline_images
     except Exception as e:
         logger.error('Erro ao renderizar EmailLayout: %s', e)
-        return body_html
+        return body_html, inline_images
 
 
 # ---------------------------------------------------------------------------
@@ -396,8 +433,9 @@ def send_email_for_record(
 
     # ── Envolver o HTML com o layout (envelope) ──
     wrapped_html = body_html
+    inline_images = []
     if body_html:
-        wrapped_html = wrap_email_with_layout(
+        wrapped_html, inline_images = wrap_email_with_layout(
             body_html=body_html,
             user=user,
             record=record,
@@ -417,6 +455,7 @@ def send_email_for_record(
         bcc=bcc,
         in_reply_to=in_reply_to,
         references=references,
+        inline_images=inline_images,
     )
 
     if not success:

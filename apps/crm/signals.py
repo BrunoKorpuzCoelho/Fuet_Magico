@@ -7,15 +7,15 @@ from apps.core.models import AuditLog
 def create_default_crm_stages(sender, **kwargs):
     """
     Cria estágios CRM default após migrations.
-    Só cria se não existirem estágios globais (owner_company=None).
+    Só cria se não existirem NENHUNS estágios (globais ou de empresa).
     """
     if sender.name != 'apps.crm':
         return
     
     from .models import CRMStage
     
-    # Verificar se já existem estágios globais
-    if CRMStage.objects.filter(owner_company__isnull=True).exists():
+    # Se já existem estágios (globais OU de empresa), não criar
+    if CRMStage.objects.exists():
         return
     
     # Criar estágios default

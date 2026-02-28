@@ -1,0 +1,580 @@
+{% extends 'base.html' %}
+
+{% block title %}Categorias de Produto — Fuet Mágico{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/inventory_navbar.html' %}
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900" x-data="{
+    selectedItems: [],
+    selectAll: false,
+
+    init() {
+        window.getSelectedItems = () => this.selectedItems;
+    },
+
+    toggleAll() {
+        if (this.selectAll) {
+            this.selectedItems = Array.from(document.querySelectorAll('.item-checkbox')).map(el => el.value);
+        } else {
+            this.selectedItems = [];
+        }
+    },
+
+    isSelected(id) {
+        return this.selectedItems.includes(id);
+    },
+
+    toggleItem(id) {
+        const index = this.selectedItems.indexOf(id);
+        if (index > -1) {
+            this.selectedItems.splice(index, 1);
+        } else {
+            this.selectedItems.push(id);
+        }
+        const totalCheckboxes = document.querySelectorAll('.item-checkbox').length;
+        this.selectAll = this.selectedItems.length === totalCheckboxes;
+    }
+}">
+    <!-- ── Search & Actions Bar — Desktop ──────────────────────────── -->
+    <div class="hidden md:block bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-3">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between gap-4">
+                <!-- Left: New Button + Bulk Actions -->
+                <div class="flex items-center space-x-3">
+                    <a href="{% url 'inventory:category_create' %}" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center space-x-2">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        <span>Novo</span>
+                    </a>
+
+                    <!-- Bulk Actions (visible when items selected) -->
+                    <div x-show="selectedItems.length > 0"
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 scale-95"
+                         x-transition:enter-end="opacity-100 scale-100"
+                         class="relative"
+                         x-data="{ actionsOpen: false }"
+                         style="display: none;">
+                        <button @click="actionsOpen = !actionsOpen" class="flex items-center space-x-2 px-4 py-2 bg-primary/10 dark:bg-primary/20 border-2 border-primary hover:bg-primary/20 text-gray-900 dark:text-white rounded-lg font-medium transition-colors">
+                            <svg class="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            <span class="text-sm font-medium">
+                                <span x-text="selectedItems.length"></span> selecionado(s)
+                            </span>
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+
+                        <!-- Dropdown Menu -->
+                        <div x-show="actionsOpen"
+                             @click.away="actionsOpen = false"
+                             x-transition:enter="transition ease-out duration-100"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             class="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+                             style="display: none;">
+                            <div class="py-1">
+                                <button @click="archiveSelected(); actionsOpen = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                                    </svg>
+                                    <span>Arquivar</span>
+                                </button>
+                                <button @click="unarchiveSelected(); actionsOpen = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                                    </svg>
+                                    <span>Desarquivar</span>
+                                </button>
+                                <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                                <button @click="deleteSelected(); actionsOpen = false" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                    <span>Eliminar</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Center: Search Bar -->
+                <div class="flex-1 max-w-2xl relative" x-data="{ filtersOpen: false, searchQuery: '{{ search_query }}' }">
+                    <form method="GET" action="{% url 'inventory:category_list' %}" id="searchForm">
+                        <div class="relative">
+                            <input
+                                type="text"
+                                name="search"
+                                x-model="searchQuery"
+                                @focus="filtersOpen = true"
+                                @input="filtersOpen = searchQuery.length > 0"
+                                placeholder="Pesquisar categorias..."
+                                class="w-full px-4 py-2 pl-10 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <input type="hidden" name="field" id="searchField" value="{{ search_field }}">
+
+                            <!-- Search Icon -->
+                            <svg class="absolute left-3 top-2.5 h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+
+                            <!-- Filter Dropdown Button -->
+                            <button
+                                type="button"
+                                @click="filtersOpen = !filtersOpen"
+                                class="absolute right-2 top-2 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                <svg class="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Combined Filters Dropdown -->
+                        <div x-show="filtersOpen"
+                             @click.away="filtersOpen = false"
+                             x-transition:enter="transition ease-out duration-100"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             class="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto"
+                             style="display: none;">
+                            <div class="p-3">
+                                <!-- Status Filter Section -->
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">FILTRAR POR STATUS:</p>
+                                <a href="?status=active{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}"
+                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if status_filter == 'active' %}bg-primary/10 text-primary font-semibold{% endif %}">
+                                    <div class="flex items-center justify-between">
+                                        <span>Ativos</span>
+                                        {% if status_filter == 'active' %}
+                                        <svg class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        {% endif %}
+                                    </div>
+                                </a>
+                                <a href="?status=archived{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}"
+                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if status_filter == 'archived' %}bg-primary/10 text-primary font-semibold{% endif %}">
+                                    <div class="flex items-center justify-between">
+                                        <span>Arquivados</span>
+                                        {% if status_filter == 'archived' %}
+                                        <svg class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        {% endif %}
+                                    </div>
+                                </a>
+
+                                <!-- Divider -->
+                                <div class="my-3 border-t border-gray-200 dark:border-gray-700"></div>
+
+                                <!-- Search Fields Section -->
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">PESQUISAR POR CAMPO:</p>
+                                <a href="#" @click.prevent="document.getElementById('searchField').value='name'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Search <strong>Name</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('searchField').value='description'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Search <strong>Description</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('searchField').value='parent'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Search <strong>Parent Category</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Right: Pagination -->
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                        <span>{{ categories.start_index }}-{{ categories.end_index }} / {{ total_count }}</span>
+                        <span class="text-gray-400">|</span>
+                        <div class="flex items-center space-x-1">
+                            <input
+                                type="text"
+                                id="pageSizeInput"
+                                value="{{ page_size }}"
+                                class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <span>/página</span>
+                        </div>
+                        {% if categories.has_previous %}
+                        <a href="?page={{ categories.previous_page_number }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}&status={{ status_filter }}" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                        </a>
+                        {% else %}
+                        <button disabled class="p-1 opacity-50 cursor-not-allowed">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                        </button>
+                        {% endif %}
+
+                        {% if categories.has_next %}
+                        <a href="?page={{ categories.next_page_number }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}&status={{ status_filter }}" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                        {% else %}
+                        <button disabled class="p-1 opacity-50 cursor-not-allowed">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Search & Actions Bar — Mobile ───────────────────────────── -->
+    <div class="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-3">
+        <div class="px-4">
+            <div class="flex items-center gap-2 mb-3">
+                <a href="{% url 'inventory:category_create' %}" class="flex-shrink-0 p-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                </a>
+                <form method="GET" action="{% url 'inventory:category_list' %}" class="flex-1">
+                    <input type="text" name="search" value="{{ search_query }}" placeholder="Pesquisar categorias..."
+                           class="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+                </form>
+            </div>
+            <!-- Mobile pagination -->
+            <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+                <span>{{ categories.start_index }}-{{ categories.end_index }} / {{ total_count }}</span>
+                <div class="flex items-center space-x-2">
+                    {% if categories.has_previous %}
+                    <a href="?page={{ categories.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}&page_size={{ page_size }}&status={{ status_filter }}" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </a>
+                    {% endif %}
+                    {% if categories.has_next %}
+                    <a href="?page={{ categories.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}&page_size={{ page_size }}&status={{ status_filter }}" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Table ───────────────────────────────────────────────────── -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-900">
+                        <tr>
+                            <th class="px-6 py-3 text-left w-12">
+                                <input type="checkbox"
+                                       x-model="selectAll"
+                                       @change="toggleAll()"
+                                       class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Nome</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Categoria Pai</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Descrição</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Subcategorias</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {% for cat in categories %}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                            @click="if (!$event.target.closest('.checkbox-cell')) { window.location.href='{% url 'inventory:category_edit' cat.pk %}' }">
+                            <td class="px-6 py-4 whitespace-nowrap checkbox-cell" @click.stop>
+                                <input type="checkbox"
+                                       value="{{ cat.pk }}"
+                                       :checked="isSelected('{{ cat.pk }}')"
+                                       @change="toggleItem('{{ cat.pk }}')"
+                                       class="item-checkbox h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                                        <svg class="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="ml-4">
+                                        <span class="text-sm font-medium text-gray-900 dark:text-white">{{ cat.name }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                                {% if cat.parent %}
+                                <span class="inline-flex items-center gap-1">
+                                    <svg class="h-3.5 w-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                                    </svg>
+                                    {{ cat.parent.name }}
+                                </span>
+                                {% else %}
+                                <span class="text-gray-400">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate">
+                                {{ cat.description|default:"—" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                {% if cat.children_count > 0 %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                                    {{ cat.children_count }}
+                                </span>
+                                {% else %}
+                                <span class="text-gray-400">0</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center">
+                                <div class="flex flex-col items-center">
+                                    <svg class="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                                    </svg>
+                                    <p class="text-gray-500 dark:text-gray-400 text-sm font-medium">Nenhuma categoria encontrada.</p>
+                                    <p class="text-gray-400 dark:text-gray-500 text-xs mt-1">Crie a primeira categoria de produto para começar.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Scripts ──────────────────────────────────────────────────── -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const pageSizeInput = document.getElementById('pageSizeInput');
+        if (pageSizeInput) {
+            pageSizeInput.addEventListener('change', function() {
+                const params = new URLSearchParams(window.location.search);
+                params.set('page_size', this.value);
+                params.set('page', '1');
+                window.location.search = params.toString();
+            });
+            pageSizeInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.dispatchEvent(new Event('change'));
+                }
+            });
+        }
+    });
+
+    /* ── Helpers ────────────────────────────────────────────────────── */
+    function getCookie(name) {
+        let v = null;
+        if (document.cookie && document.cookie !== '') {
+            for (const c of document.cookie.split(';')) {
+                const t = c.trim();
+                if (t.substring(0, name.length + 1) === (name + '=')) {
+                    v = decodeURIComponent(t.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return v;
+    }
+
+    function showNotification(type, message) {
+        const bg = type === 'success' ? 'bg-green-500' : type === 'warning' ? 'bg-amber-500' : 'bg-red-500';
+        const el = document.createElement('div');
+        el.className = `fixed top-4 right-4 ${bg} text-white px-6 py-4 rounded-lg shadow-lg z-50 transition-opacity duration-300`;
+        el.textContent = message;
+        document.body.appendChild(el);
+        setTimeout(() => {
+            el.style.opacity = '0';
+            setTimeout(() => el.remove(), 300);
+        }, 3000);
+    }
+
+    /* ── Bulk Archive ──────────────────────────────────────────────── */
+    async function archiveSelected() {
+        const ids = window.getSelectedItems ? window.getSelectedItems() : [];
+        if (!ids.length) { showNotification('error', 'Nenhuma categoria selecionada'); return; }
+
+        try {
+            const resp = await fetch('{% url "inventory:bulk_archive_categories" %}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ category_ids: ids })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                let msg = data.message;
+                if (data.warning) msg += ` (${data.warning})`;
+                showNotification('success', msg);
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showNotification('error', data.error.message);
+            }
+        } catch (e) {
+            showNotification('error', 'Erro de conexão. Tente novamente.');
+        }
+    }
+
+    /* ── Bulk Unarchive ────────────────────────────────────────────── */
+    async function unarchiveSelected() {
+        const ids = window.getSelectedItems ? window.getSelectedItems() : [];
+        if (!ids.length) { showNotification('error', 'Nenhuma categoria selecionada'); return; }
+
+        try {
+            const resp = await fetch('{% url "inventory:bulk_unarchive_categories" %}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ category_ids: ids })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                let msg = data.message;
+                if (data.warning) { setTimeout(() => showNotification('warning', data.warning), 3100); }
+                showNotification('success', msg);
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showNotification('error', data.error.message);
+            }
+        } catch (e) {
+            showNotification('error', 'Erro de conexão. Tente novamente.');
+        }
+    }
+
+    /* ── Bulk Delete (with confirmation modal) ─────────────────────── */
+    function deleteSelected() {
+        const ids = window.getSelectedItems ? window.getSelectedItems() : [];
+        if (!ids.length) { showNotification('error', 'Nenhuma categoria selecionada'); return; }
+        openDeleteConfirmationModal(ids);
+    }
+
+    function openDeleteConfirmationModal(categoryIds) {
+        const count = categoryIds.length;
+        const modal = document.createElement('div');
+        modal.id = 'delete-confirmation-modal';
+        modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+        modal.style.animation = 'fadeIn 0.2s ease-out';
+
+        modal.innerHTML = `
+            <div class="bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full border-2 border-red-600/50" style="animation: scaleIn 0.2s ease-out;">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-red-900 to-red-800 px-6 py-4 rounded-t-2xl border-b border-red-700/50">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex items-center justify-center w-10 h-10 rounded-full bg-red-600/30 border-2 border-red-500 flex-shrink-0">
+                            <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-white">ATENÇÃO!</h3>
+                            <p class="text-red-300 text-xs mt-0.5">Esta ação é <span class="font-bold text-red-200">IRREVERSÍVEL</span></p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Body -->
+                <div class="px-6 py-5">
+                    <div class="bg-red-950/40 border border-red-800/50 rounded-lg p-3 mb-4">
+                        <p class="text-gray-200 text-sm leading-relaxed">
+                            Está prestes a <span class="font-bold text-red-400">ELIMINAR PERMANENTEMENTE</span>
+                            <span class="font-bold text-white text-base">${count}</span> categoria(s).
+                        </p>
+                        <p class="text-gray-400 text-xs mt-2">
+                            Subcategorias associadas serão também eliminadas. Esta modificação é
+                            <span class="font-semibold text-red-400">IRREVERSÍVEL</span>.
+                        </p>
+                    </div>
+                    <!-- Checkbox -->
+                    <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-3 mb-4">
+                        <label class="flex items-start space-x-2 cursor-pointer">
+                            <input type="checkbox" id="deleteConfirmCheckbox"
+                                   class="mt-0.5 w-4 h-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500 focus:ring-2">
+                            <span class="text-gray-300 text-xs leading-relaxed">
+                                Confirmo que compreendo que esta ação vai
+                                <span class="font-semibold text-red-400">eliminar permanentemente</span>
+                                as categorias selecionadas e que
+                                <span class="font-semibold text-red-400">não existe forma de recuperar</span>
+                                os dados.
+                            </span>
+                        </label>
+                    </div>
+                    <!-- Actions -->
+                    <div class="flex space-x-3">
+                        <button onclick="closeDeleteConfirmationModal()"
+                                class="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors">
+                            Cancelar
+                        </button>
+                        <button id="confirmDeleteButton" disabled
+                                class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600 shadow-lg shadow-red-900/30">
+                            <div class="flex items-center justify-center space-x-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                                <span>ELIMINAR PERMANENTEMENTE</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const checkbox = modal.querySelector('#deleteConfirmCheckbox');
+        const confirmBtn = modal.querySelector('#confirmDeleteButton');
+
+        checkbox.addEventListener('change', function() { confirmBtn.disabled = !this.checked; });
+
+        confirmBtn.addEventListener('click', async function() {
+            if (!checkbox.checked) return;
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<div class="flex items-center justify-center space-x-2"><svg class="animate-spin h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg><span>A eliminar...</span></div>';
+
+            try {
+                const resp = await fetch('{% url "inventory:bulk_delete_categories" %}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                    body: JSON.stringify({ category_ids: categoryIds })
+                });
+                const data = await resp.json();
+                closeDeleteConfirmationModal();
+                if (data.success) {
+                    showNotification('success', data.message);
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    showNotification('error', data.error.message);
+                }
+            } catch (e) {
+                closeDeleteConfirmationModal();
+                showNotification('error', 'Erro ao eliminar categorias');
+            }
+        });
+
+        modal.onclick = (e) => { if (e.target === modal) closeDeleteConfirmationModal(); };
+        document.body.appendChild(modal);
+    }
+
+    function closeDeleteConfirmationModal() {
+        const m = document.getElementById('delete-confirmation-modal');
+        if (m) { m.style.animation = 'fadeOut 0.2s ease-out'; setTimeout(() => m.remove(), 200); }
+    }
+    </script>
+
+    <style>
+    @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+    @keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    </style>
+</div>
+{% endblock %}
