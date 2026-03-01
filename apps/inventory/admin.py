@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, UoMCategory, UoM, Product, Warehouse
+from .models import Category, UoMCategory, UoM, Product, Warehouse, StockMovement, StockMovementLine, StockQuant, ProductSupplierInfo
 
 
 @admin.register(Warehouse)
@@ -113,6 +113,87 @@ class ProductAdmin(admin.ModelAdmin):
         ('Compras', {
             'fields': ['supplier'],
             'classes': ['collapse']
+        }),
+        ('Multi-Company', {
+            'fields': ['owner_company'],
+            'classes': ['collapse']
+        }),
+        ('Sistema', {
+            'fields': ['id', 'is_active', 'created_at', 'updated_at'],
+            'classes': ['collapse']
+        }),
+    ]
+
+
+@admin.register(StockQuant)
+class StockQuantAdmin(admin.ModelAdmin):
+    list_display = ['product', 'warehouse', 'quantity', 'is_active']
+    list_filter = ['warehouse', 'is_active']
+    search_fields = ['product__name', 'product__internal_reference']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+
+    fieldsets = [
+        ('Stock', {
+            'fields': ['product', 'warehouse', 'quantity']
+        }),
+        ('Sistema', {
+            'fields': ['id', 'is_active', 'created_at', 'updated_at'],
+            'classes': ['collapse']
+        }),
+    ]
+
+
+class StockMovementLineInline(admin.TabularInline):
+    model = StockMovementLine
+    extra = 1
+    fields = ['product', 'quantity', 'uom', 'unit_price']
+    readonly_fields = ['id']
+
+
+@admin.register(StockMovement)
+class StockMovementAdmin(admin.ModelAdmin):
+    inlines = [StockMovementLineInline]
+    list_display = ['reference', 'movement_type', 'partner', 'state', 'date', 'warehouse', 'responsible']
+    list_filter = ['state', 'movement_type', 'warehouse', 'owner_company']
+    search_fields = ['reference', 'origin', 'notes']
+    readonly_fields = ['id', 'reference', 'created_at', 'updated_at']
+    date_hierarchy = 'date'
+
+    fieldsets = [
+        ('Movimento', {
+            'fields': ['reference', 'movement_type', 'warehouse', 'state', 'date']
+        }),
+        ('Parceiro', {
+            'fields': ['partner', 'origin'],
+        }),
+        ('Detalhes', {
+            'fields': ['notes', 'responsible'],
+        }),
+        ('Multi-Company', {
+            'fields': ['owner_company'],
+            'classes': ['collapse']
+        }),
+        ('Sistema', {
+            'fields': ['id', 'is_active', 'created_at', 'updated_at'],
+            'classes': ['collapse']
+        }),
+    ]
+
+
+@admin.register(ProductSupplierInfo)
+class ProductSupplierInfoAdmin(admin.ModelAdmin):
+    list_display  = ['product', 'supplier', 'sequence', 'supplier_product_code', 'price', 'min_quantity', 'lead_time', 'is_preferred', 'is_active']
+    list_filter   = ['is_preferred', 'is_active', 'owner_company']
+    search_fields = ['product__name', 'product__internal_reference', 'supplier__name', 'supplier_product_code']
+    ordering      = ['product__name', 'sequence']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+
+    fieldsets = [
+        ('Relação', {
+            'fields': ['product', 'supplier', 'sequence', 'is_preferred']
+        }),
+        ('Dados de Compra', {
+            'fields': ['supplier_product_code', 'price', 'min_quantity', 'lead_time']
         }),
         ('Multi-Company', {
             'fields': ['owner_company'],

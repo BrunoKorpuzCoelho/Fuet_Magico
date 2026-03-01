@@ -1,5 +1,7 @@
 from django.db import models
+from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from apps.core.models import AbstractBaseModel
 
 
@@ -332,6 +334,15 @@ class Product(AbstractBaseModel):
         help_text='NULL = global (visível para todas).',
     )
 
+    # ── Stock ─────────────────────────────────────────────────────────
+    min_stock = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=0,
+        verbose_name='Stock Mínimo',
+        help_text='Alerta quando o stock em mão cair abaixo deste valor.',
+    )
+
     class Meta:
         verbose_name = 'Produto'
         verbose_name_plural = 'Produtos'
@@ -360,7 +371,524 @@ class Product(AbstractBaseModel):
             return None
         return ((self.sale_price - self.cost_price) / self.cost_price) * 100
 
+    def get_profit_margin_pct(self):
+        """Return margin as % of sale price (e.g. 38.5). None if sale_price is 0."""
+        if not self.sale_price:
+            return None
+        return float((self.sale_price - self.cost_price) / self.sale_price * 100)
+
     def get_sale_price_with_tax(self):
         """Return sale price including IVA."""
         from decimal import Decimal
         return self.sale_price * (1 + self.tax_rate / Decimal('100'))
+
+    def get_on_hand_quantity(self, warehouse=None):
+        """Total quantity currently in stock (from validated movements)."""
+        from django.db.models import Sum
+        qs = StockQuant.objects.filter(product=self)
+        if warehouse:
+            qs = qs.filter(warehouse=warehouse)
+        return float(qs.aggregate(total=Sum('quantity'))['total'] or 0)
+
+    def get_incoming_quantity(self, warehouse=None):
+        """Quantity on pending (draft) receipt movements."""
+        from django.db.models import Sum
+        qs = StockMovementLine.objects.filter(
+            product=self,
+            stock_movement__movement_type='receipt',
+            stock_movement__state='draft',
+        )
+        if warehouse:
+            qs = qs.filter(stock_movement__warehouse=warehouse)
+        return float(qs.aggregate(total=Sum('quantity'))['total'] or 0)
+
+    def get_outgoing_quantity(self, warehouse=None):
+        """Quantity on pending (draft) delivery movements."""
+        from django.db.models import Sum
+        qs = StockMovementLine.objects.filter(
+            product=self,
+            stock_movement__movement_type='delivery',
+            stock_movement__state='draft',
+        )
+        if warehouse:
+            qs = qs.filter(stock_movement__warehouse=warehouse)
+        return float(qs.aggregate(total=Sum('quantity'))['total'] or 0)
+
+    def get_forecasted_quantity(self, warehouse=None):
+        """Forecast = on_hand + incoming - outgoing."""
+        return (
+            self.get_on_hand_quantity(warehouse)
+            + self.get_incoming_quantity(warehouse)
+            - self.get_outgoing_quantity(warehouse)
+        )
+
+    def get_stock_value(self, warehouse=None):
+        """Value of current stock = on_hand × cost_price."""
+        return self.get_on_hand_quantity(warehouse) * float(self.cost_price)
+
+
+class StockMovement(AbstractBaseModel):
+    """Central inventory document — records stock receipts, deliveries, and adjustments.
+
+    Created automatically by Purchases/Sales or manually for adjustments.
+    Lifecycle: draft → done (validates stock) or draft → cancelled.
+    """
+
+    MOVEMENT_TYPE_CHOICES = [
+        ('receipt', 'Receção'),
+        ('delivery', 'Expedição'),
+        ('adjustment', 'Ajuste'),
+    ]
+
+    ADJUSTMENT_DIRECTION_CHOICES = [
+        ('in', 'Entrada (adiciona stock)'),
+        ('out', 'Saída (remove stock)'),
+    ]
+
+    STATE_CHOICES = [
+        ('draft', 'Rascunho'),
+        ('done', 'Validado'),
+        ('cancelled', 'Cancelado'),
+    ]
+
+    REFERENCE_PREFIXES = {
+        'receipt': 'WH/IN/',
+        'delivery': 'WH/OUT/',
+        'adjustment': 'ADJ/',
+    }
+    # Maps movement_type → DocumentSequence code
+    SEQUENCE_CODES = {
+        'receipt':    'WH_IN',
+        'delivery':   'WH_OUT',
+        'adjustment': 'WH_ADJ',
+    }
+    reference = models.CharField(
+        max_length=32,
+        unique=True,
+        verbose_name='Referência',
+        help_text='Auto-gerado: WH/IN/00001, WH/OUT/00001, ADJ/00001',
+    )
+    movement_type = models.CharField(
+        max_length=16,
+        choices=MOVEMENT_TYPE_CHOICES,
+        verbose_name='Tipo de Movimento',
+    )
+    adjustment_direction = models.CharField(
+        max_length=3,
+        choices=ADJUSTMENT_DIRECTION_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name='Direção do Ajuste',
+        help_text='Apenas para ajustes: Entrada adiciona stock, Saída remove stock.',
+    )
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        related_name='stock_movements',
+        verbose_name='Armazém',
+    )
+    partner = models.ForeignKey(
+        'contacts.Contact',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='stock_movements',
+        verbose_name='Parceiro',
+        help_text='Fornecedor (receção) ou cliente (expedição).',
+    )
+    state = models.CharField(
+        max_length=16,
+        choices=STATE_CHOICES,
+        default='draft',
+        verbose_name='Estado',
+    )
+    date = models.DateTimeField(
+        default=timezone.now,
+        verbose_name='Data do Movimento',
+    )
+    origin = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+        verbose_name='Origem',
+        help_text='Referência ao documento de origem (ex: PO-00001).',
+    )
+    notes = models.TextField(
+        blank=True,
+        default='',
+        verbose_name='Notas',
+    )
+    responsible = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='stock_movements',
+        verbose_name='Responsável',
+    )
+
+    # Multi-company
+    owner_company = models.ForeignKey(
+        'core.Company',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='stock_movements',
+        verbose_name='Empresa',
+        help_text='NULL = global (visível para todas).',
+    )
+
+    class Meta:
+        verbose_name = 'Movimento de Stock'
+        verbose_name_plural = 'Movimentos de Stock'
+        ordering = ['-date', '-created_at']
+
+    def __str__(self):
+        return self.reference
+
+    def save(self, *args, **kwargs):
+        if not self.reference:
+            self.reference = self.generate_reference()
+        super().save(*args, **kwargs)
+
+    def generate_reference(self):
+        """Generate next sequential reference using DocumentSequence (atomic).
+
+        Delegates to ``DocumentSequence.get_for()`` + ``next_reference()`` so
+        that concurrent requests never produce duplicate references and deleted
+        documents never recycle their numbers.
+
+        Format: WH/IN/00001, WH/OUT/00001, ADJ/00001
+        """
+        from apps.core.models import DocumentSequence
+        code = self.SEQUENCE_CODES[self.movement_type]
+        seq = DocumentSequence.get_for(code, self.owner_company)
+        return seq.next_reference()
+
+    def action_validate(self):
+        """Validate the movement — changes state to 'done' and updates stock.
+
+        Quantities are stored exactly as entered on the movement line, in the
+        product's working UoM. No unit conversion is performed — the user is
+        responsible for entering the correct quantity in the correct unit.
+
+        Example: product base UoM is kg. User enters 1 → stock gets +1 kg.
+        If the user later consumes 0.250, stock becomes 0.750 kg.
+        """
+        from decimal import Decimal
+        if self.state != 'draft':
+            raise ValidationError('Apenas movimentos em rascunho podem ser validados.')
+        for line in self.lines.select_related('product'):
+            qty = Decimal(str(line.quantity))
+            if self.movement_type == 'receipt':
+                StockQuant.update_quantity(line.product, self.warehouse, qty, 'add')
+            elif self.movement_type == 'delivery':
+                StockQuant.update_quantity(line.product, self.warehouse, qty, 'subtract')
+            elif self.movement_type == 'adjustment':
+                if self.adjustment_direction == 'out':
+                    StockQuant.update_quantity(line.product, self.warehouse, abs(qty), 'subtract')
+                else:  # 'in' or legacy positive qty
+                    StockQuant.update_quantity(line.product, self.warehouse, abs(qty), 'add')
+        self.state = 'done'
+        self.save()
+
+    def action_cancel(self):
+        """Cancel the movement — only allowed from draft state."""
+        if self.state != 'draft':
+            raise ValidationError('Apenas movimentos em rascunho podem ser cancelados.')
+        self.state = 'cancelled'
+        self.save()
+
+    @property
+    def total_value(self):
+        """Sum of (quantity × unit_price) across all movement lines."""
+        from decimal import Decimal
+        total = self.lines.aggregate(
+            total=models.Sum(
+                models.F('quantity') * models.F('unit_price'),
+                output_field=models.DecimalField(),
+            )
+        )['total']
+        return total or Decimal('0.00')
+
+
+class StockMovementLine(AbstractBaseModel):
+    """A single product line within a StockMovement.
+
+    Each movement document can have multiple lines, one per product.
+    The uom is inherited from the product if not explicitly set.
+    """
+
+    stock_movement = models.ForeignKey(
+        StockMovement,
+        on_delete=models.CASCADE,
+        related_name='lines',
+        verbose_name='Movimento',
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT,
+        related_name='movement_lines',
+        verbose_name='Produto',
+    )
+    quantity = models.DecimalField(
+        max_digits=14,
+        decimal_places=3,
+        verbose_name='Quantidade',
+        help_text='Quantidade movida nesta linha. Usa decimais para sub-unidades (ex: 0.250 = 250 g de 1 kg).',
+    )
+    unit_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name='Preço Unitário',
+        help_text='Custo unitário (receção) ou preço de venda (expedição).',
+    )
+    uom = models.ForeignKey(
+        UoM,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='movement_lines',
+        verbose_name='Unidade de Medida',
+        help_text='Herdado do produto se não definido.',
+    )
+    tax_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name='Taxa IVA (%)',
+        help_text='Copiado do produto aquando da criação da linha.',
+    )
+
+    class Meta:
+        verbose_name = 'Linha de Movimento'
+        verbose_name_plural = 'Linhas de Movimento'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'{self.stock_movement.reference} — {self.product.name} ({self.quantity})'
+
+    def save(self, *args, **kwargs):
+        # Inherit uom from product if not set
+        if not self.uom_id and self.product_id:
+            self.uom = self.product.uom
+        # Copy tax_rate from product on first save
+        if not self.pk and self.product_id and not self.tax_rate:
+            self.tax_rate = self.product.tax_rate
+        super().save(*args, **kwargs)
+
+    @property
+    def line_total(self):
+        """Total value for this line: quantity × unit_price (excl. VAT)."""
+        from decimal import Decimal
+        return Decimal(str(self.quantity)) * Decimal(str(self.unit_price))
+
+    @property
+    def tax_amount(self):
+        """VAT amount for this line."""
+        from decimal import Decimal
+        return self.line_total * Decimal(str(self.tax_rate)) / Decimal('100')
+
+    @property
+    def line_total_with_tax(self):
+        """Total value for this line including VAT."""
+        return self.line_total + self.tax_amount
+
+
+class StockQuant(AbstractBaseModel):
+    """Current on-hand stock for a product in a warehouse.
+
+    One record per (product, warehouse) pair — enforced by unique_together.
+    Created automatically on first stock movement; updated on every validation.
+    Negative quantities are allowed (they indicate a data problem to investigate).
+    """
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='quants',
+        verbose_name='Produto',
+    )
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.CASCADE,
+        related_name='quants',
+        verbose_name='Armazém',
+    )
+    quantity = models.DecimalField(
+        max_digits=14,
+        decimal_places=3,
+        default=0,
+        verbose_name='Quantidade em Mão',
+        help_text='Quantidade física actual neste armazém.',
+    )
+
+    class Meta:
+        verbose_name = 'Stock Actual'
+        verbose_name_plural = 'Stock Actual'
+        ordering = ['product__name', 'warehouse__name']
+        unique_together = [('product', 'warehouse')]
+
+    def __str__(self):
+        return f'{self.product.name} @ {self.warehouse.name}: {self.quantity}'
+
+    @classmethod
+    def get_on_hand(cls, product, warehouse=None):
+        """Return current on-hand quantity for a product.
+
+        If warehouse is given, returns quantity for that specific warehouse.
+        If warehouse is None, returns the total across all warehouses.
+        Returns Decimal('0') if no quant record exists yet.
+        """
+        from decimal import Decimal
+        if warehouse is not None:
+            try:
+                return cls.objects.get(product=product, warehouse=warehouse).quantity
+            except cls.DoesNotExist:
+                return Decimal('0')
+        total = cls.objects.filter(product=product).aggregate(
+            total=models.Sum('quantity', output_field=models.DecimalField())
+        )['total']
+        return total or Decimal('0')
+
+    @classmethod
+    def update_quantity(cls, product, warehouse, qty, mode='add'):
+        """Add or subtract qty from the stock quant for product/warehouse.
+
+        Uses get_or_create so no quant record needs to exist beforehand.
+        mode='add'      → quantity += qty
+        mode='subtract' → quantity -= qty  (negative stock is allowed)
+        """
+        from decimal import Decimal
+        quant, _ = cls.objects.get_or_create(
+            product=product,
+            warehouse=warehouse,
+            defaults={'quantity': Decimal('0')},
+        )
+        if mode == 'add':
+            quant.quantity += Decimal(str(qty))
+        elif mode == 'subtract':
+            quant.quantity -= Decimal(str(qty))
+        else:
+            raise ValueError(f"mode deve ser 'add' ou 'subtract', não '{mode}'.")
+        quant.save()
+        return quant
+
+
+class ProductSupplierInfo(AbstractBaseModel):
+    """Purchase information for a product from a specific supplier.
+
+    Multiple suppliers can be recorded per product, ordered by sequence.
+    The supplier with the lowest sequence (and/or is_preferred=True) is used
+    first when auto-generating purchase orders.
+
+    supplier_product_code is the code this supplier uses for this product in
+    their invoices/catalogs.  Used in Phase 14 (PDF scanning) as a fallback
+    matcher when Product.internal_reference doesn\'t match directly.
+
+    Matching logic (Phase 14):
+        1. Try Product.internal_reference  == code on invoice line
+        2. Try ProductSupplierInfo where supplier == invoice supplier
+           AND supplier_product_code == code on invoice line
+        3. If price changed -> auto-update this record + Product.cost_price
+    """
+
+    product = models.ForeignKey(
+        'Product',
+        on_delete=models.CASCADE,
+        related_name='supplier_infos',
+        verbose_name='Produto',
+    )
+    supplier = models.ForeignKey(
+        'contacts.Contact',
+        on_delete=models.CASCADE,
+        related_name='product_supplier_infos',
+        verbose_name='Fornecedor',
+    )
+    sequence = models.PositiveSmallIntegerField(
+        default=10,
+        verbose_name='Sequência',
+        help_text='Prioridade de compra. Menor número = mais prioritário.',
+    )
+    supplier_product_code = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+        verbose_name='Cód. Fornecedor',
+        help_text=(
+            'Código que o fornecedor usa para este produto nas suas faturas/catálogo. '
+            'Usado para matching automático na leitura de PDFs (Fase 14).'
+        ),
+    )
+    price = models.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        default=0,
+        verbose_name='Preço de Compra',
+        help_text='Preço unitário na UdM de compra do produto. Atualizado automaticamente ao receber faturas.',
+    )
+    min_quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=1,
+        verbose_name='Qtd. Mínima',
+        help_text='Quantidade mínima de encomenda neste fornecedor.',
+    )
+    lead_time = models.PositiveSmallIntegerField(
+        default=0,
+        verbose_name='Prazo (dias)',
+        help_text='Prazo de entrega em dias úteis.',
+    )
+    is_preferred = models.BooleanField(
+        default=False,
+        verbose_name='Preferido',
+        help_text='Atalho: assinala este como o fornecedor preferido independentemente da sequência.',
+    )
+    owner_company = models.ForeignKey(
+        'core.Company',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='product_supplier_infos',
+        verbose_name='Empresa',
+    )
+
+    class Meta:
+        verbose_name = 'Info Fornecedor'
+        verbose_name_plural = 'Info Fornecedores'
+        ordering = ['sequence', '-is_preferred', 'price']
+        unique_together = [('product', 'supplier')]
+
+    def __str__(self):
+        return f'{self.supplier.name} → {self.product.name} ({self.price})'
+
+    @classmethod
+    def get_best_supplier(cls, product):
+        """Return the best (supplier, price) for a product.
+
+        Preferred supplier wins; otherwise the one with the lowest sequence;
+        tie-broken by cheapest price.
+        Returns None if no supplier_infos exist.
+        """
+        qs = cls.objects.filter(product=product, is_active=True).order_by(
+            '-is_preferred', 'sequence', 'price'
+        ).select_related('supplier').first()
+        if qs is None:
+            return None
+        return (qs.supplier, qs.price)
+
+    @classmethod
+    def find_by_supplier_code(cls, supplier, code):
+        """Lookup used by PDF scanning (Phase 14).
+
+        Given a supplier Contact and a code from their invoice,
+        return the matching ProductSupplierInfo or None.
+        """
+        if not code:
+            return None
+        return cls.objects.filter(
+            supplier=supplier,
+            supplier_product_code__iexact=code.strip(),
+            is_active=True,
+        ).select_related('product').first()

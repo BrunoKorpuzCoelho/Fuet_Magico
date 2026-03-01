@@ -7,6 +7,7 @@ from .models import (
     ActivityChain, ActivityChainStep, ActivityChainInstance, ActivityLog,
     Notification, ChatterFollower, CompanyWhatsAppConfig, GenericActivity,
     CompanyEmailConfig, EmailLayout, EmailTemplate, EmailTemplateAttachment,
+    DocumentSequence,
 )
 
 
@@ -565,3 +566,18 @@ class EmailTemplateAdmin(admin.ModelAdmin):
             obj.created_by = request.user
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
+
+
+@admin.register(DocumentSequence)
+class DocumentSequenceAdmin(admin.ModelAdmin):
+    list_display  = ['code', 'name', 'prefix', 'suffix', 'padding', 'next_number', 'owner_company', 'is_active']
+    list_filter   = ['owner_company', 'is_active']
+    search_fields = ['code', 'name', 'prefix']
+    readonly_fields = ['created_at', 'updated_at']
+    fieldsets = (
+        (None, {'fields': ('code', 'name', 'is_active')}),
+        ('Formato', {'fields': ('prefix', 'suffix', 'padding')}),
+        ('Contador', {'fields': ('next_number',)}),
+        ('Empresa', {'fields': ('owner_company',)}),
+        ('Auditoria', {'fields': ('created_at', 'updated_at')}),
+    )

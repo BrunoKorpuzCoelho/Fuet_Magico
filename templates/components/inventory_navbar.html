@@ -33,14 +33,20 @@
                             <!-- Transferências Section -->
                             <div class="px-4 py-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                                 Transferências
-                            </div>
-                            <a href="#"
+                            </div>                            <a href="{% url 'inventory:all_movements_list' %}"
+                               class="block pl-8 pr-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                Todos os Movimentos
+                            </a>                            <a href="{% url 'inventory:receipt_list' %}"
                                class="block pl-8 pr-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 Recepções
                             </a>
-                            <a href="#"
+                            <a href="{% url 'inventory:delivery_list' %}"
                                class="block pl-8 pr-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 Entregas
+                            </a>
+                            <a href="{% url 'inventory:adjustment_list' %}"
+                               class="block pl-8 pr-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                Ajustes
                             </a>
 
                             <!-- Divider -->
@@ -50,7 +56,7 @@
                             <div class="px-4 py-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                                 Ajustes
                             </div>
-                            <a href="#"
+                            <a href="{% url 'inventory:physical_inventory_list' %}"
                                class="block pl-8 pr-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 Inventário Físico
                             </a>
@@ -181,6 +187,21 @@
                                class="block pl-8 pr-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 Tipos de Operação
                             </a>
+
+                            <!-- Divider -->
+                            <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+
+                            <!-- Sinais Section -->
+                            <div class="px-4 py-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                Sinais
+                            </div>
+                            <form method="post" action="{% url 'inventory:run_low_stock_check' %}">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="w-full text-left block pl-8 pr-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    Verificar Stock Mínimo
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>

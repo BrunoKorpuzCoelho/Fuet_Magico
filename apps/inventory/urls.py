@@ -35,6 +35,10 @@ urlpatterns = [
     path('products/', views.product_list, name='product_list'),
     path('products/create/', views.product_create, name='product_create'),
     path('products/<uuid:pk>/edit/', views.product_edit, name='product_edit'),
+    path('products/<uuid:pk>/forecast/', views.product_forecast, name='product_forecast'),
+    path('products/<uuid:pk>/suppliers/', views.product_suppliers_api, name='product_suppliers_api'),
+    path('products/<uuid:pk>/suppliers/<uuid:si_pk>/', views.product_supplier_detail_api, name='product_supplier_detail_api'),
+    path('products/search/', views.product_search, name='product_search'),
     path('products/bulk-archive/', views.bulk_archive_products, name='bulk_archive_products'),
     path('products/bulk-unarchive/', views.bulk_unarchive_products, name='bulk_unarchive_products'),
     path('products/bulk-delete/', views.bulk_delete_products, name='bulk_delete_products'),
@@ -46,4 +50,34 @@ urlpatterns = [
     path('warehouses/bulk-archive/', views.bulk_archive_warehouses, name='bulk_archive_warehouses'),
     path('warehouses/bulk-unarchive/', views.bulk_unarchive_warehouses, name='bulk_unarchive_warehouses'),
     path('warehouses/bulk-delete/', views.bulk_delete_warehouses, name='bulk_delete_warehouses'),
+
+    # Operations — Receipts & Deliveries
+    path('operations/receipts/', views.receipt_list, name='receipt_list'),
+    path('operations/receipts/new/', views.receipt_create, name='receipt_create'),
+    path('operations/deliveries/', views.delivery_list, name='delivery_list'),
+    path('operations/deliveries/new/', views.delivery_create, name='delivery_create'),
+    path('operations/adjustments/', views.adjustment_list, name='adjustment_list'),
+    path('operations/adjustments/new/', views.adjustment_create, name='adjustment_create'),
+    path('operations/movements/<uuid:pk>/edit/', views.movement_edit, name='movement_edit'),
+    path('operations/movements/<uuid:pk>/validate/', views.movement_validate, name='movement_validate'),
+    path('operations/movements/<uuid:pk>/cancel/', views.movement_cancel, name='movement_cancel'),
+    path('operations/movements/<uuid:pk>/lines/add/', views.movement_line_add, name='movement_line_add'),
+    path('operations/movements/<uuid:movement_pk>/lines/<uuid:line_pk>/update/', views.movement_line_update, name='movement_line_update'),
+    path('operations/movements/<uuid:movement_pk>/lines/<uuid:line_pk>/delete/', views.movement_line_delete, name='movement_line_delete'),
+    # Chatter — Notes & Followers
+    path('operations/movements/<uuid:pk>/notes/', views.movement_notes_list, name='movement_notes_list'),
+    path('operations/movements/<uuid:pk>/notes/create/', views.movement_note_create, name='movement_note_create'),
+    path('operations/movements/<uuid:pk>/followers/', views.movement_followers_api, name='movement_followers_api'),
+    path('operations/movements/<uuid:pk>/followers/<uuid:user_id>/remove/', views.movement_follower_remove_api, name='movement_follower_remove_api'),
+    # Physical Inventory
+    path('operations/physical-inventory/', views.physical_inventory_list, name='physical_inventory_list'),
+    path('operations/bulk-archive/', views.bulk_archive_movements, name='bulk_archive_movements'),
+    path('operations/bulk-unarchive/', views.bulk_unarchive_movements, name='bulk_unarchive_movements'),
+    path('operations/bulk-delete/', views.bulk_delete_movements, name='bulk_delete_movements'),
+
+    # All movements (global list)
+    path('operations/movements/', views.all_movements_list, name='all_movements_list'),
+
+    # Tools
+    path('tools/run-low-stock-check/', views.run_low_stock_check, name='run_low_stock_check'),
 ]

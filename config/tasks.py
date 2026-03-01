@@ -6,6 +6,78 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# Stock Mínimo — verificação periódica (de 4 em 4 horas)
+# ---------------------------------------------------------------------------
+
+@shared_task(name='config.tasks.check_low_stock_periodic')
+def check_low_stock_periodic():
+    """
+    Percorre todos os produtos ativos com min_stock > 0 e cria notificações
+    SYSTEM para utilizadores da empresa quando o stock está abaixo do mínimo.
+    Deduplica: não cria se já existir uma notificação não lida igual.
+    """
+    from django.db.models import Sum
+    from django.contrib.auth import get_user_model
+    from apps.inventory.models import Product, StockQuant
+    from apps.core.models import Notification
+
+    User = get_user_model()
+    products = Product.objects.filter(
+        is_active=True, min_stock__gt=0
+    ).select_related('uom', 'owner_company')
+
+    created_total = 0
+    for product in products:
+        on_hand = float(
+            StockQuant.objects.filter(product=product)
+            .aggregate(t=Sum('quantity'))['t'] or 0
+        )
+        if on_hand >= float(product.min_stock):
+            continue
+
+        if product.owner_company_id:
+            users = list(User.objects.filter(
+                is_active=True, companies=product.owner_company_id
+            ))
+        else:
+            users = list(User.objects.filter(is_active=True, is_staff=True))
+
+        if not users:
+            continue
+
+        uom_name = product.uom.name if product.uom else 'un.'
+        title = f'Stock baixo: {product.name}'
+        message = (
+            f'O produto "{product.name}" tem {on_hand:.3g}\u00a0{uom_name} em mão, '
+            f'abaixo do mínimo de {float(product.min_stock):.3g}\u00a0{uom_name}.'
+        )
+        product_url = f'/inventory/products/{product.pk}/edit/'
+
+        bulk = []
+        for user in users:
+            already = Notification.objects.filter(
+                user=user,
+                notification_type='SYSTEM',
+                title=title,
+                is_read=False,
+            ).exists()
+            if not already:
+                bulk.append(Notification(
+                    user=user,
+                    notification_type='SYSTEM',
+                    title=title,
+                    message=message,
+                    link=product_url,
+                ))
+        if bulk:
+            Notification.objects.bulk_create(bulk)
+            created_total += len(bulk)
+
+    logger.info('[check_low_stock_periodic] %d notification(s) created.', created_total)
+    return created_total
+
+
+# ---------------------------------------------------------------------------
 # Polling IMAP — tarefa por utilizador
 # ---------------------------------------------------------------------------
 

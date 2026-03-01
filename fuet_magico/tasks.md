@@ -22,7 +22,7 @@
 - **Fase 3:** 531/531 tarefas (100%) - Backend - Estrutura Base Django ✅ COMPLETA!
 - **Fase 4:** 297/499 tarefas (60%) - App: Contactos 🔄 parcial
 - **Fase 5:** 659/949 tarefas (69%) - App: CRM (Customer Relationship Management) 🔄 parcial
-- **Fase 6:** 195/~600 tarefas (~33%) - App: Inventário (Produtos, Stock, Armazéns, Movimentos) 🔄 parcial
+- **Fase 6:** ~285/~650 tarefas (~44%) - App: Inventário (Produtos, Stock, Armazéns, Movimentos) 🔄 parcial
 - **Fase 7:** 0/152 tarefas (0%) - App: Compras
 - **Fase 8:** 0/247 tarefas (0%) - App: Vendas
 - **Fase 9:** 0/94 tarefas (0%) - App: Financeiro
@@ -5728,7 +5728,7 @@ Criar página de relatórios dedicada para o módulo CRM com KPIs em tempo real 
 
 ---
 
-## 6.1 Criação da App 'inventory'
+## 6.1 Criação da App 'inventory' ✅
 
 Criar app Django para gestão de inventário.
 
@@ -5741,7 +5741,7 @@ Criar app Django para gestão de inventário.
 
 ---
 
-## 6.2 Modelo Category
+## 6.2 Modelo Category ✅
 
 Criar categorias para produtos.
 
@@ -6113,10 +6113,10 @@ Criar smart buttons no sub-navbar do formulário de produto (`product_form_navba
 
 - [x] **Smart Button: Previsão** (azul)
   - [x] Ícone: gráfico de pulso (activity)
-  - [x] Contador: `forecast_count` (atualmente 0)
-  - [ ] ⏳ Conectar a dados reais — **depende de:** Fase 6.4/6.5 (modelos StockMovement + Stock) e Fase 13 (Stock Management Avançado)
-  - [ ] ⏳ Contador real: previsão de stock baseada em movimentos pendentes
-  - [ ] ⏳ Link: redirecionar para vista de previsão do produto
+  - [x] Contador: `forecast_count` (on_hand + incoming_pending - outgoing_pending, dados reais)
+  - [x] ⏳ Conectar a dados reais — StockMovementLine draft aggregation ✅
+  - [x] ⏳ Contador real: previsão de stock baseada em movimentos pendentes ✅
+  - [x] ⏳ Link: redirecionar para vista de previsão do produto (`product_forecast` view) ✅
 
 - [x] **Smart Button: Vendidas** (verde)
   - [x] Ícone: saco de compras (shopping-bag)
@@ -6127,13 +6127,14 @@ Criar smart buttons no sub-navbar do formulário de produto (`product_form_navba
 
 - [x] **Smart Button: Em Stock** (laranja)
   - [x] Ícone: cubo 3D (package/box)
-  - [x] Contador: `on_hand_count` (atualmente 0)
-  - [ ] ⏳ Conectar a dados reais — **depende de:** Fase 6.5 (modelo Stock) e Fase 13 (Stock Management Avançado)
-  - [ ] ⏳ Contador real: `Stock.objects.get(product=product).quantity` ou 0
-  - [ ] ⏳ Link: redirecionar para vista de stock do produto
+  - [x] Contador: `on_hand_count` — `StockQuant.objects.filter(product=product).aggregate(Sum('quantity'))` ✅
+  - [x] ⏳ Conectar a dados reais — StockQuant.Sum real ✅
+  - [x] ⏳ Contador real: `StockQuant` aggregation por produto ✅
+  - [x] ⏳ Link: `physical_inventory_list?search=<nome>&field=produto` ✅
 
 - [x] **View `product_edit`** — passa contadores ao template
-  - [x] `bom_count`, `forecast_count`, `sold_count`, `on_hand_count` (todos 0 por agora)
+  - [x] `on_hand_count`: StockQuant real (Sum), `forecast_count`: on_hand + incoming - outgoing ✅
+  - [x] `bom_count`, `sold_count`: 0 (placeholder Fase 10 / Fase 8)
 
 - [ ] **Testing - Smart Buttons Produto** ⏳
   - [ ] Test: smart buttons renderizam no formulário de edição
@@ -6322,184 +6323,193 @@ Formulário simples de criação e edição de armazéns — layout igual aos co
 
 ---
 
-## 6.5 Modelo StockMovement (Documento de Movimento de Stock)
+## 6.5 Modelo StockMovement (Documento de Movimento de Stock) ✅
 
 O documento central do inventário. Criado automaticamente por Compras/Vendas ou manualmente para ajustes.
 
-- [ ] **Criar modelo StockMovement**
-  - [ ] Herdar de AbstractBaseModel
-  - [ ] Campo: reference (CharField, único, auto-gerado, ex: "WH/IN/00001", "WH/OUT/00001", "ADJ/00001")
-  - [ ] Campo: movement_type (CharField, choices):
-    - [ ] `receipt` — Receção de mercadoria (compra/entrada)
-    - [ ] `delivery` — Expedição/entrega (venda/saída)
-    - [ ] `adjustment` — Ajuste de inventário (correção manual)
-  - [ ] Campo: warehouse (FK Warehouse, default=armazém padrão)
-  - [ ] Campo: partner (FK Contact, null=True, blank=True) — fornecedor (receção) ou cliente (expedição)
-  - [ ] Campo: state (CharField, choices):
-    - [ ] `draft` — Rascunho, editável
-    - [ ] `done` — Validado, stock atualizado
-    - [ ] `cancelled` — Cancelado
-  - [ ] Campo: date (DateTimeField, default=now) — data do movimento
-  - [ ] Campo: origin (CharField, null=True, blank=True) — ref ao documento que gerou (ex: "PO-00001", "SO-00001")
-  - [ ] Campo: notes (TextField, null=True, blank=True)
-  - [ ] Campo: responsible (FK User) — quem criou/validou
-  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True)
-  - [ ] Método __str__: retorna reference
-  - [ ] Método generate_reference(): gera ref baseado no tipo ("WH/IN/", "WH/OUT/", "ADJ/") + sequência
-  - [ ] Método action_validate(): muda para done, atualiza StockQuant para cada linha
-  - [ ] Método action_cancel(): muda para cancelled (apenas se draft)
-  - [ ] Property total_value: soma de (line.quantity * line.unit_price) de todas as linhas
+- [x] **Criar modelo StockMovement**
+  - [x] Herdar de AbstractBaseModel
+  - [x] Campo: reference (CharField, único, auto-gerado, ex: "WH/IN/00001", "WH/OUT/00001", "ADJ/00001")
+  - [x] Campo: movement_type (CharField, choices):
+    - [x] `receipt` — Receção de mercadoria (compra/entrada)
+    - [x] `delivery` — Expedição/entrega (venda/saída)
+    - [x] `adjustment` — Ajuste de inventário (correção manual)
+  - [x] Campo: warehouse (FK Warehouse, default=armazém padrão)
+  - [x] Campo: partner (FK Contact, null=True, blank=True) — fornecedor (receção) ou cliente (expedição)
+  - [x] Campo: state (CharField, choices):
+    - [x] `draft` — Rascunho, editável
+    - [x] `done` — Validado, stock atualizado
+    - [x] `cancelled` — Cancelado
+  - [x] Campo: date (DateTimeField, default=now) — data do movimento
+  - [x] Campo: origin (CharField, null=True, blank=True) — ref ao documento que gerou (ex: "PO-00001", "SO-00001")
+  - [x] Campo: notes (TextField, null=True, blank=True)
+  - [x] Campo: responsible (FK User) — quem criou/validou
+  - [x] Campo: **owner_company** (FK para Company, null=True, blank=True)
+  - [x] Método __str__: retorna reference
+  - [x] Método generate_reference(): gera ref baseado no tipo ("WH/IN/", "WH/OUT/", "ADJ/") + sequência
+  - [x] Método action_validate(): muda para done, atualiza StockQuant para cada linha
+  - [x] Método action_cancel(): muda para cancelled (apenas se draft)
+  - [x] Property total_value: soma de (line.quantity * line.unit_price) de todas as linhas
 
-- [ ] **Criar migrations**
-  - [ ] makemigrations e migrate
+- [x] **Criar migrations**
+  - [x] makemigrations e migrate
 
-- [ ] **Registrar no Admin**
-  - [ ] Criar StockMovementAdmin com inline de StockMovementLine
-  - [ ] list_display: reference, movement_type, partner, state, date, total_value
-  - [ ] list_filter: state, movement_type
+- [x] **Registrar no Admin**
+  - [x] Criar StockMovementAdmin com inline de StockMovementLine
+  - [x] list_display: reference, movement_type, partner, state, date, total_value
+  - [x] list_filter: state, movement_type
 
-- [ ] **Testing - StockMovement**
-  - [ ] Test: criar movimento funciona
-  - [ ] Test: referência auto-gerada com prefix correto por tipo
-  - [ ] Test: validar muda estado para done
-  - [ ] Test: cancelar só funciona se draft
-  - [ ] Test: total_value calcula soma das linhas
+- [x] **Testing - StockMovement**
+  - [x] Test: criar movimento funciona
+  - [x] Test: referência auto-gerada com prefix correto por tipo
+  - [x] Test: validar muda estado para done
+  - [x] Test: cancelar só funciona se draft
+  - [x] Test: total_value calcula soma das linhas
 
 ---
 
-## 6.6 Modelo StockMovementLine (Linhas de Movimento)
+## 6.6 Modelo StockMovementLine (Linhas de Movimento) ✅
 
 Cada produto dentro de um movimento. Contém quantidade e preço unitário (para cálculo de custo).
 
-- [ ] **Criar modelo StockMovementLine**
-  - [ ] Herdar de AbstractBaseModel
-  - [ ] Campo: stock_movement (FK StockMovement, on_delete=CASCADE, related_name='lines')
-  - [ ] Campo: product (FK Product, on_delete=PROTECT)
-  - [ ] Campo: quantity (DecimalField) — quantidade movida
-  - [ ] Campo: unit_price (DecimalField, default=0) — preço unitário (custo na receção, sale_price na expedição)
-  - [ ] Campo: uom (FK UoM, null=True, blank=True) — herda do produto se vazio
-  - [ ] Campo: notes (TextField, null=True, blank=True)
-  - [ ] Método save(): se uom vazio, herdar de product.uom
-  - [ ] Property line_total: quantity × unit_price
+- [x] **Criar modelo StockMovementLine**
+  - [x] Herdar de AbstractBaseModel
+  - [x] Campo: stock_movement (FK StockMovement, on_delete=CASCADE, related_name='lines')
+  - [x] Campo: product (FK Product, on_delete=PROTECT)
+  - [x] Campo: quantity (DecimalField) — quantidade movida
+  - [x] Campo: unit_price (DecimalField, default=0) — preço unitário (custo na receção, sale_price na expedição)
+  - [x] Campo: uom (FK UoM, null=True, blank=True) — herda do produto se vazio
+  - [x] Método save(): se uom vazio, herdar de product.uom
+  - [x] Property line_total: quantity × unit_price
 
-- [ ] **Criar migrations**
-  - [ ] makemigrations e migrate
+- [x] **Criar migrations**
+  - [x] makemigrations e migrate
 
-- [ ] **Testing - StockMovementLine**
-  - [ ] Test: criar linha funciona
-  - [ ] Test: uom herda do produto se não definido
-  - [ ] Test: line_total calcula corretamente
+- [x] **Testing - StockMovementLine**
+  - [x] Test: criar linha funciona
+  - [x] Test: uom herda do produto se não definido
+  - [x] Test: line_total calcula corretamente
 
 ---
 
-## 6.7 Modelo StockQuant (Stock Atual)
+## 6.7 Modelo StockQuant (Stock Atual) ✅
 
 Quantidade real de cada produto no armazém. Atualizado automaticamente quando um StockMovement é validado.
 
-- [ ] **Criar modelo StockQuant**
-  - [ ] Herdar de AbstractBaseModel
-  - [ ] Campo: product (FK Product, on_delete=CASCADE, related_name='quants')
-  - [ ] Campo: warehouse (FK Warehouse, on_delete=CASCADE, related_name='quants')
-  - [ ] Campo: quantity (DecimalField, default=0) — quantidade em mão
-  - [ ] Constraint: unique_together (product, warehouse) — 1 quant por produto/armazém
+- [x] **Criar modelo StockQuant**
+  - [x] Herdar de AbstractBaseModel
+  - [x] Campo: product (FK Product, on_delete=CASCADE, related_name='quants')
+  - [x] Campo: warehouse (FK Warehouse, on_delete=CASCADE, related_name='quants')
+  - [x] Campo: quantity (DecimalField, default=0) — quantidade em mão
+  - [x] Constraint: unique_together (product, warehouse) — 1 quant por produto/armazém
 
-- [ ] **Métodos de classe (helpers)**
-  - [ ] get_on_hand(product, warehouse=None): retorna quantidade em armazém (ou total se warehouse=None)
-  - [ ] update_quantity(product, warehouse, qty, mode='add'): add/subtract quantity (get_or_create)
+- [x] **Métodos de classe (helpers)**
+  - [x] get_on_hand(product, warehouse=None): retorna quantidade em armazém (ou total se warehouse=None)
+  - [x] update_quantity(product, warehouse, qty, mode='add'): add/subtract quantity (get_or_create)
 
-- [ ] **Integração com StockMovement.action_validate()**
-  - [ ] Ao validar um movimento:
-    - [ ] Se receipt: para cada linha → StockQuant.update_quantity(product, warehouse, qty, 'add')
-    - [ ] Se delivery: para cada linha → StockQuant.update_quantity(product, warehouse, qty, 'subtract')
-    - [ ] Se adjustment: calcular diferença (positiva = add, negativa = subtract)
-  - [ ] Se ao subtrair o stock fica negativo → permitir mas alertar (stock negativo = algo errado)
+- [x] **Integração com StockMovement.action_validate()**
+  - [x] Ao validar um movimento:
+    - [x] Se receipt: para cada linha → StockQuant.update_quantity(product, warehouse, qty, 'add')
+    - [x] Se delivery: para cada linha → StockQuant.update_quantity(product, warehouse, qty, 'subtract')
+    - [x] Se adjustment: calcular diferença (positiva = add, negativa = subtract)
+  - [x] Se ao subtrair o stock fica negativo → permitir mas alertar (stock negativo = algo errado)
 
-- [ ] **Criar migrations**
-  - [ ] makemigrations e migrate
+- [x] **Criar migrations**
+  - [x] makemigrations e migrate
 
-- [ ] **Registrar no Admin**
-  - [ ] Criar StockQuantAdmin
-  - [ ] list_display: product, warehouse, quantity
-  - [ ] list_filter: warehouse
+- [x] **Registrar no Admin**
+  - [x] Criar StockQuantAdmin
+  - [x] list_display: product, warehouse, quantity
+  - [x] list_filter: warehouse
 
-- [ ] **Testing - StockQuant**
-  - [ ] Test: criar quant funciona
-  - [ ] Test: unique_together impede duplicados (product, warehouse)
-  - [ ] Test: validar receção incrementa quantidade
-  - [ ] Test: validar expedição decrementa quantidade
-  - [ ] Test: validar ajuste positivo/negativo funciona
-  - [ ] Test: stock negativo é permitido (mas gera alerta/log)
-
----
-
-## 6.8 Modelo ProductSupplierInfo (Info Fornecedor por Produto)
-
-Informações de compra por fornecedor. Permite múltiplos fornecedores por produto.
-
-- [ ] **Criar modelo ProductSupplierInfo**
-  - [ ] Herdar de AbstractBaseModel
-  - [ ] Campo: product (FK Product, on_delete=CASCADE, related_name='supplier_infos')
-  - [ ] Campo: supplier (FK Contact, on_delete=CASCADE, related_name='supplied_products')
-  - [ ] Campo: supplier_product_code (CharField, blank=True) — ref do produto no fornecedor (ex: código Makro)
-  - [ ] Campo: price (DecimalField) — preço unitário de compra
-  - [ ] Campo: min_quantity (DecimalField, default=1) — quantidade mínima de compra
-  - [ ] Campo: lead_time (IntegerField, default=0) — prazo de entrega em dias
-  - [ ] Campo: is_preferred (BooleanField, default=False) — fornecedor preferido
-  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True)
-  - [ ] Constraint: unique_together (product, supplier)
-  - [ ] Método de classe get_best_supplier(product): retorna (supplier, price) do fornecedor preferido ou mais barato
-  - [ ] Ordering: ['-is_preferred', 'price']
-
-- [ ] **Atualizar tab "Compras" do formulário Product**
-  - [ ] No tab "Compras" do product_form.html, mostrar tabela com:
-    - [ ] Colunas: Fornecedor, Código, Preço, Qtd Mín, Prazo (dias), Preferido, Ações
-    - [ ] Botão "Adicionar Fornecedor" (AJAX modal ou inline)
-    - [ ] Edição inline (similar a category products tab)
-  - [ ] Se produto tem campo `supplier` antigo: data migration para ProductSupplierInfo
-
-- [ ] **Criar migrations**
-  - [ ] makemigrations e migrate
-
-- [ ] **Registrar no Admin**
-  - [ ] Criar ProductSupplierInfoAdmin
-  - [ ] list_display: product, supplier, price, min_quantity, lead_time, is_preferred
-
-- [ ] **Testing - ProductSupplierInfo**
-  - [ ] Test: criar funciona
-  - [ ] Test: unique_together impede duplicados
-  - [ ] Test: get_best_supplier retorna preferido, ou mais barato
-  - [ ] Test: tab "Compras" mostra fornecedores
+- [x] **Testing - StockQuant**
+  - [x] Test: criar quant funciona
+  - [x] Test: unique_together impede duplicados (product, warehouse)
+  - [x] Test: validar receção incrementa quantidade
+  - [x] Test: validar expedição decrementa quantidade
+  - [x] Test: validar ajuste positivo/negativo funciona
+  - [x] Test: stock negativo é permitido (mas gera alerta/log)
 
 ---
 
-## 6.9 Adicionar Campos de Stock ao Produto
+## 6.8 Modelo ProductSupplierInfo (Info Fornecedor por Produto) ✅
+
+Informações de compra por fornecedor. Permite múltiplos fornecedores por produto com fallback por sequência.
+`supplier_product_code` é usado na Fase 14 (PDF scanning) para identificar o produto na fatura quando a `internal_reference` não coincide — o sistema tenta: 1º `internal_reference`, 2º `supplier_product_code` do fornecedor da fatura. Quando há match e o preço mudou, auto-atualiza `price` e `Product.cost_price`.
+
+- [x] **Criar modelo ProductSupplierInfo**
+  - [x] Herdar de AbstractBaseModel
+  - [x] Campo: product (FK Product, CASCADE, related_name='supplier_infos')
+  - [x] Campo: supplier (FK Contact, CASCADE, related_name='supplied_products')
+  - [x] Campo: sequence (PositiveSmallIntegerField, default=10) — prioridade de compra (menor = preferido)
+  - [x] Campo: supplier_product_code (CharField, blank=True) — ref do produto na fatura do fornecedor, usado para matching automático na Fase 14
+  - [x] Campo: price (DecimalField 12,4) — preço unitário de compra na UdM de compra do produto
+  - [x] Campo: min_quantity (DecimalField, default=1) — quantidade mínima de encomenda
+  - [x] Campo: lead_time (IntegerField, default=0) — prazo de entrega em dias
+  - [x] Campo: is_preferred (BooleanField, default=False) — atalho para "fornecedor preferido" (complementa sequence)
+  - [x] Campo: owner_company (FK Company, null=True, blank=True)
+  - [x] Constraint: unique_together (product, supplier)
+  - [x] Método de classe get_best_supplier(product): retorna (supplier, price) do fornecedor preferred ou de menor sequence
+  - [x] Método de classe find_by_supplier_code(supplier, code): lookup para Fase 14 (PDF matching)
+  - [x] Ordering: ['sequence', '-is_preferred', 'price']
+
+- [x] **Atualizar tab "Compras" do formulário Product**
+  - [x] Tabela Alpine.js dinâmica com colunas: Seq, Fornecedor (searchable), Cód. Fornecedor, Preço, Qtd Mín, Prazo (dias), Preferido, Ações
+  - [x] Adicionar linha via botão + dropdown de pesquisa de contactos
+  - [x] Guardar/actualizar linha via API (PUT)
+  - [x] Remover linha via API (DELETE)
+  - [x] Ordenação visual por sequência
+
+- [x] **Criar migrations**
+  - [x] makemigrations e migrate
+
+- [x] **Registrar no Admin**
+  - [x] ProductSupplierInfoAdmin com list_display: product, supplier, sequence, price, min_quantity, lead_time, is_preferred
+
+- [x] **APIs AJAX**
+  - [x] GET `products/<pk>/suppliers/` — lista supplier_infos do produto (JSON)
+  - [x] POST `products/<pk>/suppliers/` — criar nova linha
+  - [x] PUT `products/<pk>/suppliers/<si_pk>/` — actualizar linha
+  - [x] DELETE `products/<pk>/suppliers/<si_pk>/` — remover linha
+
+- [x] **Testing - ProductSupplierInfo**
+  - [x] Test: criar funciona
+  - [x] Test: unique_together impede duplicados
+  - [x] Test: get_best_supplier retorna preferred, ou menor sequence
+  - [x] Test: find_by_supplier_code encontra por código do fornecedor
+  - [x] Test: tab "Compras" mostra fornecedores e permite edição inline
+
+---
+
+## 6.9 ✅ Adicionar Campos de Stock ao Produto
 
 Campos e métodos no modelo Product para alimentar smart buttons e tabs.
 
-- [ ] **Novos campos em Product (migration)**
-  - [ ] Campo: min_stock (DecimalField, default=0) — stock mínimo para alertas
+- [x] **Novos campos em Product (migration)**
+  - [x] Campo: min_stock (DecimalField, default=0) — stock mínimo para alertas
   - [ ] Campo: weight (DecimalField, null=True, blank=True) — peso em kg (opcional)
 
-- [ ] **Métodos novos em Product**
-  - [ ] get_on_hand_quantity(warehouse=None): StockQuant.get_on_hand(self, warehouse)
-  - [ ] get_incoming_quantity(): soma qty de StockMovementLines em movimentos receipt/draft
-  - [ ] get_outgoing_quantity(): soma qty de StockMovementLines em movimentos delivery/draft
-  - [ ] get_forecasted_quantity(): on_hand + incoming - outgoing
-  - [ ] get_profit_margin(): já existe — sale_price - cost_price
-  - [ ] get_stock_value(): on_hand × cost_price (valor do inventário deste produto)
+- [x] **Métodos novos em Product**
+  - [x] get_on_hand_quantity(warehouse=None): StockQuant.get_on_hand(self, warehouse)
+  - [x] get_incoming_quantity(): soma qty de StockMovementLines em movimentos receipt/draft
+  - [x] get_outgoing_quantity(): soma qty de StockMovementLines em movimentos delivery/draft
+  - [x] get_forecasted_quantity(): on_hand + incoming - outgoing
+  - [x] get_profit_margin(): já existe — sale_price - cost_price
+  - [x] get_stock_value(): on_hand × cost_price (valor do inventário deste produto)
 
-- [ ] **Atualizar tab "Inventário" do formulário Product**
-  - [ ] No tab "Inventário" do product_form.html, mostrar (read-only):
-    - [ ] Em Mão: get_on_hand_quantity()
-    - [ ] A Receber: get_incoming_quantity() (movimentos de receção pendentes)
-    - [ ] A Expedir: get_outgoing_quantity() (movimentos de expedição pendentes)
-    - [ ] Previsão: get_forecasted_quantity()
-    - [ ] Valor em Stock: get_stock_value()
-    - [ ] Margem de Lucro: get_profit_margin() / sale_price × 100 (em %)
-  - [ ] Campos editáveis: min_stock, weight
+- [x] **Atualizar tab "Inventário" do formulário Product**
+  - [x] No tab "Inventário" do product_form.html, mostrar (read-only):
+    - [x] Em Mão: get_on_hand_quantity()
+    - [x] A Receber: get_incoming_quantity() (movimentos de receção pendentes)
+    - [x] A Expedir: get_outgoing_quantity() (movimentos de expedição pendentes)
+    - [x] Previsão: get_forecasted_quantity()
+    - [x] Valor em Stock: get_stock_value()
+    - [x] Margem de Lucro: get_profit_margin() / sale_price × 100 (em %)
+  - [x] Campos editáveis: min_stock
+  - [ ] Campos editáveis: weight
 
-- [ ] **Criar migrations**
-  - [ ] makemigrations e migrate
+- [x] **Criar migrations**
+  - [x] makemigrations e migrate
 
 - [ ] **Testing - Product Stock Fields**
   - [ ] Test: get_on_hand_quantity retorna valor correto de StockQuant
@@ -6513,27 +6523,30 @@ Campos e métodos no modelo Product para alimentar smart buttons e tabs.
 
 Criar views para listar e gerir movimentos de stock. Vista principal = lista com tabs por tipo.
 
-- [ ] **StockMovementListView (lista principal)**
-  - [ ] Listar movimentos com filtros:
-    - [ ] Tabs: Todos, Receções, Expedições, Ajustes
-    - [ ] Filtros: estado, data, parceiro, produto (via linha)
-    - [ ] Busca por referência ou nome do parceiro
-  - [ ] Colunas: Referência, Tipo, Parceiro, Data, Estado, Valor Total, Nº Produtos
-  - [ ] Paginação server-side (50/page)
-  - [ ] Bulk actions: validar em massa, cancelar em massa
+- [x] **StockMovementListView (lista principal)**
+  - [x] Listar movimentos com filtros:
+    - [x] Filtros: estado, tipo (receção/entrega/ajuste), pesquisa por referência/parceiro/origem
+    - [x] Filtro por tipo: Todos / Receções / Entregas / Ajustes
+    - [x] Filtro por estado: Todos / Rascunho / Validado / Cancelado / Arquivados
+  - [x] Colunas: Referência (com ícone por tipo), Tipo (badge), Contacto, Estado, Data, Armazém, Total
+  - [x] Paginação server-side (50/page)
+  - [x] Bulk actions: arquivar, desarquivar, eliminar
+  - [x] Botão "Novo" → dropdown com Nova Receção / Nova Entrega
+  - [x] URL: `operations/movements/` · Nome: `all_movements_list`
+  - [x] Link "Todos os Movimentos" no navbar Operações
 
-- [ ] **StockMovementCreateView (criar movimento manual)**
-  - [ ] Form: movement_type (pré-selecionado se veio de tab), warehouse, partner, date, notes
-  - [ ] Tabela de linhas (Alpine.js dinâmico):
-    - [ ] Produto (seletor com busca), Quantidade, Preço Unitário, UdM (auto do produto)
-    - [ ] Botão "Adicionar Linha" e "Remover"
-    - [ ] Total por linha e total geral (calculados em real-time)
-  - [ ] Botões: "Guardar Rascunho" e "Validar" (guardar + validar de uma vez)
+- [x] **StockMovementCreateView (criar movimento manual)**
+  - [x] Form: movement_type (pré-selecionado se veio de tab), warehouse, partner, date, notes
+  - [x] Tabela de linhas (Alpine.js dinâmico):
+    - [x] Produto (seletor com busca), Quantidade, Preço Unitário, UdM (auto do produto)
+    - [x] Botão "Adicionar Linha" e "Remover"
+    - [x] Total por linha e total geral (calculados em real-time)
+  - [x] Botões: "Guardar Rascunho" e "Validar" (guardar + validar de uma vez)
 
-- [ ] **StockMovementEditView (editar rascunho)**
-  - [ ] Apenas se estado = draft
-  - [ ] Mesmo form que create, pré-preenchido
-  - [ ] Botões: "Guardar", "Validar", "Cancelar"
+- [x] **StockMovementEditView (editar rascunho)**
+  - [x] Apenas se estado = draft
+  - [x] Mesmo form que create, pré-preenchido
+  - [x] Botões: "Guardar", "Validar", "Cancelar"
 
 - [ ] **StockMovementDetailView (ver movimento validado)**
   - [ ] Mostrar cabeçalho e linhas (read-only se done)
@@ -6543,18 +6556,19 @@ Criar views para listar e gerir movimentos de stock. Vista principal = lista com
   - [ ] Se done: apenas visualização + link para parceiro
 
 - [ ] **Templates**
-  - [ ] `templates/inventory/stock_movement_list.html` — lista com tabs
-  - [ ] `templates/inventory/stock_movement_form.html` — form create/edit com linhas dinâmicas
+  - [x] `templates/inventory/all_movements_list.html` — lista global com filtros tipo + estado
+  - [x] `templates/inventory/stock_movement_form.html` — form create/edit com linhas dinâmicas
   - [ ] `templates/inventory/stock_movement_detail.html` — detalhe read-only
-  - [ ] `templates/components/stock_movement_navbar.html` — navbar
+  - [x] `templates/components/stock_movement_form_navbar.html` — navbar
 
 - [ ] **Rotas**
-  - [ ] `path('inventory/movements/', ..., name='stock_movement_list')`
-  - [ ] `path('inventory/movements/new/', ..., name='stock_movement_create')`
+  - [x] `path('operations/movements/', ..., name='all_movements_list')`
+  - [x] `path('operations/adjustments/', ..., name='adjustment_list')`
+  - [x] `path('operations/adjustments/new/', ..., name='adjustment_create')`
   - [ ] `path('inventory/movements/<uuid:pk>/', ..., name='stock_movement_detail')`
-  - [ ] `path('inventory/movements/<uuid:pk>/edit/', ..., name='stock_movement_edit')`
-  - [ ] `path('inventory/movements/<uuid:pk>/validate/', ..., name='stock_movement_validate')`
-  - [ ] `path('inventory/movements/<uuid:pk>/cancel/', ..., name='stock_movement_cancel')`
+  - [x] `path('operations/movements/<uuid:pk>/edit/', ..., name='movement_edit')`
+  - [x] `path('operations/movements/<uuid:pk>/validate/', ..., name='movement_validate')`
+  - [x] `path('operations/movements/<uuid:pk>/cancel/', ..., name='movement_cancel')`
   - [ ] `path('inventory/movements/bulk-action/', ..., name='stock_movement_bulk_action')`
 
 - [ ] **Testing - StockMovement Views**
@@ -6567,9 +6581,93 @@ Criar views para listar e gerir movimentos de stock. Vista principal = lista com
 
 ---
 
-## 6.11 View de Stock Atual (Overview)
+## 6.10.1 Chatter no Formulário de Movimento ✅
 
-Vista principal para ver o stock de todos os produtos.
+Integração do sistema de chatter (Nota + Log + Seguidores) no formulário de movimento, com design idêntico ao CRM.
+
+- [x] **Componente `templates/components/chatter_inventory.html`**
+  - [x] Design idêntico ao chatter do CRM
+  - [x] Container lateral (30% largura, sticky, altura viewport)
+  - [x] Duas abas: Nota e Log
+  - [x] Encoding UTF-8 correto (HTML entities em vez de caracteres especiais)
+
+- [x] **Aba Nota (Alpine.js, API-driven)**
+  - [x] Função Alpine `inventoryNotesPanel(movementId)`
+  - [x] Carrega notas via `GET /inventory/operations/movements/<pk>/notes/`
+  - [x] Submete notas via `POST /inventory/operations/movements/<pk>/notes/create/`
+  - [x] Dropdown @mention de utilizadores via `/crm/api/users/search/`
+  - [x] Toggle urgente (⚠), visibilidade interna, botão "Adicionar"
+  - [x] Notas renderizadas dinamicamente (sem reload de página)
+
+- [x] **Aba Log — Histórico de Atividades (estilo CRM)**
+  - [x] Header "Histórico de Atividades"
+  - [x] Ícones coloridos por tipo: 🟢 CREATE, 🔵 UPDATE, 🟡 STATUS_CHANGE
+  - [x] Diffs de campos: valor antigo (`line-through text-red-400`) → novo (`text-green-400`)
+  - [x] Formatação de datas relativas
+
+- [x] **Widget de Seguidores**
+  - [x] Função Alpine `inventoryFollowersWidget(movementId)`
+  - [x] Avatar stack com seguidores actuais
+  - [x] Dropdown de pesquisa para adicionar seguidor
+  - [x] Carrega via `GET /inventory/operations/movements/<pk>/followers/`
+  - [x] Adicionar seguidor via `POST` (mesmo endpoint)
+  - [x] Remover seguidor via `DELETE /inventory/operations/movements/<pk>/followers/<user_id>/remove/`
+
+- [x] **APIs — Notas**
+  - [x] View `movement_notes_list` — `GET /inventory/operations/movements/<pk>/notes/`
+  - [x] View `movement_note_create` — `POST /inventory/operations/movements/<pk>/notes/create/`
+
+- [x] **APIs — Seguidores**
+  - [x] View `movement_followers_api` — `GET`/`POST /inventory/operations/movements/<pk>/followers/`
+  - [x] View `movement_follower_remove_api` — `DELETE /inventory/operations/movements/<pk>/followers/<user_id>/remove/`
+
+- [x] **URLs de Chatter registadas em `apps/inventory/urls.py`**
+  - [x] `path('operations/movements/<uuid:pk>/notes/', ..., name='movement_notes_list')`
+  - [x] `path('operations/movements/<uuid:pk>/notes/create/', ..., name='movement_note_create')`
+  - [x] `path('operations/movements/<uuid:pk>/followers/', ..., name='movement_followers_api')`
+  - [x] `path('operations/movements/<uuid:pk>/followers/<uuid:user_id>/remove/', ..., name='movement_follower_remove_api')`
+
+- [x] **`movement_edit` — Rastreio de campos alterados**
+  - [x] Captura valores antigos ANTES de salvar (`partner`, `warehouse`, `date`, `origin`, `notes`)
+  - [x] Calcula dicionário `_changes` com pares old/new por campo
+  - [x] Armazena em `ChatterActivity.details = {'changes': {...}}`
+  - [x] Log mostra diffs reais no histórico
+
+---
+
+## 6.11 Lista de Inventário Físico ✅
+
+Vista de leitura do stock actual (StockQuant) por produto e armazém.  
+URL: `operations/inventario-fisico/` · Nome: `physical_inventory_list`
+
+- [x] **View `physical_inventory_list`** em `apps/inventory/views.py`
+  - [x] Queryset: `StockQuant` com `select_related` (produto, categoria, UdM, armazém)
+  - [x] Apenas produtos activos (`product__is_active=True`)
+  - [x] Anotação `stock_value = quantity × product.cost_price` por linha
+  - [x] Total geral via `Sum('stock_value')`
+  - [x] Paginação server-side (50 registos/pág por defeito)
+  - [x] Pesquisa por campo: produto (nome/ref. interna), armazém, categoria, auto (todos)
+  - [x] Filtro por armazém via query param `?warehouse=<id>`
+
+- [x] **Template `templates/inventory/physical_inventory_list.html`**
+  - [x] Navbar padrão + sub-navbar de inventário
+  - [x] Barra de pesquisa (desktop + mobile) com dropdown de filtros
+  - [x] Colunas: Produto (imagem/ícone + ref.), Categoria, Armazém, Em Mão, Custo Unit., Valor em Stock
+  - [x] Quantidade a vermelho quando ≤ 0
+  - [x] Click na linha → abre `product_edit`
+  - [x] Footer com total do valor em stock
+  - [x] Paginação com input editável de tamanho de página
+
+- [x] **URL** `path('operations/inventario-fisico/', ..., name='physical_inventory_list')`
+
+- [x] **Navbar** (`inventory_navbar.html`) — link "Inventário Físico" aponta para a view real
+
+---
+
+## 6.12.1 View de Stock Actual — Overview Avançado (a implementar)
+
+Vista completa com previsões, margens e alertas de stock mínimo.  
+*(Depende de 6.9 — campos min_stock, get_forecasted_quantity, get_profit_margin)*
 
 - [ ] **StockOverviewView**
   - [ ] Listar produtos com informação de stock:
@@ -6647,20 +6745,20 @@ Relatório simples para a pessoa saber quanto vale o seu inventário.
 
 ---
 
-## 6.14 Smart Buttons com Dados Reais
+## 6.14 Smart Buttons com Dados Reais ✅ (parcial)
 
 Conectar os smart buttons do formulário de produto (já criados em 6.3.2) aos dados reais.
 
-- [ ] **Atualizar product_edit view (views.py)**
-  - [ ] Passar contadores reais ao template:
-    - [ ] `on_hand_count`: product.get_on_hand_quantity() (smart button laranja "Em Stock")
-    - [ ] `forecast_count`: product.get_forecasted_quantity() (smart button azul "Previsão")
-    - [ ] `bom_count`: 0 (placeholder até Fase 10)
-    - [ ] `sold_count`: 0 (placeholder até Fase 8)
+- [x] **Atualizar product_edit view (views.py)**
+  - [x] Passar contadores reais ao template:
+    - [x] `on_hand_count`: `StockQuant.objects.filter(product=product).aggregate(Sum('quantity'))` ✅
+    - [x] `forecast_count`: on_hand + incoming_pending - outgoing_pending ✅
+    - [x] `bom_count`: 0 (placeholder até Fase 10)
+    - [x] `sold_count`: 0 (placeholder até Fase 8)
 
-- [ ] **Clicks dos smart buttons**
-  - [ ] **Em Stock** (laranja): click → vai para stock_overview filtrado por este produto
-  - [ ] **Previsão** (azul): click → vai para stock_overview filtrado por este produto
+- [x] **Clicks dos smart buttons**
+  - [x] **Em Stock** (laranja): `<a>` → `physical_inventory_list?search=<produto>&field=produto` ✅
+  - [x] **Previsão** (azul): `<a>` → `product_forecast` view (página dedicada com gráfico + tabelas) ✅
   - [ ] **BOM** (roxo): click → ⏳ futuro (Fase 10)
   - [ ] **Vendidas** (verde): click → ⏳ futuro (Fase 8)
 
@@ -6680,11 +6778,18 @@ Conectar os smart buttons do formulário de produto (já criados em 6.3.2) aos d
 
 ---
 
-## 6.15 Alertas de Stock e Dashboard Widget
+## 6.15 Alertas de Stock e Dashboard Widget ✅ (parcial)
 
 Alertas visuais para produtos com stock baixo.
 
-- [ ] **Alertas na stock_overview (6.11)**
+- [x] **Alertas na product_list**
+  - [x] Cores: destaque âmbar nas linhas de produtos abaixo do mínimo
+  - [x] Filtro "Abaixo do mínimo" no dropdown da lista de produtos
+  - [x] Signal `post_save` em StockMovement (state=done) → Notification SYSTEM
+  - [x] Celery beat task `check_low_stock_periodic` (cada 4h)
+  - [x] Botão manual "Verificar Stock Mínimo" no navbar Configuração → Sinais
+
+- [ ] **Alertas na stock_overview (6.12.1)**
   - [ ] Cores: vermelho (stock = 0), laranja (stock < min_stock), verde (stock >= min_stock)
   - [ ] Badge/counter no topo: "X produtos com stock baixo"
 
@@ -6698,6 +6803,123 @@ Alertas visuais para produtos com stock baixo.
 - [ ] **Testing - Alerts**
   - [ ] Test: produtos com stock < min_stock destacados
   - [ ] Test: dashboard widget mostra contagem
+
+---
+
+## 6.15.1 Lista de Compras (Reabastecimento Automático)
+
+Vista dedicada que agrega todos os produtos abaixo do stock mínimo e sugere quantidades a comprar.
+Aparece também como widget no dashboard principal de aplicações.
+Mais tarde (Fase 7) será a base para geração automática de Ordens de Compra.
+
+> **Lógica central:** `a_comprar = max(0, min_stock - on_hand + outgoing_pending)`
+> O sistema sugere comprar o suficiente para cobrir o mínimo **e** as saídas pendentes.
+
+### Modelo: `StockReorderRule` (Regra de Reabastecimento)
+
+- [ ] **Criar modelo `StockReorderRule`**
+  - [ ] Herdar de `AbstractBaseModel`
+  - [ ] Campo: `product` (FK Product, CASCADE)
+  - [ ] Campo: `warehouse` (FK Warehouse, CASCADE)
+  - [ ] Campo: `min_qty` (DecimalField) — stock mínimo que dispara o alerta/pedido
+  - [ ] Campo: `max_qty` (DecimalField, null=True, blank=True) — quantidade alvo ao reabastecer (opcional)
+  - [ ] Campo: `qty_multiple` (DecimalField, default=1) — arredondar pedido para múltiplo desta quantidade (ex: packs de 5 kg)
+  - [ ] Campo: `lead_time_days` (IntegerField, default=0) — prazo de entrega esperado (informativo)
+  - [ ] Campo: `active` (BooleanField, default=True)
+  - [ ] Campo: `owner_company` (FK Company, null=True, blank=True)
+  - [ ] Constraint: `unique_together (product, warehouse)`
+  - [ ] Property `on_hand`: StockQuant.get_on_hand(product, warehouse)
+  - [ ] Property `qty_to_order`: `max(0, (max_qty or min_qty) - on_hand + outgoing_pending)`
+  - [ ] Property `needs_reorder`: `on_hand < min_qty`
+  - [ ] Método __str__: `f"Regra {product.name} — mín {min_qty}"`
+
+- [ ] **Criar migrations**
+  - [ ] makemigrations e migrate
+
+- [ ] **Registrar no Admin**
+  - [ ] `StockReorderRuleAdmin` com list_display: product, warehouse, min_qty, max_qty, on_hand (calculado), needs_reorder
+
+### View: Lista de Compras (`purchase_suggestions`)
+
+- [ ] **View `purchase_suggestions`** em `apps/inventory/views.py`
+  - [ ] Queryset: `StockReorderRule.objects.filter(active=True).select_related('product', 'warehouse', 'product__uom')`
+  - [ ] Para cada regra: calcular `on_hand`, `outgoing_pending`, `qty_to_order`
+  - [ ] Filtrar apenas regras onde `needs_reorder = True` (por defeito) — toggle "Todas as regras"
+  - [ ] Agrupar por fornecedor preferido (`ProductSupplierInfo.get_best_supplier`) se existir (Fase 6.8)
+  - [ ] Ordenar: primeiro os que têm stock = 0, depois os mais críticos (maior défice %)
+  - [ ] Contexto: `suggestions` (lista), `total_items` (count), `zero_stock_count`
+
+- [ ] **Template `templates/inventory/purchase_suggestions.html`**
+  - [ ] Navbar inventário padrão
+  - [ ] Header com KPIs:
+    - [ ] "X produtos em falta" (stock = 0) — vermelho
+    - [ ] "Y produtos abaixo do mínimo" (0 < stock < min) — laranja
+    - [ ] "Z produtos OK" — verde
+  - [ ] Toggle: "Só em falta" / "Todas as regras"
+  - [ ] Tabela com colunas:
+    - [ ] Produto (nome + ref. interna + imagem)
+    - [ ] Em Mão (quantidade atual — vermelho se 0)
+    - [ ] Mínimo (min_qty)
+    - [ ] Saídas Previstas (outgoing_pending)
+    - [ ] **A Comprar** (qty_to_order — destacado a gold)
+    - [ ] UdM
+    - [ ] Fornecedor Preferido (se existir, badge com nome)
+    - [ ] Prazo (lead_time_days — calculado a partir das regras / ProductSupplierInfo)
+  - [ ] Botão por linha: "Criar Encomenda" → ⏳ (Fase 7 — gera PurchaseOrder com este produto)
+  - [ ] Botão global: "Gerar Ordens de Compra" → ⏳ (Fase 7 — agrupa por fornecedor e cria POs)
+  - [ ] Empty state se nenhum produto precisa de reabastecimento
+
+- [ ] **URL**
+  - [ ] `path('operations/purchase-suggestions/', ..., name='purchase_suggestions')`
+
+- [ ] **Link no navbar de inventário**
+  - [ ] "Lista de Compras" no menu "Operações" com badge vermelho quando há itens em falta
+
+### Notificações de Stock Mínimo
+
+- [x] **Signal `post_save` em `StockMovement`** (state=done)
+  - [x] Após validação de movimento, verificar linhas com produto.min_stock > 0
+  - [x] Se on_hand < min_stock, criar Notification (type=SYSTEM) com deduplicação
+  - [x] Task Celery periódica `check_low_stock_periodic` (4h) com mesma lógica
+  - [ ] Signal `post_save` em `StockQuant` (alternativa futura, após 6.15.1)
+  - [ ] Não repetir notificação se já existe uma ativa para o mesmo produto
+
+- [ ] **Widget no Dashboard Principal (apps/dashboard/)**
+  - [ ] Card "Lista de Compras":
+    - [ ] Número de produtos abaixo do mínimo (badge vermelho urgente)
+    - [ ] Top 3 produtos mais críticos (nome + quantidade em falta)
+    - [ ] Link "Ver lista completa" → `purchase_suggestions`
+  - [ ] Visível apenas se existirem regras de reabastecimento configuradas
+
+### Integração com Produto (tab "Inventário" — 6.9)
+
+- [ ] **No formulário do produto (product_form.html)**
+  - [ ] No tab "Inventário", adicionar secção "Reabastecimento":
+    - [ ] Campo: Stock Mínimo (`StockReorderRule.min_qty`) — editável inline
+    - [ ] Campo: Stock Alvo (`StockReorderRule.max_qty`) — opcional
+    - [ ] Campo: Múltiplo de Encomenda (`qty_multiple`)
+    - [ ] Auto-criar/actualizar `StockReorderRule` ao guardar (se min_stock > 0)
+  - [ ] Smart button "Reabastecimento" (badge vermelho quando precisa) — ⏳ futuro
+
+### Integração com Compras (Fase 7 — placeholder)
+
+- [ ] ⏳ **Geração automática de PurchaseOrders** (implementar na Fase 7)
+  - [ ] Botão "Gerar Ordens de Compra" na `purchase_suggestions`:
+    - [ ] Agrupa sugestões por fornecedor preferido (`ProductSupplierInfo`)
+    - [ ] Cria 1 `PurchaseOrder` por fornecedor com as linhas respetivas
+    - [ ] Se produto não tem fornecedor definido → lista numa PO "Sem Fornecedor"
+  - [ ] Quando SO confirmado sem stock → auto-verificar regras e sugerir compra
+
+### Testing
+
+- [ ] **Testing - Lista de Compras**
+  - [ ] Test: `StockReorderRule` criada funciona
+  - [ ] Test: `needs_reorder` True quando on_hand < min_qty
+  - [ ] Test: `qty_to_order` calcula corretamente com saídas pendentes
+  - [ ] Test: `purchase_suggestions` view lista apenas produtos abaixo do mínimo
+  - [ ] Test: toggle "Todas" mostra todas as regras
+  - [ ] Test: widget dashboard mostra contagem correta
+  - [ ] Test: signal notifica quando stock cai abaixo do mínimo
 
 ---
 

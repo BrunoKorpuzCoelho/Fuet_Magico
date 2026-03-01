@@ -178,16 +178,24 @@
                             </div>
                             <p class="text-xs text-gray-500 mb-5">Definir o aspeto dos documentos da empresa.</p>
 
-                            <div class="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3">Layout</div>
                             <div class="space-y-2">
                                 <a href="{% url 'dashboard:document_layout' %}" class="block text-sm font-medium text-primary hover:text-primary/80 transition-colors">
                                     Configurar Layout do Documento
                                 </a>
-                                <a href="{% url 'dashboard:document_layout' %}" class="block text-sm font-medium text-primary hover:text-primary/80 transition-colors">
-                                    Editar Layout
-                                </a>
-                                <a href="{% url 'dashboard:document_layout' %}" class="block text-sm font-medium text-primary hover:text-primary/80 transition-colors">
-                                    Pré-visualizar Documento
+                            </div>
+                        </div>
+
+                        <!-- ── Card 4b: Sequências de Documentos ── -->
+                        <div class="p-6 rounded-xl border border-gray-800 bg-gray-900/20">
+                            <div class="flex items-center gap-2 mb-1">
+                                <h3 class="text-sm font-semibold text-gray-200">Sequências de Documentos</h3>
+                                <span class="inline-flex items-center justify-center w-6 h-6 rounded bg-gray-800 text-xs">🔢</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mb-5">Gerir os prefixos e contadores de numeração dos documentos.</p>
+
+                            <div class="space-y-2">
+                                <a href="{% url 'dashboard:document_sequences' %}" class="block text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+                                    Gerir Sequências
                                 </a>
                             </div>
                         </div>

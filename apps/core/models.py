@@ -1943,3 +1943,117 @@ class EmailLayout(models.Model):
         else:
             layout = cls.objects.create(html_content=default_html, updated_by=user)
         return layout
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Document Sequence
+# ─────────────────────────────────────────────────────────────────────────────
+
+class DocumentSequence(AbstractBaseModel):
+    """Atomic sequence counter for document numbering across all apps.
+
+    One row per (code, owner_company).  ``next_number`` is incremented
+    atomically with SELECT FOR UPDATE so concurrent requests never get
+    duplicate references.
+
+    Usage::
+
+        seq = DocumentSequence.get_for('WH_IN', company=my_company)
+        reference = seq.next_reference()   # → 'WH/IN/00001'
+    """
+
+    # Default metadata for well-known sequence codes.
+    # New codes are auto-created on first use with generic defaults.
+    SEQUENCE_DEFAULTS: dict = {
+        'WH_IN':  {'name': 'Receções de Stock',       'prefix': 'WH/IN/',  'padding': 5},
+        'WH_OUT': {'name': 'Entregas de Stock',        'prefix': 'WH/OUT/', 'padding': 5},
+        'WH_ADJ': {'name': 'Ajustes de Stock',         'prefix': 'ADJ/',    'padding': 5},
+    }
+
+    code = models.CharField(
+        max_length=50,
+        verbose_name='Código',
+        help_text='Identificador único do tipo de documento (ex: WH_IN, SALE, INVOICE).',
+    )
+    name = models.CharField(
+        max_length=100,
+        verbose_name='Nome',
+    )
+    prefix = models.CharField(
+        max_length=20,
+        default='',
+        verbose_name='Prefixo',
+        help_text='Texto que antecede o número (ex: WH/IN/).',
+    )
+    suffix = models.CharField(
+        max_length=20,
+        blank=True,
+        default='',
+        verbose_name='Sufixo',
+        help_text='Texto após o número (ex: /2026). Normalmente vazio.',
+    )
+    padding = models.PositiveSmallIntegerField(
+        default=5,
+        verbose_name='Dígitos',
+        help_text='Número de dígitos do contador (5 → 00001).',
+    )
+    next_number = models.PositiveIntegerField(
+        default=1,
+        verbose_name='Próximo número',
+    )
+    owner_company = models.ForeignKey(
+        'core.Company',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='document_sequences',
+        verbose_name='Empresa',
+    )
+
+    class Meta:
+        verbose_name = 'Sequência de Documentos'
+        verbose_name_plural = 'Sequências de Documentos'
+        unique_together = [('code', 'owner_company')]
+        ordering = ['code']
+
+    def __str__(self) -> str:
+        digits = '0' * self.padding
+        return f'{self.name} ({self.prefix}{digits}{self.suffix})'
+
+    @property
+    def preview(self) -> str:
+        """Return a formatted reference using the current next_number."""
+        return f'{self.prefix}{str(self.next_number).zfill(self.padding)}{self.suffix}'
+
+    # ── Public API ────────────────────────────────────────────────────────
+
+    @classmethod
+    def get_for(cls, code: str, company=None) -> 'DocumentSequence':
+        """Return (or auto-create with defaults) the sequence for *code* + *company*."""
+        defaults_map = cls.SEQUENCE_DEFAULTS.get(code, {})
+        seq, _ = cls.objects.get_or_create(
+            code=code,
+            owner_company=company,
+            defaults={
+                'name':    defaults_map.get('name',    code),
+                'prefix':  defaults_map.get('prefix',  f'{code}/'),
+                'padding': defaults_map.get('padding', 5),
+            },
+        )
+        return seq
+
+    def next_reference(self) -> str:
+        """Atomically increment the counter and return the formatted reference.
+
+        Uses ``SELECT FOR UPDATE`` inside a transaction so two simultaneous
+        requests always get different numbers.
+        """
+        from django.db import transaction
+        with transaction.atomic():
+            # Re-fetch with a row lock to prevent race conditions.
+            seq = DocumentSequence.objects.select_for_update().get(pk=self.pk)
+            number = seq.next_number
+            seq.next_number = number + 1
+            seq.save(update_fields=['next_number', 'updated_at'])
+        formatted = str(number).zfill(seq.padding)
+        return f'{seq.prefix}{formatted}{seq.suffix}'

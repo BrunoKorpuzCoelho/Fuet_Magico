@@ -89,13 +89,14 @@
                 </button>
 
                 <!-- Previsão (Forecast) -->
-                <button class="flex items-center gap-2 px-3 py-1 rounded-md border border-blue-500 bg-transparent hover:bg-blue-500/10 transition-all">
+                <a href="{% url 'inventory:product_forecast' product.pk %}"
+                   class="flex items-center gap-2 px-3 py-1 rounded-md border border-blue-500 bg-transparent hover:bg-blue-500/10 transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-blue-400">
                         <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"></path>
                     </svg>
-                    <span class="text-sm font-semibold text-blue-400">{{ forecast_count|default:0 }}</span>
+                    <span class="text-sm font-semibold text-blue-400">{{ forecast_count|floatformat:'-3' }}</span>
                     <span class="text-xs text-blue-400">Previsão</span>
-                </button>
+                </a>
 
                 <!-- Unidades Vendidas -->
                 <button class="flex items-center gap-2 px-3 py-1 rounded-md border border-green-500 bg-transparent hover:bg-green-500/10 transition-all">
@@ -109,13 +110,14 @@
                 </button>
 
                 <!-- Em Stock (On-Hand) -->
-                <button class="flex items-center gap-2 px-3 py-1 rounded-md border border-orange-500 bg-transparent hover:bg-orange-500/10 transition-all">
+                <a href="{% url 'inventory:physical_inventory_list' %}?search={{ product.name|urlencode }}&field=produto"
+                   class="flex items-center gap-2 px-3 py-1 rounded-md border border-orange-500 bg-transparent hover:bg-orange-500/10 transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-orange-400">
                         <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                     </svg>
-                    <span class="text-sm font-semibold text-orange-400">{{ on_hand_count|default:0 }}</span>
+                    <span class="text-sm font-semibold text-orange-400">{{ on_hand_count|floatformat:'-3' }}</span>
                     <span class="text-xs text-orange-400">Em Stock</span>
-                </button>
+                </a>
             </div>
         </div>
     </div>

@@ -19,6 +19,11 @@ app.conf.beat_schedule = {
         'task'    : 'config.tasks.poll_imap_all_active_users',
         'schedule': 300.0,  # segundos
     },
+    # Verifica stock abaixo do mínimo de 4 em 4 horas
+    'check-low-stock-every-4h': {
+        'task'    : 'config.tasks.check_low_stock_periodic',
+        'schedule': 14400.0,  # 4 horas em segundos
+    },
 }
 app.conf.timezone = 'UTC'
 

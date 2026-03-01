@@ -1,0 +1,328 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Sequências de Documentos{% endblock %}
+
+{% block sub_navbar %}
+{% include "components/settings_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900" x-data="{
+    selectedItems: [],
+    selectAll: false,
+    init() { window.getSelectedItems = () => this.selectedItems; },
+    toggleAll() {
+        if (this.selectAll) {
+            this.selectedItems = Array.from(document.querySelectorAll('.seq-checkbox')).map(el => el.value);
+        } else { this.selectedItems = []; }
+    },
+    isSelected(id) { return this.selectedItems.includes(id); },
+    toggleItem(id) {
+        const idx = this.selectedItems.indexOf(id);
+        if (idx > -1) { this.selectedItems.splice(idx, 1); } else { this.selectedItems.push(id); }
+        this.selectAll = this.selectedItems.length === document.querySelectorAll('.seq-checkbox').length;
+    }
+}">
+
+    <!-- â”€â”€ Action Bar — Desktop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <div class="hidden md:block bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-3">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between gap-4">
+
+                <!-- Left: Novo + Bulk Actions -->
+                <div class="flex items-center space-x-3">
+                    <a href="{% url 'dashboard:document_sequence_create' %}" title="Novo" class="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors flex items-center">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        <span class="sr-only">Novo</span>
+                    </a>
+                    <!-- Bulk Actions -->
+                    <div x-show="selectedItems.length > 0" class="relative" x-data="{ actionsOpen: false }" style="display:none;">
+                        <button @click="actionsOpen = !actionsOpen"
+                                class="flex items-center space-x-2 px-4 py-2 bg-primary/10 dark:bg-primary/20 border-2 border-primary hover:bg-primary/20 text-gray-900 dark:text-white rounded-lg font-medium transition-colors">
+                            <svg class="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <span x-text="selectedItems.length"></span>
+                            <span>selecionado(s)</span>
+                            <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div x-show="actionsOpen" @click.away="actionsOpen = false"
+                             x-transition:enter="transition ease-out duration-100"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             class="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50"
+                             style="display:none;">
+                            <div class="py-1">
+                                <button @click="archiveSelected(); actionsOpen = false"
+                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    Arquivar
+                                </button>
+                                <button @click="unarchiveSelected(); actionsOpen = false"
+                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    Desarquivar
+                                </button>
+                                <div class="my-1 border-t border-gray-200 dark:border-gray-700"></div>
+                                <button @click="deleteSelected(); actionsOpen = false"
+                                        class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                    Eliminar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Center: Search + Filters -->
+                <div class="flex-1 max-w-2xl relative" x-data="{ filtersOpen: false, searchQuery: '{{ search_query|escapejs }}' }">
+                    <form method="GET" action="{% url 'dashboard:document_sequences' %}" id="searchForm">
+                        <div class="relative">
+                            <input type="text" name="search"
+                                   x-model="searchQuery"
+                                   @focus="filtersOpen = true"
+                                   @input="filtersOpen = searchQuery.length > 0"
+                                   placeholder="Pesquisar sequências..."
+                                   class="w-full px-4 py-2 pl-10 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <input type="hidden" name="field" id="searchField" value="{{ search_field }}">
+                            <input type="hidden" name="status" value="{{ status_filter }}">
+                            <input type="hidden" name="page_size" value="{{ page_size }}">
+                            <svg class="absolute left-3 top-2.5 h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <button type="button" @click="filtersOpen = !filtersOpen"
+                                    class="absolute right-2 top-2 p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                <svg class="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Filters dropdown -->
+                        <div x-show="filtersOpen" @click.away="filtersOpen = false"
+                             x-transition:enter="transition ease-out duration-100"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             class="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto"
+                             style="display:none;">
+                            <div class="p-3">
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">FILTRAR POR STATUS:</p>
+                                {% for sval, slabel in statuses %}
+                                <a href="?status={{ sval }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}"
+                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if status_filter == sval %}bg-primary/10 text-primary font-semibold{% endif %}">
+                                    <div class="flex items-center justify-between">
+                                        <span>{{ slabel }}</span>
+                                        {% if status_filter == sval %}<svg class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>{% endif %}
+                                    </div>
+                                </a>
+                                {% endfor %}
+                                <div class="my-3 border-t border-gray-200 dark:border-gray-700"></div>
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">PESQUISAR POR CAMPO:</p>
+                                <a href="#" @click.prevent="document.getElementById('searchField').value='name'; document.getElementById('searchForm').submit();"
+                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Search <strong>Name</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('searchField').value='code'; document.getElementById('searchForm').submit();"
+                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Search <strong>Code</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('searchField').value='prefix'; document.getElementById('searchForm').submit();"
+                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Search <strong>Prefix</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Right: Pagination -->
+                <div class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                    <span>{{ sequences.start_index }}-{{ sequences.end_index }} / {{ total_count }}</span>
+                    <div class="flex items-center gap-1">
+                        <input type="text" id="pageSizeInput" value="{{ page_size }}"
+                               class="w-14 px-1 py-0.5 text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <span class="text-xs">/pág</span>
+                    </div>
+                    {% if sequences.has_previous %}
+                    <a href="?page={{ sequences.previous_page_number }}&page_size={{ page_size }}&status={{ status_filter }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}" class="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                    </a>
+                    {% else %}
+                    <button disabled class="p-1 opacity-40"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+                    {% endif %}
+                    {% if sequences.has_next %}
+                    <a href="?page={{ sequences.next_page_number }}&page_size={{ page_size }}&status={{ status_filter }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}" class="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </a>
+                    {% else %}
+                    <button disabled class="p-1 opacity-40"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- â”€â”€ Action Bar — Mobile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <div class="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-3 px-4">
+        <div class="flex items-center gap-2 mb-2">
+            <a href="{% url 'dashboard:document_sequence_create' %}" class="px-3 py-1.5 bg-primary text-white rounded-lg text-sm font-medium flex items-center gap-1">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Novo
+            </a>
+            <form method="GET" action="{% url 'dashboard:document_sequences' %}" class="flex-1">
+                <input type="text" name="search" value="{{ search_query }}" placeholder="Pesquisar..."
+                       class="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                <input type="hidden" name="status" value="{{ status_filter }}">
+                <input type="hidden" name="page_size" value="{{ page_size }}">
+            </form>
+        </div>
+        <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+            <span>{{ sequences.start_index }}-{{ sequences.end_index }} / {{ total_count }}</span>
+            <div class="flex items-center gap-2">
+                {% if sequences.has_previous %}<a href="?page={{ sequences.previous_page_number }}&page_size={{ page_size }}&status={{ status_filter }}" class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></a>{% endif %}
+                {% if sequences.has_next %}<a href="?page={{ sequences.next_page_number }}&page_size={{ page_size }}&status={{ status_filter }}" class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></a>{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- â”€â”€ Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- Info banner -->
+        <div class="mb-4 flex items-start gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3">
+            <svg class="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="text-sm text-blue-700 dark:text-blue-300">
+                O campo <strong>Próximo Nº</strong> define o número seguinte a ser atribuído — altere com cuidado.
+                O campo <strong>Dígitos</strong> controla o zero-padding
+                (ex: 5 → <code class="bg-blue-100 dark:bg-blue-900 px-1 rounded text-xs font-mono">00001</code>).
+            </p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-900">
+                        <tr>
+                            <th class="px-5 py-3 w-10">
+                                <input type="checkbox" x-model="selectAll" @change="toggleAll()"
+                                       class="h-4 w-4 text-primary rounded border-gray-300 dark:border-gray-600 focus:ring-primary">
+                            </th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Código</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nome</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Prefixo</th>
+                            <th class="px-5 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Próximo Nº</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pré-visualização</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {% for seq in sequences %}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                            @click="if (!$event.target.closest('.checkbox-cell')) { window.location='{% url 'dashboard:document_sequence_edit' seq.pk %}'; }">
+                            <td class="px-5 py-3 whitespace-nowrap checkbox-cell" @click.stop>
+                                <input type="checkbox" value="{{ seq.pk }}"
+                                       class="seq-checkbox h-4 w-4 text-primary rounded border-gray-300 dark:border-gray-600 focus:ring-primary"
+                                       :checked="isSelected('{{ seq.pk }}')"
+                                       @change="toggleItem('{{ seq.pk }}')">
+                            </td>
+                            <td class="px-5 py-3 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-mono font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">{{ seq.code }}</span>
+                            </td>
+                            <td class="px-5 py-3 text-sm text-gray-900 dark:text-white">{{ seq.name }}</td>
+                            <td class="px-5 py-3 whitespace-nowrap text-sm font-mono text-gray-700 dark:text-gray-300">{{ seq.prefix }}</td>
+                            <td class="px-5 py-3 text-center text-sm text-gray-700 dark:text-gray-300">{{ seq.next_number }}</td>
+                            <td class="px-5 py-3 whitespace-nowrap text-sm font-mono text-primary">{{ seq.preview }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3 text-2xl">&#x1F522;</div>
+                                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Nenhuma sequência encontrada.</p>
+                                    {% if search_query %}
+                                    <p class="text-xs text-gray-400 mt-1">Tente remover os filtros ou usar outros termos.</p>
+                                    {% else %}
+                                    <p class="text-xs text-gray-400 mt-1">As sequências são criadas automaticamente ao gerar o primeiro documento.</p>
+                                    <form method="POST" action="{% url 'dashboard:document_sequence_generate' %}" class="mt-3">
+                                        {% csrf_token %}
+                                        <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-primary/90 transition-colors">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                            Gerar Sequências de Inventário
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function getCsrfToken() {
+    const name = 'csrftoken';
+    for (const c of document.cookie.split(';')) {
+        const t = c.trim();
+        if (t.startsWith(name + '=')) return decodeURIComponent(t.slice(name.length + 1));
+    }
+    return '';
+}
+
+function showToast(message, type = 'success') {
+    const bg = type === 'success' ? 'bg-green-500' : type === 'warning' ? 'bg-amber-500' : 'bg-red-500';
+    const el = document.createElement('div');
+    el.className = `fixed top-4 right-4 ${bg} text-white px-5 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-300 text-sm font-medium`;
+    el.textContent = message;
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2500);
+}
+
+function archiveSelected() {
+    bulkActionSeq('{% url "dashboard:document_sequence_bulk_archive" %}');
+}
+function unarchiveSelected() {
+    bulkActionSeq('{% url "dashboard:document_sequence_bulk_unarchive" %}');
+}
+function deleteSelected() {
+    if (!confirm('Eliminar permanentemente as sequências selecionadas?')) return;
+    bulkActionSeq('{% url "dashboard:document_sequence_bulk_delete" %}');
+}
+async function bulkActionSeq(url) {
+    const ids = window.getSelectedItems ? window.getSelectedItems() : [];
+    if (!ids.length) return;
+    const body = new URLSearchParams();
+    ids.forEach(id => body.append('ids[]', id));
+    try {
+        const resp = await fetch(url, { method: 'POST', headers: { 'X-CSRFToken': getCsrfToken() }, body });
+        const data = await resp.json();
+        if (data.success) {
+            if (data.message) showToast(data.message, 'success');
+            window.location.reload();
+        } else showToast(data.error || 'Erro', 'error');
+    } catch { showToast('Erro de ligação', 'error'); }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const pageSizeInput = document.getElementById('pageSizeInput');
+    if (pageSizeInput) {
+        pageSizeInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const v = parseInt(pageSizeInput.value);
+                if (v > 0) {
+                    const url = new URL(window.location);
+                    url.searchParams.set('page_size', v);
+                    url.searchParams.set('page', 1);
+                    window.location = url.toString();
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

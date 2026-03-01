@@ -45,11 +45,11 @@
             <div class="flex items-center justify-between gap-4">
                 <!-- Left: New Button + Bulk Actions -->
                 <div class="flex items-center space-x-3">
-                    <a href="{% url 'inventory:uom_create' %}" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center space-x-2">
+                    <a href="{% url 'inventory:uom_create' %}" title="Novo" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
-                        <span>Novo</span>
+                        <span class="sr-only">Novo</span>
                     </a>
 
                     <!-- Bulk Actions (visible when items selected) -->

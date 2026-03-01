@@ -814,3 +814,276 @@ def document_layout_view(request):
         'preview_context': json.dumps(preview_context),
     })
 
+
+# ── Document Sequences ────────────────────────────────────────────────
+
+@admin_required
+@require_http_methods(['GET'])
+def document_sequence_list_view(request):
+    """List DocumentSequence records for the active company — searchable + paginated."""
+    from apps.core.models import DocumentSequence
+    from apps.core.multi_company import get_active_company
+    from django.core.paginator import Paginator
+
+    company      = get_active_company(request)
+    search_query = request.GET.get('search', '')
+    search_field = request.GET.get('field', 'name')
+    status_filter = request.GET.get('status', 'active')
+    page_number  = request.GET.get('page', 1)
+    try:
+        page_size = int(request.GET.get('page_size', 50))
+        if page_size < 1:
+            page_size = 50
+    except (ValueError, TypeError):
+        page_size = 50
+
+    from django.db.models import Q
+    if status_filter == 'archived':
+        qs = DocumentSequence.objects.filter(owner_company=company, is_active=False)
+    elif status_filter == 'all':
+        qs = DocumentSequence.objects.filter(owner_company=company)
+    else:
+        qs = DocumentSequence.objects.filter(owner_company=company, is_active=True)
+
+    if search_query:
+        field_map = {
+            'code':   Q(code__icontains=search_query),
+            'name':   Q(name__icontains=search_query),
+            'prefix': Q(prefix__icontains=search_query),
+        }
+        qs = qs.filter(field_map.get(search_field, Q(name__icontains=search_query)))
+
+    qs = qs.order_by('code')
+    paginator = Paginator(qs, page_size)
+    page_obj  = paginator.get_page(page_number)
+
+    statuses = [
+        ('active',   'Ativos'),
+        ('archived', 'Arquivados'),
+        ('all',      'Todos'),
+    ]
+
+    return render(request, 'dashboard/document_sequences.html', {
+        'sequences':     page_obj,
+        'company':       company,
+        'search_query':  search_query,
+        'search_field':  search_field,
+        'status_filter': status_filter,
+        'total_count':   paginator.count,
+        'page_size':     page_size,
+        'statuses':      statuses,
+    })
+
+
+@admin_required
+@require_http_methods(['POST'])
+def document_sequence_save_view(request, seq_id):
+    """Inline-save a DocumentSequence (name, prefix, suffix, padding, next_number)."""
+    from apps.core.models import DocumentSequence
+    from apps.core.multi_company import get_active_company
+
+    company = get_active_company(request)
+    try:
+        seq = DocumentSequence.objects.get(pk=seq_id, owner_company=company)
+    except DocumentSequence.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Sequência não encontrada.'}, status=404)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido.'}, status=400)
+
+    seq.name        = data.get('name', seq.name).strip() or seq.name
+    seq.prefix      = data.get('prefix', seq.prefix)
+    seq.suffix      = data.get('suffix', seq.suffix)
+    seq.is_active   = bool(data.get('is_active', seq.is_active))
+
+    try:
+        padding = int(data.get('padding', seq.padding))
+        if 1 <= padding <= 10:
+            seq.padding = padding
+    except (ValueError, TypeError):
+        pass
+
+    try:
+        next_number = int(data.get('next_number', seq.next_number))
+        if next_number >= 1:
+            seq.next_number = next_number
+    except (ValueError, TypeError):
+        pass
+
+    seq.save()
+    return JsonResponse({
+        'success': True,
+        'preview': f'{seq.prefix}{str(seq.next_number).zfill(seq.padding)}{seq.suffix}',
+    })
+
+
+@admin_required
+@require_http_methods(['GET', 'POST'])
+def document_sequence_create_view(request):
+    """Create a new DocumentSequence — full form page."""
+    from apps.core.models import DocumentSequence
+    from apps.core.multi_company import get_active_company
+
+    company = get_active_company(request)
+
+    if request.method == 'GET':
+        return render(request, 'dashboard/document_sequence_form.html', {'seq': None, 'company': company})
+
+    code = request.POST.get('code', '').strip().upper()
+    name = request.POST.get('name', '').strip()
+    prefix = request.POST.get('prefix', '')
+    suffix = request.POST.get('suffix', '')
+
+    if not code or not name:
+        messages.error(request, 'Código e Nome são obrigatórios.')
+        return render(request, 'dashboard/document_sequence_form.html', {'seq': None, 'company': company})
+
+    try:
+        padding = int(request.POST.get('padding', 5))
+        padding = max(1, min(10, padding))
+    except (ValueError, TypeError):
+        padding = 5
+
+    try:
+        next_number = int(request.POST.get('next_number', 1))
+        next_number = max(1, next_number)
+    except (ValueError, TypeError):
+        next_number = 1
+
+    _, created = DocumentSequence.objects.get_or_create(
+        code=code,
+        owner_company=company,
+        defaults={
+            'name': name,
+            'prefix': prefix,
+            'suffix': suffix,
+            'padding': padding,
+            'next_number': next_number,
+            'is_active': 'is_active' in request.POST,
+        },
+    )
+
+    if created:
+        messages.success(request, f'Sequência «{code}» criada com sucesso.')
+        return redirect('dashboard:document_sequences')
+    else:
+        messages.warning(request, f'Já existe uma sequência com o código «{code}».'
+                         ' Escolha um código diferente.')
+        return render(request, 'dashboard/document_sequence_form.html', {'seq': None, 'company': company})
+
+
+@admin_required
+@require_http_methods(['POST'])
+def document_sequence_generate_view(request):
+    """Generate all default DocumentSequences (inventory) for the active company."""
+    from apps.core.models import DocumentSequence
+    from apps.core.multi_company import get_active_company
+
+    company = get_active_company(request)
+    created_count = 0
+    skipped_count = 0
+
+    for code, defaults in DocumentSequence.SEQUENCE_DEFAULTS.items():
+        _, created = DocumentSequence.objects.get_or_create(
+            code=code,
+            owner_company=company,
+            defaults={
+                'name':       defaults.get('name', code),
+                'prefix':     defaults.get('prefix', ''),
+                'suffix':     defaults.get('suffix', ''),
+                'padding':    defaults.get('padding', 5),
+                'next_number': 1,
+            },
+        )
+        if created:
+            created_count += 1
+        else:
+            skipped_count += 1
+
+    if created_count and skipped_count:
+        messages.success(request, f'{created_count} sequência(s) criada(s). {skipped_count} já existia(m) e não foram alteradas.')
+    elif created_count:
+        messages.success(request, f'{created_count} sequência(s) de inventário criada(s) com sucesso.')
+    else:
+        messages.info(request, 'Todas as sequências de inventário já existiam.')
+
+    return redirect('dashboard:document_sequences')
+
+
+@admin_required
+@require_http_methods(['GET', 'POST'])
+def document_sequence_edit_view(request, seq_id):
+    """Edit an existing DocumentSequence — full form page."""
+    from apps.core.models import DocumentSequence
+    from apps.core.multi_company import get_active_company
+
+    company = get_active_company(request)
+    seq = get_object_or_404(DocumentSequence, pk=seq_id, owner_company=company)
+
+    if request.method == 'POST':
+        seq.name = request.POST.get('name', seq.name).strip() or seq.name
+        seq.prefix = request.POST.get('prefix', seq.prefix)
+        seq.suffix = request.POST.get('suffix', seq.suffix)
+        try:
+            padding = int(request.POST.get('padding', seq.padding))
+            seq.padding = max(1, min(10, padding))
+        except (ValueError, TypeError):
+            pass
+        try:
+            next_number = int(request.POST.get('next_number', seq.next_number))
+            seq.next_number = max(1, next_number)
+        except (ValueError, TypeError):
+            pass
+        seq.is_active = 'is_active' in request.POST
+        seq.save()
+        messages.success(request, f'Sequência «{seq.code}» gravada com sucesso.')
+        return redirect('dashboard:document_sequences')
+
+    return render(request, 'dashboard/document_sequence_form.html', {
+        'seq': seq,
+        'company': company,
+    })
+
+
+@admin_required
+@require_http_methods(['POST'])
+def document_sequence_bulk_archive_view(request):
+    """Bulk-archive (deactivate) selected DocumentSequences."""
+    from apps.core.models import DocumentSequence
+    from apps.core.multi_company import get_active_company
+
+    company = get_active_company(request)
+    ids = request.POST.getlist('ids[]')
+    count = DocumentSequence.objects.filter(pk__in=ids, owner_company=company).update(is_active=False)
+    return JsonResponse({'success': True, 'message': f'{count} sequência(s) arquivada(s).'})
+
+
+@admin_required
+@require_http_methods(['POST'])
+def document_sequence_bulk_unarchive_view(request):
+    """Bulk-unarchive (reactivate) selected DocumentSequences."""
+    from apps.core.models import DocumentSequence
+    from apps.core.multi_company import get_active_company
+
+    company = get_active_company(request)
+    ids = request.POST.getlist('ids[]')
+    count = DocumentSequence.objects.filter(pk__in=ids, owner_company=company).update(is_active=True)
+    return JsonResponse({'success': True, 'message': f'{count} sequência(s) reativada(s).'})
+
+
+@admin_required
+@require_http_methods(['POST'])
+def document_sequence_bulk_delete_view(request):
+    """Permanently delete selected DocumentSequences."""
+    from apps.core.models import DocumentSequence
+    from apps.core.multi_company import get_active_company
+
+    company = get_active_company(request)
+    ids = request.POST.getlist('ids[]')
+    qs = DocumentSequence.objects.filter(pk__in=ids, owner_company=company)
+    count = qs.count()
+    qs.delete()
+    return JsonResponse({'success': True, 'message': f'{count} sequência(s) eliminada(s).'})
+

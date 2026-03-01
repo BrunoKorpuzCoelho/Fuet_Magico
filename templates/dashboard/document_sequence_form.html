@@ -1,0 +1,197 @@
+﻿{% extends "base.html" %}
+
+{% block title %}{% if seq %}Sequência {{ seq.code }}{% else %}Nova Sequência{% endif %} — Sequências de Documentos{% endblock %}
+
+{% block sub_navbar %}
+{% include "components/document_sequences_form_navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#1f2937]">
+    <form method="POST"
+          id="seq-form"
+          action="{% if seq %}{% url 'dashboard:document_sequence_edit' seq.pk %}{% else %}{% url 'dashboard:document_sequence_create' %}{% endif %}">
+        {% csrf_token %}
+
+        <div class="mx-auto max-w-3xl p-6">
+
+            {% if messages %}
+            <div class="mb-5 space-y-2">
+                {% for message in messages %}
+                <div class="px-4 py-3 rounded-lg text-sm font-medium
+                    {% if message.tags == 'success' %}bg-green-900/40 text-green-300 border border-green-700
+                    {% elif message.tags == 'error' %}bg-red-900/40 text-red-300 border border-red-700
+                    {% else %}bg-blue-900/40 text-blue-300 border border-blue-700{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Header row: icon + code/title -->
+            <div class="flex items-center gap-4 mb-8">
+                <div class="w-14 h-14 rounded-xl bg-primary/20 flex items-center justify-center text-2xl flex-shrink-0">
+                    🔢
+                </div>
+                <div class="flex-1">
+                    {% if seq %}
+                    <h1 class="text-2xl font-light text-gray-300 font-mono">{{ seq.code }}</h1>
+                    <p class="text-xs text-gray-500 mt-0.5">Sequência de Documentos</p>
+                    {% else %}
+                    <div>
+                        <label class="sr-only" for="id_code">Código</label>
+                        <input id="id_code"
+                               type="text"
+                               name="code"
+                               required
+                               placeholder="Código (ex: INVOICE, WH_IN)"
+                               autocomplete="off"
+                               class="flex w-full px-3 py-2 h-12 border-0 border-b-2 border-gray-600 bg-transparent text-2xl font-light font-mono text-gray-300 placeholder:text-gray-600 focus-visible:border-primary focus-visible:ring-0 rounded-none focus-visible:outline-none"
+                               oninput="this.value = this.value.toUpperCase()">
+                        <p class="text-xs text-gray-600 mt-1">Identificador técnico único, sem espaços (ex: INVOICE, WH_IN)</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Fields -->
+            <div class="space-y-6">
+
+                <!-- Nome -->
+                <div>
+                    <label for="id_name" class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                            <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/>
+                            <path d="M16 8H8"/><path d="M16 12H8"/><path d="M16 16H8"/>
+                        </svg>
+                        Nome <span class="text-red-500 ml-0.5">*</span>
+                    </label>
+                    <input id="id_name"
+                           type="text"
+                           name="name"
+                           required
+                           value="{{ seq.name|default:'' }}"
+                           placeholder="ex: Entradas de Armazém"
+                           class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                </div>
+
+                <!-- Prefixo + Sufixo -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="id_prefix" class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                                <polyline points="9 18 3 12 9 6"/><line x1="3" x2="21" y1="12" y2="12"/>
+                            </svg>
+                            Prefixo
+                        </label>
+                        <input id="id_prefix"
+                               type="text"
+                               name="prefix"
+                               value="{{ seq.prefix|default:'' }}"
+                               placeholder="ex: WH/IN/"
+                               class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary font-mono">
+                    </div>
+                    <div>
+                        <label for="id_suffix" class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                                <polyline points="15 18 21 12 15 6"/><line x1="3" x2="21" y1="12" y2="12"/>
+                            </svg>
+                            Sufixo
+                        </label>
+                        <input id="id_suffix"
+                               type="text"
+                               name="suffix"
+                               value="{{ seq.suffix|default:'' }}"
+                               placeholder="—"
+                               class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary font-mono">
+                    </div>
+                </div>
+
+                <!-- Dígitos + Próximo Nº -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="id_padding" class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                                <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/>
+                            </svg>
+                            Dígitos (zero-padding)
+                        </label>
+                        <input id="id_padding"
+                               type="number"
+                               name="padding"
+                               value="{{ seq.padding|default:'5' }}"
+                               min="1"
+                               max="10"
+                               class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 text-center placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                        <p class="text-xs text-gray-600 mt-1">Ex: 5 → <span class="font-mono text-gray-500">00001</span></p>
+                    </div>
+                    <div>
+                        <label for="id_next_number" class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                                <path d="m6 3 4 18"/><path d="m14 3 4 18"/><path d="M3 9h18"/><path d="M3 15h18"/>
+                            </svg>
+                            Próximo Nº
+                        </label>
+                        <input id="id_next_number"
+                               type="number"
+                               name="next_number"
+                               value="{{ seq.next_number|default:'1' }}"
+                               min="1"
+                               class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 text-center placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                        <p class="text-xs text-gray-600 mt-1">Altere com cuidado.</p>
+                    </div>
+                </div>
+
+                <!-- Pré-visualização (live) -->
+                <div x-data="{
+                        prefix: '{{ seq.prefix|default:''|escapejs }}',
+                        suffix: '{{ seq.suffix|default:''|escapejs }}',
+                        padding: {{ seq.padding|default:'5' }},
+                        nextNumber: {{ seq.next_number|default:'1' }},
+                        get preview() {
+                            return this.prefix + String(this.nextNumber).padStart(this.padding, '0') + this.suffix;
+                        }
+                    }"
+                    x-init="
+                        document.getElementById('id_prefix').addEventListener('input', e => { prefix = e.target.value; });
+                        document.getElementById('id_suffix').addEventListener('input', e => { suffix = e.target.value; });
+                        document.getElementById('id_padding').addEventListener('input', e => { padding = parseInt(e.target.value) || 1; });
+                        document.getElementById('id_next_number').addEventListener('input', e => { nextNumber = parseInt(e.target.value) || 1; });
+                    ">
+                    <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        Pré-visualização
+                    </label>
+                    <div class="flex items-center gap-2 h-9 px-3 rounded-md border border-gray-700 bg-[#1a2332]">
+                        <span x-text="preview" class="text-sm font-mono text-primary"></span>
+                    </div>
+                </div>
+
+                <!-- Ativo -->
+                <div class="flex items-center justify-between py-3 border-t border-gray-700">
+                    <div>
+                        <p class="text-sm font-medium text-gray-300">Ativo</p>
+                        <p class="text-xs text-gray-500 mt-0.5">Sequências inativas não geram novos números.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox"
+                               id="id_is_active"
+                               name="is_active"
+                               {% if seq.is_active or not seq %}checked{% endif %}
+                               class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-600 peer-focus:ring-2 peer-focus:ring-primary rounded-full peer
+                                    peer-checked:bg-primary
+                                    after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+                                    after:bg-white after:rounded-full after:h-5 after:w-5
+                                    after:transition-all peer-checked:after:translate-x-5"></div>
+                    </label>
+                </div>
+
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

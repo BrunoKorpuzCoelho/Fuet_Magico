@@ -1,6 +1,6 @@
 from django import forms
 from django.db import models
-from .models import Category, UoM, UoMCategory, Product, Warehouse
+from .models import Category, UoM, UoMCategory, Product, Warehouse, StockMovement
 
 
 class CategoryForm(forms.ModelForm):
@@ -88,6 +88,7 @@ class ProductForm(forms.ModelForm):
             'uom', 'uom_purchase',
             'sale_price', 'cost_price', 'tax_rate',
             'description', 'image',
+            'min_stock',
         ]
 
     def __init__(self, *args, company=None, **kwargs):
@@ -116,6 +117,15 @@ class ProductForm(forms.ModelForm):
         self.fields['uom_purchase'].required = False
         self.fields['uom_purchase'].empty_label = '— Mesma que UdM principal —'
 
+        # Style min_stock widget
+        self.fields['min_stock'].required = False
+        self.fields['min_stock'].widget.attrs.update({
+            'class': 'form-input w-full',
+            'step': '0.001',
+            'min': '0',
+            'placeholder': '0',
+        })
+
 
 class WarehouseForm(forms.ModelForm):
     class Meta:
@@ -127,3 +137,51 @@ class WarehouseForm(forms.ModelForm):
         self.fields['name'].required = True
         self.fields['code'].required = True
         self.fields['address'].required = False
+
+
+class StockMovementForm(forms.ModelForm):
+    class Meta:
+        model = StockMovement
+        fields = ['movement_type', 'adjustment_direction', 'warehouse', 'partner', 'date', 'origin', 'notes']
+
+    def __init__(self, *args, company=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Warehouse: filter by company
+        wh_qs = Warehouse.objects.filter(is_active=True)
+        if company:
+            wh_qs = wh_qs.filter(
+                models.Q(owner_company=company) | models.Q(owner_company__isnull=True)
+            )
+        self.fields['warehouse'].queryset = wh_qs
+        self.fields['warehouse'].empty_label = '— Selecionar armazém —'
+
+        # Partner (contacts): filter by company
+        from apps.contacts.models import Contact
+        partner_qs = Contact.objects.filter(is_active=True).order_by('name')
+        if company:
+            partner_qs = partner_qs.filter(
+                models.Q(owner_company=company) | models.Q(owner_company__isnull=True)
+            )
+        self.fields['partner'].queryset = partner_qs
+        self.fields['partner'].required = False
+        self.fields['partner'].empty_label = '— Nenhum parceiro —'
+
+        # Date: HTML5 datetime-local widget
+        self.fields['date'].widget = forms.DateTimeInput(
+            attrs={'type': 'datetime-local'},
+            format='%Y-%m-%dT%H:%M',
+        )
+        self.fields['date'].input_formats = ['%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M:%S']
+
+        # Optional fields
+        self.fields['origin'].required = False
+        self.fields['notes'].required = False
+        self.fields['adjustment_direction'].required = False  # validated in clean()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        movement_type = self.data.get('movement_type') or cleaned_data.get('movement_type', '')
+        if movement_type == 'adjustment' and not cleaned_data.get('adjustment_direction'):
+            self.add_error('adjustment_direction', 'Selecione a direção do ajuste (Entrada ou Saída).')
+        return cleaned_data

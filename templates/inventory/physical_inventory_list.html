@@ -1,0 +1,504 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventário Físico — Fuet Mágico{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/inventory_navbar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900"
+     x-data="physicalInventory('{% url 'inventory:product_search' %}', '{{ default_warehouse.id|default:'' }}')">
+
+    <!-- ── Search Bar — Desktop ──────────────────────────────────── -->
+    <div class="hidden md:block bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-3">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between gap-4">
+
+                <!-- Left: New Button -->
+                <div class="flex items-center flex-shrink-0">
+                    <button type="button"
+                            @click="addRow()"
+                            title="Adicionar linha"
+                            class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        <span class="sr-only">Novo</span>
+                    </button>
+                </div>
+
+                <!-- Center: Search Bar -->
+                <div class="flex-1 max-w-2xl relative" x-data="{ filtersOpen: false, searchQuery: '{{ search_query }}' }">
+                    <form method="GET" action="{% url 'inventory:physical_inventory_list' %}" id="searchForm">
+                        <div class="relative">
+                            <input
+                                type="text"
+                                name="search"
+                                x-model="searchQuery"
+                                @focus="filtersOpen = true"
+                                @input="filtersOpen = searchQuery.length > 0"
+                                placeholder="Pesquisar inventário..."
+                                class="w-full px-4 py-2 pl-10 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <input type="hidden" name="field" id="searchField" value="{{ search_field }}">
+                            <input type="hidden" name="warehouse" value="{{ warehouse_filter }}">
+                            <input type="hidden" name="page_size" value="{{ page_size }}">
+
+                            <svg class="absolute left-3 top-2.5 h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+
+                            <button type="button"
+                                    @click="filtersOpen = !filtersOpen"
+                                    class="absolute right-2 top-2 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                <svg class="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Filters Dropdown -->
+                        <div x-show="filtersOpen"
+                             @click.away="filtersOpen = false"
+                             x-transition:enter="transition ease-out duration-100"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             class="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto"
+                             style="display: none;">
+                            <div class="p-3">
+                                <!-- Warehouse Filter -->
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">FILTRAR POR ARMAZÉM:</p>
+                                <a href="{% url 'inventory:physical_inventory_list' %}{% if search_query %}?search={{ search_query }}&field={{ search_field }}&page_size={{ page_size }}{% else %}?page_size={{ page_size }}{% endif %}"
+                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if not warehouse_filter %}bg-primary/10 text-primary font-semibold{% endif %}">
+                                    Todos os armazéns
+                                </a>
+                                {% for wh in warehouses %}
+                                <a href="{% url 'inventory:physical_inventory_list' %}?warehouse={{ wh.id }}&page_size={{ page_size }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}"
+                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if warehouse_filter == wh.id|stringformat:'s' %}bg-primary/10 text-primary font-semibold{% endif %}">
+                                    <div class="flex items-center justify-between">
+                                        <span>{{ wh.name }}</span>
+                                        {% if warehouse_filter == wh.id|stringformat:'s' %}
+                                        <svg class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                        {% endif %}
+                                    </div>
+                                </a>
+                                {% endfor %}
+
+                                <div class="my-3 border-t border-gray-200 dark:border-gray-700"></div>
+
+                                <!-- Search Fields -->
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">PESQUISAR POR CAMPO:</p>
+                                <a href="#" @click.prevent="document.getElementById('searchField').value='auto'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Search <strong>All</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('searchField').value='produto'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Search <strong>Product</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('searchField').value='armazem'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Search <strong>Warehouse</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('searchField').value='categoria'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Search <strong>Category</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Right: Pagination -->
+                <div class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 flex-shrink-0">
+                    <span>{{ quants.start_index }}-{{ quants.end_index }} / {{ total_count }}</span>
+                    <span class="text-gray-400">|</span>
+                    <div class="flex items-center space-x-1">
+                        <input type="text" id="pageSizeInput" value="{{ page_size }}"
+                               class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <span>/página</span>
+                    </div>
+                    {% if quants.has_previous %}
+                    <a href="{% url 'inventory:physical_inventory_list' %}?page={{ quants.previous_page_number }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}{% if warehouse_filter %}&warehouse={{ warehouse_filter }}{% endif %}"
+                       class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    </a>
+                    {% else %}
+                    <button disabled class="p-1 opacity-50 cursor-not-allowed"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+                    {% endif %}
+                    {% if quants.has_next %}
+                    <a href="{% url 'inventory:physical_inventory_list' %}?page={{ quants.next_page_number }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}{% if warehouse_filter %}&warehouse={{ warehouse_filter }}{% endif %}"
+                       class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </a>
+                    {% else %}
+                    <button disabled class="p-1 opacity-50 cursor-not-allowed"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Search Bar — Mobile ───────────────────────────────────── -->
+    <div class="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-3">
+        <div class="px-4">
+            <div class="flex items-center gap-2 mb-3">
+                <div class="flex-1">
+                    <form method="GET" action="{% url 'inventory:physical_inventory_list' %}">
+                        <input type="text" name="search" value="{{ search_query }}" placeholder="Pesquisar inventário..."
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <input type="hidden" name="page_size" value="{{ page_size }}">
+                        {% if warehouse_filter %}<input type="hidden" name="warehouse" value="{{ warehouse_filter }}">{% endif %}
+                    </form>
+                </div>
+            </div>
+            <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                <span>{{ quants.start_index }}-{{ quants.end_index }} / {{ total_count }}</span>
+                <div class="flex items-center space-x-2">
+                    {% if quants.has_previous %}
+                    <a href="{% url 'inventory:physical_inventory_list' %}?page={{ quants.previous_page_number }}&page_size={{ page_size }}{% if warehouse_filter %}&warehouse={{ warehouse_filter }}{% endif %}" class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    </a>
+                    {% endif %}
+                    {% if quants.has_next %}
+                    <a href="{% url 'inventory:physical_inventory_list' %}?page={{ quants.next_page_number }}&page_size={{ page_size }}{% if warehouse_filter %}&warehouse={{ warehouse_filter }}{% endif %}" class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── POST form wraps the table ─────────────────────────────── -->
+    <form id="physical-inventory-form" method="POST" action="{% url 'inventory:physical_inventory_list' %}">
+        {% csrf_token %}
+        <input type="hidden" name="_qs" value="{{ request.GET.urlencode }}">
+
+    <!-- ── List View ─────────────────────────────────────────────── -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-900">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Produto</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">Categoria</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Armazém</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Em Mão</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-amber-500 uppercase tracking-wider">Ajuste</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">Custo Unit.</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">Valor em Stock</th>
+                            <th class="px-6 py-3 w-8"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {% for quant in quants %}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <!-- Produto (link to product_edit) -->
+                            <td class="px-6 py-3 whitespace-nowrap">
+                                <a href="{% url 'inventory:product_edit' quant.product.pk %}"
+                                   class="flex items-center group">
+                                    <div class="flex-shrink-0 h-9 w-9 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                                        {% if quant.product.image %}
+                                        <img src="{{ quant.product.image.url }}" alt="{{ quant.product.name }}" class="h-9 w-9 object-cover">
+                                        {% else %}
+                                        <svg class="h-4 w-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                        </svg>
+                                        {% endif %}
+                                    </div>
+                                    <div class="ml-3">
+                                        <div class="text-sm font-medium text-gray-900 dark:text-white group-hover:text-primary transition-colors">{{ quant.product.name }}</div>
+                                        {% if quant.product.internal_reference %}
+                                        <div class="text-xs text-gray-400 font-mono">{{ quant.product.internal_reference }}</div>
+                                        {% endif %}
+                                    </div>
+                                </a>
+                            </td>
+                            <!-- Categoria -->
+                            <td class="px-6 py-3 whitespace-nowrap hidden md:table-cell">
+                                {% if quant.product.category %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                                    {{ quant.product.category.name }}
+                                </span>
+                                {% else %}
+                                <span class="text-gray-400">—</span>
+                                {% endif %}
+                            </td>
+                            <!-- Armazém -->
+                            <td class="px-6 py-3 whitespace-nowrap hidden lg:table-cell">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">{{ quant.warehouse.name }}</span>
+                            </td>
+                            <!-- Em Mão (read-only) -->
+                            <td class="px-6 py-3 whitespace-nowrap text-right">
+                                <span class="inline-flex items-center justify-end space-x-1">
+                                    <span class="text-sm font-semibold {% if quant.quantity <= 0 %}text-red-600 dark:text-red-400{% else %}text-gray-900 dark:text-white{% endif %}">
+                                        {{ quant.quantity|floatformat:3 }}
+                                    </span>
+                                    <span class="text-xs text-gray-400">{{ quant.product.uom.name }}</span>
+                                </span>
+                            </td>
+                            <!-- Ajuste (editable) -->
+                            <td class="px-6 py-3 whitespace-nowrap text-right">
+                                <input type="number"
+                                       name="ajuste_{{ quant.pk }}"
+                                       step="0.001"
+                                       min="0"
+                                       placeholder="—"
+                                       class="w-28 px-2 py-1 text-right text-sm border border-transparent hover:border-amber-300 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 dark:focus:ring-amber-800 rounded bg-transparent dark:bg-transparent text-gray-900 dark:text-white placeholder-gray-400 transition-colors focus:bg-white dark:focus:bg-gray-700">
+                            </td>
+                            <!-- Custo Unit. -->
+                            <td class="px-6 py-3 whitespace-nowrap text-right hidden md:table-cell">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">{{ quant.product.cost_price|floatformat:2 }} €</span>
+                            </td>
+                            <!-- Valor em Stock -->
+                            <td class="px-6 py-3 whitespace-nowrap text-right hidden sm:table-cell">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ quant.stock_value|floatformat:2 }} &euro;
+                                </span>
+                            </td>
+                            <!-- Empty actions cell -->
+                            <td class="px-3 py-3 w-8"></td>
+                        </tr>
+                        {% empty %}
+                        <tr x-show="newRows.length === 0">
+                            <td colspan="8" class="px-6 py-16 text-center">
+                                <div class="flex flex-col items-center">
+                                    <svg class="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                    </svg>
+                                    <p class="text-gray-500 dark:text-gray-400 text-sm font-medium">Nenhum stock encontrado.</p>
+                                    <p class="text-gray-400 dark:text-gray-500 text-xs mt-1">Clique em <strong>+</strong> para adicionar um produto.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                        {# ── New rows (Alpine.js) ── #}
+                        <template x-for="(row, index) in newRows" :key="index">
+                            <tr class="bg-amber-50/40 dark:bg-amber-900/10 border-t border-amber-200 dark:border-amber-800">
+                                <!-- Produto (searchable) -->
+                                <td class="px-6 py-3 whitespace-nowrap">
+                                    <div class="relative">
+                                        <input type="hidden" :name="'new_product_id'" :value="row.product_id">
+                                        <input type="hidden" :name="'new_warehouse_id'" :value="row.warehouse_id">
+                                        <input
+                                            type="text"
+                                            x-model="row.searchQuery"
+                                            @input.debounce.200="searchProduct(row, $el)"
+                                            @focus="if (row.results.length > 0) { positionDropdown(row, $el); row.open = true; }"
+                                            @keydown.escape="row.open = false"
+                                            placeholder="Pesquisar produto..."
+                                            autocomplete="off"
+                                            class="w-full px-3 py-1.5 text-sm border border-amber-300 dark:border-amber-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-400 focus:border-amber-400 placeholder-gray-400">
+                                        <!-- Product search dropdown — rendered fixed to escape table overflow clipping -->
+                                        <div x-show="row.open && row.results.length > 0"
+                                             @click.away="row.open = false"
+                                             x-transition
+                                             :style="row.dropdownStyle"
+                                             class="flex flex-col bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 max-h-56 overflow-y-auto"
+                                             style="display:none; position:fixed; z-index:9999;">
+                                            <template x-for="product in row.results" :key="product.id">
+                                                <button type="button"
+                                                        @click="selectProduct(row, product)"
+                                                        class="flex-none w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="product.name"></div>
+                                                    <div class="text-xs text-gray-400 font-mono" x-text="product.internal_reference || ''"></div>
+                                                </button>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </td>
+                                <!-- Categoria (auto-filled) -->
+                                <td class="px-6 py-3 whitespace-nowrap hidden md:table-cell">
+                                    <span class="text-xs text-gray-400 italic" x-text="row.category_name || '—'"></span>
+                                </td>
+                                <!-- Armazém (auto-filled) -->
+                                <td class="px-6 py-3 whitespace-nowrap hidden lg:table-cell">
+                                    <span class="text-sm text-gray-500 dark:text-gray-400" x-text="row.warehouse_name || '—'"></span>
+                                </td>
+                                <!-- Em Mão (always 0 for new) -->
+                                <td class="px-6 py-3 whitespace-nowrap text-right">
+                                    <span class="text-sm text-gray-400">0</span>
+                                </td>
+                                <!-- Ajuste (quantity input) -->
+                                <td class="px-6 py-3 whitespace-nowrap text-right">
+                                    <input type="number"
+                                           name="new_quantity"
+                                           x-model="row.quantity"
+                                           @input="row.stock_value = (parseFloat(row.quantity) || 0) * (parseFloat(row.cost_price) || 0)"
+                                           step="0.001"
+                                           min="0"
+                                           placeholder="0"
+                                           class="w-28 px-2 py-1 text-right text-sm border border-amber-300 dark:border-amber-600 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 dark:focus:ring-amber-800 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors">
+                                </td>
+                                <!-- Custo Unit. (auto-filled) -->
+                                <td class="px-6 py-3 whitespace-nowrap text-right hidden md:table-cell">
+                                    <span class="text-sm text-gray-600 dark:text-gray-400" x-text="row.cost_price ? parseFloat(row.cost_price).toFixed(2) + ' €' : '—'"></span>
+                                </td>
+                                <!-- Valor em Stock (live = ajuste × custo) -->
+                                <td class="px-6 py-3 whitespace-nowrap text-right hidden sm:table-cell">
+                                    <span class="text-sm font-medium text-amber-600 dark:text-amber-400"
+                                          x-text="(parseFloat(row.stock_value) || 0).toFixed(2) + ' €'"></span>
+                                </td>
+                                <!-- Remove row -->
+                                <td class="px-3 py-3 w-8">
+                                    <button type="button" @click="removeRow(index)"
+                                            class="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors rounded">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+
+                    <!-- ── Footer: Totais ─────────────────────────────── -->
+                    {% if quants %}
+                    <tfoot class="bg-gray-50 dark:bg-gray-900 border-t-2 border-gray-200 dark:border-gray-700">
+                        <tr>
+                            <td class="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider" colspan="3">
+                                Total ({{ total_count }} linha{{ total_count|pluralize:"s" }})
+                            </td>
+                            <td class="px-6 py-3 hidden md:table-cell"></td>
+                            <td class="px-6 py-3 hidden md:table-cell"></td>
+                            <td class="px-6 py-3 hidden md:table-cell"></td>
+                            <td class="px-6 py-3 text-right hidden sm:table-cell">
+                                <span class="text-sm font-bold text-gray-900 dark:text-white">{{ total_value|floatformat:2 }} €</span>
+                            </td>
+                            <td class="px-3 py-3"></td>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
+
+                </table>
+            </div>
+        </div>
+
+        <!-- ── Pagination (bottom) ───────────────────────────────── -->
+        {% if quants.paginator.num_pages > 1 %}
+        <div class="mt-4 flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+            <span>Página {{ quants.number }} de {{ quants.paginator.num_pages }}</span>
+            <div class="flex items-center space-x-2">
+                {% if quants.has_previous %}
+                <a href="{% url 'inventory:physical_inventory_list' %}?page={{ quants.previous_page_number }}&page_size={{ page_size }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}{% if warehouse_filter %}&warehouse={{ warehouse_filter }}{% endif %}"
+                   class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
+                    &laquo; Anterior
+                </a>
+                {% endif %}
+                {% if quants.has_next %}
+                <a href="{% url 'inventory:physical_inventory_list' %}?page={{ quants.next_page_number }}&page_size={{ page_size }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}{% if warehouse_filter %}&warehouse={{ warehouse_filter }}{% endif %}"
+                   class="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
+                    Próximo &raquo;
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>{# end list view outer div #}
+    </form>{# end POST form #}
+
+</div>{# end min-h-screen #}
+
+<!-- ── Scripts ───────────────────────────────────────────────────── -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const totalCount = {{ total_count }};
+    const currentPageSize = {{ page_size }};
+
+    function setupPageSizeInput(input) {
+        if (!input) return;
+        input.addEventListener('blur', function () {
+            let v = parseInt(this.value);
+            if (isNaN(v) || v < 1) { v = 50; this.value = 50; }
+            if (v > totalCount && totalCount > 0) { v = totalCount; this.value = totalCount; }
+            if (v !== currentPageSize) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('page_size', v);
+                url.searchParams.set('page', 1);
+                window.location.href = url.toString();
+            }
+        });
+        input.addEventListener('keypress', function (e) { if (e.key === 'Enter') this.blur(); });
+        input.addEventListener('input', function () { this.value = this.value.replace(/[^0-9]/g, ''); });
+    }
+
+    setupPageSizeInput(document.getElementById('pageSizeInput'));
+});
+
+// Alpine.js component for new-row management and product search
+function physicalInventory(searchUrl, defaultWarehouseId) {
+    return {
+        newRows: [],
+        defaultWarehouseId,
+        defaultWarehouseName: '{{ default_warehouse.name|escapejs|default:"" }}',
+
+        addRow() {
+            this.newRows.push({
+                product_id:     '',
+                warehouse_id:   this.defaultWarehouseId,
+                warehouse_name: this.defaultWarehouseName,
+                category_name:  '',
+                uom_name:       '',
+                cost_price:     '',
+                quantity:       '',
+                stock_value:    0,
+                searchQuery:    '',
+                results:        [],
+                open:           false,
+                dropdownStyle:  '',
+            });
+            // Scroll to new row
+            this.$nextTick(() => {
+                const rows = document.querySelectorAll('tbody tr');
+                if (rows.length) rows[rows.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+        },
+
+        removeRow(index) {
+            this.newRows.splice(index, 1);
+        },
+
+        positionDropdown(row, inputEl) {
+            const rect = inputEl.getBoundingClientRect();
+            row.dropdownStyle = [
+                `top:${rect.bottom + 2}px`,
+                `left:${rect.left}px`,
+                `width:${Math.max(rect.width, 288)}px`,
+            ].join(';');
+        },
+
+        async searchProduct(row, inputEl) {
+            const q = (row.searchQuery || '').trim();
+            if (q.length < 1) { row.results = []; row.open = false; return; }
+            try {
+                const resp = await fetch(`${searchUrl}?q=${encodeURIComponent(q)}`);
+                const data = await resp.json();
+                row.results = data.results || [];
+                if (row.results.length > 0) {
+                    this.positionDropdown(row, inputEl);
+                    row.open = true;
+                } else {
+                    row.open = false;
+                }
+            } catch (e) {
+                row.results = [];
+            }
+        },
+
+        selectProduct(row, product) {
+            row.product_id    = product.id;
+            row.category_name = product.category_name || '';
+            row.uom_name      = product.uom_name || '';
+            row.cost_price    = product.cost_price;
+            row.stock_value   = (parseFloat(row.quantity) || 0) * parseFloat(product.cost_price || 0);
+            row.searchQuery   = product.internal_reference
+                ? `[${product.internal_reference}] ${product.name}`
+                : product.name;
+            row.results = [];
+            row.open    = false;
+        },
+    };
+}
+</script>
+{% endblock %}

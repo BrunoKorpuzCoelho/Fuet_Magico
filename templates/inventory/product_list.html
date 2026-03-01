@@ -45,11 +45,11 @@
             <div class="flex items-center justify-between gap-4">
                 <!-- Left: New Button + Bulk Actions -->
                 <div class="flex items-center space-x-3">
-                    <a href="{% url 'inventory:product_create' %}" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center space-x-2">
+                    <a href="{% url 'inventory:product_create' %}" title="Novo" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
-                        <span>Novo</span>
+                        <span class="sr-only">Novo</span>
                     </a>
 
                     <!-- Bulk Actions -->
@@ -153,6 +153,27 @@
                                         {% endif %}
                                     </div>
                                 </a>
+
+                                <!-- Divider -->
+                                <div class="my-3 border-t border-gray-200 dark:border-gray-700"></div>
+
+                                <!-- Stock Filter Section -->
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">FILTRAR POR STOCK:</p>
+                                <a href="?status={{ status_filter }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&stock_filter=below_min"
+                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if stock_filter == 'below_min' %}bg-amber-500/10 text-amber-500 font-semibold{% endif %}">
+                                    <div class="flex items-center justify-between">
+                                        <span>Abaixo do mínimo</span>
+                                        {% if stock_filter == 'below_min' %}
+                                        <svg class="h-4 w-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                        {% endif %}
+                                    </div>
+                                </a>
+                                {% if stock_filter == 'below_min' %}
+                                <a href="?status={{ status_filter }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}"
+                                   class="block px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Limpar filtro de stock
+                                </a>
+                                {% endif %}
 
                                 <!-- Divider -->
                                 <div class="my-3 border-t border-gray-200 dark:border-gray-700"></div>
@@ -331,6 +352,25 @@
 
                                 <div class="my-2 border-t border-gray-200 dark:border-gray-700"></div>
 
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-2">FILTRAR POR STOCK:</p>
+                                <a href="?status={{ status_filter }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&stock_filter=below_min"
+                                   class="block px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if stock_filter == 'below_min' %}bg-amber-500/10 text-amber-500 font-semibold{% endif %}">
+                                    <div class="flex items-center justify-between">
+                                        <span>Abaixo do mínimo</span>
+                                        {% if stock_filter == 'below_min' %}
+                                        <svg class="h-3 w-3 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                        {% endif %}
+                                    </div>
+                                </a>
+                                {% if stock_filter == 'below_min' %}
+                                <a href="?status={{ status_filter }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}"
+                                   class="block px-3 py-2 text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Limpar filtro de stock
+                                </a>
+                                {% endif %}
+
+                                <div class="my-2 border-t border-gray-200 dark:border-gray-700"></div>
+
                                 <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-2">PESQUISAR POR CAMPO:</p>
                                 <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='name'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
                                     Search <strong>Name</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
@@ -428,7 +468,7 @@
                     </thead>
                     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {% for product in products %}
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer {% if product.pk in below_min_pks %}bg-amber-500/5 dark:bg-amber-500/5 border-l-2 border-amber-500/40{% endif %}"
                             @click="if (!$event.target.closest('.checkbox-cell')) { window.location.href='{% url 'inventory:product_edit' product.pk %}' }">
                             <td class="px-6 py-4 whitespace-nowrap checkbox-cell" @click.stop>
                                 <input type="checkbox" value="{{ product.pk }}"

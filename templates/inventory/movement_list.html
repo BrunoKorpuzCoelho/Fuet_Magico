@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Armazéns — Fuet Mágico{% endblock %}
+{% block title %}{{ type_label }} — Fuet Mágico{% endblock %}
 
 {% block sub_navbar %}
 {% include 'components/inventory_navbar.html' %}
@@ -39,13 +39,15 @@
         this.selectAll = this.selectedItems.length === totalCheckboxes;
     }
 }">
+
     <!-- ── Search & Actions Bar — Desktop ──────────────────────────── -->
     <div class="hidden md:block bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-3">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between gap-4">
+
                 <!-- Left: New Button + Bulk Actions -->
                 <div class="flex items-center space-x-3">
-                    <a href="{% url 'inventory:warehouse_create' %}" title="Novo" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center">
+                    <a href="{{ create_url }}" title="Novo" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
@@ -99,7 +101,7 @@
 
                 <!-- Center: Search Bar -->
                 <div class="flex-1 max-w-2xl relative" x-data="{ filtersOpen: false, searchQuery: '{{ search_query }}' }">
-                    <form method="GET" action="{% url 'inventory:warehouse_list' %}" id="searchForm">
+                    <form method="GET" action="{{ list_url }}" id="searchForm">
                         <div class="relative">
                             <input
                                 type="text"
@@ -107,9 +109,11 @@
                                 x-model="searchQuery"
                                 @focus="filtersOpen = true"
                                 @input="filtersOpen = searchQuery.length > 0"
-                                placeholder="Pesquisar armazéns..."
+                                placeholder="Pesquisar {{ type_label|lower }}..."
                                 class="w-full px-4 py-2 pl-10 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                             <input type="hidden" name="field" id="searchField" value="{{ search_field }}">
+                            <input type="hidden" name="state" value="{{ state_filter }}">
+                            <input type="hidden" name="page_size" value="{{ page_size }}">
 
                             <svg class="absolute left-3 top-2.5 h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -124,7 +128,7 @@
                             </button>
                         </div>
 
-                        <!-- Combined Filters Dropdown -->
+                        <!-- Filters Dropdown -->
                         <div x-show="filtersOpen"
                              @click.away="filtersOpen = false"
                              x-transition:enter="transition ease-out duration-100"
@@ -133,43 +137,32 @@
                              class="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto"
                              style="display: none;">
                             <div class="p-3">
-                                <!-- Status Filter Section -->
+                                <!-- Status Filter -->
                                 <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">FILTRAR POR STATUS:</p>
-                                <a href="?status=active{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}"
-                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if status_filter == 'active' %}bg-primary/10 text-primary font-semibold{% endif %}">
+                                {% for state_val, state_name in states %}
+                                <a href="{{ list_url }}?state={{ state_val }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}"
+                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if state_filter == state_val %}bg-primary/10 text-primary font-semibold{% endif %}">
                                     <div class="flex items-center justify-between">
-                                        <span>Ativos</span>
-                                        {% if status_filter == 'active' %}
+                                        <span>{{ state_name }}</span>
+                                        {% if state_filter == state_val %}
                                         <svg class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                                         {% endif %}
                                     </div>
                                 </a>
-                                <a href="?status=archived{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}"
-                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if status_filter == 'archived' %}bg-primary/10 text-primary font-semibold{% endif %}">
-                                    <div class="flex items-center justify-between">
-                                        <span>Arquivados</span>
-                                        {% if status_filter == 'archived' %}
-                                        <svg class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                        {% endif %}
-                                    </div>
-                                </a>
+                                {% endfor %}
 
-                                <!-- Divider -->
                                 <div class="my-3 border-t border-gray-200 dark:border-gray-700"></div>
 
-                                <!-- Search Fields Section -->
+                                <!-- Search Fields -->
                                 <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">PESQUISAR POR CAMPO:</p>
-                                <a href="#" @click.prevent="document.getElementById('searchField').value='name'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                                    Search <strong>Nome</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                <a href="#" @click.prevent="document.getElementById('searchField').value='reference'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Pesquisar <strong>referência</strong>: <span class="text-primary" x-text="searchQuery || '...'"></span>
                                 </a>
-                                <a href="#" @click.prevent="document.getElementById('searchField').value='code'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                                    Search <strong>Código</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                <a href="#" @click.prevent="document.getElementById('searchField').value='partner'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Pesquisar <strong>contacto</strong>: <span class="text-primary" x-text="searchQuery || '...'"></span>
                                 </a>
-                                <a href="#" @click.prevent="document.getElementById('searchField').value='address'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                                    Search <strong>Morada</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
-                                </a>
-                                <a href="#" @click.prevent="document.getElementById('searchField').value='company'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                                    Search <strong>Empresa</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                <a href="#" @click.prevent="document.getElementById('searchField').value='origin'; document.getElementById('searchForm').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Pesquisar <strong>origem</strong>: <span class="text-primary" x-text="searchQuery || '...'"></span>
                                 </a>
                             </div>
                         </div>
@@ -178,24 +171,23 @@
 
                 <!-- Right: Pagination -->
                 <div class="flex items-center space-x-4">
-                    <!-- Pagination -->
                     <div class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                        <span>{{ warehouses.start_index }}-{{ warehouses.end_index }} / {{ total_count }}</span>
+                        <span>{{ movements.start_index }}-{{ movements.end_index }} / {{ total_count }}</span>
                         <span class="text-gray-400">|</span>
                         <div class="flex items-center space-x-1">
                             <input type="text" id="pageSizeInput" value="{{ page_size }}"
                                    class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                             <span>/página</span>
                         </div>
-                        {% if warehouses.has_previous %}
-                        <a href="?page={{ warehouses.previous_page_number }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}&status={{ status_filter }}" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                        {% if movements.has_previous %}
+                        <a href="{{ list_url }}?page={{ movements.previous_page_number }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}&state={{ state_filter }}" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         </a>
                         {% else %}
                         <button disabled class="p-1 opacity-50 cursor-not-allowed"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
                         {% endif %}
-                        {% if warehouses.has_next %}
-                        <a href="?page={{ warehouses.next_page_number }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}&status={{ status_filter }}" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                        {% if movements.has_next %}
+                        <a href="{{ list_url }}?page={{ movements.next_page_number }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}&state={{ state_filter }}" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                         </a>
                         {% else %}
@@ -203,6 +195,7 @@
                         {% endif %}
                     </div>
                 </div>
+
             </div>
         </div>
     </div>
@@ -211,14 +204,11 @@
     <div class="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-3" x-data="{ menuOpen: false, actionsOpen: false }">
         <div class="px-4">
             <div class="flex items-center gap-2 mb-3">
-                <!-- Menu Button -->
                 <button @click="menuOpen = !menuOpen" class="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                     </svg>
                 </button>
-
-                <!-- Bulk Actions Button (Mobile) -->
                 <div x-show="$root.selectedItems.length > 0"
                      x-transition:enter="transition ease-out duration-200"
                      x-transition:enter-start="opacity-0 scale-95"
@@ -232,13 +222,8 @@
                         </svg>
                         <span class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white text-xs font-bold" x-text="$root.selectedItems.length"></span>
                     </button>
-
-                    <!-- Mobile Bulk Actions Dropdown -->
-                    <div x-show="actionsOpen"
-                         @click.away="actionsOpen = false"
-                         x-transition
-                         class="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
-                         style="display: none;">
+                    <div x-show="actionsOpen" @click.away="actionsOpen = false" x-transition
+                         class="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50" style="display: none;">
                         <div class="py-1">
                             <button @click="archiveSelected(); actionsOpen = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2">
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
@@ -256,119 +241,39 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Search -->
-                <div class="flex-1 relative" x-data="{ filtersOpen: false, searchQuery: '{{ search_query }}' }">
-                    <form method="GET" action="{% url 'inventory:warehouse_list' %}" id="searchFormMobile">
-                        <div class="relative">
-                            <input
-                                type="text"
-                                name="search"
-                                x-model="searchQuery"
-                                @focus="filtersOpen = true"
-                                @input="filtersOpen = searchQuery.length > 0"
-                                placeholder="Pesquisar..."
-                                class="w-full px-4 py-2 pl-10 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
-                            <input type="hidden" name="field" id="searchFieldMobile" value="{{ search_field }}">
-
-                            <svg class="absolute left-3 top-2.5 h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                            </svg>
-
-                            <button type="button"
-                                    @click="filtersOpen = !filtersOpen"
-                                    class="absolute right-2 top-2 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                                <svg class="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </button>
-                        </div>
-
-                        <!-- Mobile Filters Dropdown -->
-                        <div x-show="filtersOpen"
-                             @click.away="filtersOpen = false"
-                             x-transition:enter="transition ease-out duration-100"
-                             x-transition:enter-start="opacity-0 scale-95"
-                             x-transition:enter-end="opacity-100 scale-100"
-                             class="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto"
-                             style="display: none;">
-                            <div class="p-3">
-                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">FILTRAR POR STATUS:</p>
-                                <a href="?status=active{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}"
-                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if status_filter == 'active' %}bg-primary/10 text-primary font-semibold{% endif %}">
-                                    <div class="flex items-center justify-between">
-                                        <span>Ativos</span>
-                                        {% if status_filter == 'active' %}
-                                        <svg class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                        {% endif %}
-                                    </div>
-                                </a>
-                                <a href="?status=archived{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}"
-                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if status_filter == 'archived' %}bg-primary/10 text-primary font-semibold{% endif %}">
-                                    <div class="flex items-center justify-between">
-                                        <span>Arquivados</span>
-                                        {% if status_filter == 'archived' %}
-                                        <svg class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                        {% endif %}
-                                    </div>
-                                </a>
-
-                                <div class="my-3 border-t border-gray-200 dark:border-gray-700"></div>
-
-                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">PESQUISAR POR CAMPO:</p>
-                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='name'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                                    Search <strong>Nome</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
-                                </a>
-                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='code'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                                    Search <strong>Código</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
-                                </a>
-                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='address'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                                    Search <strong>Morada</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
-                                </a>
-                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='company'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                                    Search <strong>Empresa</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
-                                </a>
-                            </div>
-                        </div>
+                <div class="flex-1">
+                    <form method="GET" action="{{ list_url }}">
+                        <input type="text" name="search" value="{{ search_query }}" placeholder="Pesquisar..."
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <input type="hidden" name="state" value="{{ state_filter }}">
+                        <input type="hidden" name="page_size" value="{{ page_size }}">
                     </form>
                 </div>
             </div>
-
-            <!-- Mobile Menu Dropdown -->
-            <div x-show="menuOpen" @click.away="menuOpen = false" class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 space-y-2" style="display: none;">
-                <a href="{% url 'inventory:warehouse_create' %}" class="w-full px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center justify-center space-x-2">
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                    <span>Novo Armazém</span>
-                </a>
-
-                <div class="pt-2 border-t border-gray-200 dark:border-gray-600">
-                    <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 px-4 py-2">
-                        <div class="flex flex-col space-y-1">
-                            <span>{{ warehouses.start_index }}-{{ warehouses.end_index }} / {{ total_count }}</span>
-                            <div class="flex items-center space-x-1">
-                                <input type="text" id="pageSizeInputMobile" value="{{ page_size }}"
-                                       class="w-14 px-1 py-0.5 text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs focus:ring-2 focus:ring-primary focus:border-transparent">
-                                <span class="text-xs">/pág</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            {% if warehouses.has_previous %}
-                            <a href="?page={{ warehouses.previous_page_number }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}&status={{ status_filter }}" class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
-                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                            </a>
-                            {% else %}
-                            <button disabled class="p-1 opacity-50"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
-                            {% endif %}
-                            {% if warehouses.has_next %}
-                            <a href="?page={{ warehouses.next_page_number }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}&status={{ status_filter }}" class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
-                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                            </a>
-                            {% else %}
-                            <button disabled class="p-1 opacity-50"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
-                            {% endif %}
-                        </div>
+            <div x-show="menuOpen" x-transition class="pb-2" style="display: none;">
+                <a href="{{ create_url }}" class="block w-full text-center px-4 py-2 mb-2 bg-primary text-white rounded-lg text-sm font-medium">Novo</a>
+                <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mt-2">
+                    <span>{{ movements.start_index }}-{{ movements.end_index }} / {{ total_count }}</span>
+                    <div class="flex items-center space-x-2">
+                        <input type="text" id="pageSizeInputMobile" value="{{ page_size }}"
+                               class="w-14 px-1 py-0.5 text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <span class="text-xs">/pág</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        {% if movements.has_previous %}
+                        <a href="{{ list_url }}?page={{ movements.previous_page_number }}&page_size={{ page_size }}&state={{ state_filter }}" class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </a>
+                        {% else %}
+                        <button disabled class="p-1 opacity-50"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+                        {% endif %}
+                        {% if movements.has_next %}
+                        <a href="{{ list_url }}?page={{ movements.next_page_number }}&page_size={{ page_size }}&state={{ state_filter }}" class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </a>
+                        {% else %}
+                        <button disabled class="p-1 opacity-50"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -386,72 +291,107 @@
                                 <input type="checkbox" x-model="selectAll" @change="toggleAll()"
                                        class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Nome</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Código</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap hidden md:table-cell">Morada</th>
-                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Padrão</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap hidden lg:table-cell">Empresa</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Referência</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Contacto</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Estado</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap hidden md:table-cell">Data</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap hidden lg:table-cell">Armaz&eacute;m</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap hidden md:table-cell">Total</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        {% for warehouse in warehouses %}
+                        {% for movement in movements %}
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-                            @click="if (!$event.target.closest('.checkbox-cell')) { window.location.href='{% url 'inventory:warehouse_edit' warehouse.pk %}' }">
+                            @click="if (!$event.target.closest('.checkbox-cell')) { window.location.href='{% url "inventory:movement_edit" movement.pk %}' }">
                             <td class="px-6 py-4 whitespace-nowrap checkbox-cell" @click.stop>
-                                <input type="checkbox" value="{{ warehouse.pk }}"
-                                       :checked="isSelected('{{ warehouse.pk }}')"
-                                       @change="toggleItem('{{ warehouse.pk }}')"
+                                <input type="checkbox" value="{{ movement.pk }}"
+                                       :checked="isSelected('{{ movement.pk }}')"
+                                       @change="toggleItem('{{ movement.pk }}')"
                                        class="item-checkbox h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
                             </td>
+                            <!-- reference -->
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
                                     <div class="flex-shrink-0 h-10 w-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"></path>
+                                        {% if movement_type == 'receipt' %}
+                                        <svg class="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path>
                                         </svg>
+                                        {% elif movement_type == 'adjustment' %}
+                                        <svg class="h-5 w-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        </svg>
+                                        {% else %}
+                                        <svg class="h-5 w-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"></path>
+                                        </svg>
+                                        {% endif %}
                                     </div>
                                     <div class="ml-4">
-                                        <div class="text-sm font-medium text-gray-900 dark:text-white">{{ warehouse.name }}</div>
+                                        <div class="text-sm font-medium text-gray-900 dark:text-white font-mono">{{ movement.reference }}</div>
+                                        {% if movement.origin %}
+                                        <div class="text-xs text-gray-400">{{ movement.origin }}</div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <code class="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-mono">{{ warehouse.code }}</code>
-                            </td>
-                            <td class="px-6 py-4 hidden md:table-cell">
-                                {% if warehouse.address %}
-                                <span class="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{{ warehouse.address }}</span>
+                            <!-- partner -->
+                            <td class="px-6 py-4 whitespace-nowrap hidden sm:table-cell">
+                                {% if movement.partner %}
+                                <span class="text-sm text-gray-700 dark:text-gray-300">{{ movement.partner.name }}</span>
                                 {% else %}
                                 <span class="text-gray-400">—</span>
                                 {% endif %}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-center hidden sm:table-cell">
-                                {% if warehouse.is_default %}
+                            <!-- state -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if movement.state == 'draft' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                                    Rascunho
+                                </span>
+                                {% elif movement.state == 'done' %}
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
                                     <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                    Sim
+                                    Validado
                                 </span>
-                                {% else %}
-                                <span class="text-gray-400">—</span>
+                                {% elif movement.state == 'cancelled' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                                    Cancelado
+                                </span>
+                                {% endif %}
+                                {% if not movement.is_active %}
+                                <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">Arquivado</span>
                                 {% endif %}
                             </td>
+                            <!-- date -->
+                            <td class="px-6 py-4 whitespace-nowrap hidden md:table-cell">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">{{ movement.date|date:"d/m/Y" }}</span>
+                            </td>
+                            <!-- warehouse -->
                             <td class="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
-                                {% if warehouse.owner_company %}
-                                <span class="text-sm text-gray-600 dark:text-gray-400">{{ warehouse.owner_company.name }}</span>
-                                {% else %}
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">Global</span>
-                                {% endif %}
+                                <span class="text-sm text-gray-600 dark:text-gray-400">{{ movement.warehouse.name }}</span>
+                            </td>
+                            <!-- total_value -->
+                            <td class="px-6 py-4 whitespace-nowrap text-right hidden md:table-cell">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ movement.total_value|floatformat:2 }} €</span>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center">
+                            <td colspan="7" class="px-6 py-12 text-center">
                                 <div class="flex flex-col items-center">
+                                    {% if movement_type == 'receipt' %}
                                     <svg class="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path>
                                     </svg>
-                                    <p class="text-gray-500 dark:text-gray-400 text-sm font-medium">Nenhum armazém encontrado.</p>
-                                    <p class="text-gray-400 dark:text-gray-500 text-xs mt-1">Crie o primeiro armazém para começar.</p>
+                                    {% else %}
+                                    <svg class="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"></path>
+                                    </svg>
+                                    {% endif %}
+                                    <p class="text-gray-500 dark:text-gray-400 text-sm font-medium">Nenhuma {{ type_label_singular|lower }} encontrada.</p>
+                                    <p class="text-gray-400 dark:text-gray-500 text-xs mt-1">Crie a primeira {{ type_label_singular|lower }} para começar.</p>
                                 </div>
                             </td>
                         </tr>
@@ -466,7 +406,6 @@
 <!-- ── Scripts ──────────────────────────────────────────────────── -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // ── Page Size ────────────────────────────────────────────────
     const totalCount = {{ total_count }};
     const currentPageSize = {{ page_size }};
 
@@ -491,7 +430,6 @@ document.addEventListener('DOMContentLoaded', function() {
     setupPageSizeInput(document.getElementById('pageSizeInputMobile'));
 });
 
-// ── Helpers ──────────────────────────────────────────────────────
 function getCookie(name) {
     let v = null;
     if (document.cookie && document.cookie !== '') {
@@ -512,15 +450,14 @@ function showNotification(type, message) {
     setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3000);
 }
 
-// ── Bulk Actions ─────────────────────────────────────────────────
 async function archiveSelected() {
     const ids = window.getSelectedItems ? window.getSelectedItems() : [];
-    if (!ids.length) { showNotification('error', 'Nenhum armazém selecionado'); return; }
+    if (!ids.length) { showNotification('error', 'Nenhum movimento selecionado'); return; }
     try {
-        const resp = await fetch('{% url "inventory:bulk_archive_warehouses" %}', {
+        const resp = await fetch('{% url "inventory:bulk_archive_movements" %}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-            body: JSON.stringify({ warehouse_ids: ids })
+            body: JSON.stringify({ movement_ids: ids })
         });
         const data = await resp.json();
         if (data.success) { showNotification('success', data.message); setTimeout(() => window.location.reload(), 1500); }
@@ -530,12 +467,12 @@ async function archiveSelected() {
 
 async function unarchiveSelected() {
     const ids = window.getSelectedItems ? window.getSelectedItems() : [];
-    if (!ids.length) { showNotification('error', 'Nenhum armazém selecionado'); return; }
+    if (!ids.length) { showNotification('error', 'Nenhum movimento selecionado'); return; }
     try {
-        const resp = await fetch('{% url "inventory:bulk_unarchive_warehouses" %}', {
+        const resp = await fetch('{% url "inventory:bulk_unarchive_movements" %}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-            body: JSON.stringify({ warehouse_ids: ids })
+            body: JSON.stringify({ movement_ids: ids })
         });
         const data = await resp.json();
         if (data.success) { showNotification('success', data.message); setTimeout(() => window.location.reload(), 1500); }
@@ -545,12 +482,12 @@ async function unarchiveSelected() {
 
 function deleteSelected() {
     const ids = window.getSelectedItems ? window.getSelectedItems() : [];
-    if (!ids.length) { showNotification('error', 'Nenhum armazém selecionado'); return; }
+    if (!ids.length) { showNotification('error', 'Nenhum movimento selecionado'); return; }
     openDeleteConfirmationModal(ids);
 }
 
-function openDeleteConfirmationModal(warehouseIds) {
-    const count = warehouseIds.length;
+function openDeleteConfirmationModal(movementIds) {
+    const count = movementIds.length;
     const modal = document.createElement('div');
     modal.id = 'delete-confirmation-modal';
     modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4';
@@ -569,14 +506,16 @@ function openDeleteConfirmationModal(warehouseIds) {
                 </div>
             </div>
             <div class="px-6 py-5">
-                <div class="bg-red-950/40 border border-red-800/50 rounded-lg p-3 mb-4">
+                <div class="bg-red-950/40 border border-red-800/50 rounded-lg p-3 mb-3">
                     <p class="text-gray-200 text-sm leading-relaxed">
                         Está prestes a <span class="font-bold text-red-400">ELIMINAR PERMANENTEMENTE</span>
-                        <span class="font-bold text-white text-base">${count}</span> armazém(ns).
+                        <span class="font-bold text-white text-base">${count}</span> movimento(s).
                     </p>
-                    <p class="text-gray-400 text-xs mt-2">
-                        Esta modificação é <span class="font-semibold text-red-400">IRREVERSÍVEL</span>
-                        e todos os dados serão perdidos para sempre.
+                </div>
+                <div class="bg-yellow-900/20 border border-yellow-700/40 rounded-lg p-3 mb-3">
+                    <p class="text-yellow-300 text-xs flex items-start gap-2">
+                        <svg class="h-4 w-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                        Movimentos em estado <strong>Validado</strong> não podem ser eliminados. Cancele-os primeiro.
                     </p>
                 </div>
                 <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-3 mb-4">
@@ -586,16 +525,14 @@ function openDeleteConfirmationModal(warehouseIds) {
                         <span class="text-gray-300 text-xs leading-relaxed">
                             Confirmo que compreendo que esta ação vai
                             <span class="font-semibold text-red-400">eliminar permanentemente</span>
-                            os armazéns selecionados e que
-                            <span class="font-semibold text-red-400">não existe forma de recuperar</span>
-                            os dados.
+                            os movimentos selecionados.
                         </span>
                     </label>
                 </div>
                 <div class="flex space-x-3">
                     <button onclick="closeDeleteConfirmationModal()" class="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors">Cancelar</button>
                     <button id="confirmDeleteButton" disabled
-                            class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600 shadow-lg shadow-red-900/30">
+                            class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-900/30">
                         <div class="flex items-center justify-center space-x-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                             <span>ELIMINAR PERMANENTEMENTE</span>
@@ -608,24 +545,22 @@ function openDeleteConfirmationModal(warehouseIds) {
     const checkbox = modal.querySelector('#deleteConfirmCheckbox');
     const confirmBtn = modal.querySelector('#confirmDeleteButton');
     checkbox.addEventListener('change', function() { confirmBtn.disabled = !this.checked; });
-
     confirmBtn.addEventListener('click', async function() {
         if (!checkbox.checked) return;
         confirmBtn.disabled = true;
         confirmBtn.innerHTML = '<div class="flex items-center justify-center space-x-2"><svg class="animate-spin h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg><span>A eliminar...</span></div>';
         try {
-            const resp = await fetch('{% url "inventory:bulk_delete_warehouses" %}', {
+            const resp = await fetch('{% url "inventory:bulk_delete_movements" %}', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-                body: JSON.stringify({ warehouse_ids: warehouseIds })
+                body: JSON.stringify({ movement_ids: movementIds })
             });
             const data = await resp.json();
             closeDeleteConfirmationModal();
             if (data.success) { showNotification('success', data.message); setTimeout(() => window.location.reload(), 1500); }
             else { showNotification('error', data.error.message); }
-        } catch (e) { closeDeleteConfirmationModal(); showNotification('error', 'Erro ao eliminar armazéns'); }
+        } catch (e) { closeDeleteConfirmationModal(); showNotification('error', 'Erro ao eliminar movimentos'); }
     });
-
     modal.onclick = (e) => { if (e.target === modal) closeDeleteConfirmationModal(); };
     document.body.appendChild(modal);
 }

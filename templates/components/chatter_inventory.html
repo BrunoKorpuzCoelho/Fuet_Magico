@@ -1,0 +1,461 @@
+﻿{% load static chatter_tags %}
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<!-- CHATTER INVENTORY â€” Nota + Log (matches CRM lead chatter design)           -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+
+<div class="w-full md:w-[30%] border-t md:border-t-0 md:border-l border-gray-700 bg-[#1a2332] h-auto md:h-[80vh] md:sticky md:top-0 flex flex-col"
+     style="margin-right: 10px;"
+     x-data="{ activeTab: 'log' }">
+
+    <!-- â”€â”€ TABS HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <div class="flex border-b border-gray-700 flex-shrink-0 items-stretch">
+        <div class="flex overflow-x-auto flex-1">
+
+            <button type="button"
+                    @click="activeTab = 'note'"
+                    :class="activeTab === 'note' ? 'bg-[#2d3748] text-white border-b-2 border-primary' : 'text-gray-400 hover:bg-[#1f2937] hover:text-white'"
+                    class="px-4 py-3 font-medium text-xs transition-all whitespace-nowrap">
+                Nota
+            </button>
+
+            <button type="button"
+                    @click="activeTab = 'log'"
+                    :class="activeTab === 'log' ? 'bg-[#2d3748] text-white border-b-2 border-primary' : 'text-gray-400 hover:bg-[#1f2937] hover:text-white'"
+                    class="px-4 py-3 font-medium text-xs transition-all whitespace-nowrap">
+                Log
+            </button>
+
+        </div><!-- /tabs-scroll -->
+
+        <!-- Followers widget -->
+        <div class="flex-shrink-0 border-l border-gray-700/50 flex items-center px-2"
+             x-data="inventoryFollowersWidget('{{ object.id }}')">
+            <!-- Avatar stack -->
+            <div class="flex items-center -space-x-1 mr-1.5">
+                <template x-for="f in followers" :key="f.user_id">
+                    <div class="w-5 h-5 rounded-full bg-primary/30 flex items-center justify-center text-[8px] font-bold text-primary ring-1 ring-[#1a2332]"
+                         :title="f.display" x-text="f.initials"></div>
+                </template>
+            </div>
+            <!-- + / toggle dropdown -->
+            <div class="relative">
+                <button type="button"
+                        @click="open = !open; if(open) $nextTick(() => $refs.searchInput && $refs.searchInput.focus())"
+                        class="w-5 h-5 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+                        title="Gerir seguidores">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                </button>
+                <div x-show="open" x-cloak @click.outside="open = false"
+                     class="absolute right-0 top-7 z-50 w-64 bg-[#1f2937] border border-gray-700 rounded-lg shadow-xl"
+                     style="display:none;">
+                    <div class="px-3 py-2 border-b border-gray-700">
+                        <span class="text-xs font-semibold text-gray-300">Seguidores</span>
+                    </div>
+                    <!-- Follower list -->
+                    <div class="max-h-36 overflow-y-auto divide-y divide-gray-700/30">
+                        <template x-for="f in followers" :key="f.user_id">
+                            <div class="flex items-center justify-between px-3 py-1.5 hover:bg-gray-700/40">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-bold text-primary"
+                                         x-text="f.initials"></div>
+                                    <span class="text-xs text-gray-300" x-text="f.display"></span>
+                                </div>
+                                <button type="button" @click="removeFollower(f.user_id)"
+                                        class="p-0.5 text-gray-500 hover:text-red-400 transition-colors">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </template>
+                        <div x-show="followers.length === 0"
+                             class="px-3 py-3 text-xs text-gray-500 italic text-center">
+                            Sem seguidores ainda
+                        </div>
+                    </div>
+                    <!-- Search / add -->
+                    <div class="px-3 py-2 border-t border-gray-700 space-y-1">
+                        <input type="text" x-model="search" @input="debounceSearch()" x-ref="searchInput"
+                               placeholder="Adicionar seguidor&hellip;"
+                               class="w-full bg-gray-800 text-xs text-gray-200 rounded px-2 py-1.5 border border-gray-600 focus:border-primary focus:outline-none">
+                        <div x-show="results.length > 0"
+                             class="max-h-28 overflow-y-auto bg-gray-800 rounded border border-gray-700">
+                            <template x-for="u in results" :key="u.id">
+                                <button type="button" @click="addFollower(u)"
+                                        class="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-gray-300 hover:bg-gray-700 text-left">
+                                    <div class="w-5 h-5 rounded-full bg-gray-600 flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0"
+                                         x-text="u.initials"></div>
+                                    <span x-text="u.display"></span>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /tabs-header -->
+
+    <!-- TAB CONTENT -->
+
+    <!-- TAB: NOTA -->
+    <div x-show="activeTab === 'note'" class="flex flex-col h-full"
+         x-data="inventoryNotesPanel('{{ object.id }}')"
+         x-effect="if (activeTab === 'note' && notes.length === 0 && !loading) load()">
+
+        <!-- Input area -->
+        <div class="p-3 border-b border-gray-700 flex-shrink-0">
+            <div class="relative">
+                <textarea
+                    x-model="newContent"
+                    x-ref="noteTextarea"
+                    @input="handleInput($event)"
+                    @keydown.escape="closeMentions()"
+                    @keydown.arrow-down.prevent="mentionHighlight = Math.min(mentionHighlight + 1, mentionUsers.length - 1)"
+                    @keydown.arrow-up.prevent="mentionHighlight = Math.max(mentionHighlight - 1, 0)"
+                    @keydown.enter.prevent="showMentions && mentionUsers.length ? selectMention(mentionUsers[mentionHighlight]) : null"
+                    rows="3"
+                    placeholder="Nota interna&hellip; Use @utilizador para mencionar"
+                    class="w-full rounded-lg bg-gray-800 border border-gray-600 text-sm text-gray-200 px-3 py-2 resize-none focus:outline-none focus:border-primary placeholder-gray-600"
+                ></textarea>
+
+                <!-- @mention dropdown -->
+                <div x-show="showMentions && mentionUsers.length > 0"
+                     class="absolute left-0 right-0 bg-[#0f1923] border border-gray-600 rounded-lg shadow-2xl z-50 overflow-hidden"
+                     style="top:100%; margin-top:3px;">
+                    <template x-for="(u, idx) in mentionUsers" :key="u.id">
+                        <div @click="selectMention(u)"
+                             :class="idx === mentionHighlight ? 'bg-gray-700' : 'hover:bg-gray-800'"
+                             class="flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors">
+                            <div class="w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0"
+                                 x-text="u.initials"></div>
+                            <div class="min-w-0">
+                                <span class="text-sm text-white" x-text="u.display"></span>
+                                <span class="text-xs text-gray-500 ml-1" x-text="'@' + u.username"></span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between mt-2">
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] text-gray-600">&#128274; Vis&#237;vel apenas internamente</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <!-- Urgent toggle -->
+                    <button type="button" @click="urgent = !urgent"
+                            :title="urgent ? 'Men&ccedil;&otilde;es marcadas como urgentes' : 'Marcar men&ccedil;&otilde;es como urgentes'"
+                            :class="urgent ? 'border-red-500 text-red-500 bg-red-500/10' : 'border-gray-600 text-gray-500 hover:border-red-500/60 hover:text-red-500/60'"
+                            class="w-7 h-7 rounded border flex items-center justify-center transition-colors flex-shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                        </svg>
+                    </button>
+                    <!-- Adicionar button -->
+                    <button type="button" @click="submitNote()"
+                            :disabled="!newContent.trim() || saving"
+                            class="px-3 py-1.5 bg-primary hover:bg-primary/80 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium rounded-lg transition-colors">
+                        <span x-show="!saving">Adicionar</span>
+                        <span x-show="saving">A guardar&hellip;</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes list -->
+        <div class="flex-1 overflow-y-auto p-3 space-y-3">
+            <div x-show="loading" class="flex items-center justify-center py-8">
+                <svg class="animate-spin h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+            </div>
+            <template x-if="!loading && notes.length === 0">
+                <div class="text-center py-10">
+                    <svg class="w-10 h-10 mx-auto text-gray-700 mb-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                    </svg>
+                    <p class="text-xs text-gray-600">Sem notas ainda</p>
+                </div>
+            </template>
+            <template x-for="note in notes" :key="note.id">
+                <div class="flex gap-2.5">
+                    <div class="w-7 h-7 rounded-full bg-indigo-600/30 text-indigo-400 text-xs font-bold flex items-center justify-center flex-shrink-0 uppercase"
+                         x-text="note.author_initials"></div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-baseline gap-2 flex-wrap mb-1">
+                            <span class="text-xs font-semibold text-gray-300" x-text="note.author"></span>
+                            <span class="text-[10px] text-gray-600" x-text="note.created_at"></span>
+                        </div>
+                        <div class="text-xs text-gray-300 bg-gray-800/60 rounded-lg px-3 py-2 leading-relaxed whitespace-pre-wrap break-all"
+                             x-html="renderMentions(note.content)"></div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div><!-- /Tab Nota -->
+
+    <!-- TAB: LOG -->
+    <div x-show="activeTab === 'log'" style="display:none" class="flex-1 overflow-y-auto p-4 space-y-3">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">Hist&#243;rico de Atividades</h3>
+        {% for activity in activities %}
+        <div class="flex gap-3 pb-3 border-b border-gray-700/50">
+
+            {% if activity.activity_type == 'CREATE' %}
+            <div class="flex-shrink-0 w-8 h-8 rounded-full bg-green-600/20 flex items-center justify-center">
+                <svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+            {% elif activity.activity_type == 'UPDATE' %}
+            <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center">
+                <svg class="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                </svg>
+            </div>
+            {% elif activity.activity_type == 'STATUS_CHANGE' %}
+            <div class="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-600/20 flex items-center justify-center">
+                <svg class="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+            </div>
+            {% else %}
+            <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gray-600/20 flex items-center justify-center">
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+            {% endif %}
+
+            <div class="flex-1 min-w-0">
+                {% if activity.activity_type == 'CREATE' %}
+                    <p class="text-xs text-gray-300">
+                        Movimento criado
+                        {% if activity.user %}por <span class="text-primary">{{ activity.user.get_full_name|default:activity.user.username }}</span>{% endif %}
+                    </p>
+                {% elif activity.activity_type == 'UPDATE' %}
+                    <p class="text-xs text-gray-300">
+                        Movimento atualizado
+                        {% if activity.user %}por <span class="text-primary">{{ activity.user.get_full_name|default:activity.user.username }}</span>{% endif %}
+                    </p>
+                    {% if activity.details.changes %}
+                    <div class="mt-1.5 pl-3 border-l-2 border-gray-600 space-y-1">
+                        {% for field, change in activity.details.changes.items %}
+                        <p class="text-xs text-gray-400">
+                            <span class="font-medium text-gray-300">{{ field }}:</span>
+                            {% if change.old %}
+                                <span class="line-through text-red-400">{{ change.old }}</span>
+                            {% else %}
+                                <span class="text-red-400">(vazio)</span>
+                            {% endif %}
+                            &rarr;
+                            {% if change.new %}
+                                <span class="text-green-400">{{ change.new }}</span>
+                            {% else %}
+                                <span class="text-gray-500">(vazio)</span>
+                            {% endif %}
+                        </p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                {% elif activity.activity_type == 'STATUS_CHANGE' %}
+                    <p class="text-xs text-gray-300">
+                        {% if activity.user %}<span class="text-primary">{{ activity.user.get_full_name|default:activity.user.username }}</span> {% endif %}{{ activity.description }}
+                    </p>
+                {% else %}
+                    <p class="text-xs text-gray-300">
+                        {% if activity.user %}<span class="text-primary">{{ activity.user.get_full_name|default:activity.user.username }}</span> {% endif %}{{ activity.description }}
+                    </p>
+                {% endif %}
+                <p class="text-xs text-gray-500 mt-0.5">{{ activity.created_at|date:"d/m/Y H:i" }}</p>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-10">
+            <svg class="w-10 h-10 mx-auto text-gray-700 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <p class="text-xs text-gray-600">Sem registos de log</p>
+        </div>
+        {% endfor %}
+    </div><!-- /Tab Log -->
+
+</div><!-- /chatter container -->
+
+
+<script>
+function inventoryNotesPanel(movementId) {
+    return {
+        movementId,
+        notes: [],
+        newContent: '',
+        loading: false,
+        saving: false,
+        urgent: false,
+        showMentions: false,
+        mentionUsers: [],
+        mentionHighlight: 0,
+        _mentionStart: -1,
+        _mentionCursorPos: -1,
+
+        async load() {
+            this.loading = true;
+            try {
+                const res = await fetch(`/inventory/operations/movements/${this.movementId}/notes/`);
+                const data = await res.json();
+                this.notes = data.notes || [];
+            } catch (e) {
+                console.warn('[Chatter] Notes load error:', e);
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async handleInput(e) {
+            const cursorPos = e.target.selectionStart;
+            const before = this.newContent.slice(0, cursorPos);
+            const atIdx = before.search(/@(\w*)$/);
+            if (atIdx !== -1 && (atIdx === 0 || /[\s\n]/.test(before[atIdx - 1] || ''))) {
+                const query = before.slice(atIdx + 1);
+                this._mentionStart = atIdx;
+                this._mentionCursorPos = cursorPos;
+                this.mentionHighlight = 0;
+                await this.fetchUsers(query);
+            } else {
+                this.closeMentions();
+            }
+        },
+
+        async fetchUsers(q) {
+            try {
+                const res = await fetch(`/crm/api/users/search/?q=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                this.mentionUsers = (data.users || []).slice(0, 5);
+                this.showMentions = this.mentionUsers.length > 0;
+            } catch (e) {
+                this.closeMentions();
+            }
+        },
+
+        selectMention(user) {
+            const before = this.newContent.slice(0, this._mentionStart);
+            const after  = this.newContent.slice(this._mentionCursorPos);
+            this.newContent = before + '@' + user.username + ' ' + after;
+            this.closeMentions();
+            this.$nextTick(() => { if (this.$refs.noteTextarea) this.$refs.noteTextarea.focus(); });
+        },
+
+        closeMentions() {
+            this.showMentions = false;
+            this.mentionUsers = [];
+        },
+
+        async submitNote() {
+            const content = this.newContent.trim();
+            if (!content || this.saving) return;
+            this.saving = true;
+            try {
+                const res = await fetch(`/inventory/operations/movements/${this.movementId}/notes/create/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.csrfToken(),
+                    },
+                    body: JSON.stringify({ content, urgent: this.urgent }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    this.notes.unshift(data.note);
+                    this.newContent = '';
+                    this.urgent = false;
+                }
+            } catch (e) {
+                console.warn('[Chatter] Note create error:', e);
+            } finally {
+                this.saving = false;
+            }
+        },
+
+        renderMentions(text) {
+            return (text || '').replace(/@(\w+)/g, '<span class="text-indigo-400 font-semibold">@$1</span>');
+        },
+
+        csrfToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                   document.cookie.split(';').map(c => c.trim())
+                       .find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
+        },
+    };
+}
+
+function inventoryFollowersWidget(movementId) {
+    return {
+        movementId,
+        open: false,
+        followers: [],
+        search: '',
+        results: [],
+        _timer: null,
+
+        init() { this.load(); },
+
+        async load() {
+            try {
+                const r = await fetch(`/inventory/operations/movements/${this.movementId}/followers/`);
+                const d = await r.json();
+                this.followers = d.followers || [];
+            } catch(e) {}
+        },
+
+        debounceSearch() {
+            clearTimeout(this._timer);
+            if (!this.search.trim()) { this.results = []; return; }
+            this._timer = setTimeout(() => this.fetchUsers(), 250);
+        },
+
+        async fetchUsers() {
+            try {
+                const r = await fetch(`/crm/api/users/search/?q=${encodeURIComponent(this.search)}`);
+                const d = await r.json();
+                const existing = new Set(this.followers.map(f => f.user_id));
+                this.results = (d.users || []).filter(u => !existing.has(u.id));
+            } catch(e) { this.results = []; }
+        },
+
+        async addFollower(u) {
+            try {
+                const r = await fetch(`/inventory/operations/movements/${this.movementId}/followers/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrf() },
+                    body: JSON.stringify({ user_id: u.id }),
+                });
+                const d = await r.json();
+                if (d.success) {
+                    this.followers.push({ user_id: d.user_id, display: d.display, initials: d.initials });
+                    this.search = '';
+                    this.results = [];
+                }
+            } catch(e) {}
+        },
+
+        async removeFollower(userId) {
+            try {
+                await fetch(`/inventory/operations/movements/${this.movementId}/followers/${userId}/remove/`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRFToken': this.csrf() },
+                });
+                this.followers = this.followers.filter(f => f.user_id !== userId);
+            } catch(e) {}
+        },
+
+        csrf() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                   document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1] || '';
+        },
+    };
+}
+</script>

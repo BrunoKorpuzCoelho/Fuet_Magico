@@ -42,3 +42,19 @@ body {
     scrollbar-color: #dbc693 transparent !important;
 }
 
+/* ==========================================
+   NUMBER INPUTS — hide spinner arrows
+   Inputs keep type="number" (só aceita números)
+   mas sem as setas visuais
+   ========================================== */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
