@@ -6993,47 +6993,47 @@ Implementar o Custo Médio Ponderado (Moving Weighted Average Cost) como base de
 
 Lista completa de relatórios a implementar. Todos usam `cost_price_at_move` como base de custo real.
 
-### 6.20.1 Valorização de Stock (Tier 1 — Crítico)
-- [ ] **View:** `inventory_report_valuation`
-- [ ] **URL:** `inventory/reports/valuation/`
-- [ ] **Lógica:**
-  - [ ] Por produto: `StockQuant.quantity × Product.cost_price` (= CMVMC atual)
-  - [ ] Filtros: por armazém, por categoria, por empresa
-  - [ ] Totais: nr. produtos, quantidade total, valor total em €
-- [ ] **Template:** tabela com colunas: Produto | Referência | Categoria | Qt. em Mão | UdM | Custo Médio | Valor Total
-- [ ] **Exportação:** botão CSV/Excel
+### 6.20.1 Valorização de Stock (Tier 1 — Crítico) ✅
+- [x] **View:** `inventory_report_valuation`
+- [x] **URL:** `inventory/reports/valuation/`
+- [x] **Lógica:**
+  - [x] Por produto: `StockQuant.quantity × Product.cost_price` (= CMVMC atual)
+  - [x] Filtros: por armazém, por categoria, por empresa
+  - [x] Totais: nr. produtos, quantidade total, valor total em €
+- [x] **Template:** tabela com colunas: Produto | Referência | Categoria | Qt. em Mão | UdM | Custo Médio | Valor Total
+- [x] **Exportação:** botão CSV/Excel
 
-### 6.20.2 Balancete de Inventário por Período (Tier 1 — Crítico)
-- [ ] **View:** `inventory_report_balance`
-- [ ] **URL:** `inventory/reports/balance/`
-- [ ] **Lógica:**
-  - [ ] Filtro por período (data início / data fim)
-  - [ ] Por produto: Stock Inicial + Entradas (qt. e €) − Saídas (qt. e €) − Sucata (qt. e €) = Stock Final
-  - [ ] Stock inicial = valor em mão antes do período (reconstruído dos movimentos)
-  - [ ] Valor de entradas = `SUM(qty × cost_price_at_move)` para receipts no período
-  - [ ] Valor de saídas = `SUM(qty × cost_price_at_move)` para deliveries no período
-- [ ] **Template:** tabela com saldos de abertura e fecho em unidades e em €
-- [ ] **Exportação:** CSV/Excel/PDF
+### 6.20.2 Balancete de Inventário por Período (Tier 1 — Crítico) ✅
+- [x] **View:** `inventory_report_balance`
+- [x] **URL:** `inventory/reports/balance/`
+- [x] **Lógica:**
+  - [x] Filtro por período (data início / data fim)
+  - [x] Por produto: Stock Inicial + Entradas (qt. e €) − Saídas (qt. e €) − Sucata (qt. e €) = Stock Final
+  - [x] Stock inicial = valor em mão antes do período (reconstruído dos movimentos)
+  - [x] Valor de entradas = `SUM(qty × cost_price_at_move)` para receipts no período
+  - [x] Valor de saídas = `SUM(qty × cost_price_at_move)` para deliveries no período
+- [x] **Template:** tabela com saldos de abertura e fecho em unidades e em €
+- [x] **Exportação:** CSV/Excel/PDF
 
-### 6.20.3 Histórico de Preços de Compra (Tier 1 — Crítico)
-- [ ] **View:** `inventory_report_purchase_prices`
-- [ ] **URL:** `inventory/reports/purchase-prices/`
-- [ ] **Lógica:**
-  - [ ] Filtra `StockMovementLine` onde `movement_type='receipt'` e `state='done'`
-  - [ ] Por produto: lista cronológica de receções com preço, fornecedor, data, referência
-  - [ ] Mostra variação % entre compras consecutivas
-  - [ ] Filtros: por produto, por fornecedor, por período
-- [ ] **Template:** tabela por produto com histórico de preços e gráfico de tendência
+### 6.20.3 Histórico de Preços de Compra (Tier 1 — Crítico) ✅
+- [x] **View:** `inventory_report_purchase_prices`
+- [x] **URL:** `inventory/reports/purchase-prices/`
+- [x] **Lógica:**
+  - [x] Filtra `StockMovementLine` onde `movement_type='receipt'` e `state='done'`
+  - [x] Por produto: lista cronológica de receções com preço, fornecedor, data, referência
+  - [x] Mostra variação % entre compras consecutivas
+  - [x] Filtros: por produto, por fornecedor, por período
+- [x] **Template:** tabela por produto com histórico de preços e gráfico de tendência
 
-### 6.20.4 Relatório de Perdas / Sucata (Tier 1 — Crítico)
-- [ ] **View:** `inventory_report_scrap`
-- [ ] **URL:** `inventory/reports/scrap/`
-- [ ] **Lógica:**
-  - [ ] Quando Sucata for implementada (6.21): lista todos os registos de sucata
-  - [ ] Por linha: produto, quantidade, `cost_price_at_move × qty` = valor destruído, motivo, data, responsável
-  - [ ] Totais por período: valor total de perdas
-  - [ ] Filtros: por período, por motivo, por produto
-- [ ] **Template:** tabela + total de perdas em € + gráfico por motivo
+### 6.20.4 Relatório de Perdas / Sucata (Tier 1 — Crítico) ✅
+- [x] **View:** `inventory_report_scrap`
+- [x] **URL:** `inventory/reports/scrap/`
+- [x] **Lógica:**
+  - [x] Quando Sucata for implementada (6.21): lista todos os registos de sucata
+  - [x] Por linha: produto, quantidade, `cost_price_at_move × qty` = valor destruído, motivo, data, responsável
+  - [x] Totais por período: valor total de perdas
+  - [x] Filtros: por período, por motivo, por produto
+- [x] **Template:** tabela + total de perdas em € + gráfico por motivo
 
 ### 6.20.5 Movimentos por Produto (Tier 2 — Operacional)
 - [ ] **View:** `inventory_report_movements`
