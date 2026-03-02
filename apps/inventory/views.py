@@ -2757,3 +2757,362 @@ def run_low_stock_check(request):
     except Exception as exc:
         messages.error(request, f'Erro durante a verificação: {exc}')
     return redirect(request.META.get('HTTP_REFERER', 'inventory:product_list'))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# INVENTORY REPORTS
+# ══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+def inventory_reports(request):
+    """Reports hub — shows all available inventory reports."""
+    company = get_active_company(request)
+    today   = timezone.now().date()
+
+    # Quick KPIs for the hub cards
+    movements_qs = StockMovement.objects.filter(state='done')
+    if company:
+        movements_qs = movements_qs.filter(owner_company=company)
+
+    quants_qs = StockQuant.objects.select_related('product')
+    if company:
+        quants_qs = quants_qs.filter(product__owner_company=company)
+
+    total_stock_value = sum(
+        float(q.quantity) * float(q.product.cost_price or 0)
+        for q in quants_qs.select_related('product')
+    )
+    ops_this_month = movements_qs.filter(
+        date__year=today.year, date__month=today.month
+    ).count()
+    pending_count = StockMovement.objects.filter(
+        state='draft',
+        **({'owner_company': company} if company else {})
+    ).count()
+    products_below_min = Product.objects.filter(
+        is_active=True, min_stock__gt=0,
+        **({'owner_company': company} if company else {})
+    ).count()  # rough count; precise check happens in signal
+
+    return render(request, 'inventory/reports_index.html', {
+        'total_stock_value': total_stock_value,
+        'ops_this_month':    ops_this_month,
+        'pending_count':     pending_count,
+        'products_below_min': products_below_min,
+    })
+
+
+@login_required
+def report_valuation(request):
+    """Stock Valuation Report — qty × avg cost per product."""
+    from decimal import Decimal
+    company = get_active_company(request)
+
+    # Filters
+    warehouse_id = request.GET.get('warehouse', '')
+    category_id  = request.GET.get('category', '')
+
+    quants_qs = StockQuant.objects.select_related(
+        'product', 'product__uom', 'product__category', 'warehouse'
+    ).filter(quantity__gt=0)
+    if company:
+        quants_qs = quants_qs.filter(
+            Q(product__owner_company=company) | Q(product__owner_company__isnull=True)
+        )
+    if warehouse_id:
+        quants_qs = quants_qs.filter(warehouse_id=warehouse_id)
+    if category_id:
+        quants_qs = quants_qs.filter(product__category_id=category_id)
+
+    rows = []
+    total_value = Decimal('0')
+    for q in quants_qs.order_by('product__name'):
+        cost  = Decimal(str(q.product.cost_price or 0))
+        value = Decimal(str(q.quantity)) * cost
+        total_value += value
+        rows.append({
+            'product':   q.product,
+            'warehouse': q.warehouse,
+            'quantity':  q.quantity,
+            'uom':       q.product.uom,
+            'cost':      cost,
+            'value':     value,
+        })
+
+    # Category breakdown for chart
+    cat_totals = {}
+    for r in rows:
+        cat_name = r['product'].category.name if r['product'].category else 'Sem Categoria'
+        cat_totals[cat_name] = cat_totals.get(cat_name, Decimal('0')) + r['value']
+    cat_labels = list(cat_totals.keys())
+    cat_values = [float(v) for v in cat_totals.values()]
+
+    warehouses = Warehouse.objects.filter(is_active=True)
+    categories = Category.objects.filter(is_active=True)
+
+    return render(request, 'inventory/report_valuation.html', {
+        'rows':          rows,
+        'total_value':   total_value,
+        'total_products': len(rows),
+        'total_qty':     sum(float(r['quantity']) for r in rows),
+        'warehouses':    warehouses,
+        'categories':    categories,
+        'warehouse_id':  warehouse_id,
+        'category_id':   category_id,
+        'cat_labels_json': json.dumps(cat_labels),
+        'cat_values_json': json.dumps(cat_values),
+    })
+
+
+@login_required
+def report_balance(request):
+    """Inventory Balance Report for a given period."""
+    from decimal import Decimal
+    company  = get_active_company(request)
+    today    = timezone.now().date()
+
+    # Default: current month
+    date_from_str = request.GET.get('date_from', today.replace(day=1).isoformat())
+    date_to_str   = request.GET.get('date_to',   today.isoformat())
+    try:
+        from datetime import date
+        date_from = date.fromisoformat(date_from_str)
+        date_to   = date.fromisoformat(date_to_str)
+    except ValueError:
+        date_from = today.replace(day=1)
+        date_to   = today
+
+    lines_qs = StockMovementLine.objects.select_related(
+        'product', 'product__uom', 'stock_movement'
+    ).filter(stock_movement__state='done')
+    if company:
+        lines_qs = lines_qs.filter(
+            Q(stock_movement__owner_company=company)
+            | Q(stock_movement__owner_company__isnull=True)
+        )
+
+    # All products that had any movement
+    product_ids = lines_qs.values_list('product_id', flat=True).distinct()
+    products    = Product.objects.filter(pk__in=product_ids).select_related('uom', 'category')
+
+    rows = []
+    total_in_qty = total_out_qty = Decimal('0')
+    total_in_val = total_out_val = Decimal('0')
+
+    for product in products.order_by('name'):
+        prod_lines = lines_qs.filter(product=product)
+
+        # Before period
+        before = prod_lines.filter(stock_movement__date__date__lt=date_from)
+        open_qty = Decimal('0')
+        for l in before:
+            mv = l.stock_movement
+            q  = abs(Decimal(str(l.quantity)))
+            if mv.movement_type == 'receipt' or (
+                mv.movement_type == 'adjustment' and mv.adjustment_direction == 'in'
+            ):
+                open_qty += q
+            else:
+                open_qty -= q
+        open_val = open_qty * Decimal(str(product.cost_price or 0))
+
+        # In-period
+        period = prod_lines.filter(
+            stock_movement__date__date__gte=date_from,
+            stock_movement__date__date__lte=date_to,
+        )
+        in_qty = in_val = Decimal('0')
+        out_qty = out_val = Decimal('0')
+        for l in period:
+            mv = l.stock_movement
+            q  = abs(Decimal(str(l.quantity)))
+            c  = Decimal(str(l.cost_price_at_move or l.product.cost_price or 0))
+            if mv.movement_type == 'receipt' or (
+                mv.movement_type == 'adjustment' and mv.adjustment_direction == 'in'
+            ):
+                in_qty += q
+                in_val += q * c
+            else:
+                out_qty += q
+                out_val += q * c
+
+        close_qty = open_qty + in_qty - out_qty
+        close_val = close_qty * Decimal(str(product.cost_price or 0))
+
+        if in_qty == 0 and out_qty == 0:
+            continue  # no activity in period
+
+        total_in_qty  += in_qty
+        total_out_qty += out_qty
+        total_in_val  += in_val
+        total_out_val += out_val
+
+        rows.append({
+            'product':    product,
+            'open_qty':   open_qty,
+            'open_val':   open_val,
+            'in_qty':     in_qty,
+            'in_val':     in_val,
+            'out_qty':    out_qty,
+            'out_val':    out_val,
+            'close_qty':  close_qty,
+            'close_val':  close_val,
+        })
+
+    return render(request, 'inventory/report_balance.html', {
+        'rows':          rows,
+        'date_from':     date_from_str,
+        'date_to':       date_to_str,
+        'total_in_qty':  total_in_qty,
+        'total_out_qty': total_out_qty,
+        'total_in_val':  total_in_val,
+        'total_out_val': total_out_val,
+    })
+
+
+@login_required
+def report_purchase_prices(request):
+    """Purchase Price History — price evolution per product across receipts."""
+    from decimal import Decimal
+    company    = get_active_company(request)
+    product_id = request.GET.get('product', '')
+
+    lines_qs = StockMovementLine.objects.select_related(
+        'product', 'product__uom', 'stock_movement', 'stock_movement__partner'
+    ).filter(
+        stock_movement__movement_type='receipt',
+        stock_movement__state='done',
+    ).order_by('product__name', 'stock_movement__date')
+    if company:
+        lines_qs = lines_qs.filter(
+            Q(stock_movement__owner_company=company)
+            | Q(stock_movement__owner_company__isnull=True)
+        )
+    if product_id:
+        lines_qs = lines_qs.filter(product_id=product_id)
+
+    # Group by product
+    from collections import defaultdict
+    product_lines = defaultdict(list)
+    for line in lines_qs:
+        product_lines[line.product].append(line)
+
+    # Build rows with price variation
+    products_data = []
+    for product, plines in sorted(product_lines.items(), key=lambda x: x[0].name):
+        enriched = []
+        prev_price = None
+        for l in plines:
+            current = float(l.unit_price or 0)
+            variation = None
+            if prev_price and prev_price > 0:
+                variation = round((current - prev_price) / prev_price * 100, 1)
+            enriched.append({
+                'line':       l,
+                'date':       l.stock_movement.date,
+                'reference':  l.stock_movement.reference,
+                'supplier':   l.stock_movement.partner,
+                'qty':        l.quantity,
+                'price':      current,
+                'variation':  variation,
+            })
+            prev_price = current
+        # Chart data: dates and prices
+        chart_dates  = [e['date'].strftime('%d/%m/%Y') for e in enriched]
+        chart_prices = [e['price'] for e in enriched]
+        products_data.append({
+            'product':      product,
+            'lines':        enriched,
+            'chart_dates':  json.dumps(chart_dates),
+            'chart_prices': json.dumps(chart_prices),
+            'min_price':    min(chart_prices) if chart_prices else 0,
+            'max_price':    max(chart_prices) if chart_prices else 0,
+            'avg_price':    round(sum(chart_prices) / len(chart_prices), 2) if chart_prices else 0,
+        })
+
+    # Products with receipts for filter dropdown
+    all_products = Product.objects.filter(
+        movement_lines__stock_movement__movement_type='receipt',
+        movement_lines__stock_movement__state='done',
+    ).distinct().order_by('name')
+    if company:
+        all_products = all_products.filter(
+            Q(owner_company=company) | Q(owner_company__isnull=True)
+        )
+
+    return render(request, 'inventory/report_purchase_prices.html', {
+        'products_data': products_data,
+        'all_products':  all_products,
+        'product_id':    product_id,
+    })
+
+
+@login_required
+def report_scrap(request):
+    """Losses / Scrap Report — adjustment-out movements as proxy until Scrap model exists."""
+    from decimal import Decimal
+    company       = get_active_company(request)
+    today         = timezone.now().date()
+    date_from_str = request.GET.get('date_from', today.replace(day=1).isoformat())
+    date_to_str   = request.GET.get('date_to',   today.isoformat())
+    try:
+        from datetime import date
+        date_from = date.fromisoformat(date_from_str)
+        date_to   = date.fromisoformat(date_to_str)
+    except ValueError:
+        date_from = today.replace(day=1)
+        date_to   = today
+
+    lines_qs = StockMovementLine.objects.select_related(
+        'product', 'product__uom', 'stock_movement', 'stock_movement__responsible'
+    ).filter(
+        stock_movement__movement_type='adjustment',
+        stock_movement__adjustment_direction='out',
+        stock_movement__state='done',
+        stock_movement__date__date__gte=date_from,
+        stock_movement__date__date__lte=date_to,
+    ).order_by('-stock_movement__date')
+    if company:
+        lines_qs = lines_qs.filter(
+            Q(stock_movement__owner_company=company)
+            | Q(stock_movement__owner_company__isnull=True)
+        )
+
+    rows = []
+    total_qty = total_value = Decimal('0')
+    for l in lines_qs:
+        qty   = abs(Decimal(str(l.quantity)))
+        cost  = Decimal(str(l.cost_price_at_move or l.product.cost_price or 0))
+        value = qty * cost
+        total_qty   += qty
+        total_value += value
+        rows.append({
+            'date':        l.stock_movement.date,
+            'reference':   l.stock_movement.reference,
+            'product':     l.product,
+            'qty':         qty,
+            'uom':         l.product.uom,
+            'cost':        cost,
+            'value':       value,
+            'responsible': l.stock_movement.responsible,
+            'notes':       l.stock_movement.notes,
+        })
+
+    # Monthly breakdown for chart
+    monthly = {}
+    for r in rows:
+        key = r['date'].strftime('%b %Y')
+        monthly[key] = float(monthly.get(key, 0)) + float(r['value'])
+    chart_labels = json.dumps(list(monthly.keys()))
+    chart_values = json.dumps(list(monthly.values()))
+
+    return render(request, 'inventory/report_scrap.html', {
+        'rows':          rows,
+        'date_from':     date_from_str,
+        'date_to':       date_to_str,
+        'total_qty':     total_qty,
+        'total_value':   total_value,
+        'total_records': len(rows),
+        'chart_labels':  chart_labels,
+        'chart_values':  chart_values,
+    })

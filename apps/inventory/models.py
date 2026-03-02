@@ -566,29 +566,79 @@ class StockMovement(AbstractBaseModel):
         return seq.next_reference()
 
     def action_validate(self):
-        """Validate the movement — changes state to 'done' and updates stock.
+        """Validate the movement — changes state to 'done', updates stock, and
+        maintains the Weighted Average Cost (CMVMC — Custo Médio Ponderado) per product.
 
-        Quantities are stored exactly as entered on the movement line, in the
-        product's working UoM. No unit conversion is performed — the user is
-        responsible for entering the correct quantity in the correct unit.
+        CMVMC logic:
+          • Receipt / Adjustment-IN:
+              new_avg = (on_hand_qty × old_avg + incoming_qty × unit_price)
+                        / (on_hand_qty + incoming_qty)
+              → updates Product.cost_price (running average)
+              → stores new_avg in line.cost_price_at_move
 
-        Example: product base UoM is kg. User enters 1 → stock gets +1 kg.
-        If the user later consumes 0.250, stock becomes 0.750 kg.
+          • Delivery / Adjustment-OUT:
+              cost used = current Product.cost_price (the running average)
+              → stores it in line.cost_price_at_move  (cost of goods sold)
+              → Product.cost_price is unchanged (average stays the same)
+
+        Quantities are stored exactly as entered (no UoM conversion).
         """
-        from decimal import Decimal
+        from decimal import Decimal, ROUND_HALF_UP
         if self.state != 'draft':
             raise ValidationError('Apenas movimentos em rascunho podem ser validados.')
+
+        is_in = (
+            self.movement_type == 'receipt'
+            or (self.movement_type == 'adjustment' and self.adjustment_direction == 'in')
+        )
+        is_out = (
+            self.movement_type == 'delivery'
+            or (self.movement_type == 'adjustment' and self.adjustment_direction == 'out')
+        )
+
+        lines_to_save = []
+        products_to_save = []
+
         for line in self.lines.select_related('product'):
-            qty = Decimal(str(line.quantity))
-            if self.movement_type == 'receipt':
-                StockQuant.update_quantity(line.product, self.warehouse, qty, 'add')
-            elif self.movement_type == 'delivery':
-                StockQuant.update_quantity(line.product, self.warehouse, qty, 'subtract')
-            elif self.movement_type == 'adjustment':
-                if self.adjustment_direction == 'out':
-                    StockQuant.update_quantity(line.product, self.warehouse, abs(qty), 'subtract')
-                else:  # 'in' or legacy positive qty
-                    StockQuant.update_quantity(line.product, self.warehouse, abs(qty), 'add')
+            qty = abs(Decimal(str(line.quantity)))
+            product = line.product
+            current_cost = Decimal(str(product.cost_price or 0))
+
+            if is_in:
+                # ── Weighted Average Cost recalculation ─────────────────
+                current_qty = Decimal(str(product.get_on_hand_quantity()))
+                line_cost = Decimal(str(line.unit_price)) if line.unit_price else current_cost
+
+                current_value = current_qty * current_cost
+                new_total_qty = current_qty + qty
+                new_total_value = current_value + qty * line_cost
+
+                new_avg = (
+                    (new_total_value / new_total_qty).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+                    if new_total_qty > 0
+                    else line_cost
+                )
+
+                line.cost_price_at_move = new_avg
+                # Update the product's running average cost
+                product.cost_price = new_avg
+                products_to_save.append(product)
+
+                StockQuant.update_quantity(product, self.warehouse, qty, 'add')
+
+            elif is_out:
+                # ── Cost of goods removed = current average ─────────────
+                line.cost_price_at_move = current_cost
+                StockQuant.update_quantity(product, self.warehouse, qty, 'subtract')
+
+            lines_to_save.append(line)
+
+        # Bulk-save lines and products
+        if lines_to_save:
+            StockMovementLine.objects.bulk_update(lines_to_save, ['cost_price_at_move'])
+        for p in products_to_save:
+            p.save(update_fields=['cost_price'])
+
         self.state = 'done'
         self.save()
 
@@ -643,6 +693,17 @@ class StockMovementLine(AbstractBaseModel):
         default=0,
         verbose_name='Preço Unitário',
         help_text='Custo unitário (receção) ou preço de venda (expedição).',
+    )
+    cost_price_at_move = models.DecimalField(
+        max_digits=10,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        verbose_name='Custo Médio no Momento',
+        help_text=(
+            'Custo Médio Ponderado (CMVMC) do produto no instante em que este '
+            'movimento foi validado. Preenchido automaticamente. Imutável após validação.'
+        ),
     )
     uom = models.ForeignKey(
         UoM,

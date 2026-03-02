@@ -6966,7 +6966,134 @@ Atualizar o navbar do inventário com os novos links.
 
 ---
 
-## 6.18 Notas para Fase 7 (Compras) e Fase 8 (Vendas)
+## 6.19 Custo Médio Ponderado — CMVMC ✅
+
+Implementar o Custo Médio Ponderado (Moving Weighted Average Cost) como base de todos os relatórios financeiros de inventário.
+
+- [x] **Campo `cost_price_at_move` em `StockMovementLine`**
+  - [x] `DecimalField(max_digits=10, decimal_places=4, null=True)`
+  - [x] Guarda o CMVMC do produto no exato instante da validação do movimento
+  - [x] Imutável após validação (registo histórico)
+
+- [x] **Lógica em `StockMovement.action_validate()`**
+  - [x] **Entrada (receipt / adjustment-in):**
+    - [x] `new_avg = (on_hand_qty × old_avg + incoming_qty × unit_price) / (on_hand_qty + incoming_qty)`
+    - [x] Atualiza `Product.cost_price` com o novo CMVMC (via `bulk_update`)
+    - [x] Guarda `new_avg` em `line.cost_price_at_move`
+  - [x] **Saída (delivery / adjustment-out):**
+    - [x] `line.cost_price_at_move = product.cost_price` (custo médio corrente)
+    - [x] `Product.cost_price` mantém-se inalterado (a média não muda em saídas)
+  - [x] `bulk_update` em linhas e produtos para eficiência
+
+- [x] **Migração criada e aplicada**
+
+---
+
+## 6.20 Relatórios de Inventário
+
+Lista completa de relatórios a implementar. Todos usam `cost_price_at_move` como base de custo real.
+
+### 6.20.1 Valorização de Stock (Tier 1 — Crítico)
+- [ ] **View:** `inventory_report_valuation`
+- [ ] **URL:** `inventory/reports/valuation/`
+- [ ] **Lógica:**
+  - [ ] Por produto: `StockQuant.quantity × Product.cost_price` (= CMVMC atual)
+  - [ ] Filtros: por armazém, por categoria, por empresa
+  - [ ] Totais: nr. produtos, quantidade total, valor total em €
+- [ ] **Template:** tabela com colunas: Produto | Referência | Categoria | Qt. em Mão | UdM | Custo Médio | Valor Total
+- [ ] **Exportação:** botão CSV/Excel
+
+### 6.20.2 Balancete de Inventário por Período (Tier 1 — Crítico)
+- [ ] **View:** `inventory_report_balance`
+- [ ] **URL:** `inventory/reports/balance/`
+- [ ] **Lógica:**
+  - [ ] Filtro por período (data início / data fim)
+  - [ ] Por produto: Stock Inicial + Entradas (qt. e €) − Saídas (qt. e €) − Sucata (qt. e €) = Stock Final
+  - [ ] Stock inicial = valor em mão antes do período (reconstruído dos movimentos)
+  - [ ] Valor de entradas = `SUM(qty × cost_price_at_move)` para receipts no período
+  - [ ] Valor de saídas = `SUM(qty × cost_price_at_move)` para deliveries no período
+- [ ] **Template:** tabela com saldos de abertura e fecho em unidades e em €
+- [ ] **Exportação:** CSV/Excel/PDF
+
+### 6.20.3 Histórico de Preços de Compra (Tier 1 — Crítico)
+- [ ] **View:** `inventory_report_purchase_prices`
+- [ ] **URL:** `inventory/reports/purchase-prices/`
+- [ ] **Lógica:**
+  - [ ] Filtra `StockMovementLine` onde `movement_type='receipt'` e `state='done'`
+  - [ ] Por produto: lista cronológica de receções com preço, fornecedor, data, referência
+  - [ ] Mostra variação % entre compras consecutivas
+  - [ ] Filtros: por produto, por fornecedor, por período
+- [ ] **Template:** tabela por produto com histórico de preços e gráfico de tendência
+
+### 6.20.4 Relatório de Perdas / Sucata (Tier 1 — Crítico)
+- [ ] **View:** `inventory_report_scrap`
+- [ ] **URL:** `inventory/reports/scrap/`
+- [ ] **Lógica:**
+  - [ ] Quando Sucata for implementada (6.21): lista todos os registos de sucata
+  - [ ] Por linha: produto, quantidade, `cost_price_at_move × qty` = valor destruído, motivo, data, responsável
+  - [ ] Totais por período: valor total de perdas
+  - [ ] Filtros: por período, por motivo, por produto
+- [ ] **Template:** tabela + total de perdas em € + gráfico por motivo
+
+### 6.20.5 Movimentos por Produto (Tier 2 — Operacional)
+- [ ] **View:** `inventory_report_movements`
+- [ ] **URL:** `inventory/reports/movements/`
+- [ ] **Lógica:**
+  - [ ] Seleção de produto + período
+  - [ ] Lista cronológica: data, tipo (IN/OUT/ADJ), referência doc., qt., custo unitário, saldo após
+  - [ ] Saldo calculado acumulativamente (running total)
+- [ ] **Template:** tabela de rastreabilidade completa com saldo corrente
+
+### 6.20.6 Produtos Abaixo do Mínimo — Detalhe (Tier 2 — Operacional)
+- [ ] **View:** `inventory_report_low_stock`
+- [ ] **URL:** `inventory/reports/low-stock/`
+- [ ] **Lógica:**
+  - [ ] Produtos com `min_stock > 0` e `StockQuant.quantity < min_stock`
+  - [ ] Colunas: produto, stock atual, mínimo, diferença, fornecedor preferido (ProductSupplierInfo), último preço de compra
+  - [ ] Botão "Criar Receção" por linha → pre-fill do adjustment_create
+- [ ] **Template:** tabela com ação direta de reabastecimento
+
+### 6.20.7 Stock Sem Movimento (Tier 2 — Operacional)
+- [ ] **View:** `inventory_report_no_movement`
+- [ ] **URL:** `inventory/reports/no-movement/`
+- [ ] **Lógica:**
+  - [ ] Produtos com `StockQuant.quantity > 0` mas sem `StockMovementLine` nos últimos X dias (padrão: 90 dias)
+  - [ ] Filtro por número de dias configurável
+  - [ ] Valor do stock parado = `quantity × cost_price`
+- [ ] **Template:** tabela com valor de capital imobilizado + total
+
+### 6.20.8 Análise ABC (Tier 3 — Analítico)
+- [ ] **View:** `inventory_report_abc`
+- [ ] **URL:** `inventory/reports/abc/`
+- [ ] **Lógica:**
+  - [ ] Calcula consumo total em € por produto no período: `SUM(qty × cost_price_at_move)` para saídas
+  - [ ] Ordena por valor decrescente, calcula % acumulada
+  - [ ] Classe A: 0–80% do valor total; B: 80–95%; C: 95–100%
+  - [ ] Filtros: por período, por categoria
+- [ ] **Template:** tabela + gráfico de Pareto
+
+### 6.20.9 Rotação de Stock (Tier 3 — Analítico)
+- [ ] **View:** `inventory_report_turnover`
+- [ ] **URL:** `inventory/reports/turnover/`
+- [ ] **Lógica:**
+  - [ ] Fórmula: `Rotação = Custo das Saídas no Período / Valor Médio do Stock no Período`
+  - [ ] Dias de stock: `365 / rotação`
+  - [ ] Filtros: por período, por categoria
+- [ ] **Template:** tabela por produto com rotação anualizada e dias de stock
+
+### 6.20.10 Margem Real por Produto (Tier 3 — Analítico)
+- [ ] **View:** `inventory_report_margin`
+- [ ] **URL:** `inventory/reports/margin/`
+- [ ] **Lógica:**
+  - [ ] Para entregas: `margem = (sale_price - cost_price_at_move) / sale_price × 100`
+  - [ ] Compara margem real (baseada em custo médio ponderado real) vs margem teórica (catálogo)
+  - [ ] Agrega por produto no período
+  - [ ] **Nota:** requer integração com Vendas (Fase 8) para ter o `sale_price` real por linha
+- [ ] **Template:** tabela com margem real vs teórica, desvio em %
+
+---
+
+
 
 > **NOTA:** Implementar estas integrações quando chegarmos à Fase 7/8.
 

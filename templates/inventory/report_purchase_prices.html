@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Histórico de Preços de Compra — Inventário{% endblock %}
+
+{% block extra_css %}
+<style>
+.reports-bg { background: linear-gradient(160deg, #0a1120 0%, #0f172a 40%, #0c1a14 100%); min-height: 100vh; }
+.kpi-card { background: linear-gradient(135deg, rgba(219,198,147,0.06) 0%, rgba(219,198,147,0.02) 100%); border: 1px solid rgba(219,198,147,0.18); border-radius: 16px; backdrop-filter: blur(12px); transition: transform 0.2s ease; position: relative; overflow: hidden; }
+.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background: linear-gradient(90deg, transparent, #dbc693, transparent); opacity: 0.6; }
+.kpi-glow { position:absolute; top:-20px; right:-20px; width:80px; height:80px; border-radius:50%; filter: blur(30px); opacity: 0.25; }
+.kpi-number { font-size: 2.2rem; font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
+.chart-card { background: rgba(15,23,42,0.7); border: 1px solid rgba(219,198,147,0.12); border-radius: 20px; backdrop-filter: blur(16px); overflow: hidden; }
+.chart-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:space-between; }
+.chart-title { font-weight: 700; font-size: 0.95rem; color: #e2e8f0; }
+.chart-body { padding: 1.5rem; }
+.section-label { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #dbc693; opacity: 0.7; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px; }
+.section-label::after { content:''; flex:1; height:1px; background: linear-gradient(90deg, rgba(219,198,147,0.2), transparent); }
+.text-gold { background: linear-gradient(135deg, #dbc693 0%, #f5e6c8 50%, #c9a96e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.filter-card { background: rgba(15,23,42,0.6); border: 1px solid rgba(219,198,147,0.1); border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 2rem; }
+.filter-select { background: rgba(30,41,59,0.8); border: 1px solid rgba(219,198,147,0.18); color: #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.875rem; outline: none; min-width: 260px; }
+.filter-select:focus { border-color: #dbc693; box-shadow: 0 0 0 2px rgba(219,198,147,0.2); }
+.btn-gold { background: linear-gradient(135deg, #dbc693, #c9a96e); color: #ffffff; font-weight: 700; font-size: 0.85rem; padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer; transition: opacity 0.2s; }
+.btn-gold:hover { opacity: 0.85; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.data-table thead th { padding: 10px 14px; text-align: left; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; border-bottom: 1px solid rgba(219,198,147,0.1); white-space: nowrap; }
+.data-table tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
+.data-table tbody tr:hover { background: rgba(219,198,147,0.04); }
+.data-table tbody td { padding: 10px 14px; color: #cbd5e1; vertical-align: middle; }
+.var-up { color: #f87171; font-weight: 700; }
+.var-down { color: #4ade80; font-weight: 700; }
+.var-neutral { color: #94a3b8; }
+.product-section { margin-bottom: 2.5rem; }
+.product-title { font-size: 1.1rem; font-weight: 700; color: #e2e8f0; margin-bottom: 1rem; display:flex; align-items:center; gap: 8px; }
+</style>
+{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/inventory_navbar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="reports-bg">
+<div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+    <div class="flex items-center gap-3">
+      <a href="{% url 'inventory:inventory_reports' %}" class="text-slate-500 hover:text-gold transition-colors">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      </a>
+      <div>
+        <h1 class="text-3xl font-extrabold text-gold tracking-tight">Histórico de Preços de Compra</h1>
+        <p class="text-sm text-slate-400 mt-1">Evolução do preço por produto em cada receção</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter -->
+  <form method="get" class="filter-card">
+    <div class="flex flex-wrap items-end gap-4">
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 mb-1 tracking-wide">Produto</label>
+        <select name="product" class="filter-select">
+          <option value="">Todos os produtos</option>
+          {% for p in all_products %}
+          <option value="{{ p.id }}" {% if product_id == p.id|stringformat:"i" %}selected{% endif %}>{{ p.name }}{% if p.sku %} ({{ p.sku }}){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn-gold">Filtrar</button>
+      {% if product_id %}
+      <a href="{% url 'inventory:report_purchase_prices' %}" class="text-xs text-slate-400 hover:text-slate-200 transition-colors py-2">Ver todos</a>
+      {% endif %}
+    </div>
+  </form>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  {% if products_data %}
+    {% for entry in products_data %}
+    <div class="product-section">
+
+      <!-- Product header -->
+      <div class="product-title">
+        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+        {{ entry.product.name }}
+        {% if entry.product.sku %}
+        <span class="text-xs font-mono text-slate-500 font-normal">({{ entry.product.sku }})</span>
+        {% endif %}
+      </div>
+
+      <!-- KPI 3-card row -->
+      <div class="grid grid-cols-3 gap-3 mb-4">
+        <div class="kpi-card p-4">
+          <div class="kpi-glow" style="background:#22c55e;"></div>
+          <p class="text-xs text-slate-400 uppercase tracking-widest mb-2">Preço Mínimo</p>
+          <div class="kpi-number text-emerald-400" style="font-size:1.75rem;">€{{ entry.min_price|floatformat:4 }}</div>
+        </div>
+        <div class="kpi-card p-4">
+          <div class="kpi-glow" style="background:#dbc693;"></div>
+          <p class="text-xs text-slate-400 uppercase tracking-widest mb-2">Preço Médio</p>
+          <div class="kpi-number text-gold" style="font-size:1.75rem;">€{{ entry.avg_price|floatformat:4 }}</div>
+        </div>
+        <div class="kpi-card p-4">
+          <div class="kpi-glow" style="background:#ef4444;"></div>
+          <p class="text-xs text-slate-400 uppercase tracking-widest mb-2">Preço Máximo</p>
+          <div class="kpi-number text-red-400" style="font-size:1.75rem;">€{{ entry.max_price|floatformat:4 }}</div>
+        </div>
+      </div>
+
+      <!-- Chart + Table -->
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+
+        <!-- Chart -->
+        <div class="chart-card lg:col-span-2">
+          <div class="chart-header">
+            <span class="chart-title">Tendência de Preços</span>
+            <span class="text-xs text-slate-500">{{ entry.lines|length }} compra{{ entry.lines|length|pluralize:"s" }}</span>
+          </div>
+          <div class="chart-body">
+            <canvas id="chart_{{ forloop.counter }}" height="160"></canvas>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="chart-card lg:col-span-3">
+          <div class="chart-header">
+            <span class="chart-title">Detalhe das Compras</span>
+          </div>
+          <div class="chart-body overflow-x-auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Referência</th>
+                  <th>Fornecedor</th>
+                  <th class="text-right">Qt</th>
+                  <th class="text-right">Preço Unit.</th>
+                  <th class="text-right">Variação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for line in entry.lines %}
+                <tr>
+                  <td class="text-slate-400 text-xs">{{ line.date|date:"d/m/Y" }}</td>
+                  <td class="text-xs font-mono text-slate-500">{{ line.reference|default:"—" }}</td>
+                  <td class="text-slate-300">{{ line.supplier|default:"—" }}</td>
+                  <td class="text-right font-mono">{{ line.qty|floatformat:2 }}</td>
+                  <td class="text-right font-mono font-bold text-slate-200">€{{ line.price|floatformat:4 }}</td>
+                  <td class="text-right">
+                    {% if line.variation is None %}
+                    <span class="var-neutral text-xs">—</span>
+                    {% elif line.variation > 0 %}
+                    <span class="var-up">▲ {{ line.variation|floatformat:1 }}%</span>
+                    {% elif line.variation < 0 %}
+                    <span class="var-down">▼ {{ line.variation|floatformat:1|slice:"1:" }}%</span>
+                    {% else %}
+                    <span class="var-neutral text-xs">= 0%</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+      <!-- Per-product inline chart -->
+      <script>
+      (function(){
+        var dates  = {{ entry.chart_dates|safe }};
+        var prices = {{ entry.chart_prices|safe }};
+        var ctx = document.getElementById('chart_{{ forloop.counter }}');
+        if (!ctx || !dates.length) return;
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: dates,
+            datasets: [{
+              label: 'Preço Unit.',
+              data: prices,
+              borderColor: '#dbc693',
+              backgroundColor: 'rgba(219,198,147,0.08)',
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: '#dbc693',
+              pointRadius: 4,
+              borderWidth: 2,
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: function(c){ return ' €' + Number(c.parsed.y).toFixed(4); } } }
+            },
+            scales: {
+              x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+              y: { ticks: { color: '#64748b', font: { size: 10 }, callback: function(v){ return '€' + v.toFixed(2); } }, grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: false }
+            }
+          }
+        });
+      })();
+      </script>
+    {% endfor %}
+
+  {% else %}
+  <div class="chart-card">
+    <div class="chart-body text-center py-20 text-slate-500">
+      <svg class="h-14 w-14 mx-auto mb-4 opacity-25" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
+      <p class="font-semibold text-lg">Sem dados de compras</p>
+      <p class="text-sm mt-1">Receções com preço unitário preenchido aparecem aqui</p>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+</div>
+{% endblock %}

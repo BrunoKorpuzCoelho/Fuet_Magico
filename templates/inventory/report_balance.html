@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Balancete por Período — Inventário{% endblock %}
+
+{% block extra_css %}
+<!-- Air Datepicker -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/air-datepicker@3.5.3/air-datepicker.css">
+<style>
+    /* Air Datepicker Dark Theme */
+    .air-datepicker {
+        --adp-background-color: #1f2937;
+        --adp-background-color-hover: #374151;
+        --adp-background-color-active: #dbc693;
+        --adp-color: #d1d5db;
+        --adp-color-secondary: #6b7280;
+        --adp-accent-color: #dbc693;
+        --adp-color-current-date: #dbc693;
+        --adp-color-other-month: #4b5563;
+        --adp-border-color: #374151;
+        --adp-border-color-inner: #374151;
+        --adp-border-radius: 12px;
+        --adp-nav-arrow-color: #9ca3af;
+        --adp-nav-color-secondary: #dbc693;
+        --adp-day-name-color: #9ca3af;
+        --adp-cell-background-color-selected: #dbc693;
+        --adp-cell-background-color-selected-hover: #c9b57e;
+        --adp-cell-background-color-in-range: rgba(219,198,147,0.15);
+        --adp-btn-color: #dbc693;
+        --adp-btn-background-color-hover: #dbc693;
+        border: 1px solid #374151;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
+    .air-datepicker-cell.-selected- { color: #1f2937 !important; font-weight: 600; }
+    .air-datepicker-cell.-current- { color: #dbc693; }
+    .air-datepicker-cell.-current-.-selected- { color: #1f2937 !important; }
+    .air-datepicker-nav--title { color: #f3f4f6; font-weight: 600; }
+    .air-datepicker-nav--action:hover { background: #374151; }
+    .air-datepicker-body--day-name { text-transform: uppercase; font-size: 11px; font-weight: 600; }
+    .air-datepicker--pointer { border-color: #374151; background: #1f2937; }
+.reports-bg { background: linear-gradient(160deg, #0a1120 0%, #0f172a 40%, #0c1a14 100%); min-height: 100vh; }
+.kpi-card { background: linear-gradient(135deg, rgba(219,198,147,0.06) 0%, rgba(219,198,147,0.02) 100%); border: 1px solid rgba(219,198,147,0.18); border-radius: 16px; backdrop-filter: blur(12px); transition: transform 0.2s ease; position: relative; overflow: hidden; }
+.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background: linear-gradient(90deg, transparent, #dbc693, transparent); opacity: 0.6; }
+.kpi-glow { position:absolute; top:-20px; right:-20px; width:80px; height:80px; border-radius:50%; filter: blur(30px); opacity: 0.25; }
+.kpi-number { font-size: 2.4rem; font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
+.chart-card { background: rgba(15,23,42,0.7); border: 1px solid rgba(219,198,147,0.12); border-radius: 20px; backdrop-filter: blur(16px); overflow: hidden; }
+.chart-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:space-between; }
+.chart-title { font-weight: 700; font-size: 0.95rem; color: #e2e8f0; }
+.chart-body { padding: 1.5rem; }
+.section-label { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #dbc693; opacity: 0.7; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px; }
+.section-label::after { content:''; flex:1; height:1px; background: linear-gradient(90deg, rgba(219,198,147,0.2), transparent); }
+.text-gold { background: linear-gradient(135deg, #dbc693 0%, #f5e6c8 50%, #c9a96e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.filter-card { background: rgba(15,23,42,0.6); border: 1px solid rgba(219,198,147,0.1); border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 2rem; }
+.filter-input { background: rgba(30,41,59,0.8); border: 1px solid rgba(219,198,147,0.18); color: #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.875rem; outline: none; }
+.filter-input:focus { border-color: #dbc693; box-shadow: 0 0 0 2px rgba(219,198,147,0.2); }
+.btn-gold { background: linear-gradient(135deg, #dbc693, #c9a96e); color: #ffffff; font-weight: 700; font-size: 0.85rem; padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer; transition: opacity 0.2s; }
+.btn-gold:hover { opacity: 0.85; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.data-table thead th { padding: 10px 12px; text-align: left; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; border-bottom: 1px solid rgba(219,198,147,0.1); white-space: nowrap; }
+.data-table thead th.right { text-align: right; }
+.data-table tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
+.data-table tbody tr:hover { background: rgba(219,198,147,0.04); }
+.data-table tbody td { padding: 9px 12px; color: #cbd5e1; vertical-align: middle; }
+.data-table tbody td.right { text-align: right; }
+.group-header { background: rgba(219,198,147,0.06); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #dbc693; }
+</style>
+{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/inventory_navbar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="reports-bg">
+<div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+    <div class="flex items-center gap-3">
+      <a href="{% url 'inventory:inventory_reports' %}" class="text-slate-500 hover:text-gold transition-colors">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      </a>
+      <div>
+        <h1 class="text-3xl font-extrabold text-gold tracking-tight">Balancete por Período</h1>
+        <p class="text-sm text-slate-400 mt-1">
+          Stock inicial + entradas − saídas = stock final
+          {% if date_from or date_to %}
+          <span class="ml-2 text-indigo-400 font-medium">
+            {% if date_from %}a partir de {{ date_from }}{% endif %}
+            {% if date_from and date_to %} até {% endif %}
+            {% if date_to %}{{ date_to }}{% endif %}
+          </span>
+          {% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" class="filter-card">
+    <div class="flex flex-wrap items-end gap-4">
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 mb-1 tracking-wide">De</label>
+        <input type="text" id="date_from_display" placeholder="dd/mm/aaaa" class="filter-input" autocomplete="off" readonly style="cursor:pointer;min-width:140px;">
+        <input type="hidden" name="date_from" id="date_from_hidden" value="{{ date_from }}">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 mb-1 tracking-wide">Até</label>
+        <input type="text" id="date_to_display" placeholder="dd/mm/aaaa" class="filter-input" autocomplete="off" readonly style="cursor:pointer;min-width:140px;">
+        <input type="hidden" name="date_to" id="date_to_hidden" value="{{ date_to }}">
+      </div>
+      <button type="submit" class="btn-gold">Filtrar</button>
+      {% if date_from or date_to %}
+      <a href="{% url 'inventory:report_balance' %}" class="text-xs text-slate-400 hover:text-slate-200 transition-colors py-2">Limpar filtros</a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- KPIs -->
+  <div class="section-label">Resumo do Período</div>
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#22c55e;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Entradas (Qt)</p>
+      <div class="kpi-number text-emerald-400 mb-1">{{ total_in_qty|floatformat:0|intcomma }}</div>
+      <p class="text-xs text-slate-500">unidades recebidas</p>
+    </div>
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#22c55e;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Entradas (€)</p>
+      <div class="kpi-number text-emerald-400 mb-1">€{{ total_in_val|floatformat:0|intcomma }}</div>
+      <p class="text-xs text-slate-500">valor entrado</p>
+    </div>
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#ef4444;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Saídas (Qt)</p>
+      <div class="kpi-number text-red-400 mb-1">{{ total_out_qty|floatformat:0|intcomma }}</div>
+      <p class="text-xs text-slate-500">unidades saídas</p>
+    </div>
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#ef4444;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Saídas (€)</p>
+      <div class="kpi-number text-red-400 mb-1">€{{ total_out_val|floatformat:0|intcomma }}</div>
+      <p class="text-xs text-slate-500">valor saído</p>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="section-label">Detalhe por Produto</div>
+  <div class="chart-card">
+    <div class="chart-header">
+      <span class="chart-title">Balancete — {{ rows|length }} produto{{ rows|length|pluralize:"s" }}</span>
+      {% if date_from and date_to %}
+      <span class="text-xs text-slate-500">{{ date_from }} → {{ date_to }}</span>
+      {% endif %}
+    </div>
+    <div class="chart-body overflow-x-auto">
+      {% if rows %}
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th rowspan="2">Produto</th>
+            <th rowspan="2">Ref.</th>
+            <th class="right" colspan="2" style="text-align:center;border-left:1px solid rgba(255,255,255,0.08);">Stock Inicial</th>
+            <th class="right" colspan="2" style="text-align:center;border-left:1px solid rgba(34,197,94,0.2);color:#4ade80;">Entradas</th>
+            <th class="right" colspan="2" style="text-align:center;border-left:1px solid rgba(239,68,68,0.2);color:#f87171;">Saídas</th>
+            <th class="right" colspan="2" style="text-align:center;border-left:1px solid rgba(219,198,147,0.2);color:#dbc693;">Stock Final</th>
+          </tr>
+          <tr>
+            <th class="right" style="border-left:1px solid rgba(255,255,255,0.08);">Qt</th>
+            <th class="right">€</th>
+            <th class="right" style="border-left:1px solid rgba(34,197,94,0.2);">Qt</th>
+            <th class="right">€</th>
+            <th class="right" style="border-left:1px solid rgba(239,68,68,0.2);">Qt</th>
+            <th class="right">€</th>
+            <th class="right" style="border-left:1px solid rgba(219,198,147,0.2);">Qt</th>
+            <th class="right">€</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td class="font-medium text-slate-200">{{ row.product.name }}</td>
+              <td class="text-slate-500 font-mono text-xs">{{ row.product.sku|default:"—" }}</td>
+            <!-- open -->
+            <td class="right font-mono text-slate-400" style="border-left:1px solid rgba(255,255,255,0.06);">{{ row.open_qty|floatformat:2 }}</td>
+            <td class="right font-mono text-slate-400">€{{ row.open_val|floatformat:2 }}</td>
+            <!-- in -->
+            <td class="right font-mono text-emerald-400" style="border-left:1px solid rgba(34,197,94,0.1);">
+              {% if row.in_qty %}+{{ row.in_qty|floatformat:2 }}{% else %}—{% endif %}
+            </td>
+            <td class="right font-mono text-emerald-400">
+              {% if row.in_val %}€{{ row.in_val|floatformat:2 }}{% else %}—{% endif %}
+            </td>
+            <!-- out -->
+            <td class="right font-mono text-red-400" style="border-left:1px solid rgba(239,68,68,0.1);">
+              {% if row.out_qty %}-{{ row.out_qty|floatformat:2 }}{% else %}—{% endif %}
+            </td>
+            <td class="right font-mono text-red-400">
+              {% if row.out_val %}€{{ row.out_val|floatformat:2 }}{% else %}—{% endif %}
+            </td>
+            <!-- close -->
+            <td class="right font-mono font-bold {% if row.close_qty > 0 %}text-gold{% elif row.close_qty < 0 %}text-red-400{% else %}text-slate-400{% endif %}" style="border-left:1px solid rgba(219,198,147,0.1);">
+              {{ row.close_qty|floatformat:2 }}
+            </td>
+            <td class="right font-mono font-bold {% if row.close_val > 0 %}text-gold{% elif row.close_val < 0 %}text-red-400{% else %}text-slate-400{% endif %}">
+              €{{ row.close_val|floatformat:2 }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr style="border-top:2px solid rgba(219,198,147,0.2);">
+            <td colspan="2" class="font-bold text-slate-300 py-3">Total</td>
+            <td colspan="2" class="text-right py-3 text-slate-400 text-xs">—</td>
+            <td class="right font-bold text-emerald-400 py-3">+{{ total_in_qty|floatformat:2|intcomma }}</td>
+            <td class="right font-bold text-emerald-400 py-3">€{{ total_in_val|floatformat:2|intcomma }}</td>
+            <td class="right font-bold text-red-400 py-3">-{{ total_out_qty|floatformat:2|intcomma }}</td>
+            <td class="right font-bold text-red-400 py-3">€{{ total_out_val|floatformat:2|intcomma }}</td>
+            <td colspan="2" class="text-right py-3 text-slate-400 text-xs">—</td>
+          </tr>
+        </tfoot>
+      </table>
+      {% else %}
+      <div class="text-center py-16 text-slate-500">
+        <svg class="h-12 w-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <p class="font-medium">Sem movimentos no período selecionado</p>
+        <p class="text-xs mt-1">Ajuste as datas e tente novamente</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+</div>
+
+{% block extra_js %}
+<script>
+if(typeof module==='undefined'){window.module={exports:{}};}
+if(typeof exports==='undefined'){window.exports=module.exports;}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/air-datepicker@3.5.3/air-datepicker.js"></script>
+<script>
+window.AirDatepicker = module.exports.default || module.exports.AirDatepicker || module.exports;
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var ptLocale = {
+        days: ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'],
+        daysShort: ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'],
+        daysMin: ['Do','Se','Te','Qu','Qi','Sx','Sá'],
+        months: ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'],
+        monthsShort: ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'],
+        today: 'Hoje', clear: 'Limpar', dateFormat: 'dd/MM/yyyy', timeFormat: 'HH:mm', firstDay: 1
+    };
+    function toDisplay(date) {
+        return String(date.getDate()).padStart(2,'0') + '/' + String(date.getMonth()+1).padStart(2,'0') + '/' + date.getFullYear();
+    }
+    function toISO(date) {
+        return date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0');
+    }
+    function initPicker(displayId, hiddenId) {
+        var disp = document.getElementById(displayId);
+        var hid  = document.getElementById(hiddenId);
+        if (!disp || !hid) return;
+        if (hid.value) {
+            var p = hid.value.split('-');
+            if (p.length === 3) disp.value = toDisplay(new Date(+p[0], +p[1]-1, +p[2]));
+        }
+        new AirDatepicker(disp, {
+            locale: ptLocale,
+            onSelect: function(o) {
+                if (o.date) { disp.value = toDisplay(o.date); hid.value = toISO(o.date); }
+                else         { disp.value = ''; hid.value = ''; }
+            }
+        });
+    }
+    initPicker('date_from_display', 'date_from_hidden');
+    initPicker('date_to_display',   'date_to_hidden');
+});
+</script>
+{% endblock %}
+{% endblock %}

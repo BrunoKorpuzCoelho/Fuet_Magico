@@ -80,4 +80,11 @@ urlpatterns = [
 
     # Tools
     path('tools/run-low-stock-check/', views.run_low_stock_check, name='run_low_stock_check'),
+
+    # Reports
+    path('reports/', views.inventory_reports, name='inventory_reports'),
+    path('reports/valuation/', views.report_valuation, name='report_valuation'),
+    path('reports/balance/', views.report_balance, name='report_balance'),
+    path('reports/purchase-prices/', views.report_purchase_prices, name='report_purchase_prices'),
+    path('reports/scrap/', views.report_scrap, name='report_scrap'),
 ]
