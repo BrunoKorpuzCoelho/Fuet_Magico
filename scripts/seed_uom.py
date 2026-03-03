@@ -48,54 +48,59 @@ def get_or_create_uom(name, symbol, category, uom_type, factor, rounding=Decimal
     return uom
 
 
-# ── Categories ──────────────────────────────────────────────────────
+def run():
+    # ── Categories ──────────────────────────────────────────────────────
 
-print('\n=== Seed: Unidades de Medida ===\n')
+    print('\n=== Seed: Unidades de Medida ===\n')
 
-cat_peso    = get_or_create_category('Peso')
-cat_volume  = get_or_create_category('Volume')
-cat_unidade = get_or_create_category('Unidade')
-cat_tempo   = get_or_create_category('Tempo')
+    cat_peso    = get_or_create_category('Peso')
+    cat_volume  = get_or_create_category('Volume')
+    cat_unidade = get_or_create_category('Unidade')
+    cat_tempo   = get_or_create_category('Tempo')
 
-# ── Peso (referência = Grama) ───────────────────────────────────────
+    # ── Peso (referência = Grama) ───────────────────────────────────────
 
-print('\n  Peso:')
-get_or_create_uom('Grama',      'g',   cat_peso, 'reference', 1)
-get_or_create_uom('Quilograma', 'kg',  cat_peso, 'bigger',    1000)
-get_or_create_uom('Miligrama',  'mg',  cat_peso, 'smaller',   Decimal('0.001'), rounding=Decimal('0.001'))
-get_or_create_uom('Tonelada',   't',   cat_peso, 'bigger',    1000000)
-get_or_create_uom('Libra',      'lb',  cat_peso, 'bigger',    Decimal('453.592'))
-get_or_create_uom('Onça',       'oz',  cat_peso, 'bigger',    Decimal('28.3495'))
+    print('\n  Peso:')
+    get_or_create_uom('Grama',      'g',   cat_peso, 'reference', 1)
+    get_or_create_uom('Quilograma', 'kg',  cat_peso, 'bigger',    1000)
+    get_or_create_uom('Miligrama',  'mg',  cat_peso, 'smaller',   Decimal('0.001'), rounding=Decimal('0.001'))
+    get_or_create_uom('Tonelada',   't',   cat_peso, 'bigger',    1000000)
+    get_or_create_uom('Libra',      'lb',  cat_peso, 'bigger',    Decimal('453.592'))
+    get_or_create_uom('Onça',       'oz',  cat_peso, 'bigger',    Decimal('28.3495'))
 
-# ── Volume (referência = Mililitro) ─────────────────────────────────
+    # ── Volume (referência = Mililitro) ─────────────────────────────────
 
-print('\n  Volume:')
-get_or_create_uom('Mililitro',  'mL',  cat_volume, 'reference', 1)
-get_or_create_uom('Litro',      'L',   cat_volume, 'bigger',    1000)
-get_or_create_uom('Decilitro',  'dL',  cat_volume, 'bigger',    100)
-get_or_create_uom('Centilitro', 'cL',  cat_volume, 'bigger',    10)
-get_or_create_uom('Galão',      'gal', cat_volume, 'bigger',    Decimal('3785.41'))
+    print('\n  Volume:')
+    get_or_create_uom('Mililitro',  'mL',  cat_volume, 'reference', 1)
+    get_or_create_uom('Litro',      'L',   cat_volume, 'bigger',    1000)
+    get_or_create_uom('Decilitro',  'dL',  cat_volume, 'bigger',    100)
+    get_or_create_uom('Centilitro', 'cL',  cat_volume, 'bigger',    10)
+    get_or_create_uom('Galão',      'gal', cat_volume, 'bigger',    Decimal('3785.41'))
 
-# ── Unidade (referência = Unidade) ──────────────────────────────────
+    # ── Unidade (referência = Unidade) ──────────────────────────────────
 
-print('\n  Unidade:')
-get_or_create_uom('Unidade',  'un',  cat_unidade, 'reference', 1, rounding=Decimal('1'))
-get_or_create_uom('Dúzia',    'dz',  cat_unidade, 'bigger',    12, rounding=Decimal('1'))
-get_or_create_uom('Caixa',    'cx',  cat_unidade, 'bigger',    1, rounding=Decimal('1'))
-get_or_create_uom('Pacote',   'pct', cat_unidade, 'bigger',    1, rounding=Decimal('1'))
-get_or_create_uom('Par',      'par', cat_unidade, 'bigger',    2, rounding=Decimal('1'))
-get_or_create_uom('Centena',  'cen', cat_unidade, 'bigger',    100, rounding=Decimal('1'))
+    print('\n  Unidade:')
+    get_or_create_uom('Unidade',  'un',  cat_unidade, 'reference', 1, rounding=Decimal('1'))
+    get_or_create_uom('Dúzia',    'dz',  cat_unidade, 'bigger',    12, rounding=Decimal('1'))
+    get_or_create_uom('Caixa',    'cx',  cat_unidade, 'bigger',    1, rounding=Decimal('1'))
+    get_or_create_uom('Pacote',   'pct', cat_unidade, 'bigger',    1, rounding=Decimal('1'))
+    get_or_create_uom('Par',      'par', cat_unidade, 'bigger',    2, rounding=Decimal('1'))
+    get_or_create_uom('Centena',  'cen', cat_unidade, 'bigger',    100, rounding=Decimal('1'))
 
-# ── Tempo (referência = Minuto) ─────────────────────────────────────
+    # ── Tempo (referência = Minuto) ─────────────────────────────────────
 
-print('\n  Tempo:')
-get_or_create_uom('Minuto',   'min', cat_tempo, 'reference', 1, rounding=Decimal('1'))
-get_or_create_uom('Hora',     'h',   cat_tempo, 'bigger',    60, rounding=Decimal('0.01'))
-get_or_create_uom('Segundo',  's',   cat_tempo, 'smaller',   Decimal('0.016667'), rounding=Decimal('1'))
-get_or_create_uom('Dia',      'd',   cat_tempo, 'bigger',    1440, rounding=Decimal('0.01'))
+    print('\n  Tempo:')
+    get_or_create_uom('Minuto',   'min', cat_tempo, 'reference', 1, rounding=Decimal('1'))
+    get_or_create_uom('Hora',     'h',   cat_tempo, 'bigger',    60, rounding=Decimal('0.01'))
+    get_or_create_uom('Segundo',  's',   cat_tempo, 'smaller',   Decimal('0.016667'), rounding=Decimal('1'))
+    get_or_create_uom('Dia',      'd',   cat_tempo, 'bigger',    1440, rounding=Decimal('0.01'))
 
-# ── Summary ─────────────────────────────────────────────────────────
+    # ── Summary ─────────────────────────────────────────────────────────
 
-total_cats = UoMCategory.objects.filter(is_active=True, owner_company__isnull=True).count()
-total_uoms = UoM.objects.filter(is_active=True, owner_company__isnull=True).count()
-print(f'\n✅ Seed concluído: {total_cats} categorias UdM, {total_uoms} unidades de medida\n')
+    total_cats = UoMCategory.objects.filter(is_active=True, owner_company__isnull=True).count()
+    total_uoms = UoM.objects.filter(is_active=True, owner_company__isnull=True).count()
+    print(f'\n✅ Seed concluído: {total_cats} categorias UdM, {total_uoms} unidades de medida\n')
+
+
+if __name__ == '__main__':
+    run()

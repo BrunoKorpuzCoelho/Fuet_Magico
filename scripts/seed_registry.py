@@ -128,6 +128,15 @@ SEEDS: list[SeedEntry] = [
         description='Cria o armazém "Armazém Principal" (code=WH) se não existir.',
     ),
 
+    SeedEntry(
+        key='uom',
+        name='Unidades de Medida',
+        category=SeedCategory.ESSENTIAL,
+        order=85,
+        runner='scripts.seed_uom',
+        description='Cria categorias e unidades de medida globais (kg, g, L, un, etc.).',
+    ),
+
     # ╔══════════════════════════════════════════════════════════════════╗
     # ║  DEMO — Dados de teste / demonstração                         ║
     # ╚══════════════════════════════════════════════════════════════════╝
@@ -172,6 +181,39 @@ SEEDS: list[SeedEntry] = [
         is_management_command=True,
         description='Cria 12 notificações fake para o utilizador cubix.',
         dependencies=['default_users'],
+    ),
+
+    SeedEntry(
+        key='demo_product_categories',
+        name='Categorias de Produto (Demo)',
+        category=SeedCategory.DEMO,
+        order=135,
+        runner='scripts.seed_product_categories',
+        description='Cria hierarquia de categorias de produto para pastelaria/padaria.',
+        dependencies=['demo_companies'],
+        destructive=True,
+    ),
+
+    SeedEntry(
+        key='demo_products',
+        name='Produtos (Demo)',
+        category=SeedCategory.DEMO,
+        order=140,
+        runner='scripts.seed_products',
+        description='Cria ~1000 produtos realistas de pastelaria com preços, UdMs e referências.',
+        dependencies=['demo_product_categories', 'uom'],
+        destructive=True,
+    ),
+
+    SeedEntry(
+        key='demo_inventory',
+        name='Movimentos de Stock (Demo)',
+        category=SeedCategory.DEMO,
+        order=150,
+        runner='scripts.seed_inventory_movements',
+        description='Gera 24 meses de entradas, saídas e ajustes de stock validados.',
+        dependencies=['demo_products', 'default_warehouse'],
+        destructive=True,
     ),
 ]
 
