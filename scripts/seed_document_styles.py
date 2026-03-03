@@ -7,9 +7,6 @@ Uso:
     python manage.py shell -c "exec(open('scripts/seed_document_styles.py', encoding='utf-8').read())"
 """
 
-import sys, io
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-
 from apps.documents.models import LayoutStyle, TableStyle
 
 

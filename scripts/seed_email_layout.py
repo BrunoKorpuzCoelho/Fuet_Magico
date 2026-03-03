@@ -8,8 +8,7 @@ Uso:
     python manage.py shell -c "exec(open('scripts/seed_email_layout.py', encoding='utf-8').read())"
 """
 
-import sys, io, os
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+import os
 
 from django.conf import settings
 from apps.core.models import EmailLayout

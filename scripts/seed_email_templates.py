@@ -11,9 +11,6 @@ Uso:
     python manage.py shell -c "exec(open('scripts/seed_email_templates.py', encoding='utf-8').read())"
 """
 
-import sys, io
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-
 from apps.core.models import EmailTemplate
 
 print('A criar templates globais (owner_company=NULL — disponíveis a todas as empresas)...')
