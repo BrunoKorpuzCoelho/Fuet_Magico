@@ -78,7 +78,7 @@ def run():
     products = list(
         Product.objects
         .filter(owner_company=company, product_type='storable', is_active=True)
-        .order_by('internal_reference')[:40]
+        .order_by('internal_reference')
     )
     if not products:
         raise RuntimeError(
@@ -86,13 +86,16 @@ def run():
             '   Corre primeiro: python manage.py seed --only demo_products'
         )
 
+    # Subset para movimentos mensais (não é preciso usar todos os 700+)
+    products_subset = products[:60]
+
     suppliers  = list(Contact.objects.filter(contact_category='company').order_by('?')[:8])
     customers  = list(Contact.objects.filter(contact_category='person').order_by('?')[:15])
     admin_user = CustomUser.objects.filter(is_staff=True).first()
 
     print(f'\n  Empresa : {company.name}')
     print(f'  Armazém : {warehouse.name}')
-    print(f'  Produtos: {len(products)} storable')
+    print(f'  Produtos: {len(products)} storable ({len(products_subset)} usados nos movimentos mensais)')
     print(f'  Fornec. : {len(suppliers)} | Clientes: {len(customers)}')
 
     # ── Limpar movimentos existentes ──────────────────────────────────
@@ -105,6 +108,47 @@ def run():
         warehouse=warehouse,
         product__owner_company=company,
     ).delete()
+
+    # ── STOCK INICIAL — receção de abertura para TODOS os produtos ────
+    BATCH_SIZE = 50  # linhas por movimento (evitar documentos gigantes)
+    print(f'\n{"=" * 60}')
+    print(f'📦 STOCK INICIAL — {len(products)} produtos em lotes de {BATCH_SIZE}')
+    print(f'{"=" * 60}')
+
+    opening_date = _date(MONTHS + 1, day=1)  # 1 mês antes do início do histórico
+    total_opening = 0
+
+    for batch_start in range(0, len(products), BATCH_SIZE):
+        batch = products[batch_start:batch_start + BATCH_SIZE]
+        batch_num = batch_start // BATCH_SIZE + 1
+
+        opening = StockMovement.objects.create(
+            movement_type='receipt',
+            warehouse=warehouse,
+            partner=random.choice(suppliers) if suppliers else None,
+            state='draft',
+            date=opening_date,
+            origin=f'ABERTURA-{batch_num:02d}',
+            notes=f'Stock inicial de abertura (lote {batch_num}).',
+            responsible=admin_user,
+            owner_company=company,
+        )
+        for product in batch:
+            # Stock inicial realista: 50–300 unidades por produto
+            qty        = Decimal(str(round(random.uniform(50, 300), 2)))
+            unit_price = product.cost_price or Decimal('1.00')
+            StockMovementLine.objects.create(
+                stock_movement=opening,
+                product=product,
+                quantity=qty,
+                unit_price=unit_price,
+                uom=product.uom,
+                tax_rate=product.tax_rate,
+            )
+        opening.action_validate()
+        total_opening += len(batch)
+
+    print(f'  ✓ Stock inicial criado para {total_opening} produtos ({batch_num} receção/ões de abertura)')
 
     # ── Gerar movimentos mês a mês (mais antigo → mais recente) ──────
     print(f'\n{"=" * 60}')
@@ -129,7 +173,7 @@ def run():
             responsible=admin_user,
             owner_company=company,
         )
-        receipt_products = random.sample(products, min(RECEIPT_LINES, len(products)))
+        receipt_products = random.sample(products_subset, min(RECEIPT_LINES, len(products_subset)))
         for product in receipt_products:
             qty         = Decimal(str(round(random.uniform(80, 500), 2)))
             unit_price  = (product.cost_price * Decimal(str(round(random.uniform(0.90, 1.08), 4)))).quantize(Decimal('0.01'))
@@ -157,7 +201,7 @@ def run():
                 responsible=admin_user,
                 owner_company=company,
             )
-            deliv_products = random.sample(products, min(DELIVERY_LINES, len(products)))
+            deliv_products = random.sample(products_subset, min(DELIVERY_LINES, len(products_subset)))
             for product in deliv_products:
                 qty        = Decimal(str(round(random.uniform(5, 25), 2)))
                 unit_price = product.sale_price
@@ -188,7 +232,7 @@ def run():
                 responsible=admin_user,
                 owner_company=company,
             )
-            adj_products = random.sample(products, min(ADJ_LINES, len(products)))
+            adj_products = random.sample(products_subset, min(ADJ_LINES, len(products_subset)))
             for product in adj_products:
                 qty        = Decimal(str(round(random.uniform(2, 18), 2)))
                 unit_price = product.cost_price
