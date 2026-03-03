@@ -7,41 +7,57 @@ Uso:
     python manage.py shell -c "exec(open('scripts/seed_activity_chains.py', encoding='utf-8').read())"
 """
 
-import sys, io
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-
 from apps.core.models import ActivityChain, ActivityChainStep, ScheduledActivity
 
-# ─── Mapa de UUIDs dos blueprints ────────────────────────────────────────────
-BP = {
+# ─── Mapa de nomes dos blueprints (lookup em runtime) ────────────────────────
+# Os UUIDs são gerados automaticamente, por isso usamos o nome como chave estável.
+BP_NAMES = {
     # Documents
-    "fatura":           "04b31967-be65-4f89-a812-5f08f843549c",
-    "recolher_docs":    "1226bf69-de38-4a37-8573-4ba4e68bab99",
-    "upload_cert":      "becff0b5-93d7-41bc-be96-2630796a6dff",
+    "fatura":           "Processar Fatura",
+    "recolher_docs":    "Recolher Documentos",
+    "upload_cert":      "Upload Certificação",
     # Email
-    "email_agradec":    "4f491102-7a8f-4bd3-9cfb-7608c1d4b9df",
-    "email_boasvindas": "53c9982b-2d40-4a3a-b91b-fe94c89bffae",
-    "email_followup":   "26743d37-6262-4f67-9522-cd24ef7464aa",
-    "email_proposta":   "bdc06368-8e98-4ad5-8cb4-7d338dbe52cc",
+    "email_agradec":    "Email de Agradecimento",
+    "email_boasvindas": "Email de Boas-vindas",
+    "email_followup":   "Email de Follow-up",
+    "email_proposta":   "Enviar Proposta por Email",
     # Phone Call
-    "callback":         "ef0850e8-efa8-40d1-8a02-61163c4c1fae",
-    "ligacao_followup": "399f6cad-acc5-441a-9b84-142aef1088f7",
-    "primeira_ligacao": "58acd619-ab13-476f-92c1-d3b2d62364b1",
-    "retry":            "7489f944-e80d-49cb-a4af-9639f4c046ba",
+    "callback":         "Callback - Cliente Pediu para Ligar",
+    "ligacao_followup": "Ligação de Follow-up",
+    "primeira_ligacao": "Primeira Ligação - Contacto Inicial",
+    "retry":            "Retry - Não Atendeu",
     # Signature
-    "assinar_acordo":   "7a7d38b7-a8ad-40f9-a54d-3509ad8b70b8",
-    "assinar_contrato": "a4ed927f-32de-4c89-8a50-571c357e32b7",
-    "assinar_nda":      "70b66ce5-2a12-4f9c-ba5f-bdacc1a21009",
+    "assinar_acordo":   "Assinatura de Acordo de Serviço",
+    "assinar_contrato": "Assinatura de Contrato",
+    "assinar_nda":      "Assinatura de NDA",
     # To-Do
-    "atualizar_crm":    "b66e1bd2-49e1-47c9-aeba-7a6ac2fbcc94",
-    "enviar_contrato":  "aa01a97e-37cc-4963-8509-4c11dffe22d7",
-    "pesquisar_cli":    "70d413c3-0b5f-4892-8c9a-b315bc95df6a",
-    "preparar_prop":    "9d8f8818-c741-46a4-916a-c6cd687ac9bd",
+    "atualizar_crm":    "Atualizar CRM",
+    "enviar_contrato":  "Enviar Contrato",
+    "pesquisar_cli":    "Pesquisar Cliente",
+    "preparar_prop":    "Preparar Proposta",
     # WhatsApp
-    "wa_followup":      "bc0071b1-4cd5-4e80-a462-bfe10e99706d",
-    "wa_lembrete":      "3c10e011-4edf-49ab-aae8-6bc4a75def17",
-    "wa_docs":          "2803cfd5-e445-4dab-a9d1-b6e878b71709",
+    "wa_followup":      "Follow-up via WhatsApp",
+    "wa_lembrete":      "Lembrete de Reunião - WhatsApp",
+    "wa_docs":          "Solicitar Documentos - WhatsApp",
 }
+
+
+def _build_bp():
+    """Resolve os nomes de blueprints para UUIDs a partir da base de dados."""
+    bp = {}
+    missing = []
+    for key, name in BP_NAMES.items():
+        obj = ScheduledActivity.objects.filter(name=name).first()
+        if obj:
+            bp[key] = obj.id
+        else:
+            missing.append(name)
+    if missing:
+        raise ValueError(
+            f"Blueprint(s) não encontrado(s) na BD: {missing}\n"
+            "Corre primeiro: python manage.py setup_activity_templates"
+        )
+    return bp
 
 # Helpers de conversão (delay_days guarda minutos internamente)
 def dias(n):    return n * 1440
@@ -160,6 +176,7 @@ CHAINS = [
 # ─── Execução ─────────────────────────────────────────────────────────────────
 
 def run():
+    BP = _build_bp()
     created = 0
     updated = 0
 
