@@ -198,23 +198,23 @@
                                 <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">PESQUISAR POR CAMPO:</p>
                                 <a href="#" @click.prevent="document.getElementById('searchField').value='display_name'; document.getElementById('searchForm').submit();"
                                    class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                                    Search <strong>display_name</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                    Pesquisar <strong>Nome de Exibição</strong>: <span class="text-primary" x-text="searchQuery || '...'"></span>
                                 </a>
                                 <a href="#" @click.prevent="document.getElementById('searchField').value='name'; document.getElementById('searchForm').submit();"
                                    class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                                    Search <strong>name</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                    Pesquisar <strong>Nome</strong>: <span class="text-primary" x-text="searchQuery || '...'"></span>
                                 </a>
                                 <a href="#" @click.prevent="document.getElementById('searchField').value='body'; document.getElementById('searchForm').submit();"
                                    class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                                    Search <strong>body</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                    Pesquisar <strong>Corpo</strong>: <span class="text-primary" x-text="searchQuery || '...'"></span>
                                 </a>
                                 <a href="#" @click.prevent="document.getElementById('searchField').value='footer'; document.getElementById('searchForm').submit();"
                                    class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                                    Search <strong>footer</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                    Pesquisar <strong>Rodapé</strong>: <span class="text-primary" x-text="searchQuery || '...'"></span>
                                 </a>
                                 <a href="#" @click.prevent="document.getElementById('searchField').value='language'; document.getElementById('searchForm').submit();"
                                    class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                                    Search <strong>language</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                    Pesquisar <strong>Idioma</strong>: <span class="text-primary" x-text="searchQuery || '...'"></span>
                                 </a>
                             </div>
                         </div>
@@ -352,11 +352,11 @@
                                 {% endfor %}
                                 <div class="my-2 border-t border-gray-200 dark:border-gray-700"></div>
                                 <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-2">PESQUISAR POR CAMPO:</p>
-                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='display_name'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">Search <strong>display_name</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span></a>
-                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='name'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">Search <strong>name</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span></a>
-                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='body'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">Search <strong>body</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span></a>
-                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='footer'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">Search <strong>footer</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span></a>
-                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='language'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">Search <strong>language</strong> for: <span class="text-primary" x-text="searchQuery || '...'"></span></a>
+                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='display_name'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">Pesquisar <strong>Nome de Exibição</strong>: <span class="text-primary" x-text="searchQuery || '...'"></span></a>
+                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='name'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">Pesquisar <strong>Nome</strong>: <span class="text-primary" x-text="searchQuery || '...'"></span></a>
+                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='body'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">Pesquisar <strong>Corpo</strong>: <span class="text-primary" x-text="searchQuery || '...'"></span></a>
+                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='footer'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">Pesquisar <strong>Rodapé</strong>: <span class="text-primary" x-text="searchQuery || '...'"></span></a>
+                                <a href="#" @click.prevent="document.getElementById('searchFieldMobile').value='language'; document.getElementById('searchFormMobile').submit();" class="block px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">Pesquisar <strong>Idioma</strong>: <span class="text-primary" x-text="searchQuery || '...'"></span></a>
                             </div>
                         </div>
                     </form>

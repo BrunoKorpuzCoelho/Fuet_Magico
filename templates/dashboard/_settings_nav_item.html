@@ -1,10 +1,17 @@
 {% comment %}
-Variables: slug, label, icon
+Variables: slug, label, icon, disabled
 {% endcomment %}
+{% if disabled %}
+<button type="button"
+        disabled
+        title="Em breve"
+        class="flex items-center gap-3 w-full px-3 py-2 rounded-r-lg text-sm font-medium border-l-2 border-transparent text-gray-600 opacity-50 cursor-not-allowed">
+{% else %}
 <button type="button"
         @click="setSection('{{ slug }}')"
         :class="activeSection === '{{ slug }}' ? 'bg-primary/10 text-primary border-l-2 border-primary' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50 border-l-2 border-transparent'"
         class="flex items-center gap-3 w-full px-3 py-2 rounded-r-lg text-sm font-medium transition-all duration-150 text-left">
+{% endif %}
 
     <!-- Icon -->
     <span class="flex-shrink-0 w-5 h-5 flex items-center justify-center">

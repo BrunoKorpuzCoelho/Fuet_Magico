@@ -142,7 +142,7 @@ class WarehouseForm(forms.ModelForm):
 class StockMovementForm(forms.ModelForm):
     class Meta:
         model = StockMovement
-        fields = ['movement_type', 'adjustment_direction', 'warehouse', 'partner', 'date', 'origin', 'notes']
+        fields = ['movement_type', 'adjustment_direction', 'scrap_reason', 'warehouse', 'partner', 'date', 'origin', 'notes']
 
     def __init__(self, *args, company=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -178,10 +178,13 @@ class StockMovementForm(forms.ModelForm):
         self.fields['origin'].required = False
         self.fields['notes'].required = False
         self.fields['adjustment_direction'].required = False  # validated in clean()
+        self.fields['scrap_reason'].required = False  # validated in clean()
 
     def clean(self):
         cleaned_data = super().clean()
         movement_type = self.data.get('movement_type') or cleaned_data.get('movement_type', '')
         if movement_type == 'adjustment' and not cleaned_data.get('adjustment_direction'):
             self.add_error('adjustment_direction', 'Selecione a direção do ajuste (Entrada ou Saída).')
+        if movement_type == 'scrap' and not cleaned_data.get('scrap_reason'):
+            self.add_error('scrap_reason', 'Selecione o motivo da sucata.')
         return cleaned_data

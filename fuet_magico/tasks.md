@@ -22,7 +22,7 @@
 - **Fase 3:** 531/531 tarefas (100%) - Backend - Estrutura Base Django ✅ COMPLETA!
 - **Fase 4:** 297/499 tarefas (60%) - App: Contactos 🔄 parcial
 - **Fase 5:** 659/949 tarefas (69%) - App: CRM (Customer Relationship Management) 🔄 parcial
-- **Fase 6:** ~285/~650 tarefas (~44%) - App: Inventário (Produtos, Stock, Armazéns, Movimentos) 🔄 parcial
+- **Fase 6:** ~340/~680 tarefas (~50%) - App: Inventário (Produtos, Stock, Armazéns, Movimentos) 🔄 parcial
 - **Fase 7:** 0/152 tarefas (0%) - App: Compras
 - **Fase 8:** 0/247 tarefas (0%) - App: Vendas
 - **Fase 9:** 0/94 tarefas (0%) - App: Financeiro
@@ -6519,7 +6519,7 @@ Campos e métodos no modelo Product para alimentar smart buttons e tabs.
 
 ---
 
-## 6.10 Views de Movimentos de Stock
+## 6.10 Views de Movimentos de Stock ✅
 
 Criar views para listar e gerir movimentos de stock. Vista principal = lista com tabs por tipo.
 
@@ -6543,29 +6543,27 @@ Criar views para listar e gerir movimentos de stock. Vista principal = lista com
     - [x] Total por linha e total geral (calculados em real-time)
   - [x] Botões: "Guardar Rascunho" e "Validar" (guardar + validar de uma vez)
 
-- [x] **StockMovementEditView (editar rascunho)**
-  - [x] Apenas se estado = draft
-  - [x] Mesmo form que create, pré-preenchido
-  - [x] Botões: "Guardar", "Validar", "Cancelar"
+- [x] **StockMovementEditView (editar rascunho) + DetailView integrada**
+  - [x] Única view `movement_edit` serve ambos os propósitos
+  - [x] `state == 'draft'` → form editável, botões Guardar/Validar/Cancelar
+  - [x] `state == 'done'` → todos os campos `disabled`, badge "Validado", sem botões de ação
+  - [x] `state == 'cancelled'` → campos `disabled`, badge "Cancelado"
+  - [x] Clique na linha em qualquer lista aponta para `movement_edit` — funciona para todos os estados
 
-- [ ] **StockMovementDetailView (ver movimento validado)**
-  - [ ] Mostrar cabeçalho e linhas (read-only se done)
-  - [ ] Informação: referência, tipo, parceiro, data, valor total
-  - [ ] Tabela de linhas: produto, quantidade, preço, total linha
-  - [ ] Se draft: botões "Editar", "Validar", "Cancelar"
-  - [ ] Se done: apenas visualização + link para parceiro
+- ❌ **StockMovementDetailView (vista separada)** — **Obsoleto**
+  - ❌ `movement_edit` já serve como detalhe read-only para movimentos done/cancelled
+  - ❌ `stock_movement_detail.html` não é necessário — `stock_movement_form.html` já adapta o UI por estado
+  - ❌ `path('inventory/movements/<uuid:pk>/', ..., name='stock_movement_detail')` — não implementar
 
-- [ ] **Templates**
+- [x] **Templates**
   - [x] `templates/inventory/all_movements_list.html` — lista global com filtros tipo + estado
-  - [x] `templates/inventory/stock_movement_form.html` — form create/edit com linhas dinâmicas
-  - [ ] `templates/inventory/stock_movement_detail.html` — detalhe read-only
+  - [x] `templates/inventory/stock_movement_form.html` — form create/edit/detail (adapta-se por estado)
   - [x] `templates/components/stock_movement_form_navbar.html` — navbar
 
-- [ ] **Rotas**
+- [x] **Rotas**
   - [x] `path('operations/movements/', ..., name='all_movements_list')`
   - [x] `path('operations/adjustments/', ..., name='adjustment_list')`
   - [x] `path('operations/adjustments/new/', ..., name='adjustment_create')`
-  - [ ] `path('inventory/movements/<uuid:pk>/', ..., name='stock_movement_detail')`
   - [x] `path('operations/movements/<uuid:pk>/edit/', ..., name='movement_edit')`
   - [x] `path('operations/movements/<uuid:pk>/validate/', ..., name='movement_validate')`
   - [x] `path('operations/movements/<uuid:pk>/cancel/', ..., name='movement_cancel')`
@@ -6632,6 +6630,46 @@ Integração do sistema de chatter (Nota + Log + Seguidores) no formulário de m
   - [x] Calcula dicionário `_changes` com pares old/new por campo
   - [x] Armazena em `ChatterActivity.details = {'changes': {...}}`
   - [x] Log mostra diffs reais no histórico
+
+---
+
+## 6.10.2 Operações de Sucata (Scrap) ✅
+
+Tipo de movimento dedicado para registar produtos descartados com motivo. Completamente separado dos ajustes — é um tipo de primeira classe.
+
+- [x] **Modelo `StockMovement` — tipo `scrap` adicionado**
+  - [x] `('scrap', 'Sucata')` adicionado a `MOVEMENT_TYPE_CHOICES`
+  - [x] `SCRAP_REASON_CHOICES`: `avaria`, `expiry` (Validade expirada), `quebra`, `qualidade`, `outro`
+  - [x] Campo `scrap_reason` (CharField, null=True, blank=True, max_length=16)
+  - [x] Prefixo de referência `'scrap': 'SCRAP/'` e sequência `'scrap': 'WH_SCRAP'`
+  - [x] `action_validate()` trata `scrap` como saída de stock (`is_out` inclui scrap)
+
+- [x] **Migration `0014_add_scrap_movement_type.py`**
+  - [x] Atualiza choices de `movement_type`
+  - [x] Adiciona campo `scrap_reason`
+
+- [x] **`StockMovementForm` — campo `scrap_reason`**
+  - [x] `scrap_reason` adicionado a `Meta.fields`
+  - [x] `clean()`: scrap requer `scrap_reason`; adjustment requer `adjustment_direction`
+
+- [x] **Views**
+  - [x] `_MOVEMENT_TYPE_META` tem entrada `'scrap'` com URLs `scrap_list`/`scrap_create`
+  - [x] `scrap_reason_choices` passado ao template no create e edit
+  - [x] `movement_edit()` regista `scrap_reason` no log de auditoria
+  - [x] `scrap_list()` e `scrap_create()` — wrappers finos adicionados
+  - [x] `report_scrap()` filtra por `movement_type='scrap'` (anteriormente era proxy de adjustment+out)
+  - [x] `all_movements_list()` suporta tipo `scrap` no filtro e labels
+
+- [x] **URLs**
+  - [x] `path('operations/scrap/', ..., name='scrap_list')`
+  - [x] `path('operations/scrap/new/', ..., name='scrap_create')`
+
+- [x] **Templates**
+  - [x] `stock_movement_form.html` — ícone de sucata, dropdown `scrap_reason` (obrigatório para scrap), campo partner oculto para scrap
+  - [x] `report_scrap.html` — banner informativo, coluna Motivo com badge, texto actualizado
+  - [x] `movement_list.html` — ícone de lixo vermelho para scrap
+  - [x] `all_movements_list.html` — ícone + badge vermelho "Sucata"
+  - [x] `inventory_navbar.html` — link Sucata aponta para `inventory:scrap_list`
 
 ---
 
@@ -7120,6 +7158,167 @@ Lista completa de relatórios a implementar. Todos usam `cost_price_at_move` com
 **⏱ Tempo estimado:** 4-5 dias
 **🎯 Objetivo:** Criar sistema de gestão de compras e documentos de compra
 **📦 Dependências:** Fase 4 (contacts), Fase 6 (inventory/products)
+
+---
+
+## 7.0 Lista de Compras (Shopping List)
+
+> **Contexto:** Funcionalidade leve que vive na app `inventory` (URL `inventory:purchase_list`).
+> Permite criar listas de compra manualmente ou gerar automaticamente a partir do stock mínimo,
+> tendo em conta a quantidade prevista (on_hand + entradas pendentes − saídas pendentes).
+> Cada lista tem um cabeçalho (`PurchaseList`) e linhas (`PurchaseListLine`), com totais calculados.
+> Flow futuro: botão "Preview" abre vista mobile para picar itens enquanto se compra.
+
+---
+
+### 7.0.1 Modelos ✅
+
+- [x] **Modelo `PurchaseList` (cabeçalho)**
+  - [x] Campos obrigatórios:
+    - [x] `name` — CharField (ex: "Compras Semana 10", gerado auto se vazio)
+    - [x] `state` — CharField choices: `draft` / `confirmed` / `done` / `cancelled` (default: `draft`)
+    - [x] `created_at` — DateTimeField auto_now_add
+    - [x] `date` — DateField (data prevista da compra, default today)
+    - [x] `owner_company` — FK Company (null/blank, filtrado por empresa ativa)
+  - [x] Campos opcionais:
+    - [x] `supplier` — FK Contact (null/blank) — onde vai ser feita a compra
+    - [x] `warehouse` — FK Warehouse (null/blank) — armazém de destino
+    - [x] `notes` — TextField (null/blank)
+    - [x] `reference` — CharField (referência externa, null/blank)
+  - [x] Campos calculados (propriedades):
+    - [x] `subtotal` — soma de `line_total` de todas as linhas (sem IVA)
+    - [x] `vat_amount` — soma do IVA de todas as linhas
+    - [x] `total` — subtotal + vat_amount
+  - [x] Método `__str__`: retorna `name` ou `f"Lista #{pk}"`
+  - [x] Método `generate_name()`: auto-gera nome se vazio (ex: `f"Compras {date}"`)
+  - [x] Registar no Admin
+
+- [x] **Modelo `PurchaseListLine` (linhas)**
+  - [x] Campos:
+    - [x] `purchase_list` — FK PurchaseList (related_name='lines', on_delete=CASCADE)
+    - [x] `product` — FK Product
+    - [x] `uom` — FK UoM (null/blank — preenchido automaticamente a partir de `product.uom`; editável pelo utilizador para permitir comprar noutra unidade, ex: caixa em vez de unidade)
+    - [x] `qty_on_hand` — DecimalField (readonly — valor do stock actual gravado no momento da criação/geração)
+    - [x] `qty_needed` — DecimalField (quantidade mínima alvo — gravada no momento da geração)
+    - [x] `qty_to_buy` — DecimalField (editável pelo utilizador — sugestão automática: max(qty_needed - forecasted, 0))
+    - [x] `purchase_price` — DecimalField (preço unitário de compra, default: cost_price do produto)
+    - [x] `vat_rate` — DecimalField (taxa IVA em %, ex: 23.00, default: 0)
+    - [x] `line_total` — propriedade: `qty_to_buy × purchase_price` (sem IVA)
+    - [x] `line_vat` — propriedade: `line_total × vat_rate / 100`
+    - [x] `line_total_with_vat` — propriedade: `line_total + line_vat`
+    - [x] `notes` — CharField (null/blank)
+  - [x] Método `__str__`
+  - [x] Registar no Admin inline de PurchaseList
+
+- [x] **Migrations**
+  - [x] `makemigrations inventory`
+  - [x] `migrate`
+
+---
+
+### 7.0.2 Lógica de Geração Automática
+
+> Ao clicar "Gerar Lista Automática", o sistema calcula para cada produto com `min_stock > 0`:
+> `forecasted = on_hand + incoming_draft - outgoing_draft`
+> `qty_to_buy = ceil(max(min_stock - forecasted, 0))`
+> Só cria linha se `qty_to_buy > 0`.
+
+- [ ] **Função `generate_purchase_list(company, warehouse=None)`** em `apps/inventory/services.py` (ou no model)
+  - [ ] Query: produtos activos com `min_stock > 0`, filtrados por empresa
+  - [ ] Anotar cada produto com `on_hand`, `incoming_draft`, `outgoing_draft` via Subquery
+  - [ ] Calcular `forecasted = on_hand + incoming - outgoing`
+  - [ ] Calcular `qty_to_buy = ceil(max(min_stock - forecasted, 0))`
+  - [ ] Criar `PurchaseList` com nome auto-gerado e state=`draft`
+  - [ ] Criar `PurchaseListLine` para cada produto com `qty_to_buy > 0`
+    - [ ] `qty_on_hand` ← valor actual do stock
+    - [ ] `qty_needed` ← `min_stock` do produto
+    - [ ] `qty_to_buy` ← calculado
+    - [ ] `uom` ← `product.uom` (preenchido automaticamente)
+    - [ ] `purchase_price` ← `product.cost_price` (se existir)
+    - [ ] `vat_rate` ← 0 (utilizador edita depois)
+  - [ ] Retornar a `PurchaseList` criada
+  - [ ] Redirecionar para o formulário da lista criada
+
+---
+
+### 7.0.3 Views
+
+- [ ] **`purchase_list_index` — Listagem de listas de compra**
+  - [ ] Tabela: name, supplier, date, state, total, nº linhas, actions
+  - [ ] Filtros: state, date_from/to, supplier
+  - [ ] Botão "Nova Lista" (criação manual)
+  - [ ] Botão "Gerar Automaticamente" → chama `generate_purchase_list()` e redireciona para o form
+
+- [ ] **`purchase_list_create` — Criar nova lista (manual)**
+  - [ ] Form com campos do cabeçalho
+  - [ ] Redireciona para `purchase_list_edit` após criar
+
+- [ ] **`purchase_list_edit` — Formulário completo (cabeçalho + linhas)**
+  - [ ] Secção cabeçalho: name, supplier, date, warehouse, reference, notes, state badge
+  - [ ] Tabela de linhas (inline editable via formset ou AJAX):
+    - [ ] Colunas: Produto, **Unidade (UoM)**, Stock Actual, Qtd. Necessária, Qtd. a Comprar, Preço Compra, IVA %, Total s/IVA, Total c/IVA, Remover
+    - [ ] Linha de adição de produto (select produto + campos)
+    - [ ] Linhas reordenáveis (drag & drop opcional — ⭐)
+  - [ ] Painel de totais (fixo no fundo ou à direita):
+    - [ ] Subtotal (sem IVA)
+    - [ ] IVA (valor total)
+    - [ ] **Total com IVA** (destaque)
+  - [ ] Botões de acção: "Confirmar Lista", "Cancelar", "Preview Mobile" (⏳ fase posterior), "Imprimir" (⏳)
+  - [ ] Estado `done` / `cancelled` → form read-only
+
+- [ ] **`purchase_list_delete` — Eliminar lista (só em draft)**
+  - [ ] POST only, redireciona para index
+
+- [ ] **URLs**
+  - [ ] `path('listas-de-compras/', views.purchase_list_index, name='purchase_list_index')`
+  - [ ] `path('listas-de-compras/nova/', views.purchase_list_create, name='purchase_list_create')`
+  - [ ] `path('listas-de-compras/gerar/', views.purchase_list_generate, name='purchase_list_generate')`
+  - [ ] `path('listas-de-compras/<int:pk>/', views.purchase_list_edit, name='purchase_list_edit')`
+  - [ ] `path('listas-de-compras/<int:pk>/eliminar/', views.purchase_list_delete, name='purchase_list_delete')`
+  - [ ] `path('listas-de-compras/<int:pk>/linha/adicionar/', views.purchase_list_line_add, name='purchase_list_line_add')`
+  - [ ] `path('listas-de-compras/linha/<int:pk>/remover/', views.purchase_list_line_remove, name='purchase_list_line_remove')`
+  - [ ] Actualizar URL `purchase_list` existente → redirecionar para `purchase_list_index`
+
+---
+
+### 7.0.4 Templates
+
+- [ ] **`templates/inventory/purchase_list_index.html`**
+  - [ ] Tabela estilo restantes listagens do inventário
+  - [ ] Badge de estado (draft=cinza, confirmed=azul, done=verde, cancelled=vermelho)
+  - [ ] Coluna de totais formatados
+
+- [ ] **`templates/inventory/purchase_list_form.html`**
+  - [ ] Layout em duas colunas: cabeçalho (esquerda/topo) + painel totais (direita/fundo)
+  - [ ] Tabela de linhas com linha de input para adicionar produto
+  - [ ] Painel de totais fixo:
+    ```
+    ┌──────────────────────────┐
+    │ Subtotal (s/ IVA)  XX.XX │
+    │ IVA                XX.XX │
+    │ ─────────────────────── │
+    │ TOTAL (c/ IVA)    XXX.XX │
+    └──────────────────────────┘
+    ```
+  - [ ] Totais actualizam em tempo real via JavaScript ao editar qtd/preço/IVA
+
+---
+
+### 7.0.5 Navbar do Inventário
+
+- [ ] Actualizar `inventory_navbar.html` — link "Lista de Compras" aponta para `purchase_list_index`
+- [ ] Manter o tile do dashboard principal a apontar para `purchase_list_index`
+
+---
+
+### 7.0.6 Testes
+
+- [ ] Test: criar lista manual funciona
+- [ ] Test: gerar lista automática cria linhas corretas (considera forecasted)
+- [ ] Test: `qty_to_buy = ceil(max(min_stock - forecasted, 0))`
+- [ ] Test: totais calculam correctamente (subtotal, IVA, total)
+- [ ] Test: confirmar lista muda state para `confirmed`
+- [ ] Test: lista `done`/`cancelled` é read-only
 
 ---
 

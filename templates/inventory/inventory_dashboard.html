@@ -244,10 +244,10 @@
             </div>
             <div class="op-card-body">
                 <div class="flex flex-wrap gap-2 mb-5">
-                    <span class="op-badge op-badge-teal">
+                    <a href="{% url 'inventory:receipt_list' %}?state=draft" class="op-badge op-badge-teal">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                         {{ receipts_to_process }} Para Receber
-                    </span>
+                    </a>
                 </div>
                 <div class="space-y-1">
                     <div class="op-status-row">
@@ -275,7 +275,7 @@
             </div>
 
             <div class="op-card-footer">
-                <a href="#">
+                <a href="{% url 'inventory:receipt_list' %}">
                     Ver todas
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </a>
@@ -295,10 +295,10 @@
             </div>
             <div class="op-card-body">
                 <div class="flex flex-wrap gap-2 mb-5">
-                    <span class="op-badge op-badge-amber">
+                    <a href="{% url 'inventory:delivery_list' %}?state=draft" class="op-badge op-badge-amber">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
                         {{ deliveries_to_process }} Para Entregar
-                    </span>
+                    </a>
                 </div>
                 <div class="space-y-1">
                     <div class="op-status-row">
@@ -326,7 +326,7 @@
             </div>
 
             <div class="op-card-footer">
-                <a href="#">
+                <a href="{% url 'inventory:delivery_list' %}">
                     Ver todas
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </a>
@@ -397,10 +397,11 @@
             </div>
             <div class="op-card-body">
                 <div class="flex flex-wrap gap-2 mb-5">
-                    <span class="op-badge op-badge-emerald">
+                    {% now "Y-m-d" as today_str %}
+                    <a href="{% url 'inventory:all_movements_list' %}?state=done&date_from={{ today_str }}&date_to={{ today_str }}" class="op-badge op-badge-emerald">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                         {{ ops_today }} Processadas
-                    </span>
+                    </a>
                 </div>
                 <div class="space-y-1">
                     <div class="op-status-row">
@@ -428,7 +429,7 @@
             </div>
 
             <div class="op-card-footer">
-                <a href="#">
+                <a href="{% url 'inventory:all_movements_list' %}">
                     Ver todas
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </a>
@@ -448,10 +449,10 @@
             </div>
             <div class="op-card-body">
                 <div class="flex flex-wrap gap-2 mb-5">
-                    <span class="op-badge op-badge-indigo">
+                    <a href="{% url 'inventory:all_movements_list' %}?state=draft" class="op-badge op-badge-indigo">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         {{ total_pending }} A Processar
-                    </span>
+                    </a>
                 </div>
                 <div class="space-y-1">
                     <div class="op-status-row">
@@ -479,7 +480,7 @@
             </div>
 
             <div class="op-card-footer">
-                <a href="#">
+                <a href="{% url 'inventory:all_movements_list' %}">
                     Ver todas
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </a>

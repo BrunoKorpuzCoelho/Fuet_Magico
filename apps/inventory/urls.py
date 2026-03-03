@@ -58,6 +58,8 @@ urlpatterns = [
     path('operations/deliveries/new/', views.delivery_create, name='delivery_create'),
     path('operations/adjustments/', views.adjustment_list, name='adjustment_list'),
     path('operations/adjustments/new/', views.adjustment_create, name='adjustment_create'),
+    path('operations/scrap/', views.scrap_list, name='scrap_list'),
+    path('operations/scrap/new/', views.scrap_create, name='scrap_create'),
     path('operations/movements/<uuid:pk>/edit/', views.movement_edit, name='movement_edit'),
     path('operations/movements/<uuid:pk>/validate/', views.movement_validate, name='movement_validate'),
     path('operations/movements/<uuid:pk>/cancel/', views.movement_cancel, name='movement_cancel'),
@@ -87,4 +89,20 @@ urlpatterns = [
     path('reports/balance/', views.report_balance, name='report_balance'),
     path('reports/purchase-prices/', views.report_purchase_prices, name='report_purchase_prices'),
     path('reports/scrap/', views.report_scrap, name='report_scrap'),
+
+    # Lista de Compras
+    path('listas-de-compras/', views.purchase_list_index, name='purchase_list_index'),
+    path('listas-de-compras/nova/', views.purchase_list_create, name='purchase_list_create'),
+    path('listas-de-compras/<uuid:pk>/editar/', views.purchase_list_edit, name='purchase_list_edit'),
+    path('listas-de-compras/<uuid:pk>/confirmar/', views.purchase_list_confirm, name='purchase_list_confirm'),
+    path('listas-de-compras/<uuid:pk>/concluir/', views.purchase_list_done, name='purchase_list_done'),
+    path('listas-de-compras/<uuid:pk>/cancelar/', views.purchase_list_cancel, name='purchase_list_cancel'),
+    # Chatter — Notes & Followers
+    path('listas-de-compras/<uuid:pk>/notes/', views.purchase_list_notes_list, name='purchase_list_notes_list'),
+    path('listas-de-compras/<uuid:pk>/notes/create/', views.purchase_list_note_create, name='purchase_list_note_create'),
+    path('listas-de-compras/<uuid:pk>/followers/', views.purchase_list_followers_api, name='purchase_list_followers_api'),
+    path('listas-de-compras/<uuid:pk>/followers/<uuid:user_id>/remove/', views.purchase_list_follower_remove, name='purchase_list_follower_remove'),
+    path('listas-de-compras/bulk-archive/', views.bulk_archive_purchase_lists, name='purchase_list_bulk_archive'),
+    path('listas-de-compras/bulk-unarchive/', views.bulk_unarchive_purchase_lists, name='purchase_list_bulk_unarchive'),
+    path('listas-de-compras/bulk-delete/', views.bulk_delete_purchase_lists, name='purchase_list_bulk_delete'),
 ]

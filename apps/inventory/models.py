@@ -438,6 +438,15 @@ class StockMovement(AbstractBaseModel):
         ('receipt', 'Receção'),
         ('delivery', 'Expedição'),
         ('adjustment', 'Ajuste'),
+        ('scrap', 'Sucata'),
+    ]
+
+    SCRAP_REASON_CHOICES = [
+        ('damage',  'Avaria'),
+        ('expiry',  'Validade expirada'),
+        ('breakage','Quebra'),
+        ('quality', 'Controlo de qualidade'),
+        ('other',   'Outro'),
     ]
 
     ADJUSTMENT_DIRECTION_CHOICES = [
@@ -452,15 +461,17 @@ class StockMovement(AbstractBaseModel):
     ]
 
     REFERENCE_PREFIXES = {
-        'receipt': 'WH/IN/',
-        'delivery': 'WH/OUT/',
+        'receipt':    'WH/IN/',
+        'delivery':   'WH/OUT/',
         'adjustment': 'ADJ/',
+        'scrap':      'SCRAP/',
     }
     # Maps movement_type → DocumentSequence code
     SEQUENCE_CODES = {
         'receipt':    'WH_IN',
         'delivery':   'WH_OUT',
         'adjustment': 'WH_ADJ',
+        'scrap':      'WH_SCRAP',
     }
     reference = models.CharField(
         max_length=32,
@@ -472,6 +483,14 @@ class StockMovement(AbstractBaseModel):
         max_length=16,
         choices=MOVEMENT_TYPE_CHOICES,
         verbose_name='Tipo de Movimento',
+    )
+    scrap_reason = models.CharField(
+        max_length=16,
+        choices=SCRAP_REASON_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name='Motivo de Sucata',
+        help_text='Apenas para movimentos de sucata.',
     )
     adjustment_direction = models.CharField(
         max_length=3,
@@ -593,6 +612,7 @@ class StockMovement(AbstractBaseModel):
         )
         is_out = (
             self.movement_type == 'delivery'
+            or self.movement_type == 'scrap'
             or (self.movement_type == 'adjustment' and self.adjustment_direction == 'out')
         )
 
@@ -643,9 +663,37 @@ class StockMovement(AbstractBaseModel):
         self.save()
 
     def action_cancel(self):
-        """Cancel the movement — only allowed from draft state."""
-        if self.state != 'draft':
-            raise ValidationError('Apenas movimentos em rascunho podem ser cancelados.')
+        """Cancel the movement.
+
+        - Draft  → simply marks as cancelled (no stock was ever touched).
+        - Done   → reverses the stock quantities (undoes the validation).
+          Note: the weighted-average cost_price on the product is NOT re-calculated
+          on reversal — this is a known simplification acceptable for this use-case.
+        """
+        if self.state == 'cancelled':
+            raise ValidationError('O movimento já está cancelado.')
+
+        if self.state == 'done':
+            # Reverse stock: opposite of what action_validate did
+            is_in = (
+                self.movement_type == 'receipt'
+                or (self.movement_type == 'adjustment' and self.adjustment_direction == 'in')
+            )
+            is_out = (
+                self.movement_type == 'delivery'
+                or self.movement_type == 'scrap'
+                or (self.movement_type == 'adjustment' and self.adjustment_direction == 'out')
+            )
+            from decimal import Decimal
+            for line in self.lines.select_related('product'):
+                qty = abs(Decimal(str(line.quantity)))
+                if is_in:
+                    # Was an entry → subtract it back
+                    StockQuant.update_quantity(line.product, self.warehouse, qty, 'subtract')
+                elif is_out:
+                    # Was an exit → add it back
+                    StockQuant.update_quantity(line.product, self.warehouse, qty, 'add')
+
         self.state = 'cancelled'
         self.save()
 
@@ -953,3 +1001,214 @@ class ProductSupplierInfo(AbstractBaseModel):
             supplier_product_code__iexact=code.strip(),
             is_active=True,
         ).select_related('product').first()
+
+
+# ---------------------------------------------------------------------------
+# Purchase List (Lista de Compras)
+# ---------------------------------------------------------------------------
+
+class PurchaseList(AbstractBaseModel):
+    """Shopping list header.
+
+    Can be created manually or auto-generated from min_stock levels.
+    Each list has N lines (PurchaseListLine) representing products to buy.
+    """
+
+    STATE_CHOICES = [
+        ('draft',     'Rascunho'),
+        ('confirmed', 'Confirmada'),
+        ('done',      'Concluída'),
+        ('cancelled', 'Cancelada'),
+    ]
+
+    name = models.CharField(
+        max_length=200,
+        verbose_name='Nome',
+        help_text='Ex: Compras Semana 10 — gerado automaticamente se deixado em branco.',
+    )
+    state = models.CharField(
+        max_length=20,
+        choices=STATE_CHOICES,
+        default='draft',
+        verbose_name='Estado',
+    )
+    date = models.DateField(
+        default=timezone.localdate,
+        verbose_name='Data Prevista',
+        help_text='Data prevista para a compra.',
+    )
+    supplier = models.ForeignKey(
+        'contacts.Contact',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='purchase_lists',
+        verbose_name='Fornecedor',
+        help_text='Local / fornecedor onde vai ser feita a compra.',
+    )
+    warehouse = models.ForeignKey(
+        'Warehouse',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='purchase_lists',
+        verbose_name='Armazém',
+        help_text='Armazém de destino dos produtos comprados.',
+    )
+    reference = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        verbose_name='Referência Externa',
+    )
+    notes = models.TextField(
+        blank=True,
+        default='',
+        verbose_name='Notas',
+    )
+    owner_company = models.ForeignKey(
+        'core.Company',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='purchase_lists',
+        verbose_name='Empresa',
+    )
+
+    class Meta:
+        verbose_name = 'Lista de Compras'
+        verbose_name_plural = 'Listas de Compras'
+        ordering = ['-date', '-created_at']
+
+    def __str__(self):
+        return self.name or f'Lista #{self.pk}'
+
+    def save(self, *args, **kwargs):
+        if not self.name:
+            self.name = self.generate_name()
+        super().save(*args, **kwargs)
+
+    def generate_name(self):
+        from django.utils.formats import date_format
+        d = self.date or timezone.localdate()
+        return f'Compras {date_format(d, "d/m/Y")}'
+
+    # ------------------------------------------------------------------
+    # Calculated totals (computed from lines at runtime)
+    # ------------------------------------------------------------------
+
+    @property
+    def subtotal(self):
+        """Sum of all line totals (excl. VAT)."""
+        return sum(line.line_total for line in self.lines.all())
+
+    @property
+    def vat_amount(self):
+        """Sum of all line VAT amounts."""
+        return sum(line.line_vat for line in self.lines.all())
+
+    @property
+    def total(self):
+        """Grand total including VAT."""
+        return self.subtotal + self.vat_amount
+
+
+class PurchaseListLine(AbstractBaseModel):
+    """One product line inside a PurchaseList."""
+
+    purchase_list = models.ForeignKey(
+        PurchaseList,
+        on_delete=models.CASCADE,
+        related_name='lines',
+        verbose_name='Lista de Compras',
+    )
+    product = models.ForeignKey(
+        'Product',
+        on_delete=models.PROTECT,
+        related_name='purchase_list_lines',
+        verbose_name='Produto',
+    )
+    uom = models.ForeignKey(
+        'UoM',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='purchase_list_lines',
+        verbose_name='Unidade de Medida',
+        help_text='Preenchida automaticamente a partir do produto; editável para comprar noutra unidade.',
+    )
+    # Stock snapshot at time of creation/generation (read-only after save)
+    qty_on_hand = models.DecimalField(
+        max_digits=14,
+        decimal_places=4,
+        default=0,
+        verbose_name='Stock Actual',
+        help_text='Valor gravado no momento de criação/geração da linha.',
+    )
+    qty_needed = models.DecimalField(
+        max_digits=14,
+        decimal_places=4,
+        default=0,
+        verbose_name='Qtd. Necessária',
+        help_text='Stock mínimo alvo gravado no momento da geração.',
+    )
+    qty_to_buy = models.DecimalField(
+        max_digits=14,
+        decimal_places=4,
+        default=0,
+        verbose_name='Qtd. a Comprar',
+        help_text='Sugerida automaticamente; editável pelo utilizador.',
+    )
+    purchase_price = models.DecimalField(
+        max_digits=14,
+        decimal_places=4,
+        default=0,
+        verbose_name='Preço de Compra',
+        help_text='Preço unitário sem IVA.',
+    )
+    vat_rate = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=0,
+        verbose_name='Taxa IVA (%)',
+        help_text='Ex: 23.00 para 23%.',
+    )
+    notes = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        verbose_name='Notas',
+    )
+
+    class Meta:
+        verbose_name = 'Linha de Lista de Compras'
+        verbose_name_plural = 'Linhas de Lista de Compras'
+        ordering = ['id']
+
+    def __str__(self):
+        return f'{self.product.name} × {self.qty_to_buy}'
+
+    def save(self, *args, **kwargs):
+        # Auto-fill uom from product if not set
+        if not self.uom_id and self.product_id:
+            self.uom = self.product.uom
+        super().save(*args, **kwargs)
+
+    # ------------------------------------------------------------------
+    # Calculated properties
+    # ------------------------------------------------------------------
+
+    @property
+    def line_total(self):
+        """Total sem IVA: qty_to_buy × purchase_price."""
+        return float(self.qty_to_buy) * float(self.purchase_price)
+
+    @property
+    def line_vat(self):
+        """Valor do IVA desta linha."""
+        return self.line_total * float(self.vat_rate) / 100
+
+    @property
+    def line_total_with_vat(self):
+        """Total com IVA."""
+        return self.line_total + self.line_vat

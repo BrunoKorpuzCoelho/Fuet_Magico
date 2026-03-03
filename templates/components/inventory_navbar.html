@@ -60,21 +60,9 @@
                                class="block pl-8 pr-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 Inventário Físico
                             </a>
-                            <a href="#"
+                            <a href="{% url 'inventory:scrap_list' %}"
                                class="block pl-8 pr-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 Sucata
-                            </a>
-
-                            <!-- Divider -->
-                            <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
-
-                            <!-- Procurement Section -->
-                            <div class="px-4 py-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                                Procurement
-                            </div>
-                            <a href="#"
-                               class="block pl-8 pr-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                Reabastecimento
                             </a>
                         </div>
                     </div>
@@ -112,10 +100,6 @@
                                class="block pl-8 pr-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 Categorias de Produtos
                             </a>
-                            <a href="#"
-                               class="block pl-8 pr-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                Lotes / Números de Série
-                            </a>
                         </div>
                     </div>
                 </div>
@@ -151,10 +135,9 @@
                             <div class="px-4 py-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                                 Definições
                             </div>
-                            <a href="{% url 'dashboard:settings' %}?s=inventario"
-                               class="block pl-8 pr-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                            <span class="block pl-8 pr-4 py-2 text-sm text-gray-500 dark:text-gray-600 opacity-50 cursor-not-allowed" title="Em breve">
                                 Inventário
-                            </a>
+                            </span>
 
                             <!-- Divider -->
                             <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
@@ -182,10 +165,6 @@
                             <a href="{% url 'inventory:warehouse_list' %}"
                                class="block pl-8 pr-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 Armazéns
-                            </a>
-                            <a href="#"
-                               class="block pl-8 pr-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                Tipos de Operação
                             </a>
 
                             <!-- Divider -->

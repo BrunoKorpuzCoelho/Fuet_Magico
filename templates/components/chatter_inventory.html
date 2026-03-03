@@ -30,7 +30,7 @@
 
         <!-- Followers widget -->
         <div class="flex-shrink-0 border-l border-gray-700/50 flex items-center px-2"
-             x-data="inventoryFollowersWidget('{{ object.id }}')">
+             x-data="inventoryFollowersWidget('{{ object.id }}', '{{ chatter_api_base|default:"" }}')">
             <!-- Avatar stack -->
             <div class="flex items-center -space-x-1 mr-1.5">
                 <template x-for="f in followers" :key="f.user_id">
@@ -103,7 +103,7 @@
 
     <!-- TAB: NOTA -->
     <div x-show="activeTab === 'note'" class="flex flex-col h-full"
-         x-data="inventoryNotesPanel('{{ object.id }}')"
+         x-data="inventoryNotesPanel('{{ object.id }}', '{{ chatter_api_base|default:"" }}')"
          x-effect="if (activeTab === 'note' && notes.length === 0 && !loading) load()">
 
         <!-- Input area -->
@@ -234,13 +234,11 @@
             <div class="flex-1 min-w-0">
                 {% if activity.activity_type == 'CREATE' %}
                     <p class="text-xs text-gray-300">
-                        Movimento criado
-                        {% if activity.user %}por <span class="text-primary">{{ activity.user.get_full_name|default:activity.user.username }}</span>{% endif %}
+                        {% if activity.user %}<span class="text-primary">{{ activity.user.get_full_name|default:activity.user.username }}</span> {% endif %}{{ activity.description }}
                     </p>
                 {% elif activity.activity_type == 'UPDATE' %}
                     <p class="text-xs text-gray-300">
-                        Movimento atualizado
-                        {% if activity.user %}por <span class="text-primary">{{ activity.user.get_full_name|default:activity.user.username }}</span>{% endif %}
+                        {% if activity.user %}<span class="text-primary">{{ activity.user.get_full_name|default:activity.user.username }}</span> {% endif %}{{ activity.description }}
                     </p>
                     {% if activity.details.changes %}
                     <div class="mt-1.5 pl-3 border-l-2 border-gray-600 space-y-1">
@@ -288,9 +286,10 @@
 
 
 <script>
-function inventoryNotesPanel(movementId) {
+function inventoryNotesPanel(movementId, apiBase) {
     return {
         movementId,
+        apiBase: apiBase || '/inventory/operations/movements',
         notes: [],
         newContent: '',
         loading: false,
@@ -305,7 +304,7 @@ function inventoryNotesPanel(movementId) {
         async load() {
             this.loading = true;
             try {
-                const res = await fetch(`/inventory/operations/movements/${this.movementId}/notes/`);
+                const res = await fetch(`${this.apiBase}/${this.movementId}/notes/`);
                 const data = await res.json();
                 this.notes = data.notes || [];
             } catch (e) {
@@ -359,7 +358,7 @@ function inventoryNotesPanel(movementId) {
             if (!content || this.saving) return;
             this.saving = true;
             try {
-                const res = await fetch(`/inventory/operations/movements/${this.movementId}/notes/create/`, {
+                const res = await fetch(`${this.apiBase}/${this.movementId}/notes/create/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -392,9 +391,10 @@ function inventoryNotesPanel(movementId) {
     };
 }
 
-function inventoryFollowersWidget(movementId) {
+function inventoryFollowersWidget(movementId, apiBase) {
     return {
         movementId,
+        apiBase: apiBase || '/inventory/operations/movements',
         open: false,
         followers: [],
         search: '',
@@ -405,7 +405,7 @@ function inventoryFollowersWidget(movementId) {
 
         async load() {
             try {
-                const r = await fetch(`/inventory/operations/movements/${this.movementId}/followers/`);
+                const r = await fetch(`${this.apiBase}/${this.movementId}/followers/`);
                 const d = await r.json();
                 this.followers = d.followers || [];
             } catch(e) {}
@@ -428,7 +428,7 @@ function inventoryFollowersWidget(movementId) {
 
         async addFollower(u) {
             try {
-                const r = await fetch(`/inventory/operations/movements/${this.movementId}/followers/`, {
+                const r = await fetch(`${this.apiBase}/${this.movementId}/followers/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrf() },
                     body: JSON.stringify({ user_id: u.id }),
@@ -444,7 +444,7 @@ function inventoryFollowersWidget(movementId) {
 
         async removeFollower(userId) {
             try {
-                await fetch(`/inventory/operations/movements/${this.movementId}/followers/${userId}/remove/`, {
+                await fetch(`${this.apiBase}/${this.movementId}/followers/${userId}/remove/`, {
                     method: 'DELETE',
                     headers: { 'X-CSRFToken': this.csrf() },
                 });

@@ -96,15 +96,15 @@
     <!-- HEADER FORM                                            -->
     <!-- ═══════════════════════════════════════════════════════ -->
     <form method="post"
-          action="{% if movement %}{% url 'inventory:movement_edit' movement.pk %}{% else %}{% if movement_type == 'receipt' %}{% url 'inventory:receipt_create' %}{% elif movement_type == 'adjustment' %}{% url 'inventory:adjustment_create' %}{% else %}{% url 'inventory:delivery_create' %}{% endif %}{% endif %}"
+          action="{% if movement %}{% url 'inventory:movement_edit' movement.pk %}{% else %}{% if movement_type == 'receipt' %}{% url 'inventory:receipt_create' %}{% elif movement_type == 'adjustment' %}{% url 'inventory:adjustment_create' %}{% elif movement_type == 'scrap' %}{% url 'inventory:scrap_create' %}{% else %}{% url 'inventory:delivery_create' %}{% endif %}{% endif %}"
           id="movement-form">
         {% csrf_token %}
 
         <div class="px-8 py-6">
 
             <!-- ── Botões de acção + Status ───────────────────── -->
-            <div class="flex items-center justify-between mb-8">
-                <!-- Left: Validar / Cancelar (só quando rascunho guardado) -->
+            <div class="flex items-center justify-between mb-8" x-data="{ showCancelModal: false }">
+                <!-- Left: Validar / Cancelar -->
                 <div class="flex items-center gap-3">
                     {% if movement and movement.state == 'draft' %}
                     <button type="submit" form="form-validate"
@@ -114,13 +114,21 @@
                         </svg>
                         Validar
                     </button>
-                    <button type="submit" form="form-cancel"
-                            onclick="return confirm('Cancelar este movimento?');"
+                    <button type="button" @click="showCancelModal = true"
                             class="px-4 py-1.5 rounded-md border border-red-500 text-red-500 bg-transparent hover:bg-red-500/10 text-sm font-medium transition-colors">
                         Cancelar
                     </button>
+                    {% elif movement and movement.state == 'done' %}
+                    <button type="button" @click="showCancelModal = true"
+                            class="px-4 py-1.5 rounded-md border border-red-500 text-red-500 bg-transparent hover:bg-red-500/10 text-sm font-medium transition-colors flex items-center gap-1.5">
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        Cancelar e Reverter Stock
+                    </button>
                     {% endif %}
                 </div>
+
                 <!-- Right: Status pills -->
                 <div class="flex items-center">
                     {% if movement and movement.state == 'done' %}
@@ -131,6 +139,81 @@
                     <div class="px-5 py-1.5 text-xs font-semibold rounded-md" style="background:#dbc693;border:1px solid #dbc693;color:#fff">Rascunho</div>
                     {% endif %}
                 </div>
+
+                <!-- Modal de confirmação de cancelamento -->
+                {% if movement and movement.state != 'cancelled' %}
+                <div x-show="showCancelModal"
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0"
+                     x-transition:enter-end="opacity-100"
+                     x-transition:leave="transition ease-in duration-150"
+                     x-transition:leave-start="opacity-100"
+                     x-transition:leave-end="opacity-0"
+                     class="fixed inset-0 z-[200] flex items-center justify-center p-4"
+                     style="display:none;"
+                     @keydown.escape.window="showCancelModal = false">
+                    <!-- Backdrop -->
+                    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="showCancelModal = false"></div>
+                    <!-- Card -->
+                    <div x-show="showCancelModal"
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+                         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-150"
+                         x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                         x-transition:leave-end="opacity-0 scale-95 translate-y-2"
+                         class="relative w-full max-w-md bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden"
+                         style="display:none;">
+                        <!-- Header -->
+                        <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-700/60">
+                            <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);">
+                                <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-semibold text-white">
+                                    {% if movement.state == 'done' %}Cancelar movimento validado{% else %}Cancelar rascunho{% endif %}
+                                </h3>
+                                <p class="text-xs text-gray-500 mt-0.5">{{ movement.reference }}</p>
+                            </div>
+                            <button type="button" @click="showCancelModal = false" class="ml-auto p-1 text-gray-600 hover:text-gray-300 transition-colors rounded-lg">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <!-- Body -->
+                        <div class="px-6 py-5">
+                            {% if movement.state == 'done' %}
+                            <div class="flex items-start gap-3 rounded-lg p-4 mb-4" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);">
+                                <svg class="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <p class="text-sm text-red-300">Este movimento já foi <strong>validado</strong>. Ao cancelar, o stock será revertido automaticamente.</p>
+                            </div>
+                            <p class="text-sm text-gray-400">Tens a certeza que queres cancelar este movimento e reverter as quantidades de stock?</p>
+                            {% else %}
+                            <p class="text-sm text-gray-400">Tens a certeza que queres cancelar este rascunho? Esta acção não pode ser desfeita.</p>
+                            {% endif %}
+                        </div>
+                        <!-- Footer -->
+                        <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-700/60 bg-gray-800/40">
+                            <button type="button" @click="showCancelModal = false"
+                                    class="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white bg-gray-700/50 hover:bg-gray-700 rounded-lg transition-colors">
+                                Voltar
+                            </button>
+                            <button type="submit" form="form-cancel"
+                                    class="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-1.5">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                                {% if movement.state == 'done' %}Sim, cancelar e reverter stock{% else %}Sim, cancelar{% endif %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
 
             {% if form.errors %}
@@ -169,6 +252,13 @@
                                   d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
                         </svg>
                         <span class="text-xs text-amber-400/60 font-medium">Ajuste</span>
+                        {% elif movement_type == 'scrap' %}
+                        <!-- Scrap: trash can -->
+                        <svg class="h-14 w-14 text-red-400/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        <span class="text-xs text-red-400/60 font-medium">Sucata</span>
                         {% else %}
                         <!-- Delivery: outbox arrow up -->
                         <svg class="h-14 w-14 text-orange-400/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -264,8 +354,36 @@
                     </div>
                     {% endif %}
 
-                    <!-- Parceiro (não aplicável a ajustes) -->
-                    {% if movement_type != 'adjustment' %}
+                    <!-- Motivo de sucata (só para sucata) -->
+                    {% if movement_type == 'scrap' %}
+                    <div>
+                        <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            Motivo de Sucata <span class="text-red-400 ml-0.5">*</span>
+                        </label>
+                        {% if movement and movement.state != 'draft' %}
+                        <div class="flex h-9 w-full items-center px-3 text-sm text-gray-400 border border-gray-700 rounded-md bg-[#1a2332] opacity-60 cursor-not-allowed">
+                            {{ movement.get_scrap_reason_display|default:"— Sem motivo —" }}
+                        </div>
+                        <input type="hidden" name="scrap_reason" value="{{ movement.scrap_reason }}">
+                        {% else %}
+                        <select name="scrap_reason"
+                                id="id_scrap_reason"
+                                required
+                                class="flex h-9 w-full rounded-md border border-gray-700 bg-[#1a2332] px-3 text-sm text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                            <option value="">— Selecionar motivo —</option>
+                            {% for val, label in scrap_reason_choices %}
+                            <option value="{{ val }}" {% if form.scrap_reason.value == val %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Parceiro (não aplicável a ajustes nem sucata) -->
+                    {% if movement_type != 'adjustment' and movement_type != 'scrap' %}
                     <div>
                         <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -467,6 +585,8 @@
 
     {% if movement and movement.state == 'draft' %}
     <form id="form-validate" method="post" action="{% url 'inventory:movement_validate' movement.pk %}" style="display:none">{% csrf_token %}</form>
+    {% endif %}
+    {% if movement and movement.state != 'cancelled' %}
     <form id="form-cancel" method="post" action="{% url 'inventory:movement_cancel' movement.pk %}" style="display:none">{% csrf_token %}</form>
     {% endif %}
 

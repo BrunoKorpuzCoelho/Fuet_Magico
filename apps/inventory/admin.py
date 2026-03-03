@@ -204,3 +204,42 @@ class ProductSupplierInfoAdmin(admin.ModelAdmin):
             'classes': ['collapse']
         }),
     ]
+
+
+# ---------------------------------------------------------------------------
+# Purchase List admin
+# ---------------------------------------------------------------------------
+
+from .models import PurchaseList, PurchaseListLine
+
+
+class PurchaseListLineInline(admin.TabularInline):
+    model = PurchaseListLine
+    extra = 0
+    fields = ['product', 'uom', 'qty_on_hand', 'qty_needed', 'qty_to_buy', 'purchase_price', 'vat_rate', 'notes']
+    readonly_fields = ['qty_on_hand', 'qty_needed']
+    autocomplete_fields = ['product']
+
+
+@admin.register(PurchaseList)
+class PurchaseListAdmin(admin.ModelAdmin):
+    list_display  = ['name', 'state', 'date', 'supplier', 'warehouse', 'owner_company']
+    list_filter   = ['state', 'owner_company']
+    search_fields = ['name', 'reference', 'supplier__name']
+    ordering      = ['-date', '-created_at']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+    inlines       = [PurchaseListLineInline]
+
+    fieldsets = [
+        ('Cabeçalho', {
+            'fields': ['name', 'state', 'date', 'supplier', 'warehouse', 'reference', 'notes']
+        }),
+        ('Multi-Company', {
+            'fields': ['owner_company'],
+            'classes': ['collapse']
+        }),
+        ('Sistema', {
+            'fields': ['id', 'is_active', 'created_at', 'updated_at'],
+            'classes': ['collapse']
+        }),
+    ]

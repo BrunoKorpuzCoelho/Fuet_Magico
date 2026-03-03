@@ -20,8 +20,9 @@ _APP_TILES = [
     {'slug': 'bom',       'name': 'BOM',           'icon': '🎂', 'url_name': None, 'url': '#'},
     {'slug': 'documents', 'name': 'Documentos',    'icon': '📄', 'url_name': None, 'url': '#'},
     {'slug': 'marketing', 'name': 'Marketing',     'icon': '📱', 'url_name': None, 'url': '#'},
-    {'slug': 'reports',   'name': 'Relatórios',    'icon': '📊', 'url_name': None, 'url': '#'},
-    {'slug': 'whatsapp',  'name': 'WhatsApp',      'icon': '',   'url_name': 'whatsapp:template_list'},
+    {'slug': 'reports',       'name': 'Relatórios',       'icon': '📊', 'url_name': None, 'url': '#'},
+    {'slug': 'whatsapp',      'name': 'WhatsApp',         'icon': '',   'url_name': 'whatsapp:template_list'},
+    {'slug': 'purchase_list', 'name': 'Lista de Compras', 'icon': '🛍️', 'url_name': 'inventory:purchase_list_index'},
 ]
 
 

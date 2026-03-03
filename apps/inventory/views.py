@@ -19,7 +19,7 @@ from apps.core.models import ChatterMessage, ChatterActivity, ChatterFollower
 
 User = get_user_model()
 from .forms import CategoryForm, UoMForm, UoMCategoryForm, ProductForm, WarehouseForm, StockMovementForm
-from .models import Category, UoM, UoMCategory, Product, Warehouse, StockMovement, StockMovementLine, StockQuant, ProductSupplierInfo
+from .models import Category, UoM, UoMCategory, Product, Warehouse, StockMovement, StockMovementLine, StockQuant, ProductSupplierInfo, PurchaseList, PurchaseListLine
 
 
 def _weekly_placeholder_bars():
@@ -1646,6 +1646,12 @@ _MOVEMENT_TYPE_META = {
         'list_url_name': 'inventory:adjustment_list',
         'create_url_name': 'inventory:adjustment_create',
     },
+    'scrap': {
+        'label': 'Sucata',
+        'label_singular': 'Sucata',
+        'list_url_name': 'inventory:scrap_list',
+        'create_url_name': 'inventory:scrap_create',
+    },
 }
 
 
@@ -1878,7 +1884,7 @@ def movement_create(request, movement_type):
     GET  → blank form with movement_type pre-selected.
     POST → saves the header draft, then redirects to movement_edit.
     """
-    if movement_type not in ('receipt', 'delivery', 'adjustment'):
+    if movement_type not in ('receipt', 'delivery', 'adjustment', 'scrap'):
         from django.http import Http404
         raise Http404
 
@@ -1933,6 +1939,7 @@ def movement_create(request, movement_type):
         'list_url_name':     meta['list_url_name'],
         'lines_json':        '[]',
         'next_ref_preview':  next_ref_preview,
+        'scrap_reason_choices': StockMovement.SCRAP_REASON_CHOICES,
     })
 
 
@@ -1954,27 +1961,30 @@ def movement_edit(request, pk):
         if form.is_valid():
             # Capture old values BEFORE save for audit diff
             _field_labels = {
-                'partner':    'Fornecedor',
-                'warehouse':  'Armaz\u00e9m',
-                'date':       'Data',
-                'origin':     'Origem',
-                'notes':      'Notas Internas',
+                'partner':      'Fornecedor',
+                'warehouse':    'Armaz\u00e9m',
+                'date':         'Data',
+                'origin':       'Origem',
+                'notes':        'Notas Internas',
+                'scrap_reason': 'Motivo de Sucata',
             }
             _old = {
-                'partner':   str(movement.partner)   if movement.partner   else '',
-                'warehouse': str(movement.warehouse) if movement.warehouse else '',
-                'date':      movement.date.strftime('%d/%m/%Y %H:%M') if movement.date else '',
-                'origin':    movement.origin  or '',
-                'notes':     movement.notes   or '',
+                'partner':      str(movement.partner)   if movement.partner   else '',
+                'warehouse':    str(movement.warehouse) if movement.warehouse else '',
+                'date':         movement.date.strftime('%d/%m/%Y %H:%M') if movement.date else '',
+                'origin':       movement.origin  or '',
+                'notes':        movement.notes   or '',
+                'scrap_reason': movement.get_scrap_reason_display() if movement.scrap_reason else '',
             }
             form.save()
             movement.refresh_from_db()
             _new = {
-                'partner':   str(movement.partner)   if movement.partner   else '',
-                'warehouse': str(movement.warehouse) if movement.warehouse else '',
-                'date':      movement.date.strftime('%d/%m/%Y %H:%M') if movement.date else '',
-                'origin':    movement.origin  or '',
-                'notes':     movement.notes   or '',
+                'partner':      str(movement.partner)   if movement.partner   else '',
+                'warehouse':    str(movement.warehouse) if movement.warehouse else '',
+                'date':         movement.date.strftime('%d/%m/%Y %H:%M') if movement.date else '',
+                'origin':       movement.origin  or '',
+                'notes':        movement.notes   or '',
+                'scrap_reason': movement.get_scrap_reason_display() if movement.scrap_reason else '',
             }
             _changes = {
                 _field_labels[k]: {'old': _old[k], 'new': _new[k]}
@@ -2046,6 +2056,7 @@ def movement_edit(request, pk):
         # chatter
         'chatter_notes':      chatter_notes,
         'activities':         chatter_activities,
+        'scrap_reason_choices': StockMovement.SCRAP_REASON_CHOICES,
     })
 
 
@@ -2078,19 +2089,28 @@ def movement_validate(request, pk):
 @require_http_methods(['POST'])
 @login_required
 def movement_cancel(request, pk):
-    """Cancel a draft movement."""
+    """Cancel a movement (draft or done). Done movements have their stock reversed."""
     movement = get_object_or_404(StockMovement, pk=pk)
     meta     = _MOVEMENT_TYPE_META[movement.movement_type]
+    was_done = movement.state == 'done'
     try:
         movement.action_cancel()
         # Log STATUS_CHANGE
+        description = (
+            'cancelou o movimento e reverteu o stock'
+            if was_done else
+            'cancelou o movimento (rascunho)'
+        )
         ChatterActivity.objects.create(
             content_object=movement,
             user=request.user,
             activity_type='STATUS_CHANGE',
-            description='cancelou o movimento',
+            description=description,
         )
-        messages.success(request, f'Movimento {movement.reference} cancelado.')
+        msg = f'Movimento {movement.reference} cancelado.'
+        if was_done:
+            msg += ' O stock foi revertido automaticamente.'
+        messages.success(request, msg)
     except Exception as exc:
         messages.error(request, str(exc))
     from django.urls import reverse
@@ -2249,6 +2269,16 @@ def adjustment_list(request):
 @login_required
 def adjustment_create(request):
     return movement_create(request, 'adjustment')
+
+
+@login_required
+def scrap_list(request):
+    return movement_list(request, 'scrap')
+
+
+@login_required
+def scrap_create(request):
+    return movement_create(request, 'scrap')
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -2684,7 +2714,7 @@ def all_movements_list(request):
     else:
         qs = StockMovement.objects.filter(is_active=True)
 
-    if type_filter in ('receipt', 'delivery', 'adjustment'):
+    if type_filter in ('receipt', 'delivery', 'adjustment', 'scrap'):
         qs = qs.filter(movement_type=type_filter)
 
     qs = filter_by_company(qs, request)
@@ -2726,11 +2756,13 @@ def all_movements_list(request):
             ('receipt',    'Receções'),
             ('delivery',   'Entregas'),
             ('adjustment', 'Ajustes'),
+            ('scrap',      'Sucata'),
         ],
         'type_labels': {
             'receipt':    'Receção',
             'delivery':   'Entrega',
             'adjustment': 'Ajuste',
+            'scrap':      'Sucata',
         },
     }
     return render(request, 'inventory/all_movements_list.html', context)
@@ -3049,7 +3081,7 @@ def report_purchase_prices(request):
 
 @login_required
 def report_scrap(request):
-    """Losses / Scrap Report — adjustment-out movements as proxy until Scrap model exists."""
+    """Losses / Scrap Report — dedicated scrap movements (movement_type='scrap')."""
     from decimal import Decimal
     company       = get_active_company(request)
     today         = timezone.now().date()
@@ -3066,8 +3098,7 @@ def report_scrap(request):
     lines_qs = StockMovementLine.objects.select_related(
         'product', 'product__uom', 'stock_movement', 'stock_movement__responsible'
     ).filter(
-        stock_movement__movement_type='adjustment',
-        stock_movement__adjustment_direction='out',
+        stock_movement__movement_type='scrap',
         stock_movement__state='done',
         stock_movement__date__date__gte=date_from,
         stock_movement__date__date__lte=date_to,
@@ -3095,6 +3126,7 @@ def report_scrap(request):
             'cost':        cost,
             'value':       value,
             'responsible': l.stock_movement.responsible,
+            'reason':      l.stock_movement.get_scrap_reason_display() if l.stock_movement.scrap_reason else '—',
             'notes':       l.stock_movement.notes,
         })
 
@@ -3116,3 +3148,466 @@ def report_scrap(request):
         'chart_labels':  chart_labels,
         'chart_values':  chart_values,
     })
+
+
+# ---------------------------------------------------------------------------
+# Lista de Compras — Índice
+# ---------------------------------------------------------------------------
+
+@login_required
+def purchase_list_index(request):
+    """List of all PurchaseLists, with search/filter/pagination."""
+    search_query  = request.GET.get('search', '')
+    search_field  = request.GET.get('field', 'name')
+    page_number   = request.GET.get('page', 1)
+    status_filter = request.GET.get('status', 'active')
+    try:
+        page_size = int(request.GET.get('page_size', 50))
+        if page_size < 1:
+            page_size = 50
+    except (ValueError, TypeError):
+        page_size = 50
+
+    company = get_active_company(request)
+
+    if status_filter == 'archived':
+        qs = PurchaseList.objects.filter(is_active=False)
+    else:
+        qs = PurchaseList.objects.filter(is_active=True)
+
+    if company:
+        qs = qs.filter(owner_company=company)
+
+    qs = qs.select_related('supplier', 'warehouse', 'owner_company').prefetch_related('lines')
+
+    if search_query:
+        field_mapping = {
+            'name':      Q(name__icontains=search_query),
+            'supplier':  Q(supplier__name__icontains=search_query),
+            'reference': Q(reference__icontains=search_query),
+            'notes':     Q(notes__icontains=search_query),
+        }
+        qs = qs.filter(field_mapping.get(search_field, Q(name__icontains=search_query)))
+
+    qs = qs.order_by('-date', '-created_at')
+
+    paginator = Paginator(qs, page_size)
+    page_obj  = paginator.get_page(page_number)
+
+    return render(request, 'inventory/purchase_list_index.html', {
+        'purchase_lists': page_obj,
+        'search_query':   search_query,
+        'search_field':   search_field,
+        'total_count':    paginator.count,
+        'page_size':      page_size,
+        'status_filter':  status_filter,
+    })
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_archive_purchase_lists(request):
+    try:
+        ids   = json.loads(request.body).get('ids', [])
+        count = PurchaseList.objects.filter(id__in=ids, is_active=True).update(is_active=False)
+        return JsonResponse({'success': True, 'message': f'{count} lista(s) arquivada(s).'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': {'code': 'ERROR', 'message': str(e)}}, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_unarchive_purchase_lists(request):
+    try:
+        ids   = json.loads(request.body).get('ids', [])
+        count = PurchaseList.objects.filter(id__in=ids, is_active=False).update(is_active=True)
+        return JsonResponse({'success': True, 'message': f'{count} lista(s) desarquivada(s).'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': {'code': 'ERROR', 'message': str(e)}}, status=500)
+
+
+@require_http_methods(["POST"])
+@login_required
+def bulk_delete_purchase_lists(request):
+    try:
+        ids   = json.loads(request.body).get('ids', [])
+        if not ids:
+            return JsonResponse({'success': False, 'error': {'code': 'NO_ITEMS', 'message': 'Nenhuma lista selecionada'}}, status=400)
+        deleted, _ = PurchaseList.objects.filter(id__in=ids).delete()
+        return JsonResponse({'success': True, 'message': f'{deleted} lista(s) eliminada(s) permanentemente.'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': {'code': 'ERROR', 'message': str(e)}}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Purchase List FORM views
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _purchase_list_context(request, purchase_list=None):
+    """Build the shared context dict for the purchase list form."""
+    from decimal import Decimal
+    warehouses = filter_by_company(Warehouse.objects.filter(is_active=True), request)
+    uoms       = UoM.objects.select_related('category').order_by('name')
+
+    uom_json = json.dumps([
+        {'id': str(u.pk), 'symbol': u.symbol, 'name': u.name}
+        for u in uoms
+    ])
+
+    if purchase_list:
+        lines_data = []
+        for line in purchase_list.lines.select_related('product', 'uom').order_by('id'):
+            lines_data.append({
+                'id':           str(line.pk),
+                'product_id':   str(line.product_id),
+                'product_name': line.product.name,
+                'qty_on_hand':  float(line.qty_on_hand),
+                'qty_needed':   float(line.qty_needed),
+                'qty_to_buy':   float(line.qty_to_buy),
+                'uom_id':       str(line.uom_id) if line.uom_id else '',
+                'unit_price':   float(line.unit_price),
+                'tax_rate':     float(line.tax_rate),
+            })
+        lines_json = json.dumps(lines_data)
+    else:
+        lines_json = '[]'
+
+    from django.contrib.contenttypes.models import ContentType
+    if purchase_list:
+        ct = ContentType.objects.get_for_model(PurchaseList)
+        activities = (
+            ChatterActivity.objects
+            .filter(content_type=ct, object_id=purchase_list.pk)
+            .select_related('user')
+            .order_by('-created_at')[:100]
+        )
+    else:
+        activities = []
+
+    return {
+        'purchase_list': purchase_list,
+        'warehouses':    warehouses,
+        'lines_json':    lines_json,
+        'uom_json':      uom_json,
+        'form_errors':   [],
+        'activities':    activities,
+    }
+
+
+def _save_purchase_list_from_post(request, purchase_list=None):
+    """Parse POST data and save header + lines. Returns (instance, errors)."""
+    from decimal import Decimal
+    from django.utils.dateparse import parse_date
+    post     = request.POST
+    company  = get_active_company(request)
+    errors   = []
+
+    name         = post.get('name', '').strip()
+    date_raw     = post.get('date', '').strip()
+    reference    = post.get('reference', '').strip()
+    notes        = post.get('notes', '').strip()
+    supplier_id  = post.get('supplier', '').strip() or None
+    warehouse_id = post.get('warehouse', '').strip() or None
+
+    parsed_date = parse_date(date_raw) if date_raw else None
+    if not parsed_date:
+        parsed_date = timezone.localdate()
+
+    with transaction.atomic():
+        if purchase_list is None:
+            purchase_list = PurchaseList(owner_company=company)
+
+        purchase_list.name         = name
+        purchase_list.date         = parsed_date
+        purchase_list.reference    = reference
+        purchase_list.notes        = notes
+        purchase_list.supplier_id  = supplier_id
+        purchase_list.warehouse_id = warehouse_id
+        purchase_list.save()
+
+        lines_count  = int(post.get('lines_count', 0))
+        existing_pks = set(str(pk) for pk in purchase_list.lines.values_list('id', flat=True))
+        submitted_pks = set()
+
+        for i in range(lines_count):
+            product_id = post.get(f'line_product_{i}', '').strip()
+            if not product_id:
+                continue
+            line_pk = post.get(f'line_pk_{i}', '').strip()
+
+            def _dec(key, default='0'):
+                v = post.get(key, default).strip()
+                try:
+                    return Decimal(v)
+                except Exception:
+                    return Decimal(default)
+
+            qty_needed = _dec(f'line_qty_needed_{i}')
+            qty_to_buy = _dec(f'line_qty_to_buy_{i}')
+            unit_price = _dec(f'line_unit_price_{i}')
+            tax_rate   = _dec(f'line_tax_rate_{i}')
+            uom_id     = post.get(f'line_uom_{i}', '').strip() or None
+
+            if line_pk and line_pk in existing_pks:
+                try:
+                    line = purchase_list.lines.get(pk=line_pk)
+                    line.product_id = product_id
+                    line.qty_needed = qty_needed
+                    line.qty_to_buy = qty_to_buy
+                    line.unit_price = unit_price
+                    line.tax_rate   = tax_rate
+                    line.uom_id     = uom_id
+                    line.save()
+                    submitted_pks.add(line_pk)
+                except PurchaseListLine.DoesNotExist:
+                    pass
+            else:
+                line = PurchaseListLine.objects.create(
+                    purchase_list=purchase_list,
+                    product_id   =product_id,
+                    qty_needed   =qty_needed,
+                    qty_to_buy   =qty_to_buy,
+                    unit_price   =unit_price,
+                    tax_rate     =tax_rate,
+                    uom_id       =uom_id,
+                )
+                submitted_pks.add(str(line.pk))
+
+        to_delete = existing_pks - submitted_pks
+        if to_delete:
+            purchase_list.lines.filter(pk__in=to_delete).delete()
+
+    return purchase_list, errors
+
+
+@login_required
+@login_required
+def purchase_list_create(request):
+    if request.method == 'POST':
+        pl, errors = _save_purchase_list_from_post(request)
+        if not errors:
+            ChatterActivity.objects.create(
+                content_object=pl,
+                user=request.user,
+                activity_type='CREATE',
+                description=f'criou a lista de compras "{pl.name}"',
+            )
+            messages.success(request, 'Lista de compras criada.')
+            return redirect('inventory:purchase_list_edit', pk=pl.pk)
+        ctx = _purchase_list_context(request)
+        ctx['form_errors'] = errors
+        return render(request, 'inventory/purchase_list_form.html', ctx)
+
+    ctx = _purchase_list_context(request)
+    return render(request, 'inventory/purchase_list_form.html', ctx)
+
+
+@login_required
+def purchase_list_edit(request, pk):
+    pl = get_object_or_404(PurchaseList, pk=pk)
+
+    if request.method == 'POST':
+        if pl.state in ('draft', 'confirmed'):
+            pl, errors = _save_purchase_list_from_post(request, purchase_list=pl)
+            if not errors:
+                ChatterActivity.objects.create(
+                    content_object=pl,
+                    user=request.user,
+                    activity_type='UPDATE',
+                    description='actualizou a lista de compras',
+                )
+                messages.success(request, 'Lista guardada.')
+                return redirect('inventory:purchase_list_edit', pk=pl.pk)
+            ctx = _purchase_list_context(request, pl)
+            ctx['form_errors'] = errors
+            return render(request, 'inventory/purchase_list_form.html', ctx)
+
+    ctx = _purchase_list_context(request, pl)
+    return render(request, 'inventory/purchase_list_form.html', ctx)
+
+
+@login_required
+@require_http_methods(['POST'])
+def purchase_list_confirm(request, pk):
+    pl = get_object_or_404(PurchaseList, pk=pk)
+    if pl.state == 'draft':
+        pl.state = 'confirmed'
+        pl.save(update_fields=['state'])
+        ChatterActivity.objects.create(
+            content_object=pl,
+            user=request.user,
+            activity_type='STATUS_CHANGE',
+            description='confirmou a lista de compras',
+        )
+        messages.success(request, 'Lista confirmada.')
+    return redirect('inventory:purchase_list_edit', pk=pk)
+
+
+@login_required
+@require_http_methods(['POST'])
+def purchase_list_done(request, pk):
+    pl = get_object_or_404(PurchaseList, pk=pk)
+    if pl.state == 'confirmed':
+        pl.state = 'done'
+        pl.save(update_fields=['state'])
+        ChatterActivity.objects.create(
+            content_object=pl,
+            user=request.user,
+            activity_type='STATUS_CHANGE',
+            description='marcou a lista como concluída',
+        )
+        messages.success(request, 'Lista marcada como concluída.')
+    return redirect('inventory:purchase_list_edit', pk=pk)
+
+
+@login_required
+@require_http_methods(['POST'])
+def purchase_list_cancel(request, pk):
+    pl = get_object_or_404(PurchaseList, pk=pk)
+    if pl.state not in ('cancelled', 'done'):
+        pl.state = 'cancelled'
+        pl.save(update_fields=['state'])
+        ChatterActivity.objects.create(
+            content_object=pl,
+            user=request.user,
+            activity_type='STATUS_CHANGE',
+            description='cancelou a lista de compras',
+        )
+        messages.success(request, 'Lista cancelada.')
+    return redirect('inventory:purchase_list_edit', pk=pk)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CHATTER API — Purchase List Notes & Followers
+# ══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+@require_http_methods(['GET'])
+def purchase_list_notes_list(request, pk):
+    from django.contrib.contenttypes.models import ContentType
+    pl = get_object_or_404(PurchaseList, pk=pk)
+    ct = ContentType.objects.get_for_model(PurchaseList)
+    notes = (
+        ChatterMessage.objects
+        .filter(content_type=ct, object_id=pl.id, message_type='NOTE')
+        .select_related('author')
+        .order_by('-created_at')[:100]
+    )
+    return JsonResponse({'notes': [_note_to_dict(n) for n in notes]})
+
+
+@login_required
+@require_http_methods(['POST'])
+def purchase_list_note_create(request, pk):
+    from django.contrib.contenttypes.models import ContentType
+    pl = get_object_or_404(PurchaseList, pk=pk)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+
+    content = data.get('content', '').strip()
+    if not content:
+        return JsonResponse({'success': False, 'error': 'Conteúdo não pode estar vazio.'}, status=400)
+
+    urgent = bool(data.get('urgent', False))
+    ct = ContentType.objects.get_for_model(PurchaseList)
+    note = ChatterMessage.objects.create(
+        content_type=ct,
+        object_id=pl.id,
+        author=request.user,
+        message_type='NOTE',
+        body=content,
+    )
+
+    mentioned_usernames = list(set(re.findall(r'@(\w+)', content)))
+    if mentioned_usernames:
+        try:
+            from apps.core.models import Notification as _N
+            mentioned_users = User.objects.filter(username__in=mentioned_usernames, is_active=True)
+            author_display = request.user.get_full_name() or request.user.username
+            for mu in mentioned_users:
+                _N.objects.create(
+                    user=mu,
+                    notification_type='MENTION',
+                    title=f'{author_display} mencionou-te numa nota',
+                    message=f'Lista de compras: {pl.name}',
+                    link=f'/inventory/listas-de-compras/{str(pl.id)}/editar/',
+                    related_object_id=note.id,
+                    is_urgent=urgent,
+                )
+        except Exception:
+            pass
+
+    return JsonResponse({'success': True, 'note': _note_to_dict(note)}, status=201)
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def purchase_list_followers_api(request, pk):
+    from django.contrib.contenttypes.models import ContentType
+    pl = get_object_or_404(PurchaseList, pk=pk)
+    ct = ContentType.objects.get_for_model(PurchaseList)
+
+    if request.method == 'GET':
+        ChatterFollower.objects.get_or_create(
+            content_type=ct,
+            object_id=pl.id,
+            user=request.user,
+            defaults={'added_by': None},
+        )
+        followers = (
+            ChatterFollower.objects
+            .filter(content_type=ct, object_id=pl.id)
+            .select_related('user')
+            .order_by('created_at')
+        )
+        return JsonResponse({
+            'followers': [
+                {
+                    'user_id': str(f.user.id),
+                    'display': f.user.get_full_name() or f.user.username,
+                    'initials': ''.join(
+                        p[0].upper()
+                        for p in (f.user.get_full_name() or f.user.username).split()[:2]
+                    ),
+                }
+                for f in followers
+            ]
+        })
+
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+
+    user_id = data.get('user_id', '').strip()
+    if not user_id:
+        return JsonResponse({'success': False, 'error': 'user_id obrigatório'}, status=400)
+
+    try:
+        target_user = User.objects.get(id=user_id, is_active=True)
+    except (User.DoesNotExist, Exception):
+        return JsonResponse({'success': False, 'error': 'Utilizador não encontrado'}, status=404)
+
+    ChatterFollower.objects.get_or_create(
+        content_type=ct,
+        object_id=pl.id,
+        user=target_user,
+        defaults={'added_by': request.user},
+    )
+    display  = target_user.get_full_name() or target_user.username
+    initials = ''.join(p[0].upper() for p in display.split()[:2])
+    return JsonResponse({'success': True, 'user_id': str(target_user.id), 'display': display, 'initials': initials})
+
+
+@login_required
+@require_http_methods(['DELETE'])
+def purchase_list_follower_remove(request, pk, user_id):
+    from django.contrib.contenttypes.models import ContentType
+    pl = get_object_or_404(PurchaseList, pk=pk)
+    ct = ContentType.objects.get_for_model(PurchaseList)
+    ChatterFollower.objects.filter(
+        content_type=ct, object_id=pl.id, user_id=user_id,
+    ).delete()
+    return JsonResponse({'success': True})
