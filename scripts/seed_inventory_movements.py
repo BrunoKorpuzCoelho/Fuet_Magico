@@ -86,8 +86,8 @@ def run():
             '   Corre primeiro: python manage.py seed --only demo_products'
         )
 
-    suppliers  = list(Contact.objects.filter(contact_type='company').order_by('?')[:8])
-    customers  = list(Contact.objects.filter(contact_type='person').order_by('?')[:15])
+    suppliers  = list(Contact.objects.filter(contact_category='company').order_by('?')[:8])
+    customers  = list(Contact.objects.filter(contact_category='person').order_by('?')[:15])
     admin_user = CustomUser.objects.filter(is_staff=True).first()
 
     print(f'\n  Empresa : {company.name}')
