@@ -1,0 +1,1018 @@
+import json
+import re
+
+from django.contrib import messages
+from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required
+from django.contrib.contenttypes.models import ContentType
+from django.core.paginator import Paginator
+from django.db import transaction
+from django.db.models import Q
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST, require_http_methods
+
+from apps.core.models import ChatterMessage, ChatterActivity, ChatterFollower
+
+User = get_user_model()
+
+from apps.core.multi_company import filter_by_company, get_active_company
+from .models import SaleOrder, SaleOrderLine, PaymentTerm
+from .forms import SaleOrderForm, SaleOrderLineForm, PaymentTermForm
+
+
+_FIELD_LABELS = {
+    'client':         'Cliente',
+    'order_date':     'Data',
+    'delivery_date':  'Data de Entrega',
+    'notes':          'Notas',
+    'payment_terms':  'Condição de Pagamento',
+}
+
+
+def _log(order, user, activity_type, description, details=None):
+    """Create a ChatterActivity log entry for a SaleOrder."""
+    ct = ContentType.objects.get_for_model(SaleOrder)
+    ChatterActivity.objects.create(
+        content_type=ct,
+        object_id=order.pk,
+        user=user,
+        activity_type=activity_type,
+        description=description,
+        details=details or {},
+    )
+
+
+def _build_lines_json(order):
+    """Serialize SaleOrderLine queryset to JSON string for Alpine.js."""
+    lines_data = []
+    for line in order.lines.select_related('product', 'uom').all():
+        lines_data.append({
+            'id':           str(line.pk),
+            'product_id':   str(line.product.pk),
+            'product_name': line.product.name,
+            'product_ref':  line.product.internal_reference or '',
+            'quantity':     float(line.quantity),
+            'uom_id':       str(line.uom.pk) if line.uom else '',
+            'uom_symbol':   line.uom.symbol if line.uom else '',
+            'unit_price':   float(line.unit_price),
+            'tax_rate':     float(line.tax_rate),
+            'discount_pct': float(line.discount_pct),
+            'line_total':   float(line.line_total),
+        })
+    return json.dumps(lines_data)
+
+
+_STATUS_FILTER_OPTIONS = [
+    ('all',       'Todas (Activas)',   'bg-gray-400'),
+    ('draft',     'Rascunho',          'bg-gray-500'),
+    ('confirmed', 'Confirmado',        'bg-yellow-500'),
+    ('delivered', 'Entregue',          'bg-blue-500'),
+    ('invoiced',  'Faturado',          'bg-green-500'),
+    ('cancelled', 'Cancelado',         'bg-red-500'),
+    ('archived',  'Arquivados',        'bg-orange-400'),
+]
+
+
+def _parse_order_ids(request):
+    try:
+        body = json.loads(request.body)
+        ids = body.get('order_ids', [])
+        if not ids:
+            return None, 'Nenhum registo selecionado.'
+        return ids, None
+    except (json.JSONDecodeError, KeyError):
+        return None, 'Pedido inválido.'
+
+
+# ────────────────────────────────────────────────────────────────────
+# Sale Order — Index
+# ────────────────────────────────────────────────────────────────────
+
+@login_required
+def sale_order_index(request):
+    """List sale orders for the active company with search, status filter and pagination."""
+    search_query  = request.GET.get('search', '').strip()
+    search_field  = request.GET.get('field', 'order_number')
+    status_filter = request.GET.get('status', 'all')
+    page_number   = request.GET.get('page', 1)
+
+    try:
+        page_size = int(request.GET.get('page_size', 50))
+        if page_size < 1:
+            page_size = 50
+    except (ValueError, TypeError):
+        page_size = 50
+
+    qs = filter_by_company(
+        SaleOrder.objects.select_related('client', 'owner_company'),
+        request,
+    )
+
+    if status_filter == 'archived':
+        qs = qs.filter(is_active=False)
+    elif status_filter in ('draft', 'confirmed', 'delivered', 'invoiced', 'cancelled'):
+        qs = qs.filter(is_active=True, status=status_filter)
+    else:
+        qs = qs.filter(is_active=True)
+
+    if search_query:
+        field_map = {
+            'order_number':  Q(order_number__icontains=search_query),
+            'client':        Q(client__name__icontains=search_query),
+            'document_type': Q(document_type__icontains=search_query),
+            'notes':         Q(notes__icontains=search_query),
+        }
+        q_filter = field_map.get(search_field)
+        if q_filter:
+            qs = qs.filter(q_filter)
+        else:
+            qs = qs.filter(
+                Q(order_number__icontains=search_query) |
+                Q(client__name__icontains=search_query) |
+                Q(notes__icontains=search_query)
+            )
+
+    paginator = Paginator(qs, page_size)
+    page_obj  = paginator.get_page(page_number)
+
+    return render(request, 'sales/order_list.html', {
+        'orders':                page_obj,
+        'search_query':          search_query,
+        'search_field':          search_field,
+        'status_filter':         status_filter,
+        'status_filter_options': _STATUS_FILTER_OPTIONS,
+        'total_count':           paginator.count,
+        'page_size':             page_size,
+    })
+
+
+# ────────────────────────────────────────────────────────────────────
+# Sale Order — Create
+# ────────────────────────────────────────────────────────────────────
+
+@login_required
+def sale_order_create(request):
+    """Create a new sale order."""
+    company = get_active_company(request)
+
+    # Build payment terms queryset for this company + global
+    payment_terms_qs = PaymentTerm.objects.filter(
+        Q(owner_company=company) | Q(owner_company__isnull=True),
+        is_active=True,
+    )
+
+    form = SaleOrderForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        with transaction.atomic():
+            order = form.save(commit=False)
+            order.owner_company = company
+            order.document_type = SaleOrder.DocumentType.QUOTATION  # DRAFT → Orçamento
+            order.save()
+            _log(order, request.user, 'CREATE', f'Venda {order.order_number} criada.')
+        messages.success(request, f'Venda {order.order_number} criada.')
+        return redirect('sales:order_edit', pk=order.pk)
+
+    # Pre-select default payment term on GET
+    default_pt = payment_terms_qs.filter(is_default=True).first()
+    selected_payment_term_id = (
+        str(request.POST.get('payment_terms', '')) if request.method == 'POST'
+        else (str(default_pt.pk) if default_pt else '')
+    )
+
+    return render(request, 'sales/order_form.html', {
+        'form':                    form,
+        'order':                   None,
+        'title':                   'Nova Venda',
+        'is_create':               True,
+        'lines_json':              '[]',
+        'next_ref_preview':        SaleOrder.generate_order_number(),
+        'payment_terms_qs':        payment_terms_qs,
+        'selected_payment_term_id': selected_payment_term_id,
+    })
+
+
+# ────────────────────────────────────────────────────────────────────
+# Sale Order — Edit
+# ────────────────────────────────────────────────────────────────────
+
+@login_required
+def sale_order_edit(request, pk):
+    """Edit (or view) a sale order."""
+    order = get_object_or_404(
+        filter_by_company(
+            SaleOrder.objects.select_related('client', 'owner_company', 'payment_terms')
+                      .prefetch_related('lines__product', 'lines__uom'),
+            request,
+        ),
+        pk=pk,
+    )
+
+    company = get_active_company(request)
+    payment_terms_qs = PaymentTerm.objects.filter(
+        Q(owner_company=company) | Q(owner_company__isnull=True),
+        is_active=True,
+    )
+
+    if order.is_editable:
+        form = SaleOrderForm(request.POST or None, instance=order)
+        if request.method == 'POST' and form.is_valid():
+            with transaction.atomic():
+                old_client = order.client.name if order.client else ''
+                old_pt     = order.payment_terms.name if order.payment_terms else ''
+                old_vals = {
+                    'client':        old_client,
+                    'order_date':    str(order.order_date or ''),
+                    'delivery_date': str(order.delivery_date or ''),
+                    'notes':         str(order.notes or ''),
+                    'payment_terms': old_pt,
+                }
+                form.save()
+                order.refresh_from_db()
+                new_client = order.client.name if order.client else ''
+                new_pt     = order.payment_terms.name if order.payment_terms else ''
+                new_vals = {
+                    'client':        new_client,
+                    'order_date':    str(order.order_date or ''),
+                    'delivery_date': str(order.delivery_date or ''),
+                    'notes':         str(order.notes or ''),
+                    'payment_terms': new_pt,
+                }
+                changes = {
+                    _FIELD_LABELS[f]: {'old': old_vals[f], 'new': new_vals[f]}
+                    for f in old_vals if old_vals[f] != new_vals[f]
+                }
+                if changes:
+                    _log(order, request.user, 'UPDATE', 'Venda actualizada.', {'changes': changes})
+            messages.success(request, 'Venda guardada.')
+            return redirect('sales:order_edit', pk=order.pk)
+    else:
+        form = SaleOrderForm(instance=order)
+
+    selected_payment_term_id = str(order.payment_terms.pk) if order.payment_terms else ''
+
+    # Chatter context
+    _ct = ContentType.objects.get_for_model(SaleOrder)
+    chatter_activities = ChatterActivity.objects.filter(
+        content_type=_ct, object_id=order.id
+    ).select_related('user').order_by('-created_at')[:100]
+
+    # Smart button counts
+    from apps.inventory.models import StockMovement
+    delivery_count = StockMovement.objects.filter(
+        origin=order.order_number,
+        movement_type='delivery',
+    ).count()
+
+    return render(request, 'sales/order_form.html', {
+        'form':                    form,
+        'order':                   order,
+        'title':                   order.order_number,
+        'is_create':               False,
+        'lines_json':              _build_lines_json(order),
+        'next_ref_preview':        None,
+        'activities':              chatter_activities,
+        'delivery_count':          delivery_count,
+        'payment_terms_qs':        payment_terms_qs,
+        'selected_payment_term_id': selected_payment_term_id,
+    })
+
+
+# ────────────────────────────────────────────────────────────────────
+# Sale Order — Detail (read-only → redirect to edit)
+# ────────────────────────────────────────────────────────────────────
+
+@login_required
+def sale_order_detail(request, pk):
+    return redirect('sales:order_edit', pk=pk)
+
+
+# ────────────────────────────────────────────────────────────────────
+# Sale Order — State transitions
+# ────────────────────────────────────────────────────────────────────
+
+@login_required
+@require_POST
+def sale_order_confirm(request, pk):
+    """Confirm a DRAFT sale order → CONFIRMED."""
+    order = get_object_or_404(
+        filter_by_company(SaleOrder.objects, request), pk=pk
+    )
+    if order.status != SaleOrder.Status.DRAFT:
+        messages.error(request, 'Apenas vendas em rascunho podem ser confirmadas.')
+        return redirect('sales:order_detail', pk=order.pk)
+
+    if not order.lines.exists():
+        messages.error(request, 'Não é possível confirmar uma venda sem linhas.')
+        return redirect('sales:order_edit', pk=order.pk)
+
+    from apps.inventory.models import StockMovement, StockMovementLine, Warehouse
+
+    so_lines = list(order.lines.select_related('product', 'uom').all())
+
+    # Resolve default warehouse for this company
+    warehouse = (
+        Warehouse.objects.filter(owner_company=order.owner_company, is_default=True).first()
+        or Warehouse.objects.filter(owner_company=order.owner_company).first()
+        or Warehouse.objects.filter(owner_company__isnull=True).first()
+    )
+    if not warehouse:
+        messages.error(request, 'Não existe nenhum armazém configurado. Cria um armazém antes de confirmar.')
+        return redirect('sales:order_edit', pk=order.pk)
+
+    with transaction.atomic():
+        # 1. Confirm the sale order → document becomes Encomenda
+        order.status = SaleOrder.Status.CONFIRMED
+        order.document_type = SaleOrder.DocumentType.ORDER
+        order.save(update_fields=['status', 'document_type'])
+
+        # 2. Create a draft delivery movement linked via origin (espelho das compras, saída de stock)
+        movement = StockMovement.objects.create(
+            movement_type='delivery',
+            state='draft',
+            warehouse=warehouse,
+            partner=order.client,
+            origin=order.order_number,
+            notes=f'Gerado automaticamente a partir da venda {order.order_number}.',
+            responsible=request.user,
+            owner_company=order.owner_company,
+        )
+
+        # 3. Copy every SO line into the movement
+        StockMovementLine.objects.bulk_create([
+            StockMovementLine(
+                stock_movement=movement,
+                product=line.product,
+                quantity=line.quantity,
+                unit_price=line.unit_price,
+                uom=line.uom,
+                tax_rate=line.tax_rate,
+                discount_pct=line.discount_pct,
+            )
+            for line in so_lines
+        ])
+
+        _log(
+            order, request.user, 'STATUS_CHANGE',
+            f'Estado alterado: Rascunho → Confirmado (Encomenda). Entrega {movement.reference} criada.',
+            {
+                'field':        'status',
+                'old':          'draft',
+                'new':          'confirmed',
+                'delivery_ref': movement.reference,
+                'delivery_pk':  str(movement.pk),
+            },
+        )
+
+    messages.success(
+        request,
+        f'Venda {order.order_number} confirmada. Entrega {movement.reference} criada em rascunho.',
+    )
+    return redirect('sales:order_edit', pk=order.pk)
+
+
+@login_required
+@require_POST
+def sale_order_deliver(request, pk):
+    """Mark a CONFIRMED sale order as DELIVERED."""
+    order = get_object_or_404(
+        filter_by_company(SaleOrder.objects, request), pk=pk
+    )
+    if order.status != SaleOrder.Status.CONFIRMED:
+        messages.error(request, 'Apenas vendas confirmadas podem ser marcadas como entregues.')
+        return redirect('sales:order_detail', pk=order.pk)
+
+    with transaction.atomic():
+        order.status = SaleOrder.Status.DELIVERED
+        order.save(update_fields=['status'])
+        _log(order, request.user, 'STATUS_CHANGE',
+             'Estado alterado: Confirmado → Entregue.',
+             {'field': 'status', 'old': 'confirmed', 'new': 'delivered'})
+
+    messages.success(request, f'Venda {order.order_number} marcada como entregue.')
+    return redirect('sales:order_edit', pk=order.pk)
+
+
+@login_required
+@require_POST
+def sale_order_cancel(request, pk):
+    """Cancel a sale order (not allowed if already INVOICED)."""
+    order = get_object_or_404(
+        filter_by_company(SaleOrder.objects, request), pk=pk
+    )
+    if order.status == SaleOrder.Status.INVOICED:
+        messages.error(request, 'Não é possível cancelar uma venda já faturada.')
+        return redirect('sales:order_detail', pk=order.pk)
+    old_status = order.status
+    with transaction.atomic():
+        order.status = SaleOrder.Status.CANCELLED
+        order.save(update_fields=['status'])
+        _log(order, request.user, 'STATUS_CHANGE',
+             f'Estado alterado: {old_status} → Cancelado.',
+             {'field': 'status', 'old': old_status, 'new': 'cancelled'})
+
+    messages.success(request, f'Venda {order.order_number} cancelada.')
+    return redirect('sales:order_edit', pk=order.pk)
+
+
+# ────────────────────────────────────────────────────────────────────
+# Sale Order Line — Add / Remove / Update (AJAX)
+# ────────────────────────────────────────────────────────────────────
+
+@login_required
+@require_POST
+def sale_order_line_add(request, pk):
+    """Add a line to a DRAFT sale order (JSON body)."""
+    order = get_object_or_404(
+        filter_by_company(SaleOrder.objects, request), pk=pk
+    )
+    if not order.is_editable:
+        return JsonResponse({'error': 'Venda não editável.'}, status=400)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido.'}, status=400)
+
+    product_id = data.get('product_id')
+    if not product_id:
+        return JsonResponse({'error': 'product_id é obrigatório.'}, status=400)
+
+    from apps.inventory.models import Product, UoM
+    try:
+        product = Product.objects.get(pk=product_id)
+    except Product.DoesNotExist:
+        return JsonResponse({'error': 'Produto não encontrado.'}, status=404)
+
+    uom_id = data.get('uom_id')
+    uom = None
+    if uom_id:
+        try:
+            uom = UoM.objects.get(pk=uom_id)
+        except UoM.DoesNotExist:
+            pass
+    if not uom:
+        uom = product.uom
+
+    quantity   = data.get('quantity', 1)
+    unit_price = data.get('unit_price', float(product.sale_price or product.cost_price or 0))
+    tax_rate   = data.get('tax_rate', 0)
+    discount_pct = data.get('discount_pct', 0)
+
+    with transaction.atomic():
+        line = SaleOrderLine.objects.create(
+            sale_order=order,
+            product=product,
+            uom=uom,
+            quantity=quantity,
+            unit_price=unit_price,
+            tax_rate=tax_rate,
+            discount_pct=discount_pct,
+        )
+        order.recalculate_totals()
+        _log(order, request.user, 'UPDATE', f'Linha adicionada: {product.name}', {
+            'changes': {
+                'Produto':     {'old': '', 'new': product.name},
+                'Quantidade':  {'old': '', 'new': str(quantity)},
+                'Preço Unit.': {'old': '', 'new': str(unit_price)},
+            }
+        })
+
+    return JsonResponse({
+        'success':        True,
+        'line_id':        str(line.id),
+        'product_name':   line.product.name,
+        'quantity':       float(line.quantity),
+        'unit_price':     float(line.unit_price),
+        'tax_rate':       float(line.tax_rate),
+        'line_total':     float(line.line_total),
+        'order_subtotal': float(order.subtotal),
+        'order_tax':      float(order.tax),
+        'order_total':    float(order.total),
+    })
+
+
+@login_required
+@require_POST
+def sale_order_line_remove(request, pk, line_pk):
+    """Remove a line from a DRAFT sale order."""
+    order = get_object_or_404(
+        filter_by_company(SaleOrder.objects, request), pk=pk
+    )
+    if not order.is_editable:
+        return JsonResponse({'error': 'Venda não editável.'}, status=400)
+
+    line = get_object_or_404(SaleOrderLine, pk=line_pk, sale_order=order)
+    product_name = line.product.name if line.product else ''
+    with transaction.atomic():
+        line.delete()
+        order.recalculate_totals()
+        _log(order, request.user, 'UPDATE', f'Linha removida: {product_name}', {
+            'changes': {'Produto': {'old': product_name, 'new': ''}}
+        })
+    return JsonResponse({'success': True, 'order_total': float(order.total)})
+
+
+@login_required
+@require_POST
+def sale_order_line_update(request, pk, line_pk):
+    """Update qty/price/tax of an existing DRAFT line (JSON body)."""
+    order = get_object_or_404(
+        filter_by_company(SaleOrder.objects, request), pk=pk
+    )
+    if not order.is_editable:
+        return JsonResponse({'error': 'Venda não editável.'}, status=400)
+
+    line = get_object_or_404(SaleOrderLine, pk=line_pk, sale_order=order)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido.'}, status=400)
+
+    old_qty   = float(line.quantity)
+    old_price = float(line.unit_price)
+    old_tax   = float(line.tax_rate)
+    old_discount = float(line.discount_pct)
+
+    if 'quantity'    in data: line.quantity    = data['quantity']
+    if 'unit_price'  in data: line.unit_price  = data['unit_price']
+    if 'tax_rate'    in data: line.tax_rate    = data['tax_rate']
+    if 'discount_pct' in data: line.discount_pct = data['discount_pct']
+    if 'uom_id'      in data and data['uom_id']: line.uom_id = data['uom_id']
+
+    with transaction.atomic():
+        line.save()
+        order.recalculate_totals()
+        line_changes = {}
+        if old_qty   != float(line.quantity):   line_changes['Quantidade']  = {'old': str(old_qty),   'new': str(float(line.quantity))}
+        if old_price != float(line.unit_price): line_changes['Preço Unit.'] = {'old': str(old_price), 'new': str(float(line.unit_price))}
+        if old_tax   != float(line.tax_rate):   line_changes['IVA %']       = {'old': str(old_tax),   'new': str(float(line.tax_rate))}
+        if old_discount != float(line.discount_pct): line_changes['Desconto %'] = {'old': str(old_discount), 'new': str(float(line.discount_pct))}
+        if line_changes:
+            product_name = line.product.name if line.product else ''
+            _log(order, request.user, 'UPDATE', f'Linha actualizada: {product_name}', {'changes': line_changes})
+
+    return JsonResponse({
+        'success': True,
+        'line': {'id': str(line.pk), 'line_total': float(line.line_total)},
+        'order_subtotal': float(order.subtotal),
+        'order_tax':      float(order.tax),
+        'order_total':    float(order.total),
+    })
+
+
+# ────────────────────────────────────────────────────────────────────
+# Sale Order — Bulk Actions
+# ────────────────────────────────────────────────────────────────────
+
+@login_required
+@require_POST
+def sale_order_bulk_archive(request):
+    ids, err = _parse_order_ids(request)
+    if err:
+        return JsonResponse({'success': False, 'error': err}, status=400)
+    qs = filter_by_company(SaleOrder.objects, request).filter(pk__in=ids, is_active=True)
+    updated = qs.update(is_active=False)
+    return JsonResponse({'success': True, 'message': f'{updated} venda(s) arquivada(s).', 'updated': updated})
+
+
+@login_required
+@require_POST
+def sale_order_bulk_unarchive(request):
+    ids, err = _parse_order_ids(request)
+    if err:
+        return JsonResponse({'success': False, 'error': err}, status=400)
+    qs = filter_by_company(SaleOrder.objects, request).filter(pk__in=ids, is_active=False)
+    updated = qs.update(is_active=True)
+    return JsonResponse({'success': True, 'message': f'{updated} venda(s) desarquivada(s).', 'updated': updated})
+
+
+@login_required
+@require_POST
+def sale_order_bulk_delete(request):
+    if getattr(request.user, 'role', None) != 'ADMIN':
+        return JsonResponse({'success': False, 'error': 'Apenas administradores podem eliminar vendas.'}, status=403)
+    ids, err = _parse_order_ids(request)
+    if err:
+        return JsonResponse({'success': False, 'error': err}, status=400)
+    qs = filter_by_company(SaleOrder.objects, request).filter(pk__in=ids)
+    count = qs.count()
+    qs.delete()
+    return JsonResponse({'success': True, 'message': f'{count} venda(s) eliminada(s) permanentemente.', 'deleted': count})
+
+
+# ────────────────────────────────────────────────────────────────────
+# Chatter — Notes & Followers
+# ────────────────────────────────────────────────────────────────────
+
+def _so_note_to_dict(n):
+    author = n.author
+    name = author.get_full_name() or author.username if author else 'Sistema'
+    initials = ''.join(p[0].upper() for p in name.split()[:2])
+    return {
+        'id':           str(n.id),
+        'author':       name,
+        'author_initials': initials,
+        'content':      n.body,
+        'created_at':   n.created_at.strftime('%d/%m/%Y %H:%M'),
+    }
+
+
+@login_required
+@require_http_methods(['GET'])
+def sale_order_notes_list(request, pk):
+    """GET /vendas/<pk>/notes/"""
+    order = get_object_or_404(SaleOrder, pk=pk)
+    ct = ContentType.objects.get_for_model(SaleOrder)
+    notes = (
+        ChatterMessage.objects
+        .filter(content_type=ct, object_id=order.id, message_type='NOTE')
+        .select_related('author')
+        .order_by('-created_at')[:100]
+    )
+    return JsonResponse({'notes': [_so_note_to_dict(n) for n in notes]})
+
+
+@login_required
+@require_http_methods(['POST'])
+def sale_order_note_create(request, pk):
+    """POST /vendas/<pk>/notes/create/"""
+    order = get_object_or_404(SaleOrder, pk=pk)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+
+    content = data.get('content', '').strip()
+    if not content:
+        return JsonResponse({'success': False, 'error': 'Conteúdo não pode estar vazio.'}, status=400)
+
+    urgent = bool(data.get('urgent', False))
+    ct = ContentType.objects.get_for_model(SaleOrder)
+    note = ChatterMessage.objects.create(
+        content_type=ct,
+        object_id=order.id,
+        author=request.user,
+        message_type='NOTE',
+        body=content,
+    )
+
+    mentioned_usernames = list(set(re.findall(r'@(\w+)', content)))
+    if mentioned_usernames:
+        try:
+            from apps.core.models import Notification as _N
+            mentioned_users = User.objects.filter(username__in=mentioned_usernames, is_active=True)
+            author_display = request.user.get_full_name() or request.user.username
+            for mu in mentioned_users:
+                _N.objects.create(
+                    user=mu,
+                    notification_type='MENTION',
+                    title=f'{author_display} mencionou-te numa nota',
+                    message=f'Venda: {order.order_number}',
+                    link=f'/vendas/{str(order.id)}/editar/',
+                    related_object_id=note.id,
+                    is_urgent=urgent,
+                )
+        except Exception:
+            pass
+
+    return JsonResponse({'success': True, 'note': _so_note_to_dict(note)}, status=201)
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def sale_order_followers_api(request, pk):
+    """GET/POST /vendas/<pk>/followers/"""
+    order = get_object_or_404(SaleOrder, pk=pk)
+    ct = ContentType.objects.get_for_model(SaleOrder)
+
+    if request.method == 'GET':
+        ChatterFollower.objects.get_or_create(
+            content_type=ct, object_id=order.id, user=request.user,
+            defaults={'added_by': None},
+        )
+        followers = (
+            ChatterFollower.objects
+            .filter(content_type=ct, object_id=order.id)
+            .select_related('user')
+            .order_by('created_at')
+        )
+        return JsonResponse({
+            'followers': [
+                {
+                    'user_id':  str(f.user.id),
+                    'display':  f.user.get_full_name() or f.user.username,
+                    'initials': ''.join(
+                        p[0].upper()
+                        for p in (f.user.get_full_name() or f.user.username).split()[:2]
+                    ),
+                }
+                for f in followers
+            ]
+        })
+
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+
+    user_id = data.get('user_id', '').strip()
+    if not user_id:
+        return JsonResponse({'success': False, 'error': 'user_id obrigatório'}, status=400)
+
+    try:
+        target_user = User.objects.get(id=user_id, is_active=True)
+    except (User.DoesNotExist, Exception):
+        return JsonResponse({'success': False, 'error': 'Utilizador não encontrado'}, status=404)
+
+    ChatterFollower.objects.get_or_create(
+        content_type=ct, object_id=order.id, user=target_user,
+        defaults={'added_by': request.user},
+    )
+    display  = target_user.get_full_name() or target_user.username
+    initials = ''.join(p[0].upper() for p in display.split()[:2])
+    return JsonResponse({'success': True, 'user_id': str(target_user.id), 'display': display, 'initials': initials})
+
+
+@login_required
+@require_http_methods(['DELETE'])
+def sale_order_follower_remove(request, pk, user_id):
+    """DELETE /vendas/<pk>/followers/<user_id>/remove/"""
+    order = get_object_or_404(SaleOrder, pk=pk)
+    ct = ContentType.objects.get_for_model(SaleOrder)
+    ChatterFollower.objects.filter(
+        content_type=ct, object_id=order.id, user_id=user_id,
+    ).delete()
+    return JsonResponse({'success': True})
+
+
+
+_STATUS_FILTER_OPTIONS = [
+    ('all',       'Todas (Activas)',   'bg-gray-400'),
+    ('draft',     'Rascunho',          'bg-gray-500'),
+    ('confirmed', 'Confirmado',        'bg-yellow-500'),
+    ('delivered', 'Entregue',          'bg-blue-500'),
+    ('invoiced',  'Faturado',          'bg-green-500'),
+    ('cancelled', 'Cancelado',         'bg-red-500'),
+    ('archived',  'Arquivados',        'bg-orange-400'),
+]
+
+
+def _parse_order_ids(request):
+    try:
+        body = json.loads(request.body)
+        ids = body.get('order_ids', [])
+        if not ids:
+            return None, 'Nenhum registo selecionado.'
+        return ids, None
+    except (json.JSONDecodeError, KeyError):
+        return None, 'Pedido inválido.'
+
+
+# ────────────────────────────────────────────────────────────────────
+# Sale Order — Index
+# ────────────────────────────────────────────────────────────────────
+
+@login_required
+def sale_order_index(request):
+    """List sale orders for the active company with search, status filter and pagination."""
+    search_query  = request.GET.get('search', '').strip()
+    search_field  = request.GET.get('field', 'order_number')
+    status_filter = request.GET.get('status', 'all')
+    page_number   = request.GET.get('page', 1)
+
+    try:
+        page_size = int(request.GET.get('page_size', 50))
+        if page_size < 1:
+            page_size = 50
+    except (ValueError, TypeError):
+        page_size = 50
+
+    qs = filter_by_company(
+        SaleOrder.objects.select_related('client', 'owner_company'),
+        request,
+    )
+
+    # is_active / status filtering
+    if status_filter == 'archived':
+        qs = qs.filter(is_active=False)
+    elif status_filter in ('draft', 'confirmed', 'delivered', 'invoiced', 'cancelled'):
+        qs = qs.filter(is_active=True, status=status_filter)
+    else:
+        qs = qs.filter(is_active=True)
+
+    # Search
+    if search_query:
+        field_map = {
+            'order_number': Q(order_number__icontains=search_query),
+            'client':       Q(client__name__icontains=search_query),
+            'document_type': Q(document_type__icontains=search_query),
+            'notes':        Q(notes__icontains=search_query),
+        }
+        q_filter = field_map.get(search_field)
+        if q_filter:
+            qs = qs.filter(q_filter)
+        else:
+            qs = qs.filter(
+                Q(order_number__icontains=search_query) |
+                Q(client__name__icontains=search_query) |
+                Q(notes__icontains=search_query)
+            )
+
+    paginator = Paginator(qs, page_size)
+    page_obj  = paginator.get_page(page_number)
+
+    return render(request, 'sales/order_list.html', {
+        'orders':               page_obj,
+        'search_query':         search_query,
+        'search_field':         search_field,
+        'status_filter':        status_filter,
+        'status_filter_options': _STATUS_FILTER_OPTIONS,
+        'total_count':          paginator.count,
+        'page_size':            page_size,
+    })
+
+
+# ────────────────────────────────────────────────────────────────────
+# Sale Order — Bulk Actions
+# ────────────────────────────────────────────────────────────────────
+
+@login_required
+@require_POST
+def sale_order_bulk_archive(request):
+    ids, err = _parse_order_ids(request)
+    if err:
+        return JsonResponse({'success': False, 'error': err}, status=400)
+    qs = filter_by_company(SaleOrder.objects, request).filter(pk__in=ids, is_active=True)
+    updated = qs.update(is_active=False)
+    return JsonResponse({'success': True, 'message': f'{updated} venda(s) arquivada(s).', 'updated': updated})
+
+
+@login_required
+@require_POST
+def sale_order_bulk_unarchive(request):
+    ids, err = _parse_order_ids(request)
+    if err:
+        return JsonResponse({'success': False, 'error': err}, status=400)
+    qs = filter_by_company(SaleOrder.objects, request).filter(pk__in=ids, is_active=False)
+    updated = qs.update(is_active=True)
+    return JsonResponse({'success': True, 'message': f'{updated} venda(s) desarquivada(s).', 'updated': updated})
+
+
+@login_required
+@require_POST
+def sale_order_bulk_delete(request):
+    if getattr(request.user, 'role', None) != 'ADMIN':
+        return JsonResponse({'success': False, 'error': 'Apenas administradores podem eliminar vendas.'}, status=403)
+    ids, err = _parse_order_ids(request)
+    if err:
+        return JsonResponse({'success': False, 'error': err}, status=400)
+    qs = filter_by_company(SaleOrder.objects, request).filter(pk__in=ids)
+    count = qs.count()
+    qs.delete()
+    return JsonResponse({'success': True, 'message': f'{count} venda(s) eliminada(s) permanentemente.', 'deleted': count})
+
+
+# ──────────────────────────────────────────────────────────────────
+# Payment Terms — CRUD
+# ──────────────────────────────────────────────────────────────────
+
+@login_required
+def payment_term_list(request):
+    """List payment terms with search and pagination."""
+    company = get_active_company(request)
+    search_query = request.GET.get('search', '').strip()
+    active_filter = request.GET.get('active', '')
+    page_size = max(1, int(request.GET.get('page_size', 50) or 50))
+
+    qs = PaymentTerm.objects.filter(
+        Q(owner_company=company) | Q(owner_company__isnull=True)
+    )
+
+    if active_filter == '1':
+        qs = qs.filter(is_active=True)
+    elif active_filter == '0':
+        qs = qs.filter(is_active=False)
+
+    if search_query:
+        qs = qs.filter(Q(name__icontains=search_query) | Q(description__icontains=search_query))
+
+    total_count = qs.count()
+    from django.core.paginator import Paginator
+    paginator = Paginator(qs, page_size)
+    page_number = request.GET.get('page', 1)
+    payment_terms_page = paginator.get_page(page_number)
+
+    return render(request, 'sales/payment_term_list.html', {
+        'payment_terms': payment_terms_page,
+        'search_query':  search_query,
+        'active_filter': active_filter,
+        'total_count':   total_count,
+        'page_size':     page_size,
+    })
+
+
+@login_required
+def payment_term_create(request):
+    """Create a new payment term."""
+    company = get_active_company(request)
+    form = PaymentTermForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        pt = form.save(commit=False)
+        pt.owner_company = company
+        pt.save()
+        messages.success(request, f'Condicao de pagamento "{pt.name}" criada.')
+        return redirect('sales:payment_term_list')
+
+    return render(request, 'sales/payment_term_form.html', {
+        'form':    form,
+        'editing': None,
+    })
+
+
+@login_required
+def payment_term_edit(request, pk):
+    """Edit an existing payment term."""
+    pt = get_object_or_404(PaymentTerm, pk=pk)
+    form = PaymentTermForm(request.POST or None, instance=pt)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, f'Condicao de pagamento "{pt.name}" actualizada.')
+        return redirect('sales:payment_term_list')
+
+    return render(request, 'sales/payment_term_form.html', {
+        'form':    form,
+        'editing': pt,
+    })
+
+
+@login_required
+@require_POST
+def payment_term_toggle(request, pk):
+    """Toggle active/inactive on a payment term."""
+    pt = get_object_or_404(PaymentTerm, pk=pk)
+    pt.is_active = not pt.is_active
+    pt.save(update_fields=['is_active'])
+    state = 'activada' if pt.is_active else 'desactivada'
+    messages.success(request, f'"{pt.name}" {state}.')
+    return redirect('sales:payment_term_list')
+
+
+@login_required
+@require_POST
+def payment_term_delete(request, pk):
+    """Delete a payment term only if no sale orders reference it."""
+    pt = get_object_or_404(PaymentTerm, pk=pk)
+    if pt.sale_orders.exists():
+        messages.error(request, f'Nao e possivel eliminar "{pt.name}" - esta associada a vendas.')
+    else:
+        name = pt.name
+        pt.delete()
+        messages.success(request, f'"{name}" eliminada.')
+    return redirect('sales:payment_term_list')
+
+
+@login_required
+@require_POST
+def payment_term_bulk_activate(request):
+    try:
+        data = json.loads(request.body)
+        ids = data.get('term_ids', [])
+        count = PaymentTerm.objects.filter(pk__in=ids).update(is_active=True)
+        return JsonResponse({'success': True, 'message': f'{count} condicao(oes) activada(s).'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@require_POST
+def payment_term_bulk_deactivate(request):
+    try:
+        data = json.loads(request.body)
+        ids = data.get('term_ids', [])
+        count = PaymentTerm.objects.filter(pk__in=ids).update(is_active=False)
+        return JsonResponse({'success': True, 'message': f'{count} condicao(oes) desactivada(s).'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@require_POST
+def payment_term_bulk_delete(request):
+    try:
+        data = json.loads(request.body)
+        ids = data.get('term_ids', [])
+        qs = PaymentTerm.objects.filter(pk__in=ids)
+        blocked = [pt.name for pt in qs if pt.sale_orders.exists()]
+        deletable = qs.exclude(pk__in=[pt.pk for pt in qs if pt.sale_orders.exists()])
+        count = deletable.count()
+        deletable.delete()
+        if blocked:
+            return JsonResponse({
+                'success': True,
+                'message': f'{count} eliminada(s).',
+                'warning': f'Nao foi possivel eliminar: {", ".join(blocked)} (tem vendas associadas).',
+            })
+        return JsonResponse({'success': True, 'message': f'{count} condicao(oes) eliminada(s).'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)

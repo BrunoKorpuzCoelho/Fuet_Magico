@@ -264,6 +264,15 @@
                     <p class="text-xs text-gray-300">
                         {% if activity.user %}<span class="text-primary">{{ activity.user.get_full_name|default:activity.user.username }}</span> {% endif %}{{ activity.description }}
                     </p>
+                    {% if activity.details.receipt_ref and activity.details.receipt_pk %}
+                    <p class="text-xs mt-1">
+                        <span class="text-gray-500">Receção gerada:</span>
+                        <a href="/inventory/operations/movements/{{ activity.details.receipt_pk }}/edit/"
+                           class="text-teal-400 hover:text-teal-300 underline font-medium transition-colors">
+                            {{ activity.details.receipt_ref }}
+                        </a>
+                    </p>
+                    {% endif %}
                 {% else %}
                     <p class="text-xs text-gray-300">
                         {% if activity.user %}<span class="text-primary">{{ activity.user.get_full_name|default:activity.user.username }}</span> {% endif %}{{ activity.description }}

@@ -1,0 +1,104 @@
+<div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-12">
+
+        <!-- Left: nav + actions -->
+        <div class="flex items-center space-x-6">
+
+            <!-- Voltar à lista -->
+            <a href="{% url 'purchases:order_index' %}"
+               class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+                Encomendas de Compra
+            </a>
+
+            <!-- Configuração dropdown -->
+            <div class="relative" x-data="{ open: false }">
+                <button @click="open = !open"
+                        class="flex items-center space-x-1 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+                    <span>Configuração</span>
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+
+                <div x-show="open"
+                     @click.away="open = false"
+                     x-transition:enter="transition ease-out duration-100"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100"
+                     x-transition:leave="transition ease-in duration-75"
+                     x-transition:leave-start="opacity-100 scale-100"
+                     x-transition:leave-end="opacity-0 scale-95"
+                     class="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+                     style="display: none;">
+                    <div class="py-1">
+                        <span class="flex items-center justify-between px-4 py-2 text-sm text-gray-400 dark:text-gray-500 cursor-not-allowed select-none">
+                            Fornecedores
+                            <span class="text-xs font-medium px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 rounded">Em breve</span>
+                        </span>
+                        <a href="{% url 'purchases:payment_term_list' %}"
+                           class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            Condições de Pagamento
+                        </a>
+                        <span class="flex items-center justify-between px-4 py-2 text-sm text-gray-400 dark:text-gray-500 cursor-not-allowed select-none">
+                            Impostos
+                            <span class="text-xs font-medium px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 rounded">Em breve</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {% if not order or order.status == 'draft' %}
+            <!-- Descartar (caixote) — ao lado da Configuração -->
+            <a href="{% url 'purchases:order_index' %}"
+               class="flex items-center justify-center hover:opacity-80 transition-opacity"
+               title="Descartar">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     class="h-5 w-5 text-red-500">
+                    <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                    <line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>
+                </svg>
+            </a>
+
+            <!-- Guardar rascunho (disco) — ao lado do caixote -->
+            <button type="submit"
+                    form="purchase-order-form"
+                    class="flex items-center justify-center hover:opacity-80 transition-opacity"
+                    title="Guardar Rascunho">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     class="h-5 w-5 text-green-500">
+                    <path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
+                    <path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/>
+                    <path d="M7 3v4a1 1 0 0 0 1 1h7"/>
+                </svg>
+            </button>
+            {% endif %}
+
+        </div><!-- end left -->
+
+        <!-- Right: Smart Buttons -->
+        {% if order %}
+        <div class="flex items-center gap-2">
+
+            <!-- Recepções smart button -->
+            <a href="{% url 'inventory:receipt_list' %}?search={{ order.order_number|urlencode }}&field=origin"
+               class="flex items-center gap-2 px-3 py-1 rounded-md border border-teal-500 bg-transparent hover:bg-teal-500/10 transition-all"
+               title="Ver recepções geradas a partir de {{ order.order_number }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     class="h-4 w-4 text-teal-400">
+                    <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                </svg>
+                <span class="text-sm font-semibold text-teal-400">{{ receipt_count|default:0 }}</span>
+                <span class="text-xs text-teal-400">Recepções</span>
+            </a>
+
+        </div>
+        {% endif %}
+
+        </div><!-- end justify-between -->
+    </div>
+</div>

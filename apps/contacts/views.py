@@ -364,14 +364,23 @@ def contact_edit_view(request, contact_id):
     crm_leads = filter_by_company(crm_leads, request)
     crm_count = crm_leads.count()
     
-    # TODO: Calcular outros contadores quando os módulos estiverem implementados
+    # Compras: encomendas de compra associadas a este fornecedor
+    from apps.purchases.models import PurchaseOrder
+    contact_purchases = (
+        PurchaseOrder.objects
+        .filter(supplier=contact)
+        .order_by('-order_date', '-created_at')[:20]
+    )
+    purchases_count = PurchaseOrder.objects.filter(supplier=contact).count()
+
     context = {
         'form': form,
         'contact': contact,  # Passa o contacto para o template
         'companies': companies,
         'crm_count': crm_count,
         'sales_count': 0,
-        'purchases_count': 0,
+        'purchases_count': purchases_count,
+        'contact_purchases': contact_purchases,
         'invoices_total': 0,
         'documents_count': 0,
         'campaigns_count': 0,

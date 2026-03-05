@@ -93,9 +93,13 @@ urlpatterns = [
     # Lista de Compras
     path('listas-de-compras/', views.purchase_list_index, name='purchase_list_index'),
     path('listas-de-compras/nova/', views.purchase_list_create, name='purchase_list_create'),
+    path('listas-de-compras/auto-generate/', views.purchase_list_auto_generate, name='purchase_list_auto_generate'),
     path('listas-de-compras/<uuid:pk>/editar/', views.purchase_list_edit, name='purchase_list_edit'),
     path('listas-de-compras/<uuid:pk>/confirmar/', views.purchase_list_confirm, name='purchase_list_confirm'),
     path('listas-de-compras/<uuid:pk>/concluir/', views.purchase_list_done, name='purchase_list_done'),
+    path('listas-de-compras/<uuid:pk>/mobile/', views.purchase_list_mobile, name='purchase_list_mobile'),
+    path('listas-de-compras/<uuid:pk>/lines/<uuid:line_pk>/update-qty/', views.purchase_list_line_update_qty, name='purchase_list_line_update_qty'),
+    path('listas-de-compras/<uuid:pk>/mobile/add-line/', views.purchase_list_mobile_add_line, name='purchase_list_mobile_add_line'),
     path('listas-de-compras/<uuid:pk>/cancelar/', views.purchase_list_cancel, name='purchase_list_cancel'),
     # Chatter — Notes & Followers
     path('listas-de-compras/<uuid:pk>/notes/', views.purchase_list_notes_list, name='purchase_list_notes_list'),

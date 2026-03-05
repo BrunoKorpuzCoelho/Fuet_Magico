@@ -1,0 +1,527 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{{ purchase_list.name }} — Lista de Compras</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#dbc693',
+                        'gray-950': '#0a0a0f',
+                    }
+                }
+            }
+        }
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        body { overscroll-behavior: none; }
+        /* hide number input arrows */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+    </style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen flex flex-col" style="background-color:#0a0a0f;color:#fff"
+      x-data="mobileChecklist()"
+      x-init="init()">
+
+    <!-- ── TOP BAR ──────────────────────────────────────────────────────── -->
+    <div class="fixed top-0 inset-x-0 z-50 bg-gray-900 border-b border-gray-700/60 safe-top">
+        <div class="flex items-center justify-between px-4 h-14">
+            <!-- Close → back to form -->
+            <a href="{% url 'inventory:purchase_list_edit' purchase_list.pk %}"
+               class="flex items-center justify-center w-9 h-9 rounded-xl bg-gray-800 hover:bg-gray-700 transition-colors">
+                <svg class="h-5 w-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </a>
+
+            <!-- Title + progress -->
+            <div class="flex flex-col items-center min-w-0 px-3">
+                <p class="text-sm font-semibold text-white truncate max-w-[180px]">{{ purchase_list.name }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">
+                    <span x-text="doneCount"></span> / <span x-text="totalCount"></span> artigos prontos
+                </p>
+            </div>
+
+            <!-- Progress ring placeholder -->
+            <div class="w-9 h-9 flex items-center justify-center">
+                <svg class="h-8 w-8 -rotate-90" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="14" fill="none" stroke="#374151" stroke-width="3"/>
+                    <circle cx="18" cy="18" r="14" fill="none" stroke="#22c55e" stroke-width="3"
+                            stroke-dasharray="88"
+                            :stroke-dashoffset="88 - (doneCount / (totalCount || 1)) * 88"
+                            stroke-linecap="round"
+                            style="transition: stroke-dashoffset .3s ease"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── LINES ─────────────────────────────────────────────────────────── -->
+    <div class="flex-1 overflow-y-auto pt-20 pb-28 px-4 space-y-3">
+
+        {% if not lines %}
+        <div class="flex flex-col items-center justify-center h-48 text-gray-500">
+            <svg class="h-10 w-10 mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            <p class="text-sm">Nenhum produto nesta lista.</p>
+        </div>
+        {% endif %}
+
+        {% for line in lines %}
+        <div class="relative rounded-2xl border transition-all duration-300"
+             :class="lines[{{ forloop.counter0 }}].qty_purchased >= lines[{{ forloop.counter0 }}].qty_to_buy
+                     ? 'bg-gray-900/60 border-green-800/40 opacity-70'
+                     : 'bg-gray-900 border-gray-700/60'">
+
+            <!-- Done overlay tick -->
+            <div class="absolute top-3 right-3 transition-all duration-200"
+                 :class="lines[{{ forloop.counter0 }}].qty_purchased >= lines[{{ forloop.counter0 }}].qty_to_buy ? 'opacity-100' : 'opacity-0'">
+                <div class="w-6 h-6 rounded-full bg-green-700 flex items-center justify-center">
+                    <svg class="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="p-4">
+                <!-- Product name -->
+                <p class="text-sm font-semibold pr-8 leading-snug"
+                   :class="lines[{{ forloop.counter0 }}].qty_purchased >= lines[{{ forloop.counter0 }}].qty_to_buy ? 'line-through text-gray-400' : 'text-white'">
+                    {{ line.product.name }}
+                </p>
+
+                <!-- Info row -->
+                <div class="flex items-center gap-4 mt-2">
+                    <div class="flex flex-col">
+                        <span class="text-xs text-gray-500 uppercase tracking-wide">A comprar</span>
+                        <span class="text-sm font-medium text-gray-200 mt-0.5">{{ line.qty_to_buy|floatformat:"-2" }} {{ line.uom.name|default:"un" }}</span>
+                    </div>
+                    <div class="w-px h-8 bg-gray-700"></div>
+                    <div class="flex flex-col">
+                        <span class="text-xs text-gray-500 uppercase tracking-wide">Preço unit.</span>
+                        <span class="text-sm font-medium text-gray-200 mt-0.5">{{ line.purchase_price|floatformat:2 }} €</span>
+                    </div>
+                    <div class="w-px h-8 bg-gray-700"></div>
+                    <div class="flex flex-col">
+                        <span class="text-xs text-gray-500 uppercase tracking-wide">IVA</span>
+                        <span class="text-sm font-medium text-gray-200 mt-0.5">{{ line.vat_rate|floatformat:0 }}%</span>
+                    </div>
+                </div>
+
+                <!-- Qty purchased stepper -->
+                <div class="flex items-center justify-between mt-4">
+                    <span class="text-xs text-gray-400">Qtd. no carrinho</span>
+                    <div class="flex items-center gap-0">
+                        <!-- Minus -->
+                        <button type="button"
+                                @click="decrement({{ forloop.counter0 }})"
+                                class="w-10 h-10 flex items-center justify-center rounded-l-xl bg-gray-800 hover:bg-gray-700 active:bg-gray-600 transition-colors border border-gray-600 text-gray-300 text-lg font-bold select-none">
+                            −
+                        </button>
+                        <!-- Value display (tap to type) -->
+                        <input type="number"
+                               inputmode="numeric"
+                               pattern="[0-9]*"
+                               min="0"
+                               :value="lines[{{ forloop.counter0 }}].qty_purchased"
+                               @change="setQty({{ forloop.counter0 }}, $event.target.value)"
+                               @focus="$event.target.select()"
+                               class="w-16 h-10 text-center bg-gray-800 border-t border-b border-gray-600 text-white text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                        <!-- Plus -->
+                        <button type="button"
+                                @click="increment({{ forloop.counter0 }})"
+                                class="w-10 h-10 flex items-center justify-center rounded-r-xl bg-gray-800 hover:bg-gray-700 active:bg-gray-600 transition-colors border border-gray-600 text-gray-300 text-lg font-bold select-none">
+                            +
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Extra lines added during shopping (Alpine reactive) -->
+        <template x-for="(el, ei) in extraLines" :key="el.id">
+            <div class="relative rounded-2xl border transition-all duration-300"
+                 :class="el.qty_purchased >= el.qty_to_buy
+                         ? 'bg-gray-900/60 border-green-800/40 opacity-70'
+                         : 'bg-gray-900 border-gray-700/60'">
+
+                <!-- Done tick -->
+                <div class="absolute top-3 right-3 transition-all duration-200"
+                     :class="el.qty_purchased >= el.qty_to_buy ? 'opacity-100' : 'opacity-0'">
+                    <div class="w-6 h-6 rounded-full bg-green-700 flex items-center justify-center">
+                        <svg class="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="p-4">
+                    <p class="text-sm font-semibold pr-8 leading-snug"
+                       :class="el.qty_purchased >= el.qty_to_buy ? 'line-through text-gray-400' : 'text-white'"
+                       x-text="el.product_name"></p>
+
+                    <div class="flex items-center gap-4 mt-2">
+                        <div class="flex flex-col">
+                            <span class="text-xs text-gray-500 uppercase tracking-wide">A comprar</span>
+                            <span class="text-sm font-medium text-gray-200 mt-0.5" x-text="el.qty_to_buy + ' ' + el.uom_name"></span>
+                        </div>
+                        <div class="w-px h-8 bg-gray-700"></div>
+                        <div class="flex flex-col">
+                            <span class="text-xs text-gray-500 uppercase tracking-wide">Preço unit.</span>
+                            <span class="text-sm font-medium text-gray-200 mt-0.5" x-text="el.purchase_price.toFixed(2) + ' €'"></span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between mt-4">
+                        <span class="text-xs text-gray-400">Qtd. no carrinho</span>
+                        <div class="flex items-center">
+                            <button type="button" @click="extraDecrement(ei)"
+                                    class="w-10 h-10 flex items-center justify-center rounded-l-xl bg-gray-800 border border-gray-600 text-gray-300 text-lg font-bold hover:bg-gray-700 transition-colors select-none">−</button>
+                            <input type="number" inputmode="numeric" min="0"
+                                   :value="el.qty_purchased"
+                                   @change="extraSetQty(ei, $event.target.value)"
+                                   @focus="$event.target.select()"
+                                   class="w-16 h-10 text-center bg-gray-800 border-t border-b border-gray-600 text-white text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-primary"
+                                   style="-moz-appearance:textfield;">
+                            <button type="button" @click="extraIncrement(ei)"
+                                    class="w-10 h-10 flex items-center justify-center rounded-r-xl bg-gray-800 border border-gray-600 text-gray-300 text-lg font-bold hover:bg-gray-700 transition-colors select-none">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+    </div>
+
+    <!-- ── BOTTOM ACTIONS ─────────────────────────────────────────────────── -->
+    <div class="fixed bottom-0 inset-x-0 z-50 bg-gray-900 border-t border-gray-700/60 safe-bottom">
+        <div class="px-4 py-3 flex items-center gap-3">
+            <!-- Add product button -->
+            <button type="button"
+                    @click="showAddModal = true"
+                    class="w-12 h-12 flex-shrink-0 rounded-xl bg-gray-800 border border-gray-600 hover:bg-gray-700 active:bg-gray-600 transition-colors flex items-center justify-center text-gray-300"
+                    title="Adicionar produto">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+            </button>
+            <div class="flex-1 flex flex-col">
+                <form id="form-done-mobile" method="post" action="{% url 'inventory:purchase_list_done' purchase_list.pk %}">
+                    {% csrf_token %}
+                </form>
+                <button type="submit"
+                        form="form-done-mobile"
+                        class="w-full h-12 rounded-xl bg-green-600 hover:bg-green-700 active:bg-green-800 transition-colors text-white text-sm font-semibold flex items-center justify-center gap-2">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Concluir lista de compras
+                </button>
+                <p class="text-center text-xs text-gray-500 mt-1">Esta acção é irreversível.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── ADD PRODUCT MODAL ──────────────────────────────────────────────── -->
+    <div x-show="showAddModal"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[200] flex flex-col justify-end"
+         style="display:none;">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/70" @click="closeAddModal()"></div>
+        <!-- Sheet -->
+        <div x-show="showAddModal"
+             x-transition:enter="transition ease-out duration-250"
+             x-transition:enter-start="translate-y-full"
+             x-transition:enter-end="translate-y-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="translate-y-0"
+             x-transition:leave-end="translate-y-full"
+             class="relative bg-gray-900 rounded-t-2xl border-t border-gray-700/60 p-5 pb-8 max-h-[85vh] flex flex-col"
+             style="display:none;">
+
+            <!-- Handle bar -->
+            <div class="w-10 h-1 bg-gray-600 rounded-full mx-auto mb-5"></div>
+
+            <template x-if="!selectedProduct">
+                <div class="flex flex-col gap-3">
+                    <p class="text-sm font-semibold text-white">Adicionar produto</p>
+                    <!-- Search input -->
+                    <div class="relative">
+                        <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        <input type="text"
+                               x-model="searchQuery"
+                               @input.debounce.300="searchProducts()"
+                               @keydown.escape="closeAddModal()"
+                               placeholder="Pesquisar produto..."
+                               x-ref="searchInput"
+                               autofocus
+                               class="w-full h-11 pl-9 pr-4 bg-gray-800 border border-gray-600 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary">
+                    </div>
+                    <!-- Results -->
+                    <div class="overflow-y-auto max-h-64 space-y-1">
+                        <template x-if="searchLoading">
+                            <p class="text-center text-xs text-gray-500 py-4">A pesquisar...</p>
+                        </template>
+                        <template x-if="!searchLoading && searchQuery.length > 0 && searchResults.length === 0">
+                            <p class="text-center text-xs text-gray-500 py-4">Nenhum produto encontrado.</p>
+                        </template>
+                        <template x-for="product in searchResults" :key="product.id">
+                            <button type="button"
+                                    @click="selectProduct(product)"
+                                    class="w-full flex items-center justify-between px-3 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 active:bg-gray-600 transition-colors text-left">
+                                <div>
+                                    <p class="text-sm font-medium text-white" x-text="product.name"></p>
+                                    <p class="text-xs text-gray-400 mt-0.5" x-text="product.uom_name"></p>
+                                </div>
+                                <span class="text-xs text-gray-400 ml-3 flex-shrink-0" x-text="product.cost_price.toFixed(2) + ' €'"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <template x-if="selectedProduct">
+                <div class="flex flex-col gap-4">
+                    <!-- Back + product name -->
+                    <div class="flex items-center gap-3">
+                        <button type="button" @click="selectedProduct = null"
+                                class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors">
+                            <svg class="h-4 w-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                            </svg>
+                        </button>
+                        <p class="text-sm font-semibold text-white" x-text="selectedProduct.name"></p>
+                    </div>
+
+                    <!-- Info -->
+                    <div class="flex items-center gap-4 px-1">
+                        <div class="flex flex-col">
+                            <span class="text-xs text-gray-500 uppercase tracking-wide">Preço unit.</span>
+                            <span class="text-sm font-medium text-gray-200 mt-0.5" x-text="selectedProduct.cost_price.toFixed(2) + ' €'"></span>
+                        </div>
+                        <div class="w-px h-8 bg-gray-700"></div>
+                        <div class="flex flex-col">
+                            <span class="text-xs text-gray-500 uppercase tracking-wide">Unidade</span>
+                            <span class="text-sm font-medium text-gray-200 mt-0.5" x-text="selectedProduct.uom_name"></span>
+                        </div>
+                    </div>
+
+                    <!-- Qty to buy -->
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-400">Quantidade a comprar</span>
+                        <div class="flex items-center">
+                            <button type="button" @click="newQty = Math.max(1, newQty - 1)"
+                                    class="w-10 h-10 flex items-center justify-center rounded-l-xl bg-gray-800 border border-gray-600 text-gray-300 text-lg font-bold hover:bg-gray-700 transition-colors select-none">
+                                −
+                            </button>
+                            <input type="number" x-model.number="newQty" min="1"
+                                   class="w-16 h-10 text-center bg-gray-800 border-t border-b border-gray-600 text-white text-sm font-semibold focus:outline-none"
+                                   style="-moz-appearance:textfield;">
+                            <button type="button" @click="newQty = newQty + 1"
+                                    class="w-10 h-10 flex items-center justify-center rounded-r-xl bg-gray-800 border border-gray-600 text-gray-300 text-lg font-bold hover:bg-gray-700 transition-colors select-none">
+                                +
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Confirm -->
+                    <button type="button"
+                            @click="addLine()"
+                            :disabled="addingLine"
+                            class="w-full h-12 rounded-xl bg-primary text-white font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 active:opacity-75 transition-opacity disabled:opacity-50">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        <span x-text="addingLine ? 'A adicionar...' : 'Adicionar à lista'"></span>
+                    </button>
+                </div>
+            </template>
+
+        </div>
+    </div>
+
+    <!-- ── ALPINE DATA ────────────────────────────────────────────────────── -->
+    <script>
+    const LINES_DATA = [
+        {% for line in lines %}
+        {
+            id: "{{ line.pk }}",
+            qty_to_buy: {{ line.qty_to_buy|floatformat:"-4" }},
+            qty_purchased: {{ line.qty_purchased|floatformat:"-4" }},
+            saving: false,
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    const UPDATE_URLS = {
+        {% for line in lines %}
+        "{{ line.pk }}": "{% url 'inventory:purchase_list_line_update_qty' purchase_list.pk line.pk %}"{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    };
+    const CSRF = "{{ csrf_token }}";
+    const PRODUCT_SEARCH_URL = "{% url 'inventory:product_search' %}";
+    const ADD_LINE_URL = "{% url 'inventory:purchase_list_mobile_add_line' purchase_list.pk %}";
+
+    function mobileChecklist() {
+        return {
+            lines: LINES_DATA,
+            extraLines: [],
+
+            // Add modal state
+            showAddModal: false,
+            searchQuery: '',
+            searchResults: [],
+            searchLoading: false,
+            selectedProduct: null,
+            newQty: 1,
+            addingLine: false,
+
+            get doneCount() {
+                const a = this.lines.filter(l => l.qty_purchased >= l.qty_to_buy).length;
+                const b = this.extraLines.filter(l => l.qty_purchased >= l.qty_to_buy).length;
+                return a + b;
+            },
+
+            get totalCount() {
+                return this.lines.length + this.extraLines.length;
+            },
+
+            init() {},
+
+            // ── Existing lines ───────────────────────────────────────────
+            increment(idx) {
+                const l = this.lines[idx];
+                l.qty_purchased = parseFloat((l.qty_purchased + 1).toFixed(4));
+                this.save(idx);
+            },
+
+            decrement(idx) {
+                const l = this.lines[idx];
+                if (l.qty_purchased <= 0) return;
+                l.qty_purchased = parseFloat(Math.max(0, l.qty_purchased - 1).toFixed(4));
+                this.save(idx);
+            },
+
+            setQty(idx, val) {
+                const l = this.lines[idx];
+                const n = parseFloat(val);
+                l.qty_purchased = isNaN(n) || n < 0 ? 0 : parseFloat(n.toFixed(4));
+                this.save(idx);
+            },
+
+            save(idx) {
+                const l = this.lines[idx];
+                if (l.saving) return;
+                l.saving = true;
+                fetch(UPDATE_URLS[l.id], {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+                    body: JSON.stringify({ qty_purchased: l.qty_purchased }),
+                })
+                .then(r => r.json())
+                .catch(() => {})
+                .finally(() => { l.saving = false; });
+            },
+
+            // ── Extra lines (added during shopping) ──────────────────────
+            extraIncrement(ei) {
+                const l = this.extraLines[ei];
+                l.qty_purchased = parseFloat((l.qty_purchased + 1).toFixed(4));
+                this.extraSave(l);
+            },
+
+            extraDecrement(ei) {
+                const l = this.extraLines[ei];
+                if (l.qty_purchased <= 0) return;
+                l.qty_purchased = parseFloat(Math.max(0, l.qty_purchased - 1).toFixed(4));
+                this.extraSave(l);
+            },
+
+            extraSetQty(ei, val) {
+                const l = this.extraLines[ei];
+                const n = parseFloat(val);
+                l.qty_purchased = isNaN(n) || n < 0 ? 0 : parseFloat(n.toFixed(4));
+                this.extraSave(l);
+            },
+
+            extraSave(l) {
+                if (!l.update_url) return;
+                fetch(l.update_url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+                    body: JSON.stringify({ qty_purchased: l.qty_purchased }),
+                }).catch(() => {});
+            },
+
+            // ── Add modal ────────────────────────────────────────────────
+            closeAddModal() {
+                this.showAddModal = false;
+                this.searchQuery = '';
+                this.searchResults = [];
+                this.selectedProduct = null;
+                this.newQty = 1;
+            },
+
+            searchProducts() {
+                if (this.searchQuery.trim().length < 1) {
+                    this.searchResults = [];
+                    return;
+                }
+                this.searchLoading = true;
+                fetch(PRODUCT_SEARCH_URL + '?q=' + encodeURIComponent(this.searchQuery) + '&movement_type=receipt')
+                    .then(r => r.json())
+                    .then(data => { this.searchResults = data.results || []; })
+                    .catch(() => { this.searchResults = []; })
+                    .finally(() => { this.searchLoading = false; });
+            },
+
+            selectProduct(product) {
+                this.selectedProduct = product;
+                this.newQty = 1;
+            },
+
+            addLine() {
+                if (!this.selectedProduct || this.addingLine) return;
+                this.addingLine = true;
+                fetch(ADD_LINE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+                    body: JSON.stringify({ product_id: this.selectedProduct.id, qty_to_buy: this.newQty }),
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        this.extraLines.push(data.line);
+                        this.closeAddModal();
+                    }
+                })
+                .catch(() => {})
+                .finally(() => { this.addingLine = false; });
+            },
+        };
+    }
+    </script>
+
+</body>
+</html>

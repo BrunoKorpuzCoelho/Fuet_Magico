@@ -1,11 +1,10 @@
 {% extends 'base.html' %}
-{% load static chatter_tags %}
+{% load static %}
 
 {% block extra_css %}
 <!-- Air Datepicker -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/air-datepicker@3.5.3/air-datepicker.css">
 <style>
-    /* Air Datepicker Dark Theme - Fuet Mágico */
     .air-datepicker {
         --adp-font-family: inherit;
         --adp-font-size: 14px;
@@ -19,17 +18,14 @@
         --adp-background-color: #1f2937;
         --adp-background-color-hover: #374151;
         --adp-background-color-active: #dbc693;
-        --adp-background-color-in-range: rgba(219, 198, 147, 0.15);
-        --adp-background-color-in-range-focused: rgba(219, 198, 147, 0.25);
-        --adp-background-color-selected-other-month-focused: rgba(219, 198, 147, 0.8);
-        --adp-background-color-selected-other-month: rgba(219, 198, 147, 0.5);
+        --adp-background-color-in-range: rgba(219,198,147,.15);
+        --adp-background-color-in-range-focused: rgba(219,198,147,.25);
         --adp-color: #d1d5db;
         --adp-color-secondary: #6b7280;
         --adp-accent-color: #dbc693;
         --adp-color-current-date: #dbc693;
         --adp-color-other-month: #4b5563;
         --adp-color-disabled: #374151;
-        --adp-color-disabled-in-range: #374151;
         --adp-color-other-month-hover: #9ca3af;
         --adp-border-color: #374151;
         --adp-border-color-inner: #374151;
@@ -40,29 +36,25 @@
         --adp-nav-action-size: 32px;
         --adp-nav-color-secondary: #dbc693;
         --adp-day-name-color: #9ca3af;
-        --adp-day-name-color-hover: #dbc693;
         --adp-day-cell-height: 36px;
         --adp-month-cell-height: 42px;
         --adp-year-cell-height: 42px;
         --adp-pointer-size: 8px;
-        --adp-pointerArrow-size: 4px;
         --adp-cell-border-radius: 8px;
         --adp-cell-background-color-hover: #374151;
         --adp-cell-background-color-selected: #dbc693;
         --adp-cell-background-color-selected-hover: #c9b57e;
-        --adp-cell-background-color-in-range: rgba(219, 198, 147, 0.15);
-        --adp-cell-background-color-in-range-hover: rgba(219, 198, 147, 0.25);
-        --adp-cell-border-color-in-range: rgba(219, 198, 147, 0.3);
+        --adp-cell-background-color-in-range: rgba(219,198,147,.15);
         --adp-btn-height: 36px;
         --adp-btn-color: #dbc693;
         --adp-btn-color-hover: #1f2937;
         --adp-btn-background-color-hover: #dbc693;
         --adp-btn-background-color-active: #c9b57e;
         border: 1px solid #374151;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 20px 40px rgba(0,0,0,.4);
     }
     .air-datepicker-cell.-selected- { color: #1f2937 !important; font-weight: 600; }
-    .air-datepicker-cell.-current- { color: #dbc693; }
+    .air-datepicker-cell.-current-  { color: #dbc693; }
     .air-datepicker-cell.-current-.-selected- { color: #1f2937 !important; }
     .air-datepicker-nav--title { color: #f3f4f6; font-weight: 600; }
     .air-datepicker-nav--action:hover { background: #374151; }
@@ -74,74 +66,100 @@
 {% endblock %}
 
 {% block title %}
-{% if movement %}{{ movement.reference }} — {{ type_label_singular }}{% else %}Nova {{ type_label_singular }}{% endif %} — Fuet Mágico
+{% if order %}{{ order.order_number }}{% else %}Nova Venda{% endif %} — Fuet Mágico
 {% endblock %}
 
 {% block sub_navbar %}
-{% include 'components/stock_movement_form_navbar.html' %}
+{% include 'components/sales_form_navbar.html' %}
 {% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-[#1f2937]"
-     x-data="movementForm()"
+     x-data="saleOrderForm()"
      x-init="init()">
 
-    <!-- Two-column body: left (form+lines) | right (chatter) -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- Two-column body: left (form+lines) │ right (chatter)       -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
     <div class="flex" style="min-height:calc(100vh - 64px)">
 
-    <!-- LEFT COLUMN ───────────────────────────────── -->
+    <!-- ─────────────────────────── LEFT COLUMN ─────────────────── -->
     <div class="flex-1 min-w-0 overflow-y-auto">
 
-    <!-- ═══════════════════════════════════════════════════════ -->
-    <!-- HEADER FORM                                            -->
-    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- HEADER FORM                                                -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
     <form method="post"
-          action="{% if movement %}{% url 'inventory:movement_edit' movement.pk %}{% else %}{% if movement_type == 'receipt' %}{% url 'inventory:receipt_create' %}{% elif movement_type == 'adjustment' %}{% url 'inventory:adjustment_create' %}{% elif movement_type == 'scrap' %}{% url 'inventory:scrap_create' %}{% else %}{% url 'inventory:delivery_create' %}{% endif %}{% endif %}"
-          id="movement-form">
+          action="{% if order %}{% url 'sales:order_edit' order.pk %}{% else %}{% url 'sales:order_create' %}{% endif %}"
+          id="sale-order-form"
+          @submit.prevent="saveBeforeSubmit">
         {% csrf_token %}
 
         <div class="px-8 py-6">
 
-            <!-- ── Botões de acção + Status ───────────────────── -->
+            <!-- ── Botões de acção + Status ─────────────────────── -->
             <div class="flex items-center justify-between mb-8" x-data="{ showCancelModal: false }">
-                <!-- Left: Validar / Cancelar -->
+
+                <!-- Left: action buttons -->
                 <div class="flex items-center gap-3">
-                    {% if movement and movement.state == 'draft' %}
-                    <button type="submit" form="form-validate"
-                            class="px-4 py-1.5 rounded-md bg-primary hover:bg-primary/90 text-white text-sm font-semibold transition-colors flex items-center gap-1.5">
-                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                        </svg>
-                        Validar
-                    </button>
-                    <button type="button" @click="showCancelModal = true"
-                            class="px-4 py-1.5 rounded-md border border-red-500 text-red-500 bg-transparent hover:bg-red-500/10 text-sm font-medium transition-colors">
-                        Cancelar
-                    </button>
-                    {% elif movement and movement.state == 'done' %}
-                    <button type="button" @click="showCancelModal = true"
-                            class="px-4 py-1.5 rounded-md border border-red-500 text-red-500 bg-transparent hover:bg-red-500/10 text-sm font-medium transition-colors flex items-center gap-1.5">
-                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                        Cancelar e Reverter Stock
-                    </button>
+
+                    {% if order %}
+                        {% if order.status == 'draft' %}
+                        <!-- Confirm -->
+                        <button type="submit" form="form-confirm"
+                                class="px-4 py-1.5 rounded-md bg-primary hover:bg-primary/90 text-white text-sm font-semibold transition-colors flex items-center gap-1.5">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            Confirmar
+                        </button>
+                        <!-- Cancel draft -->
+                        <button type="button" @click="showCancelModal = true"
+                                class="px-4 py-1.5 rounded-md border border-red-500 text-red-500 bg-transparent hover:bg-red-500/10 text-sm font-medium transition-colors">
+                            Cancelar
+                        </button>
+
+                        {% elif order.status == 'confirmed' %}
+                        <!-- Create Invoice -->
+                        <button type="button"
+                                disabled
+                                title="Em breve — módulo de faturação"
+                                class="px-4 py-1.5 rounded-md bg-green-900/30 text-green-400/50 text-sm font-semibold border border-green-700/40 flex items-center gap-1.5 cursor-not-allowed select-none opacity-60">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            Criar Fatura
+                            <span class="text-xs font-normal opacity-70">· Em breve</span>
+                        </button>
+                        <!-- Cancel confirmed -->
+                        <button type="button" @click="showCancelModal = true"
+                                class="px-4 py-1.5 rounded-md border border-red-500 text-red-500 bg-transparent hover:bg-red-500/10 text-sm font-medium transition-colors">
+                            Cancelar
+                        </button>
+                        {% endif %}
                     {% endif %}
                 </div>
 
-                <!-- Right: Status pills -->
+                <!-- Right: Status pill -->
                 <div class="flex items-center">
-                    {% if movement and movement.state == 'done' %}
-                    <div class="px-5 py-1.5 text-xs font-semibold rounded-md" style="background:#dbc693;border:1px solid #dbc693;color:#fff">Validado</div>
-                    {% elif movement and movement.state == 'cancelled' %}
-                    <div class="px-5 py-1.5 text-xs font-semibold rounded-md" style="background:#dbc693;border:1px solid #dbc693;color:#fff">Cancelado</div>
-                    {% else %}
-                    <div class="px-5 py-1.5 text-xs font-semibold rounded-md" style="background:#dbc693;border:1px solid #dbc693;color:#fff">Rascunho</div>
+                    {% if not order %}
+                    <div class="px-5 py-1.5 text-xs font-semibold rounded-md bg-gray-700 border border-gray-600 text-gray-300">Novo</div>
+                    {% elif order.status == 'draft' %}
+                    <div class="px-5 py-1.5 text-xs font-semibold rounded-md bg-gray-700 border border-gray-600 text-gray-300">Rascunho</div>
+                    {% elif order.status == 'confirmed' %}
+                    <div class="px-5 py-1.5 text-xs font-semibold rounded-md bg-yellow-900/40 border border-yellow-700 text-yellow-300">Confirmado</div>
+                    {% elif order.status == 'delivered' %}
+                    <div class="px-5 py-1.5 text-xs font-semibold rounded-md bg-blue-900/40 border border-blue-700 text-blue-300">Entregue</div>
+                    {% elif order.status == 'invoiced' %}
+                    <div class="px-5 py-1.5 text-xs font-semibold rounded-md bg-green-900/40 border border-green-700 text-green-300">Faturado</div>
+                    {% elif order.status == 'cancelled' %}
+                    <div class="px-5 py-1.5 text-xs font-semibold rounded-md bg-red-900/40 border border-red-700 text-red-300">Cancelado</div>
                     {% endif %}
                 </div>
 
-                <!-- Modal de confirmação de cancelamento -->
-                {% if movement and movement.state != 'cancelled' %}
+                <!-- Cancel confirmation modal -->
+                {% if order and order.status != 'cancelled' and order.status != 'invoiced' %}
                 <div x-show="showCancelModal"
                      x-transition:enter="transition ease-out duration-200"
                      x-transition:enter-start="opacity-0"
@@ -152,9 +170,7 @@
                      class="fixed inset-0 z-[200] flex items-center justify-center p-4"
                      style="display:none;"
                      @keydown.escape.window="showCancelModal = false">
-                    <!-- Backdrop -->
                     <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="showCancelModal = false"></div>
-                    <!-- Card -->
                     <div x-show="showCancelModal"
                          x-transition:enter="transition ease-out duration-200"
                          x-transition:enter-start="opacity-0 scale-95 translate-y-2"
@@ -164,40 +180,28 @@
                          x-transition:leave-end="opacity-0 scale-95 translate-y-2"
                          class="relative w-full max-w-md bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden"
                          style="display:none;">
-                        <!-- Header -->
                         <div class="flex items-center gap-4 px-6 py-5 border-b border-gray-700/60">
-                            <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);">
+                            <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
+                                 style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);">
                                 <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="text-base font-semibold text-white">
-                                    {% if movement.state == 'done' %}Cancelar movimento validado{% else %}Cancelar rascunho{% endif %}
-                                </h3>
-                                <p class="text-xs text-gray-500 mt-0.5">{{ movement.reference }}</p>
+                                <h3 class="text-base font-semibold text-white">Cancelar venda</h3>
+                                <p class="text-xs text-gray-500 mt-0.5">{{ order.order_number }}</p>
                             </div>
-                            <button type="button" @click="showCancelModal = false" class="ml-auto p-1 text-gray-600 hover:text-gray-300 transition-colors rounded-lg">
+                            <button type="button" @click="showCancelModal = false"
+                                    class="ml-auto p-1 text-gray-600 hover:text-gray-300 transition-colors rounded-lg">
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
                             </button>
                         </div>
-                        <!-- Body -->
                         <div class="px-6 py-5">
-                            {% if movement.state == 'done' %}
-                            <div class="flex items-start gap-3 rounded-lg p-4 mb-4" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);">
-                                <svg class="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                                <p class="text-sm text-red-300">Este movimento já foi <strong>validado</strong>. Ao cancelar, o stock será revertido automaticamente.</p>
-                            </div>
-                            <p class="text-sm text-gray-400">Tens a certeza que queres cancelar este movimento e reverter as quantidades de stock?</p>
-                            {% else %}
-                            <p class="text-sm text-gray-400">Tens a certeza que queres cancelar este rascunho? Esta acção não pode ser desfeita.</p>
-                            {% endif %}
+                            <p class="text-sm text-gray-400">Tens a certeza que queres cancelar esta venda? Esta acção não pode ser desfeita.</p>
                         </div>
-                        <!-- Footer -->
                         <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-700/60 bg-gray-800/40">
                             <button type="button" @click="showCancelModal = false"
                                     class="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white bg-gray-700/50 hover:bg-gray-700 rounded-lg transition-colors">
@@ -208,19 +212,21 @@
                                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
-                                {% if movement.state == 'done' %}Sim, cancelar e reverter stock{% else %}Sim, cancelar{% endif %}
+                                Sim, cancelar
                             </button>
                         </div>
                     </div>
                 </div>
                 {% endif %}
-            </div>
+            </div><!-- /action bar -->
 
+            <!-- ── Erro de validação ─────────────────────────── -->
             {% if form.errors %}
             <div class="mb-6 rounded-lg border border-red-700 bg-red-900/30 p-4">
                 <div class="flex items-center gap-2 text-red-400 text-sm font-medium mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                     Corrija os erros abaixo
                 </div>
@@ -232,172 +238,59 @@
             </div>
             {% endif %}
 
-            <!-- Top: Icon + Title row -->
+            <!-- ── Ícone + Nº Venda ──────────────────────────── -->
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
 
-                <!-- Movement type icon -->
+                <!-- Icon box -->
                 <div class="lg:col-span-1 flex justify-center items-start pt-4">
                     <div class="flex flex-col items-center justify-center w-[140px] h-[140px] rounded-xl bg-[#1a2332] border border-gray-700 gap-2">
-                        {% if movement_type == 'receipt' %}
-                        <!-- Receipt: inbox arrow down -->
+                        <!-- Sale / money icon -->
                         <svg class="h-14 w-14 text-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                  d="M9 14l2 2 4-4m-5-7H5a2 2 0 00-2 2v12a2 2 0 002 2h14a2 2 0 002-2V9l-5-6z"/>
                         </svg>
-                        <span class="text-xs text-primary/60 font-medium">Receção</span>
-                        {% elif movement_type == 'adjustment' %}
-                        <!-- Adjustment: wrench/cog -->
-                        <svg class="h-14 w-14 text-amber-400/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
-                        </svg>
-                        <span class="text-xs text-amber-400/60 font-medium">Ajuste</span>
-                        {% elif movement_type == 'scrap' %}
-                        <!-- Scrap: trash can -->
-                        <svg class="h-14 w-14 text-red-400/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                        <span class="text-xs text-red-400/60 font-medium">Sucata</span>
-                        {% else %}
-                        <!-- Delivery: outbox arrow up -->
-                        <svg class="h-14 w-14 text-orange-400/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                  d="M5 10l7-7m0 0l7 7m-7-7v18"/>
-                        </svg>
-                        <span class="text-xs text-orange-400/60 font-medium">Expedição</span>
-                        {% endif %}
-                        <input type="hidden" name="movement_type" value="{{ movement_type }}">
+                        <span class="text-xs text-primary/60 font-medium">Venda</span>
                     </div>
                 </div>
 
-                <!-- Reference + key info -->
+                <!-- Nº Venda + meta -->
                 <div class="lg:col-span-2 space-y-5">
-                    <!-- Reference (auto, read-only) -->
                     <div>
-                        <label class="sr-only">Referência</label>
+                        <label class="sr-only">Nº Venda</label>
                         <div class="flex w-full px-3 py-2 h-14 border-0 border-b-2 border-gray-600 text-3xl font-light text-gray-400">
-                            {% if movement %}
-                                {{ movement.reference }}
-                            {% else %}
-                                {{ next_ref_preview }}
-                            {% endif %}
+                            {% if order %}{{ order.order_number }}{% else %}{{ next_ref_preview }}{% endif %}
                         </div>
                     </div>
-
-                    <!-- State / Date row -->
-                    {% if movement %}
+                    {% if order %}
                     <div class="flex items-center gap-4 text-xs text-gray-500">
-                        <span>Criado: {{ movement.created_at|date:"d/m/Y H:i" }}</span>
-                        <span>Por: {{ movement.responsible.get_full_name|default:movement.responsible.username }}</span>
+                        <span>Criado: {{ order.created_at|date:"d/m/Y H:i" }}</span>
                     </div>
                     {% endif %}
                 </div>
-            </div>
+            </div><!-- /icon+ref grid -->
 
-            <!-- ── Grid de campos ──────────────────────────────── -->
+            <!-- ── Grid de campos ─────────────────────────────── -->
             <div class="mt-8 grid grid-cols-1 gap-x-12 gap-y-6 lg:grid-cols-2">
 
-                <!-- Col ESQUERDA -->
+                <!-- ═══ Col ESQUERDA ═══ -->
                 <div class="space-y-5">
 
-                    <!-- Direção do ajuste (só para ajustes) -->
-                    {% if movement_type == 'adjustment' %}
+                    <!-- Cliente -->
                     <div>
                         <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                             </svg>
-                            Direção do Ajuste <span class="text-red-400 ml-0.5">*</span>
+                            Cliente
                         </label>
-                        {% if movement and movement.state != 'draft' %}
-                        <div class="flex items-center gap-2">
-                            {% if movement.adjustment_direction == 'in' %}
-                            <div class="flex items-center gap-2 px-4 py-2 rounded-md bg-green-900/30 border border-green-700 text-green-400 text-sm font-semibold">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m-8-8h16"/></svg>
-                                Entrada
-                            </div>
-                            {% else %}
-                            <div class="flex items-center gap-2 px-4 py-2 rounded-md bg-red-900/30 border border-red-700 text-red-400 text-sm font-semibold">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
-                                Saída
-                            </div>
-                            {% endif %}
-                            <input type="hidden" name="adjustment_direction" value="{{ movement.adjustment_direction }}">
-                        </div>
-                        {% else %}
-                        <div x-data="{ dir: '{{ form.adjustment_direction.value|default:'' }}' }" class="flex gap-3">
-                            <label class="flex-1 cursor-pointer">
-                                <input type="radio" name="adjustment_direction" value="in" x-model="dir" required class="sr-only">
-                                <div :class="dir === 'in' ? 'border-green-500 bg-green-900/30 text-green-400' : 'border-gray-700 bg-[#1a2332] text-gray-400 hover:border-green-700 hover:text-green-400'"
-                                     class="flex items-center justify-center gap-2 px-4 py-3 rounded-md border-2 text-sm font-semibold transition-colors">
-                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m-8-8h16"/>
-                                    </svg>
-                                    Entrada
-                                    <span class="text-xs font-normal opacity-70">(+stock)</span>
-                                </div>
-                            </label>
-                            <label class="flex-1 cursor-pointer">
-                                <input type="radio" name="adjustment_direction" value="out" x-model="dir" required class="sr-only">
-                                <div :class="dir === 'out' ? 'border-red-500 bg-red-900/30 text-red-400' : 'border-gray-700 bg-[#1a2332] text-gray-400 hover:border-red-700 hover:text-red-400'"
-                                     class="flex items-center justify-center gap-2 px-4 py-3 rounded-md border-2 text-sm font-semibold transition-colors">
-                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
-                                    </svg>
-                                    Saída
-                                    <span class="text-xs font-normal opacity-70">(-stock)</span>
-                                </div>
-                            </label>
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-
-                    <!-- Motivo de sucata (só para sucata) -->
-                    {% if movement_type == 'scrap' %}
-                    <div>
-                        <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                            </svg>
-                            Motivo de Sucata <span class="text-red-400 ml-0.5">*</span>
-                        </label>
-                        {% if movement and movement.state != 'draft' %}
+                        {% if order and order.status != 'draft' %}
                         <div class="flex h-9 w-full items-center px-3 text-sm text-gray-400 border border-gray-700 rounded-md bg-[#1a2332] opacity-60 cursor-not-allowed">
-                            {{ movement.get_scrap_reason_display|default:"— Sem motivo —" }}
+                            {{ order.client.name|default:"— Sem cliente —" }}
                         </div>
-                        <input type="hidden" name="scrap_reason" value="{{ movement.scrap_reason }}">
+                        <input type="hidden" name="client" value="{{ order.client.pk|default:'' }}">
                         {% else %}
-                        <select name="scrap_reason"
-                                id="id_scrap_reason"
-                                required
-                                class="flex h-9 w-full rounded-md border border-gray-700 bg-[#1a2332] px-3 text-sm text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                            <option value="">— Selecionar motivo —</option>
-                            {% for val, label in scrap_reason_choices %}
-                            <option value="{{ val }}" {% if form.scrap_reason.value == val %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-
-                    <!-- Parceiro (não aplicável a ajustes nem sucata) -->
-                    {% if movement_type != 'adjustment' and movement_type != 'scrap' %}
-                    <div>
-                        <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                            </svg>
-                            {% if movement_type == 'receipt' %}Fornecedor{% else %}Cliente{% endif %}
-                        </label>
-                        {% if movement and movement.state != 'draft' %}
-                        <div class="flex h-9 w-full items-center px-3 text-sm text-gray-400 border border-gray-700 rounded-md bg-[#1a2332] opacity-60 cursor-not-allowed">
-                            {{ movement.partner.name|default:"— Sem parceiro —" }}
-                        </div>
-                        <input type="hidden" name="partner" value="{{ movement.partner.pk|default:'' }}">
-                        {% else %}
-                        <div x-data="partnerAutocomplete()" @click.away="showResults = false" class="relative">
+                        <div x-data="clientAutocomplete()" @click.away="showResults = false" class="relative">
                             <div class="relative flex items-center">
                                 <input type="text"
                                        x-model="query"
@@ -405,11 +298,11 @@
                                        @input.debounce.300ms="doSearch()"
                                        @focus="doSearch(true)"
                                        autocomplete="off"
-                                       placeholder="{% if movement_type == 'receipt' %}Pesquisar fornecedor...{% else %}Pesquisar cliente...{% endif %}"
+                                       placeholder="Pesquisar cliente..."
                                        class="flex h-9 w-full rounded-md border border-gray-700 bg-[#1a2332] px-3 text-sm text-gray-300 placeholder-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                                <input type="hidden" name="partner" :value="selectedId">
+                                <input type="hidden" name="client" :value="selectedId">
 
-                                <!-- Clear button: show when typing -->
+                                <!-- Clear -->
                                 <button type="button"
                                         x-show="query.length > 0"
                                         x-cloak
@@ -421,7 +314,7 @@
                                     </svg>
                                 </button>
 
-                                <!-- Edit link: show when contact is selected -->
+                                <!-- Open contact link -->
                                 <a x-show="selectedId"
                                    x-cloak
                                    :href="`/contacts/${selectedId}/edit/`"
@@ -429,7 +322,8 @@
                                    class="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition-colors"
                                    title="Ver contacto">
                                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                                     </svg>
                                 </a>
                             </div>
@@ -440,14 +334,13 @@
                                  x-transition
                                  class="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-80 overflow-y-auto">
 
-                                <!-- Loading -->
                                 <div x-show="isLoading" class="p-3 text-center">
                                     <svg class="animate-spin h-4 w-4 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                                     </svg>
                                 </div>
 
-                                <!-- Results -->
                                 <div x-show="!isLoading">
                                     <template x-for="c in results" :key="c.id">
                                         <button type="button"
@@ -464,14 +357,12 @@
                                             </div>
                                         </button>
                                     </template>
-                                    <!-- No results -->
                                     <div x-show="results.length === 0 && query.length > 0 && !isLoading"
                                          class="px-4 py-3 text-sm text-gray-500">
                                         Nenhum contacto encontrado
                                     </div>
                                 </div>
 
-                                <!-- Always: Criar e Editar -->
                                 <div class="border-t border-gray-700">
                                     <button type="button"
                                             @click="createAndEdit()"
@@ -486,154 +377,188 @@
                         </div>
                         {% endif %}
                     </div>
-                    {% endif %}
 
-                    <!-- Armazém -->
+                    <!-- Tipo de Documento (auto-gerido pelo estado) -->
                     <div>
                         <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/>
+                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                             </svg>
-                            Armazém
+                            Tipo de Documento
                         </label>
-                        <select name="warehouse"
-                                id="id_warehouse"
-                                required
-                                {% if movement and movement.state != 'draft' %}disabled{% endif %}
-                                class="flex h-9 w-full rounded-md border border-gray-700 bg-[#1a2332] px-3 text-sm text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50 disabled:cursor-not-allowed">
-                            <option value="">— Selecionar armazém —</option>
-                            {% for wh in form.fields.warehouse.queryset %}
-                            <option value="{{ wh.pk }}"
-                                {% if form.warehouse.value|stringformat:"s" == wh.pk|stringformat:"s" %}selected{% endif %}>
-                                {{ wh.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
+                        <div class="flex h-9 w-full items-center gap-2 px-3 text-sm border border-gray-700 rounded-md bg-[#1a2332] opacity-70 cursor-not-allowed select-none">
+                            {% if is_create or not order %}
+                                {# Nova venda começa sempre como Orçamento #}
+                                <span class="inline-flex items-center rounded-full bg-gray-600 px-2 py-0.5 text-xs font-medium text-gray-200">Orçamento</span>
+                                <span class="text-gray-500 text-xs">· Será confirmado como Encomenda</span>
+                            {% elif order.status == 'draft' %}
+                                <span class="inline-flex items-center rounded-full bg-gray-600 px-2 py-0.5 text-xs font-medium text-gray-200">Orçamento</span>
+                                <span class="text-gray-500 text-xs">· Confirmar para converter em Encomenda</span>
+                            {% elif order.status == 'cancelled' %}
+                                <span class="inline-flex items-center rounded-full bg-red-900 px-2 py-0.5 text-xs font-medium text-red-300">Cancelado</span>
+                            {% else %}
+                                <span class="inline-flex items-center rounded-full bg-blue-900 px-2 py-0.5 text-xs font-medium text-blue-200">Encomenda</span>
+                                {% if order.status == 'delivered' %}<span class="text-gray-500 text-xs">· Entregue</span>{% endif %}
+                                {% if order.status == 'invoiced' %}<span class="text-gray-500 text-xs">· Faturado</span>{% endif %}
+                            {% endif %}
+                        </div>
                     </div>
 
                     <!-- Data -->
                     <div>
-                        <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500" for="id_date">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500" for="id_order_date_display">
+                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                                 <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
                                 <line x1="3" y1="10" x2="21" y2="10"/>
                             </svg>
                             Data
                         </label>
-                        {% if movement and movement.state != 'draft' %}
+                        {% if order and order.status != 'draft' %}
                         <div class="flex h-9 w-full items-center px-3 text-sm text-gray-400 border border-gray-700 rounded-md bg-[#1a2332] opacity-60 cursor-not-allowed">
-                            {{ movement.date|date:'d/m/Y H:i' }}
+                            {{ order.order_date|date:'d/m/Y' }}
                         </div>
-                        <input type="hidden" name="date" value="{{ movement.date|date:'Y-m-d H:i' }}">
+                        <input type="hidden" name="order_date" value="{{ order.order_date|date:'Y-m-d' }}">
                         {% else %}
                         <input type="text"
-                               id="id_date_display"
-                               placeholder="DD/MM/AAAA HH:mm"
+                               id="id_order_date_display"
+                               placeholder="DD/MM/AAAA"
                                autocomplete="off"
                                readonly
-                               value="{{ form.date.value|date:'d/m/Y H:i' }}"
+                               value="{{ form.order_date.value|date:'d/m/Y' }}"
                                class="flex h-9 w-full rounded-md border border-gray-700 bg-[#1a2332] px-3 text-sm text-gray-300 placeholder-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer">
-                        <input type="hidden" name="date" id="id_date" value="{{ form.date.value|date:'Y-m-d H:i' }}">
+                        <input type="hidden" name="order_date" id="id_order_date" value="{{ form.order_date.value|date:'Y-m-d' }}">
                         {% endif %}
                     </div>
 
-                </div>
+                </div><!-- /left col -->
 
-                <!-- Col DIREITA -->
+                <!-- ═══ Col DIREITA ═══ -->
                 <div class="space-y-5">
 
-                    <!-- Origem -->
+                    <!-- Data de Entrega -->
                     <div>
-                        <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                        <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500" for="id_delivery_date_display">
+                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+                                <line x1="3" y1="10" x2="21" y2="10"/>
                             </svg>
-                            Origem (referência externa)
+                            Data de Entrega
                         </label>
-                        {% if movement.origin %}
-                        {# Always read-only when set — origin is immutable after creation #}
-                        <div class="relative flex items-center">
-                            <div class="flex h-9 w-full items-center px-3 pr-8 text-sm text-gray-300 border border-gray-700 rounded-md bg-[#1a2332] opacity-80 cursor-not-allowed select-none">
-                                {{ movement.origin }}
-                            </div>
-                            {% if origin_url %}
-                            <a href="{{ origin_url }}"
-                               title="Abrir {{ movement.origin }}"
-                               class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition-colors">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                                </svg>
-                            </a>
-                            {% endif %}
-                            <input type="hidden" name="origin" value="{{ movement.origin }}">
+                        {% if order and order.status != 'draft' %}
+                        <div class="flex h-9 w-full items-center px-3 text-sm text-gray-400 border border-gray-700 rounded-md bg-[#1a2332] opacity-60 cursor-not-allowed">
+                            {{ order.delivery_date|date:'d/m/Y'|default:"—" }}
                         </div>
+                        <input type="hidden" name="delivery_date" value="{{ order.delivery_date|date:'Y-m-d'|default:'' }}">
                         {% else %}
                         <input type="text"
-                               name="origin"
-                               id="id_origin"
-                               value=""
-                               placeholder="Ex: PO-00001"
-                               maxlength="64"
-                               {% if movement and movement.state != 'draft' %}disabled{% endif %}
-                               class="flex h-9 w-full rounded-md border border-gray-700 bg-[#1a2332] px-3 text-sm text-gray-300 placeholder-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50 disabled:cursor-not-allowed">
+                               id="id_delivery_date_display"
+                               placeholder="DD/MM/AAAA (opcional)"
+                               autocomplete="off"
+                               readonly
+                               value="{{ form.delivery_date.value|date:'d/m/Y'|default:'' }}"
+                               class="flex h-9 w-full rounded-md border border-gray-700 bg-[#1a2332] px-3 text-sm text-gray-300 placeholder-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer">
+                        <input type="hidden" name="delivery_date" id="id_delivery_date" value="{{ form.delivery_date.value|date:'Y-m-d'|default:'' }}">
                         {% endif %}
                     </div>
 
-                    <!-- Notas -->
+                    <!-- Condição de Pagamento -->
+                    <div>
+                        <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500" for="id_payment_terms">
+                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                            </svg>
+                            Condição de Pagamento
+                        </label>
+                        {% if order and order.status != 'draft' %}
+                        <div class="flex h-9 w-full items-center px-3 text-sm text-gray-400 border border-gray-700 rounded-md bg-[#1a2332] opacity-60 cursor-not-allowed">
+                            {{ order.payment_terms.name|default:"—" }}
+                        </div>
+                        <input type="hidden" name="payment_terms" value="{{ order.payment_terms.pk|default:'' }}">
+                        {% else %}
+                        <select name="payment_terms"
+                                id="id_payment_terms"
+                                class="flex h-9 w-full rounded-md border border-gray-700 bg-[#1a2332] px-3 text-sm text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                            <option value="">— Nenhuma —</option>
+                            {% for pt in payment_terms_qs %}
+                            <option value="{{ pt.pk }}"
+                                {% if pt.pk|stringformat:"s" == selected_payment_term_id %}selected{% endif %}>
+                                {{ pt.name }} ({{ pt.days }}d){% if pt.is_default %} ★{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% endif %}
+                    </div>
+
+                    <!-- Notas Internas -->
                     <div>
                         <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500" for="id_notes">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                             </svg>
                             Notas Internas
                         </label>
+                        {% if order and order.status != 'draft' %}
+                        <div class="flex w-full px-3 py-2 text-sm text-gray-400 border border-gray-700 rounded-md bg-[#1a2332] opacity-60 cursor-not-allowed min-h-[80px]">
+                            {{ order.notes|linebreaksbr|default:"—" }}
+                        </div>
+                        <input type="hidden" name="notes" value="{{ order.notes }}">
+                        {% else %}
                         <textarea name="notes"
                                   id="id_notes"
                                   rows="4"
-                                  placeholder="Observações sobre este movimento..."
-                                  {% if movement and movement.state != 'draft' %}disabled{% endif %}
-                                  class="flex w-full rounded-md border border-gray-700 bg-[#1a2332] px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50 disabled:cursor-not-allowed resize-none">{{ form.notes.value|default:'' }}</textarea>
+                                  placeholder="Observações sobre esta venda..."
+                                  class="flex w-full rounded-md border border-gray-700 bg-[#1a2332] px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary resize-none">{{ form.notes.value|default:'' }}</textarea>
+                        {% endif %}
                     </div>
 
-                </div>
-            </div>
+                </div><!-- /right col -->
+
+            </div><!-- /field grid -->
+
         </div>
     </form>
     <!-- END header form -->
 
-    {% if movement and movement.state == 'draft' %}
-    <form id="form-validate" method="post" action="{% url 'inventory:movement_validate' movement.pk %}" style="display:none">{% csrf_token %}</form>
+    <!-- Hidden action forms -->
+    {% if order and order.status == 'draft' %}
+    <form id="form-confirm" method="post" action="{% url 'sales:order_confirm' order.pk %}" style="display:none">{% csrf_token %}</form>
     {% endif %}
-    {% if movement and movement.state != 'cancelled' %}
-    <form id="form-cancel" method="post" action="{% url 'inventory:movement_cancel' movement.pk %}" style="display:none">{% csrf_token %}</form>
+    {% if order and order.status != 'cancelled' and order.status != 'invoiced' %}
+    <form id="form-cancel" method="post" action="{% url 'sales:order_cancel' order.pk %}" style="display:none">{% csrf_token %}</form>
     {% endif %}
 
-    <!-- ═══════════════════════════════════════════════════════ -->
-    <!-- LINES TABLE                                            -->
-    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- LINES TABLE                                                -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
     <div class="px-8 pb-12">
 
         <div class="mt-2 border-b border-gray-700 pb-2 mb-4">
             <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                 <svg class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                 </svg>
-                Linhas do Movimento
+                Linhas da Venda
             </h2>
         </div>
 
-        {% if not movement %}
+        {% if not order %}
         <!-- Not yet saved: prompt to save first -->
         <div class="rounded-xl border border-dashed border-gray-700 bg-gray-800/20 p-8 text-center">
             <svg class="h-10 w-10 text-gray-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
             </svg>
-            <p class="text-gray-500 text-sm">Guarda o rascunho para adicionar os produtos ao movimento.</p>
+            <p class="text-gray-500 text-sm">Guarda o rascunho para adicionar produtos à venda.</p>
         </div>
 
-        {% elif movement.state != 'draft' %}
-        <!-- Done / Cancelled: read-only lines table -->
+        {% elif order.status != 'draft' %}
+        <!-- Non-draft: read-only table -->
         <div class="rounded-xl border border-gray-700 overflow-hidden">
             <table class="min-w-full divide-y divide-gray-700">
                 <thead class="bg-gray-900/50">
@@ -641,14 +566,14 @@
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Qtd.</th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">UdM</th>
-                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Preço Unit.</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Preço Unit.</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Desc. %</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20">IVA %</th>
-                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Subtotal</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Subtotal</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-700/50">
-                    {% for line in movement.lines.all %}
+                    {% for line in order.lines.all %}
                     <tr class="hover:bg-gray-700/20">
                         <td class="px-4 py-3">
                             <div class="flex items-center gap-2">
@@ -659,10 +584,11 @@
                                     {% endif %}
                                 </div>
                                 <a href="/inventory/products/{{ line.product.pk }}/edit/" target="_blank"
-                                   class="flex-shrink-0 p-0.5 text-gray-600 hover:text-primary transition-colors rounded"
+                                   class="flex-shrink-0 p-0.5 text-gray-600 hover:text-primary transition-colors"
                                    title="Abrir produto">
                                     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                                     </svg>
                                 </a>
                             </div>
@@ -681,26 +607,26 @@
             </table>
         </div>
 
-        <!-- Totals breakdown -->
+        <!-- Totals (read-only) -->
         <div class="mt-4 flex justify-end">
             <div class="bg-gray-800/50 rounded-lg border border-gray-700 min-w-[260px]">
                 <div class="flex items-center justify-between px-6 py-2 border-b border-gray-700/60">
                     <span class="text-xs text-gray-500 uppercase tracking-wider">Subtotal (s/ IVA)</span>
-                    <span class="text-sm text-gray-300">{{ ctx_subtotal|floatformat:2 }} €</span>
+                    <span class="text-sm text-gray-300">{{ order.subtotal|floatformat:2 }} €</span>
                 </div>
                 <div class="flex items-center justify-between px-6 py-2 border-b border-gray-700/60">
                     <span class="text-xs text-gray-500 uppercase tracking-wider">IVA</span>
-                    <span class="text-sm text-gray-300">{{ ctx_tax|floatformat:2 }} €</span>
+                    <span class="text-sm text-gray-300">{{ order.tax|floatformat:2 }} €</span>
                 </div>
                 <div class="flex items-center justify-between px-6 py-3">
                     <span class="text-xs text-gray-400 uppercase tracking-wider font-semibold">Total</span>
-                    <span class="text-xl font-bold text-white">{{ ctx_total|floatformat:2 }} €</span>
+                    <span class="text-xl font-bold text-white">{{ order.total|floatformat:2 }} €</span>
                 </div>
             </div>
         </div>
 
         {% else %}
-        <!-- DRAFT: Editable lines table with Alpine.js -->
+        <!-- DRAFT: editable lines table with Alpine.js -->
         <div class="rounded-t-xl border border-gray-700 overflow-visible">
             <table class="min-w-full divide-y divide-gray-700">
                 <thead class="bg-gray-900/50">
@@ -715,11 +641,11 @@
                         <th class="px-4 py-3 w-10"></th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-700/50" id="lines-tbody">
+                <tbody class="divide-y divide-gray-700/50">
                     <template x-for="(line, index) in lines" :key="line.id || line.tempId">
                         <tr class="hover:bg-gray-700/20 transition-colors group">
 
-                            <!-- Product search cell -->
+                            <!-- Product search -->
                             <td class="px-4 py-2 relative">
                                 <div class="relative">
                                     <input
@@ -732,15 +658,12 @@
                                         :placeholder="line.product_name || 'Pesquisar produto...'"
                                         class="w-full bg-transparent text-sm text-gray-300 placeholder-gray-600 border-0 border-b border-gray-700 focus:border-primary focus:outline-none py-1 pr-6"
                                     >
-                                    <!-- Loading spinner -->
                                     <span x-show="line._loading" class="absolute right-1 top-1.5">
                                         <svg class="h-3.5 w-3.5 text-primary animate-spin" fill="none" viewBox="0 0 24 24">
                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
                                         </svg>
                                     </span>
-
-                                    <!-- Product link: show when product selected and not loading -->
                                     <a x-show="line.product_id && !line._loading"
                                        :href="productEditBaseUrl + line.product_id + '/edit/'"
                                        target="_blank"
@@ -748,24 +671,23 @@
                                        title="Abrir produto"
                                        style="display:none;">
                                         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                                         </svg>
                                     </a>
 
-                                    <!-- Dropdown results -->
                                     <div x-show="line._searchOpen"
                                          @click.away="line._searchOpen = false; line._results = []"
                                          class="absolute left-0 top-full mt-1 w-72 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl z-[300]"
                                          style="display:none;">
-
-                                        <!-- Product results -->
                                         <template x-for="r in line._results" :key="r.id">
                                             <button type="button"
                                                     @click.prevent="selectProduct(index, r)"
                                                     class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 transition-colors text-left border-b border-gray-700/50 last:border-0">
                                                 <div class="w-7 h-7 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
                                                     <svg class="h-3.5 w-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                                                     </svg>
                                                 </div>
                                                 <div class="min-w-0 flex-1">
@@ -777,19 +699,12 @@
                                                 </div>
                                             </button>
                                         </template>
-
-                                        <!-- Empty state -->
                                         <div x-show="line._query.length > 0 && line._results.length === 0 && !line._loading"
-                                             class="px-4 py-3 text-sm text-gray-500 text-center"
-                                             style="display:none;">
+                                             class="px-4 py-3 text-sm text-gray-500 text-center" style="display:none;">
                                             Nenhum produto encontrado
                                         </div>
-
-                                        <!-- Separator -->
                                         <div class="border-t border-gray-700 my-1"></div>
-
-                                        <!-- Create product -->
-                                        <a :href="productCreateUrl + '?return_to=' + movementPk"
+                                        <a :href="productCreateUrl"
                                            target="_blank"
                                            class="w-full flex items-center gap-2 px-4 py-2 text-sm text-green-400 hover:bg-green-900/20 transition-colors">
                                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -797,22 +712,23 @@
                                             </svg>
                                             Criar novo produto
                                         </a>
-
-                                        <!-- Edit product (only when one is selected) -->
                                         <a x-show="line.product_id"
-                                           :href="productEditBaseUrl + line.product_id + '/edit/?return_to=' + movementPk"
+                                           :href="productEditBaseUrl + line.product_id + '/edit/'"
                                            target="_blank"
                                            class="w-full flex items-center gap-2 px-4 py-2 text-sm text-blue-400 hover:bg-blue-900/20 transition-colors"
                                            style="display:none;">
                                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                             </svg>
                                             Editar produto
                                         </a>
                                     </div>
                                 </div>
-                                <!-- Product sub-info -->
-                                <div x-show="line.product_id && !line._searchOpen" class="text-xs text-gray-600 mt-0.5" x-text="line.product_ref" style="display:none;"></div>
+                                <div x-show="line.product_id && !line._searchOpen"
+                                     class="text-xs text-gray-600 mt-0.5"
+                                     x-text="line.product_ref"
+                                     style="display:none;"></div>
                             </td>
 
                             <!-- Quantity -->
@@ -822,8 +738,7 @@
                                        @blur="onQtyBlur(index)"
                                        min="0.001"
                                        step="0.001"
-                                       :disabled="!line.product_id"
-                                       class="w-full text-right bg-transparent text-sm text-gray-300 border-0 border-b border-gray-700 focus:border-primary focus:outline-none py-1 disabled:opacity-40">
+                                       class="w-full text-right bg-transparent text-sm text-gray-300 border-0 border-b border-gray-700 focus:border-primary focus:outline-none py-1">
                             </td>
 
                             <!-- UdM -->
@@ -837,9 +752,8 @@
                                        x-model.number="line.unit_price"
                                        @blur="onPriceBlur(index)"
                                        min="0"
-                                       step="0.01"
-                                       :disabled="!line.product_id"
-                                       class="w-full text-right bg-transparent text-sm text-gray-300 border-0 border-b border-gray-700 focus:border-primary focus:outline-none py-1 disabled:opacity-40">
+                                       step="0.0001"
+                                       class="w-full text-right bg-transparent text-sm text-gray-300 border-0 border-b border-gray-700 focus:border-primary focus:outline-none py-1">
                             </td>
 
                             <!-- Desc. % -->
@@ -850,8 +764,7 @@
                                        min="0"
                                        max="100"
                                        step="0.01"
-                                       :disabled="!line.product_id"
-                                       class="w-full text-right bg-transparent text-sm text-amber-400/80 border-0 border-b border-gray-700 focus:border-amber-400 focus:outline-none py-1 disabled:opacity-40">
+                                       class="w-full text-right bg-transparent text-sm text-amber-400/80 border-0 border-b border-gray-700 focus:border-amber-400 focus:outline-none py-1">
                             </td>
 
                             <!-- IVA % -->
@@ -862,11 +775,10 @@
                                        min="0"
                                        max="100"
                                        step="0.01"
-                                       :disabled="!line.product_id"
-                                       class="w-full text-right bg-transparent text-sm text-gray-300 border-0 border-b border-gray-700 focus:border-primary focus:outline-none py-1 disabled:opacity-40">
+                                       class="w-full text-right bg-transparent text-sm text-gray-300 border-0 border-b border-gray-700 focus:border-primary focus:outline-none py-1">
                             </td>
 
-                            <!-- Line total -->
+                            <!-- Subtotal -->
                             <td class="px-4 py-2 text-right">
                                 <span class="text-sm font-medium"
                                       :class="line.product_id ? 'text-gray-200' : 'text-gray-600'"
@@ -887,7 +799,6 @@
                         </tr>
                     </template>
 
-                    <!-- Empty state (no lines yet) -->
                     <tr x-show="lines.length === 0" style="display:none;">
                         <td colspan="8" class="px-4 py-6 text-center text-gray-600 text-sm">
                             Nenhum produto adicionado. Clica em &ldquo;Adicionar linha&rdquo; abaixo.
@@ -897,7 +808,7 @@
             </table>
         </div>
 
-        <!-- Add line + total footer -->
+        <!-- Add line footer -->
         <div class="border border-t-0 border-gray-700 rounded-b-xl -mt-px">
             <button type="button"
                     @click="addLine()"
@@ -909,7 +820,7 @@
             </button>
         </div>
 
-        <!-- Totals breakdown -->
+        <!-- Totals (live, Alpine) -->
         <div class="mt-4 flex justify-end">
             <div class="bg-gray-800/50 rounded-lg border border-gray-700 min-w-[260px]">
                 <div class="flex items-center justify-between px-6 py-2 border-b border-gray-700/60">
@@ -937,31 +848,27 @@
     </div>
     <!-- END left column -->
 
-    <!-- RIGHT COLUMN: Chatter placeholder ────────────── -->
-    {% if movement %}
-    {% include 'components/chatter_inventory.html' with object=movement %}
+    <!-- ─────────────────────────── RIGHT COLUMN (Chatter) ───────── -->
+    {% if order %}
+    {% include 'components/chatter_inventory.html' with object=order chatter_api_base='/vendas' %}
     {% else %}
     <div class="w-96 flex-shrink-0 border-l border-gray-700 bg-[#1a2332]"></div>
     {% endif %}
     <!-- END right column -->
 
-    </div>
-    <!-- END two-column body -->
-
-</div>
+    </div><!-- END two-column body -->
+</div><!-- END page -->
 
 <script>
-function movementForm() {
+function saleOrderForm() {
     return {
-        lines:           {{ lines_json|safe }},
-        movementPk:      '{{ movement.pk|default:"" }}',
-        movementType:    '{{ movement_type }}',
-        productSearchUrl: '{% url "inventory:product_search" %}',
-        productCreateUrl: '{% url "inventory:product_create" %}',
+        lines:              {{ lines_json|safe }},
+        orderPk:            '{{ order.pk|default:"" }}',
+        productSearchUrl:   '{% url "inventory:product_search" %}',
+        productCreateUrl:   '{% url "inventory:product_create" %}',
         productEditBaseUrl: '/inventory/products/',
 
         init() {
-            // Initialise line state fields not coming from server
             this.lines = this.lines.map(l => ({
                 ...l,
                 _query:      l.product_name,
@@ -991,6 +898,8 @@ function movementForm() {
                 _results:     [],
                 _loading:     false,
                 _searchOpen:  false,
+                _saving:      false,
+                _pendingSave: false,
             });
             this.$nextTick(() => {
                 const input = document.getElementById('product-search-' + tempId);
@@ -1008,37 +917,36 @@ function movementForm() {
             }
             line._loading    = true;
             line._searchOpen = true;
-            const url = `${this.productSearchUrl}?q=${encodeURIComponent(query)}&movement_type=${this.movementType}`;
+            const url = `${this.productSearchUrl}?q=${encodeURIComponent(query)}&movement_type=delivery`;
             try {
                 const resp = await fetch(url);
                 const data = await resp.json();
                 line._results = data.results || [];
-            } catch (e) {
-                line._results = [];
-            }
+            } catch(e) { line._results = []; }
             line._loading = false;
         },
 
         async selectProduct(index, product) {
-            const line      = this.lines[index];
+            const line        = this.lines[index];
             line.product_id   = product.id;
             line.product_name = product.name;
             line.product_ref  = product.internal_reference;
             line.unit_price   = product.default_price;
-            // Use the pre-computed line_uom (purchase UoM for receipts, base UoM otherwise)
-            line.uom_id       = product.line_uom_id;
-            line.uom_symbol   = product.line_uom_symbol;
+            line.uom_id       = product.line_uom_id || product.uom_id || null;
+            line.uom_symbol   = product.line_uom_symbol || product.uom_symbol || '';
             line.tax_rate     = product.tax_rate || 0;
             line.line_total   = line.quantity * line.unit_price;
             line._query       = product.name;
-            line._results    = [];
-            line._searchOpen = false;
+            line._results     = [];
+            line._searchOpen  = false;
             await this.saveLine(index);
         },
 
         async saveLine(index) {
             const line = this.lines[index];
-            if (!line.product_id || !this.movementPk) return;
+            if (!line.product_id || !this.orderPk) return;
+            if (line._saving) return;
+            line._saving = true;
 
             const payload = {
                 product_id:   line.product_id,
@@ -1050,8 +958,7 @@ function movementForm() {
             };
 
             if (line.id) {
-                // PATCH existing line
-                const url = `/inventory/operations/movements/${this.movementPk}/lines/${line.id}/update/`;
+                const url = `/vendas/${this.orderPk}/linhas/${line.id}/actualizar/`;
                 try {
                     const resp = await fetch(url, {
                         method:  'POST',
@@ -1060,10 +967,9 @@ function movementForm() {
                     });
                     const data = await resp.json();
                     if (data.success) line.line_total = data.line.line_total;
-                } catch (e) {}
+                } catch(e) {}
             } else {
-                // CREATE line
-                const url = `/inventory/operations/movements/${this.movementPk}/lines/add/`;
+                const url = `/vendas/${this.orderPk}/linhas/adicionar/`;
                 try {
                     const resp = await fetch(url, {
                         method:  'POST',
@@ -1072,27 +978,32 @@ function movementForm() {
                     });
                     const data = await resp.json();
                     if (data.success) {
-                        line.id         = data.line.id;
+                        line.id         = data.line_id;
                         line.tempId     = null;
-                        line.line_total = data.line.line_total;
+                        line.line_total = data.line_total;
                     }
-                } catch (e) {}
+                } catch(e) {}
+            }
+            line._saving = false;
+            if (line._pendingSave && line.id) {
+                line._pendingSave = false;
+                await this.saveLine(index);
             }
         },
 
         async removeLine(index) {
             const line = this.lines[index];
             if (line.id) {
-                const url = `/inventory/operations/movements/${this.movementPk}/lines/${line.id}/delete/`;
+                const url = `/vendas/${this.orderPk}/linhas/${line.id}/remover/`;
                 try {
                     const resp = await fetch(url, {
                         method:  'POST',
                         headers: { 'X-CSRFToken': this._csrf() },
                     });
-                    if (!resp.ok) return; // Leave line in UI if server rejected the delete
+                    if (!resp.ok) return;
                     const data = await resp.json();
                     if (!data.success) return;
-                } catch (e) { return; }
+                } catch(e) { return; }
             }
             this.lines.splice(index, 1);
         },
@@ -1100,24 +1011,48 @@ function movementForm() {
         onQtyBlur(index) {
             const line      = this.lines[index];
             line.line_total = line.quantity * line.unit_price * (1 - (line.discount_pct || 0) / 100);
+            if (line._saving) { line._pendingSave = true; return; }
             if (line.id) this.saveLine(index);
         },
 
         onPriceBlur(index) {
             const line      = this.lines[index];
             line.line_total = line.quantity * line.unit_price * (1 - (line.discount_pct || 0) / 100);
+            if (line._saving) { line._pendingSave = true; return; }
             if (line.id) this.saveLine(index);
         },
 
         onTaxBlur(index) {
             const line = this.lines[index];
+            if (line._saving) { line._pendingSave = true; return; }
             if (line.id) this.saveLine(index);
         },
 
         onDiscountBlur(index) {
             const line = this.lines[index];
             line.line_total = line.quantity * line.unit_price * (1 - (line.discount_pct || 0) / 100);
+            if (line._saving) { line._pendingSave = true; return; }
             if (line.id) this.saveLine(index);
+        },
+
+        async saveBeforeSubmit() {
+            if (this.orderPk) {
+                const saves = this.lines
+                    .filter(line => line.id && line.product_id)
+                    .map(line => fetch(`/vendas/${this.orderPk}/linhas/${line.id}/actualizar/`, {
+                        method:  'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this._csrf() },
+                        body: JSON.stringify({
+                            quantity:    line.quantity,
+                            unit_price:  line.unit_price,
+                            uom_id:      line.uom_id,
+                            tax_rate:    line.tax_rate,
+                            discount_pct: line.discount_pct || 0,
+                        }),
+                    }).catch(() => {}));
+                await Promise.all(saves);
+            }
+            document.getElementById('sale-order-form').submit();
         },
 
         _csrf() {
@@ -1129,44 +1064,40 @@ function movementForm() {
     };
 }
 
-function partnerAutocomplete() {
+function clientAutocomplete() {
     return {
-        query: '{{ movement.partner.name|default:""|escapejs }}',
-        selectedId: '{{ movement.partner.pk|default:"" }}',
-        results: [],
+        query:       '{{ order.client.name|default:""|escapejs }}',
+        selectedId:  '{{ order.client.pk|default:"" }}',
+        results:     [],
         showResults: false,
-        isLoading: false,
+        isLoading:   false,
 
         async doSearch(fromFocus = false) {
-            // When user types (not focus) and a contact was already selected, clear the selection
             if (!fromFocus && this.selectedId && this.query.length > 0) {
                 this.selectedId = '';
             }
-            this.isLoading = true;
+            this.isLoading   = true;
             this.showResults = true;
             try {
-                const url = `/crm/api/contacts/search/?q=${encodeURIComponent(this.query)}&limit=7`;
+                const url  = `/crm/api/contacts/search/?q=${encodeURIComponent(this.query)}&limit=7`;
                 const resp = await fetch(url);
                 if (!resp.ok) throw new Error(resp.status);
                 const data = await resp.json();
                 this.results = data.success ? data.results : [];
-            } catch (e) {
-                this.results = [];
-            } finally {
-                this.isLoading = false;
-            }
+            } catch(e) { this.results = []; }
+            finally { this.isLoading = false; }
         },
 
         pick(c) {
-            this.query = c.name;
-            this.selectedId = c.id;
+            this.query       = c.name;
+            this.selectedId  = c.id;
             this.showResults = false;
         },
 
         clear() {
-            this.query = '';
-            this.selectedId = '';
-            this.results = [];
+            this.query       = '';
+            this.selectedId  = '';
+            this.results     = [];
             this.showResults = false;
         },
 
@@ -1178,6 +1109,7 @@ function partnerAutocomplete() {
 }
 </script>
 
+<!-- Air Datepicker (date pickers) -->
 <script>
 if (typeof module === 'undefined') { window.module = { exports: {} }; }
 if (typeof exports === 'undefined') { window.exports = module.exports; }
@@ -1187,69 +1119,55 @@ if (typeof exports === 'undefined') { window.exports = module.exports; }
 window.AirDatepicker = module.exports.default || module.exports.AirDatepicker || module.exports;
 
 document.addEventListener('DOMContentLoaded', function () {
-    const displayInput = document.getElementById('id_date_display');
-    const hiddenInput  = document.getElementById('id_date');
-    if (!displayInput || !hiddenInput) return;
-
     const ptLocale = {
-        days: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'],
-        daysShort: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
-        daysMin: ['Do', 'Se', 'Te', 'Qu', 'Qi', 'Sx', 'Sá'],
-        months: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
-        monthsShort: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
-        today: 'Hoje',
-        clear: 'Limpar',
-        dateFormat: 'dd/MM/yyyy',
-        timeFormat: 'HH:mm',
-        firstDay: 1
+        days: ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'],
+        daysShort: ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'],
+        daysMin: ['Do','Se','Te','Qu','Qi','Sx','Sá'],
+        months: ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'],
+        monthsShort: ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'],
+        today: 'Hoje', clear: 'Limpar',
+        dateFormat: 'dd/MM/yyyy', timeFormat: 'HH:mm', firstDay: 1,
     };
 
-    function formatDisplayPT(date) {
-        const dd  = String(date.getDate()).padStart(2, '0');
-        const mm  = String(date.getMonth() + 1).padStart(2, '0');
-        const yy  = date.getFullYear();
-        const hh  = String(date.getHours()).padStart(2, '0');
-        const min = String(date.getMinutes()).padStart(2, '0');
-        return `${dd}/${mm}/${yy} ${hh}:${min}`;
+    function fmtDisplay(d) {
+        return String(d.getDate()).padStart(2,'0') + '/' +
+               String(d.getMonth()+1).padStart(2,'0') + '/' +
+               d.getFullYear();
+    }
+    function fmtISO(d) {
+        return d.getFullYear() + '-' +
+               String(d.getMonth()+1).padStart(2,'0') + '-' +
+               String(d.getDate()).padStart(2,'0');
+    }
+    function parseISO(s) {
+        if (!s) return null;
+        const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return m ? new Date(+m[1], +m[2]-1, +m[3]) : null;
     }
 
-    function formatISO(date) {
-        const dd  = String(date.getDate()).padStart(2, '0');
-        const mm  = String(date.getMonth() + 1).padStart(2, '0');
-        const yy  = date.getFullYear();
-        const hh  = String(date.getHours()).padStart(2, '0');
-        const min = String(date.getMinutes()).padStart(2, '0');
-        return `${yy}-${mm}-${dd} ${hh}:${min}`;
+    function initDatePicker(displayId, hiddenId) {
+        const display = document.getElementById(displayId);
+        const hidden  = document.getElementById(hiddenId);
+        if (!display || !hidden) return;
+        const init = parseISO(hidden.value);
+        if (init) display.value = fmtDisplay(init);
+        new AirDatepicker(display, {
+            locale: ptLocale,
+            timepicker: false,
+            autoClose: true,
+            position: 'bottom left',
+            buttons: ['today', 'clear'],
+            selectedDates: init ? [init] : [],
+            navTitles: { days: 'MMMM yyyy', months: 'yyyy', years: 'yyyy1 - yyyy2' },
+            onSelect({ date }) {
+                hidden.value  = date ? fmtISO(date) : '';
+                display.value = date ? fmtDisplay(date) : '';
+            },
+        });
     }
 
-    // Parse existing value (YYYY-MM-DD HH:mm)
-    let initialDate = null;
-    if (hiddenInput.value) {
-        const parts = hiddenInput.value.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/);
-        if (parts) {
-            initialDate = new Date(+parts[1], +parts[2] - 1, +parts[3], +parts[4], +parts[5]);
-            displayInput.value = formatDisplayPT(initialDate);
-        }
-    }
-
-    new AirDatepicker(displayInput, {
-        locale: ptLocale,
-        timepicker: true,
-        autoClose: true,
-        position: 'bottom left',
-        buttons: ['today', 'clear'],
-        selectedDates: initialDate ? [initialDate] : [],
-        navTitles: { days: 'MMMM yyyy', months: 'yyyy', years: 'yyyy1 - yyyy2' },
-        onSelect({ date }) {
-            if (date) {
-                hiddenInput.value  = formatISO(date);
-                displayInput.value = formatDisplayPT(date);
-            } else {
-                hiddenInput.value  = '';
-                displayInput.value = '';
-            }
-        }
-    });
+    initDatePicker('id_order_date_display',    'id_order_date');
+    initDatePicker('id_delivery_date_display', 'id_delivery_date');
 });
 </script>
 {% endblock %}

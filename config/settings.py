@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'apps.whatsapp',
     'apps.documents',
     'apps.inventory',
+    'apps.purchases',
+    'apps.sales',
 ]
 
 MIDDLEWARE = [

@@ -97,6 +97,14 @@
                         </svg>
                         Concluir
                     </button>
+                    <a href="{% url 'inventory:purchase_list_mobile' purchase_list.pk %}"
+                       class="p-1.5 rounded-md border border-gray-600 text-gray-300 bg-transparent hover:bg-gray-700 transition-colors inline-flex items-center"
+                       title="Vista mobile">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="12" y1="18" x2="12.01" y2="18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </a>
                     <button type="button" @click="showCancelModal = true"
                             class="px-4 py-1.5 rounded-md border border-red-500 text-red-500 bg-transparent hover:bg-red-500/10 text-sm font-medium transition-colors">
                         Cancelar
@@ -110,7 +118,7 @@
                         {% if purchase_list.state == 'draft' %}
                         <div class="px-5 py-1.5 text-xs font-semibold rounded-md bg-gray-700 border border-gray-600 text-gray-300">Rascunho</div>
                         {% elif purchase_list.state == 'confirmed' %}
-                        <div class="px-5 py-1.5 text-xs font-semibold rounded-md" style="background:#dbc693;border:1px solid #dbc693;color:#1f2937">Confirmada</div>
+                        <div class="px-5 py-1.5 text-xs font-semibold rounded-md" style="background:#dbc693;border:1px solid #dbc693;color:#ffffff">Confirmada</div>
                         {% elif purchase_list.state == 'done' %}
                         <div class="px-5 py-1.5 text-xs font-semibold rounded-md bg-green-800 border border-green-700 text-green-300">Concluída</div>
                         {% elif purchase_list.state == 'cancelled' %}
@@ -434,18 +442,7 @@
                 </div>
             </div>
         </div>
-    </form>
 
-    <!-- State-change forms (hidden) -->
-    {% if purchase_list and purchase_list.state == 'draft' %}
-    <form id="form-confirm" method="post" action="{% url 'inventory:purchase_list_confirm' purchase_list.pk %}" style="display:none">{% csrf_token %}</form>
-    {% endif %}
-    {% if purchase_list and purchase_list.state == 'confirmed' %}
-    <form id="form-done" method="post" action="{% url 'inventory:purchase_list_done' purchase_list.pk %}" style="display:none">{% csrf_token %}</form>
-    {% endif %}
-    {% if purchase_list and purchase_list.state != 'cancelled' %}
-    <form id="form-cancel" method="post" action="{% url 'inventory:purchase_list_cancel' purchase_list.pk %}" style="display:none">{% csrf_token %}</form>
-    {% endif %}
 
     <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <!-- LINES TABLE                                           -->
@@ -480,6 +477,7 @@
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Stock Actual</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Qtd. Necessária</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Qtd. a Comprar</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Qtd. Efectuada</th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">UdM</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Preço Unit.</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20">IVA %</th>
@@ -498,13 +496,16 @@
                         <td class="px-4 py-3 text-right text-sm text-gray-500">{{ line.qty_on_hand|floatformat:3 }}</td>
                         <td class="px-4 py-3 text-right text-sm text-gray-400">{{ line.qty_needed|floatformat:3 }}</td>
                         <td class="px-4 py-3 text-right text-sm text-gray-300 font-medium">{{ line.qty_to_buy|floatformat:3 }}</td>
+                        <td class="px-4 py-3 text-right text-sm font-semibold {% if line.qty_purchased >= line.qty_to_buy %}text-green-400{% elif line.qty_purchased > 0 %}text-yellow-400{% else %}text-gray-600{% endif %}">
+                            {{ line.qty_purchased|floatformat:3 }}
+                        </td>
                         <td class="px-4 py-3 text-center text-xs text-gray-500">{{ line.uom.symbol|default:"—" }}</td>
-                        <td class="px-4 py-3 text-right text-sm text-gray-300">{{ line.unit_price|floatformat:2 }} €</td>
-                        <td class="px-4 py-3 text-right text-sm text-gray-400">{{ line.tax_rate|floatformat:2 }}%</td>
+                        <td class="px-4 py-3 text-right text-sm text-gray-300">{{ line.purchase_price|floatformat:2 }} €</td>
+                        <td class="px-4 py-3 text-right text-sm text-gray-400">{{ line.vat_rate|floatformat:2 }}%</td>
                         <td class="px-4 py-3 text-right text-sm font-medium text-gray-200">{{ line.line_total|floatformat:2 }} €</td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="8" class="px-4 py-8 text-center text-gray-600 text-sm">Sem linhas</td></tr>
+                    <tr><td colspan="9" class="px-4 py-8 text-center text-gray-600 text-sm">Sem linhas</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -538,6 +539,7 @@
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Stock Act.</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Necessário</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">A Comprar</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Efectuada</th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">UdM</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Preço Unit. €</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20">IVA %</th>
@@ -620,6 +622,13 @@
                                        class="flex h-8 w-full rounded border border-gray-700 bg-[#1a2332] px-2 text-xs text-right text-gray-300 placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-primary">
                             </td>
 
+                            <!-- Qtd. Efectuada (read-only, filled via mobile) -->
+                            <td class="px-4 py-2 text-right">
+                                <span class="text-xs font-semibold"
+                                      :class="parseFloat(line.qty_purchased) > 0 && parseFloat(line.qty_purchased) >= parseFloat(line.qty_to_buy) ? 'text-green-400' : parseFloat(line.qty_purchased) > 0 ? 'text-yellow-400' : 'text-gray-600'"
+                                      x-text="line.qty_purchased != null ? parseFloat(line.qty_purchased).toFixed(3) : '0.000'"></span>
+                            </td>
+
                             <!-- UdM -->
                             <td class="px-2 py-2">
                                 <select :name="`line_uom_${index}`"
@@ -690,6 +699,18 @@
             </button>
         </div>
         <input type="hidden" name="lines_count" :value="lines.length">
+    </form>
+
+    <!-- State-change forms (hidden, must be outside main form) -->
+    {% if purchase_list and purchase_list.state == 'draft' %}
+    <form id="form-confirm" method="post" action="{% url 'inventory:purchase_list_confirm' purchase_list.pk %}" style="display:none">{% csrf_token %}</form>
+    {% endif %}
+    {% if purchase_list and purchase_list.state == 'confirmed' %}
+    <form id="form-done" method="post" action="{% url 'inventory:purchase_list_done' purchase_list.pk %}" style="display:none">{% csrf_token %}</form>
+    {% endif %}
+    {% if purchase_list and purchase_list.state != 'cancelled' %}
+    <form id="form-cancel" method="post" action="{% url 'inventory:purchase_list_cancel' purchase_list.pk %}" style="display:none">{% csrf_token %}</form>
+    {% endif %}
 
         <!-- Totais separados -->
         <div class="mt-4 flex justify-end">

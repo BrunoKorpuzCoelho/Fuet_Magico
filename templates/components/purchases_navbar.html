@@ -1,10 +1,9 @@
 <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center space-x-6 h-12">
-
-            <a href="{% url 'inventory:purchase_list_index' %}"
+            <a href="{% url 'purchases:order_index' %}"
                class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
-                Listas de Compras
+                Encomendas de Compra
             </a>
 
             <div class="relative" x-data="{ open: false }">
@@ -27,20 +26,20 @@
                      class="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
                      style="display: none;">
                     <div class="py-1">
-                        <div class="px-4 py-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                            Ações
-                        </div>
-                        <form method="POST" action="{% url 'inventory:purchase_list_auto_generate' %}" @click.stop>
-                            {% csrf_token %}
-                            <button type="submit"
-                                    class="w-full text-left block pl-8 pr-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                Criar Lista Automática
-                            </button>
-                        </form>
+                        <span class="flex items-center justify-between px-4 py-2 text-sm text-gray-400 dark:text-gray-500 cursor-not-allowed select-none">
+                            Fornecedores
+                            <span class="text-xs font-medium px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 rounded">Em breve</span>
+                        </span>
+                        <a href="{% url 'purchases:payment_term_list' %}" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
+                            Condições de Pagamento
+                        </a>
+                        <span class="flex items-center justify-between px-4 py-2 text-sm text-gray-400 dark:text-gray-500 cursor-not-allowed select-none">
+                            Impostos
+                            <span class="text-xs font-medium px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 rounded">Em breve</span>
+                        </span>
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </div>

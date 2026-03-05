@@ -90,7 +90,13 @@
                     <span class="text-xs text-green-400">Vendas</span>
                 </button>
                 
-                <button class="flex items-center gap-2 px-3 py-1 rounded-md border border-orange-500 bg-transparent hover:bg-orange-500/10 transition-all">
+                {% if contact %}
+                <a href="{% url 'purchases:order_index' %}?search={{ contact.name|urlencode }}&field=supplier"
+                   class="flex items-center gap-2 px-3 py-1 rounded-md border border-orange-500 bg-transparent hover:bg-orange-500/10 transition-all">
+                {% else %}
+                <a href="{% url 'purchases:order_index' %}"
+                   class="flex items-center gap-2 px-3 py-1 rounded-md border border-orange-500 bg-transparent hover:bg-orange-500/10 transition-all">
+                {% endif %}
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-orange-400">
                         <circle cx="8" cy="21" r="1"></circle>
                         <circle cx="19" cy="21" r="1"></circle>
@@ -98,7 +104,7 @@
                     </svg>
                     <span class="text-sm font-semibold text-orange-400">{{ purchases_count|default:0 }}</span>
                     <span class="text-xs text-orange-400">Compras</span>
-                </button>
+                </a>
                 
                 <button class="flex items-center gap-2 px-3 py-1 rounded-md border border-blue-500 bg-transparent hover:bg-blue-500/10 transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-blue-400">

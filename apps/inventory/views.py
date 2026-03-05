@@ -2014,7 +2014,7 @@ def movement_edit(request, pk):
     _subtotal   = _D('0.00')
     _tax_total  = _D('0.00')
     for line in movement.lines.select_related('product', 'uom').order_by('created_at'):
-        lt = _D(str(line.quantity)) * _D(str(line.unit_price))
+        lt = _D(str(line.quantity)) * _D(str(line.unit_price)) * (1 - _D(str(line.discount_pct)) / 100)
         ta = lt * _D(str(line.tax_rate)) / _D('100')
         _subtotal  += lt
         _tax_total += ta
@@ -2028,6 +2028,7 @@ def movement_edit(request, pk):
             'uom_id':       str(line.uom.pk) if line.uom else None,
             'uom_symbol':   line.uom.symbol if line.uom else '',
             'tax_rate':     float(line.tax_rate),
+            'discount_pct': float(line.discount_pct),
             'line_total':   float(lt),
         })
 
@@ -2039,6 +2040,25 @@ def movement_edit(request, pk):
     chatter_activities = ChatterActivity.objects.filter(
         content_type=_ct, object_id=movement.id
     ).select_related('user').order_by('-created_at')[:100]
+
+    # Resolve origin → PO or SO link
+    origin_url = None
+    if movement.origin:
+        try:
+            from apps.purchases.models import PurchaseOrder as _PO
+            _po = _PO.objects.filter(order_number=movement.origin).first()
+            if _po:
+                origin_url = f'/purchases/{_po.pk}/editar/'
+        except Exception:
+            pass
+        if not origin_url:
+            try:
+                from apps.sales.models import SaleOrder as _SO
+                _so = _SO.objects.filter(order_number=movement.origin).first()
+                if _so:
+                    origin_url = f'/vendas/{_so.pk}/editar/'
+            except Exception:
+                pass
 
     return render(request, 'inventory/stock_movement_form.html', {
         'form':          form,
@@ -2057,6 +2077,8 @@ def movement_edit(request, pk):
         'chatter_notes':      chatter_notes,
         'activities':         chatter_activities,
         'scrap_reason_choices': StockMovement.SCRAP_REASON_CHOICES,
+        # origin link
+        'origin_url': origin_url,
     })
 
 
@@ -2073,14 +2095,80 @@ def movement_validate(request, pk):
         return redirect('inventory:movement_edit', pk=movement.pk)
     try:
         movement.action_validate()
-        # Log STATUS_CHANGE
+        # Log STATUS_CHANGE on the movement
         ChatterActivity.objects.create(
             content_object=movement,
             user=request.user,
             activity_type='STATUS_CHANGE',
             description='validou o movimento — stock atualizado',
         )
-        messages.success(request, f'Movimento {movement.reference} validado com sucesso.')
+
+        # ── Auto-close linked PurchaseOrder ──────────────────────────────
+        po_closed_ref = None
+        if movement.movement_type == 'receipt' and movement.origin:
+            try:
+                from apps.purchases.models import PurchaseOrder as _PO
+                from apps.core.models import ChatterActivity as _CA
+                from django.contrib.contenttypes.models import ContentType as _CT
+                _po = _PO.objects.filter(order_number=movement.origin).first()
+                if _po and _po.status == _PO.Status.CONFIRMED:
+                    _po.status = _PO.Status.RECEIVED
+                    _po.save(update_fields=['status'])
+                    _CT_po = _CT.objects.get_for_model(_PO)
+                    _CA.objects.create(
+                        content_type=_CT_po,
+                        object_id=_po.pk,
+                        user=request.user,
+                        activity_type='STATUS_CHANGE',
+                        description=f'Estado alterado: Confirmado → Recebido. Receção {movement.reference} validada.',
+                        details={
+                            'field': 'status',
+                            'old': 'confirmed',
+                            'new': 'received',
+                            'receipt_ref': movement.reference,
+                            'receipt_pk': str(movement.pk),
+                        },
+                    )
+                    po_closed_ref = _po.order_number
+            except Exception:
+                pass  # Never block the validate if PO update fails
+
+        # ── Auto-update linked SaleOrder → DELIVERED ─────────────────────
+        so_delivered_ref = None
+        if movement.movement_type == 'delivery' and movement.origin:
+            try:
+                from apps.sales.models import SaleOrder as _SO
+                from apps.core.models import ChatterActivity as _CA
+                from django.contrib.contenttypes.models import ContentType as _CT
+                _so = _SO.objects.filter(order_number=movement.origin).first()
+                if _so and _so.status == _SO.Status.CONFIRMED:
+                    _so.status = _SO.Status.DELIVERED
+                    _so.save(update_fields=['status'])
+                    _CT_so = _CT.objects.get_for_model(_SO)
+                    _CA.objects.create(
+                        content_type=_CT_so,
+                        object_id=_so.pk,
+                        user=request.user,
+                        activity_type='STATUS_CHANGE',
+                        description=f'Estado alterado: Confirmado → Entregue. Entrega {movement.reference} validada.',
+                        details={
+                            'field': 'status',
+                            'old': 'confirmed',
+                            'new': 'delivered',
+                            'delivery_ref': movement.reference,
+                            'delivery_pk': str(movement.pk),
+                        },
+                    )
+                    so_delivered_ref = _so.order_number
+            except Exception:
+                pass  # Never block the validate if SO update fails
+
+        msg = f'Movimento {movement.reference} validado com sucesso. Stock atualizado.'
+        if po_closed_ref:
+            msg += f' Encomenda {po_closed_ref} marcada como Recebida.'
+        if so_delivered_ref:
+            msg += f' Venda {so_delivered_ref} marcada como Entregue.'
+        messages.success(request, msg)
     except Exception as exc:
         messages.error(request, str(exc))
     return redirect('inventory:movement_edit', pk=movement.pk)
@@ -2134,6 +2222,7 @@ def movement_line_add(request, pk):
         unit_price = data.get('unit_price', 0)
         uom_id     = data.get('uom_id')
         tax_rate   = data.get('tax_rate', None)
+        discount_pct = data.get('discount_pct', 0)
     except (json.JSONDecodeError, TypeError):
         return JsonResponse({'success': False, 'error': 'JSON inválido.'}, status=400)
 
@@ -2160,6 +2249,7 @@ def movement_line_add(request, pk):
             unit_price=unit_price,
             uom=uom,
             tax_rate=tax_rate,
+            discount_pct=discount_pct,
         )
 
     return JsonResponse({
@@ -2174,7 +2264,8 @@ def movement_line_add(request, pk):
             'uom_id':       str(line.uom.pk) if line.uom else None,
             'uom_symbol':   line.uom.symbol if line.uom else '',
             'tax_rate':     float(line.tax_rate),
-            'line_total':   float(line.quantity * line.unit_price),
+            'discount_pct': float(line.discount_pct),
+            'line_total':   float(line.line_total),
         },
         'movement_total': float(movement.total_value),
     })
@@ -2205,18 +2296,21 @@ def movement_line_update(request, movement_pk, line_pk):
             line.uom = uom
     if 'tax_rate' in data:
         line.tax_rate = data['tax_rate']
+    if 'discount_pct' in data:
+        line.discount_pct = data['discount_pct']
     line.save()
 
     return JsonResponse({
         'success': True,
         'line': {
-            'id':         str(line.pk),
-            'quantity':   float(line.quantity),
-            'unit_price': float(line.unit_price),
-            'uom_id':     str(line.uom.pk) if line.uom else None,
-            'uom_symbol': line.uom.symbol if line.uom else '',
-            'tax_rate':   float(line.tax_rate),
-            'line_total': float(line.quantity * line.unit_price),
+            'id':          str(line.pk),
+            'quantity':    float(line.quantity),
+            'unit_price':  float(line.unit_price),
+            'uom_id':      str(line.uom.pk) if line.uom else None,
+            'uom_symbol':  line.uom.symbol if line.uom else '',
+            'tax_rate':    float(line.tax_rate),
+            'discount_pct': float(line.discount_pct),
+            'line_total':  float(line.line_total),
         },
         'movement_total': float(movement.total_value),
     })
@@ -3240,6 +3334,102 @@ def bulk_delete_purchase_lists(request):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Purchase List AUTO-GENERATE
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required
+@require_http_methods(['POST'])
+def purchase_list_auto_generate(request):
+    """Create a PurchaseList from all storable products below min_stock.
+
+    For each eligible product:
+        target     = max(min_stock, forecasted_qty)
+        qty_to_buy = target - on_hand
+
+    A new draft PurchaseList is created with those lines (supplier left empty).
+    """
+    from decimal import Decimal
+
+    company = get_active_company(request)
+
+    products_qs = Product.objects.filter(
+        product_type='storable',
+        is_active=True,
+        min_stock__gt=0,
+    ).select_related('uom')
+
+    if company:
+        products_qs = products_qs.filter(
+            Q(owner_company=company) | Q(owner_company__isnull=True)
+        )
+
+    lines_to_create = []
+    for product in products_qs:
+        min_stock = product.min_stock
+        forecast  = Decimal(str(product.get_forecasted_quantity()))
+
+        # Only purchase if, after ALL pending movements, stock falls below min_stock.
+        if forecast >= min_stock:
+            continue
+
+        # Buy exactly enough so that after all pending movements we land at min_stock.
+        # qty_to_buy = min_stock - forecast
+        # Example: on_hand=110, outgoing=400 (forecast=-290), min_stock=200
+        #   → buy 200-(-290) = 490  (110+490-400 = 200 = min_stock)
+        qty_to_buy = min_stock - forecast
+
+        if qty_to_buy <= 0:
+            continue
+
+        lines_to_create.append({
+            'product':        product,
+            'on_hand':        Decimal(str(product.get_on_hand_quantity())),
+            'min_stock':      min_stock,
+            'qty_to_buy':     qty_to_buy,
+            'purchase_price': product.cost_price or Decimal('0'),
+            'vat_rate':       product.tax_rate or Decimal('0'),
+        })
+
+    if not lines_to_create:
+        messages.info(request, 'Nenhum produto está abaixo do stock mínimo.')
+        return redirect('inventory:purchase_list_index')
+
+    with transaction.atomic():
+        pl = PurchaseList(
+            owner_company=company,
+            # supplier intentionally left empty
+        )
+        pl.save()  # name auto-generated by save()
+
+        for item in lines_to_create:
+            PurchaseListLine.objects.create(
+                purchase_list  = pl,
+                product        = item['product'],
+                qty_on_hand    = item['on_hand'],
+                qty_needed     = item['min_stock'],
+                qty_to_buy     = item['qty_to_buy'],
+                purchase_price = item['purchase_price'],
+                vat_rate       = item['vat_rate'],
+            )
+
+        ChatterActivity.objects.create(
+            content_object = pl,
+            user           = request.user,
+            activity_type  = 'CREATE',
+            description    = (
+                f'gerou automaticamente a lista "{pl.name}" '
+                f'com {len(lines_to_create)} produto(s) abaixo do stock mínimo.'
+            ),
+        )
+
+    messages.success(
+        request,
+        f'Lista automática criada com {len(lines_to_create)} produto(s) abaixo do stock mínimo.',
+    )
+    return redirect('inventory:purchase_list_edit', pk=pl.pk)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Purchase List FORM views
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -3258,15 +3448,16 @@ def _purchase_list_context(request, purchase_list=None):
         lines_data = []
         for line in purchase_list.lines.select_related('product', 'uom').order_by('id'):
             lines_data.append({
-                'id':           str(line.pk),
-                'product_id':   str(line.product_id),
-                'product_name': line.product.name,
-                'qty_on_hand':  float(line.qty_on_hand),
-                'qty_needed':   float(line.qty_needed),
-                'qty_to_buy':   float(line.qty_to_buy),
-                'uom_id':       str(line.uom_id) if line.uom_id else '',
-                'unit_price':   float(line.unit_price),
-                'tax_rate':     float(line.tax_rate),
+                'id':             str(line.pk),
+                'product_id':     str(line.product_id),
+                'product_name':   line.product.name,
+                'qty_on_hand':    float(line.qty_on_hand),
+                'qty_needed':     float(line.qty_needed),
+                'qty_to_buy':     float(line.qty_to_buy),
+                'qty_purchased':  float(line.qty_purchased),
+                'uom_id':         str(line.uom_id) if line.uom_id else '',
+                'unit_price':     float(line.purchase_price),
+                'tax_rate':       float(line.vat_rate),
             })
         lines_json = json.dumps(lines_data)
     else:
@@ -3351,25 +3542,25 @@ def _save_purchase_list_from_post(request, purchase_list=None):
             if line_pk and line_pk in existing_pks:
                 try:
                     line = purchase_list.lines.get(pk=line_pk)
-                    line.product_id = product_id
-                    line.qty_needed = qty_needed
-                    line.qty_to_buy = qty_to_buy
-                    line.unit_price = unit_price
-                    line.tax_rate   = tax_rate
-                    line.uom_id     = uom_id
+                    line.product_id    = product_id
+                    line.qty_needed    = qty_needed
+                    line.qty_to_buy    = qty_to_buy
+                    line.purchase_price = unit_price
+                    line.vat_rate       = tax_rate
+                    line.uom_id        = uom_id
                     line.save()
                     submitted_pks.add(line_pk)
                 except PurchaseListLine.DoesNotExist:
                     pass
             else:
                 line = PurchaseListLine.objects.create(
-                    purchase_list=purchase_list,
-                    product_id   =product_id,
-                    qty_needed   =qty_needed,
-                    qty_to_buy   =qty_to_buy,
-                    unit_price   =unit_price,
-                    tax_rate     =tax_rate,
-                    uom_id       =uom_id,
+                    purchase_list  = purchase_list,
+                    product_id     = product_id,
+                    qty_needed     = qty_needed,
+                    qty_to_buy     = qty_to_buy,
+                    purchase_price = unit_price,
+                    vat_rate       = tax_rate,
+                    uom_id         = uom_id,
                 )
                 submitted_pks.add(str(line.pk))
 
@@ -3611,3 +3802,86 @@ def purchase_list_follower_remove(request, pk, user_id):
         content_type=ct, object_id=pl.id, user_id=user_id,
     ).delete()
     return JsonResponse({'success': True})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Purchase List — Mobile Checklist View
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required
+def purchase_list_mobile(request, pk):
+    """Full-screen mobile-optimised checklist for a confirmed purchase list."""
+    pl = get_object_or_404(PurchaseList, pk=pk, state='confirmed')
+    lines = pl.lines.select_related('product', 'uom').order_by('id')
+    return render(request, 'inventory/purchase_list_mobile.html', {
+        'purchase_list': pl,
+        'lines': lines,
+    })
+
+
+@login_required
+@require_http_methods(['POST'])
+def purchase_list_line_update_qty(request, pk, line_pk):
+    """AJAX endpoint – update qty_purchased for a single line."""
+    import json
+    pl = get_object_or_404(PurchaseList, pk=pk, state='confirmed')
+    line = get_object_or_404(PurchaseListLine, pk=line_pk, purchase_list=pl)
+    try:
+        data = json.loads(request.body)
+        from decimal import Decimal
+        qty = Decimal(str(data.get('qty_purchased', 0)))
+    except Exception:
+        return JsonResponse({'error': 'invalid'}, status=400)
+    if qty < 0:
+        qty = Decimal('0')
+    line.qty_purchased = qty
+    line.save(update_fields=['qty_purchased'])
+    return JsonResponse({
+        'success': True,
+        'qty_purchased': float(line.qty_purchased),
+        'done': line.qty_purchased >= line.qty_to_buy,
+    })
+
+
+@login_required
+@require_http_methods(['POST'])
+def purchase_list_mobile_add_line(request, pk):
+    """AJAX endpoint – add a new line to a confirmed purchase list from the mobile view."""
+    import json
+    from decimal import Decimal
+    pl = get_object_or_404(PurchaseList, pk=pk, state='confirmed')
+    try:
+        data = json.loads(request.body)
+        product_id = data.get('product_id')
+        qty_to_buy = Decimal(str(data.get('qty_to_buy', 1)))
+    except Exception:
+        return JsonResponse({'error': 'invalid'}, status=400)
+
+    product = get_object_or_404(Product, pk=product_id, is_active=True)
+    if qty_to_buy <= 0:
+        qty_to_buy = Decimal('1')
+
+    line = PurchaseListLine.objects.create(
+        purchase_list=pl,
+        product=product,
+        uom=product.uom_purchase or product.uom,
+        qty_to_buy=qty_to_buy,
+        qty_purchased=Decimal('0'),
+        purchase_price=product.cost_price,
+        vat_rate=product.vat_rate if hasattr(product, 'vat_rate') else Decimal('0'),
+    )
+
+    from django.urls import reverse
+    return JsonResponse({
+        'success': True,
+        'line': {
+            'id': str(line.pk),
+            'product_name': product.name,
+            'qty_to_buy': float(line.qty_to_buy),
+            'qty_purchased': 0,
+            'purchase_price': float(line.purchase_price),
+            'vat_rate': float(line.vat_rate),
+            'uom_name': line.uom.name if line.uom else 'un',
+            'update_url': reverse('inventory:purchase_list_line_update_qty', args=[pl.pk, line.pk]),
+        }
+    })

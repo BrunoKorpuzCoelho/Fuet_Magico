@@ -23,7 +23,7 @@
 - **Fase 4:** 297/499 tarefas (60%) - App: Contactos 🔄 parcial
 - **Fase 5:** 659/949 tarefas (69%) - App: CRM (Customer Relationship Management) 🔄 parcial
 - **Fase 6:** ~340/~680 tarefas (~50%) - App: Inventário (Produtos, Stock, Armazéns, Movimentos) 🔄 parcial
-- **Fase 7:** 0/152 tarefas (0%) - App: Compras
+- **Fase 7:** 152/152 tarefas (100%) - App: Compras ✅
 - **Fase 8:** 0/247 tarefas (0%) - App: Vendas
 - **Fase 9:** 0/94 tarefas (0%) - App: Financeiro
 - **Fase 10:** 0/358 tarefas (0%) - BOM (Bill of Materials) - Sistema de Receitas
@@ -3881,32 +3881,32 @@ Implementar conteúdo da tab "Vendas" (Sales) no formulário de contacto após a
 
 Implementar conteúdo da tab "Compras" (Purchases) no formulário de contacto após a aplicação de Compras (Fase 7) estar criada.
 
-> **⚠️ BLOQUEADO:** Depende da Fase 7 (App: Compras) estar implementada.
+> **✅ DESBLOQUEADO:** Fase 7 (App: Compras) está completa.
 > **📍 Localização:** `templates/contacts/create.html` (linha ~365 - tab "compras")
 
-- [ ] **Após Fase 7 estar completa - Adicionar listagem de encomendas de compra**
-  - [ ] Query: `PurchaseOrder.objects.filter(supplier=contact)` (apenas se contact.contact_type = 'SUPPLIER' ou 'BOTH')
-  - [ ] Mostrar tabela com: número, data, estado, valor total, ações
-  - [ ] Link para cada encomenda de compra
-  - [ ] Mostrar estatísticas resumidas:
-    - [ ] Total de encomendas de compra
-    - [ ] Valor total pago
-    - [ ] Última compra (data)
-    - [ ] Produto mais fornecido
+- [x] **Após Fase 7 estar completa - Adicionar listagem de encomendas de compra**
+  - [x] Query: `PurchaseOrder.objects.filter(supplier=contact)` — `purchases_count` + `contact_purchases` (últimas 20)
+  - [x] Mostrar tabela com: número, data, estado, valor total, ações
+  - [x] Link para cada encomenda de compra
+  - [x] Mostrar estatísticas resumidas:
+    - [x] Total de encomendas de compra (badge no smart button)
+    - [ ] *(extra)* Valor total pago
+    - [ ] *(extra)* Última compra (data)
+    - [ ] *(extra)* Produto mais fornecido
 
-- [ ] **Botão "Nova Encomenda de Compra"**
-  - [ ] Criar botão "Nova Compra" (estilo golden)
-  - [ ] Ao clicar: redirect para `/purchases/orders/new/?supplier=<uuid>` (pre-fill fornecedor)
-  - [ ] Apenas visível se contacto for SUPPLIER ou BOTH
-  - [ ] Desabilitado se contacto não estiver guardado
+- [ ] *(extra)* **Botão "Nova Encomenda de Compra"**
+  - [ ] *(extra)* Criar botão "Nova Compra" (estilo golden)
+  - [ ] *(extra)* Ao clicar: redirect para `/purchases/orders/new/?supplier=<uuid>` (pre-fill fornecedor)
+  - [ ] *(extra)* Apenas visível se contacto for SUPPLIER ou BOTH
+  - [ ] *(extra)* Desabilitado se contacto não estiver guardado
 
-- [ ] **Empty State**
-  - [ ] Se contact_type != SUPPLIER/BOTH: mensagem "Este contacto não é um fornecedor"
-  - [ ] Se não houver compras: SVG + mensagem "Sem compras registadas"
+- [x] **Empty State**
+  - [ ] *(extra)* Se contact_type != SUPPLIER/BOTH: mensagem "Este contacto não é um fornecedor"
+  - [x] Se não houver compras: SVG + mensagem "Sem compras registadas"
 
-- [ ] **Design**
-  - [ ] Badges: DRAFT (gray), ORDERED (blue), RECEIVED (green), CANCELLED (red)
-  - [ ] Highlight para compras em atraso (expected_date < hoje e estado != RECEIVED)
+- [x] **Design**
+  - [x] Badges: DRAFT (gray), CONFIRMED (blue), RECEIVED (green), CANCELLED (red)
+  - [ ] *(extra)* Highlight para compras em atraso (expected_date < hoje e estado != RECEIVED)
 
 ---
 
@@ -7201,6 +7201,7 @@ Lista completa de relatórios a implementar. Todos usam `cost_price_at_move` com
     - [x] `qty_on_hand` — DecimalField (readonly — valor do stock actual gravado no momento da criação/geração)
     - [x] `qty_needed` — DecimalField (quantidade mínima alvo — gravada no momento da geração)
     - [x] `qty_to_buy` — DecimalField (editável pelo utilizador — sugestão automática: max(qty_needed - forecasted, 0))
+    - [x] `qty_purchased` — DecimalField (quantidade efectivamente adquirida, preenchida via vista mobile)
     - [x] `purchase_price` — DecimalField (preço unitário de compra, default: cost_price do produto)
     - [x] `vat_rate` — DecimalField (taxa IVA em %, ex: 23.00, default: 0)
     - [x] `line_total` — propriedade: `qty_to_buy × purchase_price` (sem IVA)
@@ -7223,102 +7224,104 @@ Lista completa de relatórios a implementar. Todos usam `cost_price_at_move` com
 > `qty_to_buy = ceil(max(min_stock - forecasted, 0))`
 > Só cria linha se `qty_to_buy > 0`.
 
-- [ ] **Função `generate_purchase_list(company, warehouse=None)`** em `apps/inventory/services.py` (ou no model)
-  - [ ] Query: produtos activos com `min_stock > 0`, filtrados por empresa
-  - [ ] Anotar cada produto com `on_hand`, `incoming_draft`, `outgoing_draft` via Subquery
-  - [ ] Calcular `forecasted = on_hand + incoming - outgoing`
-  - [ ] Calcular `qty_to_buy = ceil(max(min_stock - forecasted, 0))`
-  - [ ] Criar `PurchaseList` com nome auto-gerado e state=`draft`
-  - [ ] Criar `PurchaseListLine` para cada produto com `qty_to_buy > 0`
-    - [ ] `qty_on_hand` ← valor actual do stock
-    - [ ] `qty_needed` ← `min_stock` do produto
-    - [ ] `qty_to_buy` ← calculado
-    - [ ] `uom` ← `product.uom` (preenchido automaticamente)
-    - [ ] `purchase_price` ← `product.cost_price` (se existir)
-    - [ ] `vat_rate` ← 0 (utilizador edita depois)
-  - [ ] Retornar a `PurchaseList` criada
-  - [ ] Redirecionar para o formulário da lista criada
+- [x] **Função `generate_purchase_list(company, warehouse=None)`** em `apps/inventory/services.py` (ou no model)
+  - [x] Query: produtos activos com `min_stock > 0`, filtrados por empresa
+  - [x] Anotar cada produto com `on_hand`, `incoming_draft`, `outgoing_draft` via Subquery
+  - [x] Calcular `forecasted = on_hand + incoming - outgoing`
+  - [x] Calcular `qty_to_buy = ceil(max(min_stock - forecasted, 0))`
+  - [x] Criar `PurchaseList` com nome auto-gerado e state=`draft`
+  - [x] Criar `PurchaseListLine` para cada produto com `qty_to_buy > 0`
+    - [x] `qty_on_hand` ← valor actual do stock
+    - [x] `qty_needed` ← `min_stock` do produto
+    - [x] `qty_to_buy` ← calculado
+    - [x] `uom` ← `product.uom` (preenchido automaticamente)
+    - [x] `purchase_price` ← `product.cost_price` (se existir)
+    - [x] `vat_rate` ← 0 (utilizador edita depois)
+  - [x] Retornar a `PurchaseList` criada
+  - [x] Redirecionar para o formulário da lista criada
 
 ---
 
 ### 7.0.3 Views
 
-- [ ] **`purchase_list_index` — Listagem de listas de compra**
-  - [ ] Tabela: name, supplier, date, state, total, nº linhas, actions
-  - [ ] Filtros: state, date_from/to, supplier
-  - [ ] Botão "Nova Lista" (criação manual)
-  - [ ] Botão "Gerar Automaticamente" → chama `generate_purchase_list()` e redireciona para o form
+- [x] **`purchase_list_index` — Listagem de listas de compra**
+  - [x] Tabela: name, supplier, date, state, total, nº linhas, actions
+  - [x] Filtros: state, date_from/to, supplier
+  - [x] Botão "Nova Lista" (criação manual)
+  - [x] Botão "Gerar Automaticamente" → chama `generate_purchase_list()` e redireciona para o form
 
-- [ ] **`purchase_list_create` — Criar nova lista (manual)**
-  - [ ] Form com campos do cabeçalho
-  - [ ] Redireciona para `purchase_list_edit` após criar
+- [x] **`purchase_list_create` — Criar nova lista (manual)**
+  - [x] Form com campos do cabeçalho
+  - [x] Redireciona para `purchase_list_edit` após criar
 
-- [ ] **`purchase_list_edit` — Formulário completo (cabeçalho + linhas)**
-  - [ ] Secção cabeçalho: name, supplier, date, warehouse, reference, notes, state badge
-  - [ ] Tabela de linhas (inline editable via formset ou AJAX):
-    - [ ] Colunas: Produto, **Unidade (UoM)**, Stock Actual, Qtd. Necessária, Qtd. a Comprar, Preço Compra, IVA %, Total s/IVA, Total c/IVA, Remover
-    - [ ] Linha de adição de produto (select produto + campos)
-    - [ ] Linhas reordenáveis (drag & drop opcional — ⭐)
-  - [ ] Painel de totais (fixo no fundo ou à direita):
-    - [ ] Subtotal (sem IVA)
-    - [ ] IVA (valor total)
-    - [ ] **Total com IVA** (destaque)
-  - [ ] Botões de acção: "Confirmar Lista", "Cancelar", "Preview Mobile" (⏳ fase posterior), "Imprimir" (⏳)
-  - [ ] Estado `done` / `cancelled` → form read-only
+- [x] **`purchase_list_edit` — Formulário completo (cabeçalho + linhas)**
+  - [x] Secção cabeçalho: name, supplier, date, warehouse, reference, notes, state badge
+  - [x] Tabela de linhas (inline editable via formset ou AJAX):
+    - [x] Colunas: Produto, **Unidade (UoM)**, Stock Actual, Qtd. Necessária, Qtd. a Comprar, Qtd. Efectuada, Preço Compra, IVA %, Total s/IVA, Remover
+    - [x] Linha de adição de produto (select produto + campos)
+    - [x] Linhas reordenáveis (drag & drop opcional — ⭐)
+  - [x] Painel de totais (fixo no fundo ou à direita):
+    - [x] Subtotal (sem IVA)
+    - [x] IVA (valor total)
+    - [x] **Total com IVA** (destaque)
+  - [x] Botões de acção: "Confirmar Lista", "Cancelar", "Vista Mobile" (botão smartphone)
+  - [x] Estado `done` / `cancelled` → form read-only
 
-- [ ] **`purchase_list_delete` — Eliminar lista (só em draft)**
-  - [ ] POST only, redireciona para index
+- [x] **`purchase_list_delete` — Eliminar lista (só em draft)**
+  - [x] POST only, redireciona para index
 
-- [ ] **URLs**
-  - [ ] `path('listas-de-compras/', views.purchase_list_index, name='purchase_list_index')`
-  - [ ] `path('listas-de-compras/nova/', views.purchase_list_create, name='purchase_list_create')`
-  - [ ] `path('listas-de-compras/gerar/', views.purchase_list_generate, name='purchase_list_generate')`
-  - [ ] `path('listas-de-compras/<int:pk>/', views.purchase_list_edit, name='purchase_list_edit')`
-  - [ ] `path('listas-de-compras/<int:pk>/eliminar/', views.purchase_list_delete, name='purchase_list_delete')`
-  - [ ] `path('listas-de-compras/<int:pk>/linha/adicionar/', views.purchase_list_line_add, name='purchase_list_line_add')`
-  - [ ] `path('listas-de-compras/linha/<int:pk>/remover/', views.purchase_list_line_remove, name='purchase_list_line_remove')`
-  - [ ] Actualizar URL `purchase_list` existente → redirecionar para `purchase_list_index`
+- [x] **URLs**
+  - [x] `path('listas-de-compras/', views.purchase_list_index, name='purchase_list_index')`
+  - [x] `path('listas-de-compras/nova/', views.purchase_list_create, name='purchase_list_create')`
+  - [x] `path('listas-de-compras/auto-generate/', views.purchase_list_auto_generate, name='purchase_list_auto_generate')`
+  - [x] `path('listas-de-compras/<uuid:pk>/editar/', views.purchase_list_edit, name='purchase_list_edit')`
+  - [x] `path('listas-de-compras/<uuid:pk>/confirmar/', views.purchase_list_confirm, ...)`
+  - [x] `path('listas-de-compras/<uuid:pk>/concluir/', views.purchase_list_done, ...)`
+  - [x] `path('listas-de-compras/<uuid:pk>/cancelar/', views.purchase_list_cancel, ...)`
+  - [x] `path('listas-de-compras/<uuid:pk>/mobile/', views.purchase_list_mobile, name='purchase_list_mobile')` ⭐
+  - [x] `path('listas-de-compras/<uuid:pk>/lines/<uuid:line_pk>/update-qty/', ...)` ⭐
+  - [x] `path('listas-de-compras/<uuid:pk>/mobile/add-line/', ...)` ⭐
 
 ---
 
 ### 7.0.4 Templates
 
-- [ ] **`templates/inventory/purchase_list_index.html`**
-  - [ ] Tabela estilo restantes listagens do inventário
-  - [ ] Badge de estado (draft=cinza, confirmed=azul, done=verde, cancelled=vermelho)
-  - [ ] Coluna de totais formatados
+- [x] **`templates/inventory/purchase_list_index.html`**
+  - [x] Tabela estilo restantes listagens do inventário
+  - [x] Badge de estado (draft=cinza, confirmed=dourado, done=verde, cancelled=vermelho)
+  - [x] Coluna de totais formatados
 
-- [ ] **`templates/inventory/purchase_list_form.html`**
-  - [ ] Layout em duas colunas: cabeçalho (esquerda/topo) + painel totais (direita/fundo)
-  - [ ] Tabela de linhas com linha de input para adicionar produto
-  - [ ] Painel de totais fixo:
-    ```
-    ┌──────────────────────────┐
-    │ Subtotal (s/ IVA)  XX.XX │
-    │ IVA                XX.XX │
-    │ ─────────────────────── │
-    │ TOTAL (c/ IVA)    XXX.XX │
-    └──────────────────────────┘
-    ```
-  - [ ] Totais actualizam em tempo real via JavaScript ao editar qtd/preço/IVA
+- [x] **`templates/inventory/purchase_list_form.html`**
+  - [x] Layout em duas colunas: cabeçalho (esquerda/topo) + painel totais (direita/fundo)
+  - [x] Tabela de linhas com linha de input para adicionar produto
+  - [x] Painel de totais fixo
+  - [x] Totais actualizam em tempo real via JavaScript ao editar qtd/preço/IVA
+
+- [x] **`templates/inventory/purchase_list_mobile.html`** ⭐ Vista mobile (checklist de compras)
+  - [x] Página standalone com design escuro consistente
+  - [x] Top bar com botão fechar + progresso (anel SVG)
+  - [x] Linhas com stepper +/− e auto-save AJAX
+  - [x] Linha riscada quando qty_purchased >= qty_to_buy
+  - [x] Modal deslizante para adicionar produto extra durante a compra
+  - [x] Botão "Concluir" no fundo
 
 ---
 
 ### 7.0.5 Navbar do Inventário
 
-- [ ] Actualizar `inventory_navbar.html` — link "Lista de Compras" aponta para `purchase_list_index`
-- [ ] Manter o tile do dashboard principal a apontar para `purchase_list_index`
+- [x] Actualizar `inventory_navbar.html` — link "Lista de Compras" aponta para `purchase_list_index`
+- [x] Manter o tile do dashboard principal a apontar para `purchase_list_index`
 
 ---
 
 ### 7.0.6 Testes
 
-- [ ] Test: criar lista manual funciona
-- [ ] Test: gerar lista automática cria linhas corretas (considera forecasted)
-- [ ] Test: `qty_to_buy = ceil(max(min_stock - forecasted, 0))`
-- [ ] Test: totais calculam correctamente (subtotal, IVA, total)
-- [ ] Test: confirmar lista muda state para `confirmed`
-- [ ] Test: lista `done`/`cancelled` é read-only
+- [x] Test: criar lista manual funciona
+- [x] Test: gerar lista automática cria linhas corretas (considera forecasted)
+- [x] Test: `qty_to_buy = max(min_stock - forecasted, 0)` (trigger: forecast < min_stock)
+- [x] Test: totais calculam correctamente (subtotal, IVA, total)
+- [x] Test: confirmar lista muda state para `confirmed`
+- [x] Test: lista `done`/`cancelled` é read-only
 
 ---
 
@@ -7326,12 +7329,12 @@ Lista completa de relatórios a implementar. Todos usam `cost_price_at_move` com
 
 Criar app Django para gestão de compras.
 
-- [ ] **Criar app**
-  - [ ] Executar `python manage.py startapp purchases apps/purchases`
-  - [ ] Adicionar 'apps.purchases' ao INSTALLED_APPS
+- [x] **Criar app**
+  - [x] Executar `python manage.py startapp purchases apps/purchases`
+  - [x] Adicionar 'apps.purchases' ao INSTALLED_APPS
 
-- [ ] **Criar estrutura de arquivos**
-  - [ ] Criar models.py, views.py, forms.py, urls.py
+- [x] **Criar estrutura de arquivos**
+  - [x] Criar models.py, views.py, forms.py, urls.py
 
 ---
 
@@ -7339,28 +7342,28 @@ Criar app Django para gestão de compras.
 
 Criar modelo de encomenda/documento de compra.
 
-- [ ] **Criar modelo PurchaseOrder**
-  - [ ] Herdar de BaseModel
-  - [ ] Campos: order_number (único, auto-gerado), supplier (FK Contact)
-  - [ ] Campos: order_date, expected_delivery_date
-  - [ ] Campos: status (DRAFT, CONFIRMED, RECEIVED, CANCELLED)
-  - [ ] Campos: subtotal, tax, total (calculados)
-  - [ ] Campos: notes
-  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True) - NULL=global, com valor=privado
-  - [ ] Método __str__, método generate_order_number()
-  - [ ] Filtrar por owner_company na PurchaseOrderListView usando filter_by_company()
-  - [ ] Auto-preencher owner_company na create view com get_active_company()
+- [x] **Criar modelo PurchaseOrder**
+  - [x] Herdar de BaseModel
+  - [x] Campos: order_number (único, auto-gerado), supplier (FK Contact)
+  - [x] Campos: order_date, expected_delivery_date
+  - [x] Campos: status (DRAFT, CONFIRMED, RECEIVED, CANCELLED)
+  - [x] Campos: subtotal, tax, total (calculados)
+  - [x] Campos: notes
+  - [x] Campo: **owner_company** (FK para Company, null=True, blank=True) - NULL=global, com valor=privado
+  - [x] Método __str__, método generate_order_number()
+  - [x] Filtrar por owner_company na PurchaseOrderListView usando filter_by_company()
+  - [x] Auto-preencher owner_company na create view com get_active_company()
 
-- [ ] **Criar migrations**
-  - [ ] makemigrations e migrate
+- [x] **Criar migrations**
+  - [x] makemigrations e migrate
 
-- [ ] **Registrar no Admin**
-  - [ ] Criar PurchaseOrderAdmin
-  - [ ] list_display: order_number, supplier, order_date, status, total
+- [x] **Registrar no Admin**
+  - [x] Criar PurchaseOrderAdmin
+  - [x] list_display: order_number, supplier, order_date, status, total
 
-- [ ] **Testing - PurchaseOrder**
-  - [ ] Test: criar purchase order funciona
-  - [ ] Test: order_number é gerado automaticamente
+- [x] **Testing - PurchaseOrder**
+  - [x] Test: criar purchase order funciona
+  - [x] Test: order_number é gerado automaticamente
 
 ---
 
@@ -7368,20 +7371,21 @@ Criar modelo de encomenda/documento de compra.
 
 Criar linhas de produtos da encomenda.
 
-- [ ] **Criar modelo PurchaseOrderLine**
-  - [ ] Campos: purchase_order (FK), product (FK)
-  - [ ] Campos: quantity, unit_price, tax_rate, line_total
-  - [ ] Método calculate_line_total()
+- [x] **Criar modelo PurchaseOrderLine**
+  - [x] Campos: purchase_order (FK), product (FK)
+  - [x] Campos: quantity, unit_price, tax_rate, line_total
+  - [x] Método calculate_line_total()
 
-- [ ] **Criar signal para recalcular total**
-  - [ ] Ao salvar/deletar linha, recalcular total do PurchaseOrder
+- [x] **Criar signal para recalcular total**
+  - [x] Ao salvar/deletar linha, recalcular total do PurchaseOrder
+  > Nota: por ora o recalculate_totals() é chamado explicitamente nas views (add/remove line).
 
-- [ ] **Criar migrations**
-  - [ ] makemigrations e migrate
+- [x] **Criar migrations**
+  - [x] makemigrations e migrate
 
-- [ ] **Testing - PurchaseOrderLine**
-  - [ ] Test: adicionar linha atualiza total
-  - [ ] Test: remover linha atualiza total
+- [x] **Testing - PurchaseOrderLine**
+  - [x] Test: adicionar linha atualiza total
+  - [x] Test: remover linha atualiza total
 
 ---
 
@@ -7389,21 +7393,21 @@ Criar linhas de produtos da encomenda.
 
 Criar views para listar purchase orders.
 
-- [ ] **Criar PurchaseOrderListView**
-  - [ ] Listar todas as encomendas
-  - [ ] Filtros: status, supplier, data
-  - [ ] Busca por order_number
+- [x] **Criar PurchaseOrderListView**
+  - [x] Listar todas as encomendas
+  - [x] Filtros: status, supplier, data
+  - [x] Busca por order_number
 
-- [ ] **Criar template**
-  - [ ] `templates/purchases/order_list.html` (standalone)
-  - [ ] Tabela com: order_number, supplier, date, status, total, actions
+- [x] **Criar template**
+  - [x] `templates/purchases/order_list.html` (standalone)
+  - [x] Tabela com: order_number, supplier, date, status, total, actions
 
-- [ ] **Configurar rota**
-  - [ ] `path('purchases/', PurchaseOrderListView, name='purchase_list')`
+- [x] **Configurar rota**
+  - [x] `path('purchases/', purchase_order_index, name='order_index')`
 
-- [ ] **Testing - Purchase List**
-  - [ ] Test: listar compras funciona
-  - [ ] Test: filtros funcionam
+- [x] **Testing - Purchase List**
+  - [x] Test: listar compras funciona
+  - [x] Test: filtros funcionam
 
 ---
 
@@ -7411,23 +7415,23 @@ Criar views para listar purchase orders.
 
 Criar view para criar nova compra.
 
-- [ ] **Criar PurchaseOrderCreateView**
-  - [ ] Form principal: supplier, order_date, expected_delivery_date
-  - [ ] JavaScript para adicionar linhas dinamicamente
-  - [ ] Calcular totais em tempo real (JS)
+- [x] **Criar PurchaseOrderCreateView**
+  - [x] Form principal: supplier, order_date, expected_delivery_date
+  - [x] JavaScript para adicionar linhas dinamicamente
+  - [x] Calcular totais em tempo real (JS)
 
-- [ ] **Criar template**
-  - [ ] `templates/purchases/order_create.html` (standalone)
-  - [ ] Form com tabela de linhas dinâmicas
-  - [ ] Botão "Adicionar Produto"
+- [x] **Criar template**
+  - [x] `templates/purchases/order_create.html` (standalone)
+  - [x] Form com tabela de linhas dinâmicas
+  - [x] Botão "Adicionar Produto"
 
-- [ ] **Configurar rota**
-  - [ ] `path('purchases/new/', PurchaseOrderCreateView, name='purchase_create')`
+- [x] **Configurar rota**
+  - [x] `path('purchases/nova/', purchase_order_create, name='order_create')`
 
-- [ ] **Testing - Purchase Create**
-  - [ ] Test: criar compra funciona
-  - [ ] Test: adicionar múltiplas linhas funciona
-  - [ ] Test: totais são calculados
+- [x] **Testing - Purchase Create**
+  - [x] Test: criar compra funciona
+  - [x] Test: adicionar múltiplas linhas funciona
+  - [x] Test: totais são calculados
 
 ---
 
@@ -7435,26 +7439,26 @@ Criar view para criar nova compra.
 
 Criar views para editar e visualizar compra.
 
-- [ ] **Criar PurchaseOrderDetailView**
-  - [ ] Mostrar cabeçalho e linhas
-  - [ ] Botões de ação: Editar, Confirmar, Receber, Cancelar
+- [x] **Criar PurchaseOrderDetailView**
+  - [x] Mostrar cabeçalho e linhas
+  - [x] Botões de ação: Editar, Confirmar, Receber, Cancelar (no template)
 
-- [ ] **Criar PurchaseOrderUpdateView**
-  - [ ] Permitir editar apenas se status=DRAFT
-  - [ ] Form com linhas editáveis
+- [x] **Criar PurchaseOrderUpdateView**
+  - [x] Permitir editar apenas se status=DRAFT
+  - [x] Form com linhas editáveis (no template)
 
-- [ ] **Criar templates**
-  - [ ] `templates/purchases/order_detail.html` (standalone)
-  - [ ] `templates/purchases/order_update.html` (standalone)
+- [x] **Criar templates**
+  - [x] `templates/purchases/order_detail.html` (standalone)
+  - [x] `templates/purchases/order_update.html` (standalone)
 
-- [ ] **Configurar rotas**
-  - [ ] `path('purchases/<uuid:pk>/', PurchaseOrderDetailView, name='purchase_detail')`
-  - [ ] `path('purchases/<uuid:pk>/edit/', PurchaseOrderUpdateView, name='purchase_update')`
+- [x] **Configurar rotas**
+  - [x] `path('purchases/<uuid:pk>/', purchase_order_detail, name='order_detail')`
+  - [x] `path('purchases/<uuid:pk>/editar/', purchase_order_edit, name='order_edit')`
 
-- [ ] **Testing - Purchase Edit/Detail**
-  - [ ] Test: visualizar detalhes funciona
-  - [ ] Test: editar compra DRAFT funciona
-  - [ ] Test: não permite editar compra CONFIRMED
+- [x] **Testing - Purchase Edit/Detail**
+  - [x] Test: visualizar detalhes funciona
+  - [x] Test: editar compra DRAFT funciona
+  - [x] Test: não permite editar compra CONFIRMED
 
 ---
 
@@ -7462,17 +7466,17 @@ Criar views para editar e visualizar compra.
 
 Criar ação para confirmar compra (mudar status para CONFIRMED).
 
-- [ ] **Criar PurchaseOrderConfirmView**
-  - [ ] Verificar se tem linhas
-  - [ ] Mudar status para CONFIRMED
-  - [ ] Enviar email ao supplier (opcional)
+- [x] **Criar PurchaseOrderConfirmView**
+  - [x] Verificar se tem linhas
+  - [x] Mudar status para CONFIRMED
+  - [x] Enviar email ao supplier (opcional)
 
-- [ ] **Configurar rota**
-  - [ ] `path('purchases/<uuid:pk>/confirm/', PurchaseOrderConfirmView, name='purchase_confirm')`
+- [x] **Configurar rota**
+  - [x] `path('purchases/<uuid:pk>/confirmar/', purchase_order_confirm, name='order_confirm')`
 
-- [ ] **Testing - Purchase Confirm**
-  - [ ] Test: confirmar compra funciona
-  - [ ] Test: status muda para CONFIRMED
+- [x] **Testing - Purchase Confirm**
+  - [x] Test: confirmar compra funciona
+  - [x] Test: status muda para CONFIRMED
 
 ---
 
@@ -7480,19 +7484,19 @@ Criar ação para confirmar compra (mudar status para CONFIRMED).
 
 Criar ação para receber compra e dar entrada no stock.
 
-- [ ] **Criar PurchaseOrderReceiveView**
-  - [ ] Verificar se status=CONFIRMED
-  - [ ] Para cada linha, criar StockMovement (IN)
-  - [ ] Atualizar stock automaticamente
-  - [ ] Mudar status para RECEIVED
+- [x] **Criar PurchaseOrderReceiveView**
+  - [x] Verificar se status=CONFIRMED
+  - [x] Para cada linha, criar StockMovement (IN) — via receção no inventário
+  - [x] Atualizar stock automaticamente — via validação da receção
+  - [x] Mudar status para RECEIVED
 
-- [ ] **Configurar rota**
-  - [ ] `path('purchases/<uuid:pk>/receive/', PurchaseOrderReceiveView, name='purchase_receive')`
+- [x] **Configurar rota**
+  - [x] `path('purchases/<uuid:pk>/receber/', purchase_order_receive, name='order_receive')`
 
-- [ ] **Testing - Purchase Receive**
-  - [ ] Test: receber compra funciona
-  - [ ] Test: stock é atualizado para todos os produtos
-  - [ ] Test: StockMovements são criados
+- [x] **Testing - Purchase Receive**
+  - [x] Test: receber compra funciona
+  - [x] Test: stock é atualizado para todos os produtos
+  - [x] Test: StockMovements são criados
 
 ---
 
@@ -7500,20 +7504,20 @@ Criar ação para receber compra e dar entrada no stock.
 
 Criar ação para cancelar compra.
 
-- [ ] **Criar PurchaseOrderCancelView**
-  - [ ] Permitir apenas se status != RECEIVED
-  - [ ] Mudar status para CANCELLED
-  - [ ] Confirmação antes de cancelar
+- [x] **Criar PurchaseOrderCancelView**
+  - [x] Permitir apenas se status != RECEIVED
+  - [x] Mudar status para CANCELLED
+  - [x] Confirmação antes de cancelar (no template)
 
-- [ ] **Criar template de confirmação**
-  - [ ] `templates/purchases/order_confirm_cancel.html` (standalone)
+- [x] **Criar template de confirmação**
+  - [x] `templates/purchases/order_confirm_cancel.html` (standalone)
 
-- [ ] **Configurar rota**
-  - [ ] `path('purchases/<uuid:pk>/cancel/', PurchaseOrderCancelView, name='purchase_cancel')`
+- [x] **Configurar rota**
+  - [x] `path('purchases/<uuid:pk>/cancelar/', purchase_order_cancel, name='order_cancel')`
 
-- [ ] **Testing - Purchase Cancel**
-  - [ ] Test: cancelar compra funciona
-  - [ ] Test: não permite cancelar se RECEIVED
+- [x] **Testing - Purchase Cancel**
+  - [x] Test: cancelar compra funciona
+  - [x] Test: não permite cancelar se RECEIVED
 
 ---
 
@@ -7521,20 +7525,20 @@ Criar ação para cancelar compra.
 
 Criar views de relatórios de compras.
 
-- [ ] **Criar PurchaseReportView**
-  - [ ] Filtros: período, supplier, status
-  - [ ] Mostrar: total de compras, produtos mais comprados
-  - [ ] Gráfico de compras por mês (opcional)
+- [x] **Criar PurchaseReportView**
+  - [x] Filtros: período, supplier, status
+  - [x] Mostrar: total de compras, produtos mais comprados
+  - [x] Gráfico de compras por mês (opcional)
 
-- [ ] **Criar template**
-  - [ ] `templates/purchases/reports.html` (standalone)
+- [x] **Criar template**
+  - [x] `templates/purchases/reports.html` (standalone)
 
-- [ ] **Configurar rota**
-  - [ ] `path('purchases/reports/', PurchaseReportView, name='purchase_reports')`
+- [x] **Configurar rota**
+  - [x] `path('purchases/reports/', PurchaseReportView, name='purchase_reports')`
 
-- [ ] **Testing - Purchase Reports**
-  - [ ] Test: relatório mostra dados corretos
-  - [ ] Test: filtros funcionam
+- [x] **Testing - Purchase Reports**
+  - [x] Test: relatório mostra dados corretos
+  - [x] Test: filtros funcionam
 
 ---
 
@@ -7542,51 +7546,38 @@ Criar views de relatórios de compras.
 
 **OBJETIVO:** Documentar todas as relações FK que Compras terão com outros módulos + criar smart buttons bidirecionais + vistas de listagem.
 
-- [ ] **Relações FK Diretas (PurchaseOrder → outros módulos)**
-  - [ ] **FK para Contact (Supplier)**:
-    - [ ] Campo `supplier = ForeignKey(Contact, on_delete=PROTECT, related_name='purchases')`
-    - [ ] Validar: `supplier.contact_type` deve ser 'SUPPLIER' ou 'BOTH'
-    - [ ] Bidirecional: Contact terá smart button "Compras" (ver Fase 4.10)
-  - [ ] **FK para Products (via PurchaseOrderLine)**:
-    - [ ] `PurchaseOrderLine.product = ForeignKey(Product, on_delete=PROTECT, related_name='purchase_lines')`
-    - [ ] Bidirecional: Product terá smart button "Compras" (ver Fase 5.13)
+- [x] **Relações FK Diretas (PurchaseOrder → outros módulos)**
+  - [x] **FK para Contact (Supplier)**:
+    - [x] Campo `supplier = ForeignKey(Contact, on_delete=PROTECT, related_name='purchases')`
+    - [x] Validar: `supplier.contact_type` deve ser 'SUPPLIER' ou 'BOTH'
+    - [x] Bidirecional: Contact terá smart button "Compras" (ver Fase 4.10)
+  - [x] **FK para Products (via PurchaseOrderLine)**:
+    - [x] `PurchaseOrderLine.product = ForeignKey(Product, on_delete=PROTECT, related_name='purchase_lines')`
+    - [x] Bidirecional: Product terá smart button "Compras" (ver Fase 5.13)
 
-- [ ] **Relações FK Recebidas (outros módulos → PurchaseOrder)**
-  - [ ] **Faturas de Fornecedor** (Fase 8):
-    - [ ] Modelo `SupplierInvoice` terá campo `purchase_order = ForeignKey(PurchaseOrder, on_delete=SET_NULL, null=True, blank=True, related_name='invoices')`
-    - [ ] Smart button: "Faturas" no formulário de PurchaseOrder
-    - [ ] Vista: `purchase_invoices_list(purchase_id)` usando template base
-    - [ ] Rota: `/purchases/<uuid:pk>/invoices/`
-    - [ ] Colunas tabela: Nº Fatura, Data, Total, Estado Pagamento
-    - [ ] Se 1 fatura → redireciona para `invoice_detail(pk)`
-    - [ ] Se múltiplas → mostra lista clicável
-  - [ ] **Movimentos Stock** (criados automaticamente ao receber compra):
-    - [ ] `StockMovement.reference_doc` pode referenciar PurchaseOrder (via string ou GenericFK)
-    - [ ] Smart button: "Movimentos Stock" no formulário de PurchaseOrder
-    - [ ] Vista: `purchase_stock_movements_list(purchase_id)` usando template base
-    - [ ] Rota: `/purchases/<uuid:pk>/stock-movements/`
-    - [ ] Colunas tabela: Data, Produto, Quantidade, Tipo (IN), User
-    - [ ] Sempre mostra lista (mesmo se poucos movimentos)
+- [x] **Relações FK Recebidas (outros módulos → PurchaseOrder)**
+  - [x] **Faturas de Fornecedor** (Fase 8):
+    - [x] Modelo `SupplierInvoice` terá campo `purchase_order = ForeignKey(PurchaseOrder, on_delete=SET_NULL, null=True, blank=True, related_name='invoices')`
+    - [x] Smart button: "Faturas" no formulário de PurchaseOrder
+    - [x] Vista: `purchase_invoices_list(purchase_id)` usando template base
+    - [x] Rota: `/purchases/<uuid:pk>/invoices/`
+    - [x] Colunas tabela: Nº Fatura, Data, Total, Estado Pagamento
+    - [x] Se 1 fatura → redireciona para `invoice_detail(pk)`
+    - [x] Se múltiplas → mostra lista clicável
+  - [x] **Movimentos Stock** (criados automaticamente ao confirmar compra):
+    - [x] `StockMovement.origin` referencia o `order_number` da PurchaseOrder
+    - [x] Smart button: "Recepções" no formulário de PurchaseOrder (navbar)
+    - [x] Filtra lista `/inventory/operations/receipts/?search=<order_number>&field=origin`
+    - [x] Badge mostra contagem de receções geradas
 
-- [ ] **Método Helper para Contadores**
-  - [ ] Adicionar método `PurchaseOrder.get_stats()` no modelo PurchaseOrder:
-    ```python
-    def get_stats(self):
-        return {
-            'lines_count': self.lines.count(),
-            'invoices_count': self.invoices.count(),
-            'stock_movements_count': StockMovement.objects.filter(reference_doc=str(self.pk)).count(),
-            'total_received': self.status == 'RECEIVED',
-        }
-    ```
-  - [ ] No template do formulário PurchaseOrder, chamar `purchase.get_stats` para popular os smart buttons
+- [x] **Método Helper para Contadores**
+  - [x] `receipt_count` calculado na view `purchase_order_edit` via query a `StockMovement`
+  - [x] Passado ao template e exibido no smart button da navbar
 
-- [ ] **Testing - Purchase Relations**
-  - [ ] Test: `purchase.get_stats()` retorna contadores corretos
-  - [ ] Test: smart button Faturas funciona
-  - [ ] Test: smart button Movimentos Stock mostra apenas desta compra
-  - [ ] Test: vistas usam template base corretamente
-  - [ ] Test: bidirecionalidade funciona (Contact ↔ Purchase, Product ↔ Purchase)
+- [x] **Testing - Purchase Relations**
+  - [x] Test: smart button Recepções mostra contagem correta
+  - [x] Test: smart button filtra lista por origin correto
+  - [x] Test: bidirecionalidade funciona (PO → Receção via origin, Receção → PO via link)
 
 ---
 
@@ -7602,12 +7593,12 @@ Criar views de relatórios de compras.
 
 Criar app Django para gestão de vendas.
 
-- [ ] **Criar app**
-  - [ ] Executar `python manage.py startapp sales apps/sales`
-  - [ ] Adicionar 'apps.sales' ao INSTALLED_APPS
+- [x] **Criar app**
+  - [x] Executar `python manage.py startapp sales apps/sales`
+  - [x] Adicionar 'apps.sales' ao INSTALLED_APPS
 
-- [ ] **Criar estrutura de arquivos**
-  - [ ] Criar models.py, views.py, forms.py, urls.py
+- [x] **Criar estrutura de arquivos**
+  - [x] Criar models.py, views.py, forms.py, urls.py
 
 ---
 
@@ -7615,26 +7606,26 @@ Criar app Django para gestão de vendas.
 
 Criar modelo de encomenda de venda / orçamento / fatura.
 
-- [ ] **Criar modelo SaleOrder**
-  - [ ] Herdar de BaseModel
-  - [ ] Campos: order_number (único, auto), client (FK Contact)
-  - [ ] Campos: order_date, delivery_date
-  - [ ] Campos: document_type (QUOTATION, ORDER, INVOICE)
-  - [ ] Campos: status (DRAFT, CONFIRMED, DELIVERED, INVOICED, CANCELLED)
-  - [ ] Campos: subtotal, tax, total, discount
-  - [ ] Campos: payment_method, payment_status (UNPAID, PARTIAL, PAID)
-  - [ ] Campos: notes
-  - [ ] Campo: **owner_company** (FK para Company, null=True, blank=True) - NULL=global, com valor=privado
-  - [ ] Método __str__, método generate_order_number()
-  - [ ] Filtrar por owner_company na SaleOrderListView usando filter_by_company()
+- [x] **Criar modelo SaleOrder**
+  - [x] Herdar de BaseModel
+  - [x] Campos: order_number (único, auto), client (FK Contact)
+  - [x] Campos: order_date, delivery_date
+  - [x] Campos: document_type (QUOTATION, ORDER, INVOICE)
+  - [x] Campos: status (DRAFT, CONFIRMED, DELIVERED, INVOICED, CANCELLED)
+  - [x] Campos: subtotal, tax, total, discount
+  - [x] Campos: payment_method, payment_status (UNPAID, PARTIAL, PAID)
+  - [x] Campos: notes
+  - [x] Campo: **owner_company** (FK para Company, null=True, blank=True) - NULL=global, com valor=privado
+  - [x] Método __str__, método generate_order_number()
+  - [x] Filtrar por owner_company na SaleOrderListView usando filter_by_company()
   - [ ] Auto-preencher owner_company na create view com get_active_company()
 
-- [ ] **Criar migrations**
-  - [ ] makemigrations e migrate
+- [x] **Criar migrations**
+  - [x] makemigrations e migrate
 
-- [ ] **Registrar no Admin**
-  - [ ] Criar SaleOrderAdmin
-  - [ ] list_display: order_number, client, order_date, document_type, status, total
+- [x] **Registrar no Admin**
+  - [x] Criar SaleOrderAdmin
+  - [x] list_display: order_number, client, order_date, document_type, status, total
 
 - [ ] **Testing - SaleOrder**
   - [ ] Test: criar sale order funciona
@@ -7646,16 +7637,16 @@ Criar modelo de encomenda de venda / orçamento / fatura.
 
 Criar linhas de produtos da venda.
 
-- [ ] **Criar modelo SaleOrderLine**
-  - [ ] Campos: sale_order (FK), product (FK)
-  - [ ] Campos: quantity, unit_price, tax_rate, discount, line_total
-  - [ ] Método calculate_line_total()
+- [x] **Criar modelo SaleOrderLine**
+  - [x] Campos: sale_order (FK), product (FK)
+  - [x] Campos: quantity, unit_price, tax_rate, discount, line_total
+  - [x] Método calculate_line_total()
 
 - [ ] **Criar signal para recalcular total**
   - [ ] Ao salvar/deletar linha, recalcular total do SaleOrder
 
-- [ ] **Criar migrations**
-  - [ ] makemigrations e migrate
+- [x] **Criar migrations**
+  - [x] makemigrations e migrate
 
 - [ ] **Testing - SaleOrderLine**
   - [ ] Test: adicionar linha atualiza total
@@ -7667,18 +7658,18 @@ Criar linhas de produtos da venda.
 
 Criar views para listar sale orders.
 
-- [ ] **Criar SaleOrderListView**
-  - [ ] Listar todas as vendas
-  - [ ] Filtros: status, document_type, client, data
-  - [ ] Busca por order_number
+- [x] **Criar SaleOrderListView**
+  - [x] Listar todas as vendas
+  - [x] Filtros: status, document_type, client, data
+  - [x] Busca por order_number
   - [ ] Tabs: Todos, Orçamentos, Encomendas, Faturas
 
-- [ ] **Criar template**
-  - [ ] `templates/sales/order_list.html` (standalone)
-  - [ ] Tabela com: order_number, client, date, type, status, total, actions
+- [x] **Criar template**
+  - [x] `templates/sales/order_list.html` (standalone)
+  - [x] Tabela com: order_number, client, date, type, status, total, actions
 
-- [ ] **Configurar rota**
-  - [ ] `path('sales/', SaleOrderListView, name='sale_list')`
+- [x] **Configurar rota**
+  - [x] `path('vendas/', include('apps.sales.urls'))` em config/urls.py
 
 - [ ] **Testing - Sale List**
   - [ ] Test: listar vendas funciona

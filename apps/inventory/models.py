@@ -616,6 +616,22 @@ class StockMovement(AbstractBaseModel):
             or (self.movement_type == 'adjustment' and self.adjustment_direction == 'out')
         )
 
+        # ── Pre-validation: check sufficient stock for all out-lines ─────
+        if is_out:
+            shortages = []
+            for line in self.lines.select_related('product'):
+                qty_needed = abs(Decimal(str(line.quantity)))
+                available = Decimal(str(line.product.get_on_hand_quantity()))
+                if available < qty_needed:
+                    shortages.append(
+                        f'{line.product.name}: disponível {available:f}, necessário {qty_needed:f}'
+                    )
+            if shortages:
+                raise ValidationError(
+                    'Stock insuficiente para validar este movimento:\n'
+                    + '\n'.join(f'• {s}' for s in shortages)
+                )
+
         lines_to_save = []
         products_to_save = []
 
@@ -699,15 +715,9 @@ class StockMovement(AbstractBaseModel):
 
     @property
     def total_value(self):
-        """Sum of (quantity × unit_price) across all movement lines."""
+        """Sum of line_total (after discount, excl. VAT) across all movement lines."""
         from decimal import Decimal
-        total = self.lines.aggregate(
-            total=models.Sum(
-                models.F('quantity') * models.F('unit_price'),
-                output_field=models.DecimalField(),
-            )
-        )['total']
-        return total or Decimal('0.00')
+        return sum((line.line_total for line in self.lines.all()), Decimal('0.00'))
 
 
 class StockMovementLine(AbstractBaseModel):
@@ -769,6 +779,13 @@ class StockMovementLine(AbstractBaseModel):
         verbose_name='Taxa IVA (%)',
         help_text='Copiado do produto aquando da criação da linha.',
     )
+    discount_pct = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name='Desconto (%)',
+        help_text='Percentagem de desconto copiada da linha de venda/compra (0–100).',
+    )
 
     class Meta:
         verbose_name = 'Linha de Movimento'
@@ -789,15 +806,19 @@ class StockMovementLine(AbstractBaseModel):
 
     @property
     def line_total(self):
-        """Total value for this line: quantity × unit_price (excl. VAT)."""
+        """Total value for this line: quantity × unit_price × (1 - discount) excl. VAT."""
         from decimal import Decimal
-        return Decimal(str(self.quantity)) * Decimal(str(self.unit_price))
+        return (
+            Decimal(str(self.quantity))
+            * Decimal(str(self.unit_price))
+            * (1 - Decimal(str(self.discount_pct)) / 100)
+        ).quantize(Decimal('0.01'))
 
     @property
     def tax_amount(self):
         """VAT amount for this line."""
         from decimal import Decimal
-        return self.line_total * Decimal(str(self.tax_rate)) / Decimal('100')
+        return (self.line_total * Decimal(str(self.tax_rate)) / Decimal('100')).quantize(Decimal('0.01'))
 
     @property
     def line_total_with_tax(self):
@@ -810,7 +831,7 @@ class StockQuant(AbstractBaseModel):
 
     One record per (product, warehouse) pair — enforced by unique_together.
     Created automatically on first stock movement; updated on every validation.
-    Negative quantities are allowed (they indicate a data problem to investigate).
+    Negative quantities are prevented by action_validate() before any subtraction.
     """
 
     product = models.ForeignKey(
@@ -867,7 +888,7 @@ class StockQuant(AbstractBaseModel):
 
         Uses get_or_create so no quant record needs to exist beforehand.
         mode='add'      → quantity += qty
-        mode='subtract' → quantity -= qty  (negative stock is allowed)
+        mode='subtract' → quantity -= qty  (stock check done in action_validate before calling this)
         """
         from decimal import Decimal
         quant, _ = cls.objects.get_or_create(
@@ -1165,6 +1186,13 @@ class PurchaseListLine(AbstractBaseModel):
         default=0,
         verbose_name='Preço de Compra',
         help_text='Preço unitário sem IVA.',
+    )
+    qty_purchased = models.DecimalField(
+        max_digits=14,
+        decimal_places=4,
+        default=0,
+        verbose_name='Qtd. Adquirida',
+        help_text='Quantidade já colocada no carrinho / recebida no ponto de venda.',
     )
     vat_rate = models.DecimalField(
         max_digits=6,
