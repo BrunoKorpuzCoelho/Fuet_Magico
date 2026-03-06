@@ -1,0 +1,174 @@
+{% load static %}
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="pt-PT" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Termos e Condições – Fuet Mágico by Daisy</title>
+
+    <link rel="icon" type="image/x-icon" href="{% static 'website/favicon/favicon.ico' %}">
+    <link rel="icon" type="image/svg+xml" href="{% static 'website/favicon/favicon.svg' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'website/favicon/apple-touch-icon.png' %}">
+    <link rel="manifest" href="{% static 'website/favicon/site.webmanifest' %}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Delius&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { font-family: 'Delius', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+</head>
+<body class="bg-white text-gray-800 min-h-screen flex flex-col">
+
+    <!-- Navbar (same structure as home.html — starts in scrolled/white state) -->
+    <header id="navbar" class="fixed top-0 z-50 w-full bg-white shadow-md transition-all duration-300">
+        <div class="container mx-auto px-4">
+            <div class="flex h-20 items-center justify-between">
+                <a href="{% url 'website:home' %}" class="flex flex-col items-start">
+                    <span id="logo-main" class="text-2xl font-bold transition-colors duration-300" style="color:#dbc693;">Fuet Mágico</span>
+                    <span id="logo-sub" class="text-xs text-gray-900 transition-colors duration-300 -mt-0.5">by Daisy</span>
+                </a>
+                <nav class="hidden md:flex items-center gap-8">
+                    <a href="{% url 'website:home' %}#inicio" class="nav-link text-base font-medium text-gray-700 hover:text-pink-400 transition-colors">{% trans "Início" %}</a>
+                    <a href="{% url 'website:home' %}#sobre" class="nav-link text-base font-medium text-gray-700 hover:text-pink-400 transition-colors">{% trans "Sobre Nós" %}</a>
+                    <a href="{% url 'website:home' %}#portfolio" class="nav-link text-base font-medium text-gray-700 hover:text-pink-400 transition-colors">{% trans "Portfólio" %}</a>
+                    <a href="{% url 'website:home' %}#servicos" class="nav-link text-base font-medium text-gray-700 hover:text-pink-400 transition-colors">{% trans "Serviços" %}</a>
+                    <a href="{% url 'website:home' %}#precos" class="nav-link text-base font-medium text-gray-700 hover:text-pink-400 transition-colors">{% trans "Preços" %}</a>
+                    <a href="{% url 'website:home' %}#testemunhos" class="nav-link text-base font-medium text-gray-700 hover:text-pink-400 transition-colors">{% trans "Testemunhos" %}</a>
+                    <a href="{% url 'website:home' %}#contacto" class="nav-link text-base font-medium text-gray-700 hover:text-pink-400 transition-colors">{% trans "Contacto" %}</a>
+                </nav>
+                <div class="hidden md:flex items-center gap-3">
+                    <a href="{% url 'website:home' %}#contacto" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-base font-semibold transition-all h-10 px-6 py-2 text-white hover:opacity-90" style="background-color: #dbc693;">{% trans "Faça a sua Encomenda" %}</a>
+                </div>
+                <button class="md:hidden transition-colors duration-300 text-gray-900" id="menu-btn">
+                    <svg class="menu-icon text-gray-900 transition-colors duration-300" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="hidden md:hidden pb-4" id="mobile-menu">
+                <nav class="flex flex-col gap-2 bg-white border border-gray-100 shadow-lg p-4 rounded-lg mt-2">
+                    <a href="{% url 'website:home' %}#inicio" class="py-2 text-sm font-medium text-gray-700">{% trans "Início" %}</a>
+                    <a href="{% url 'website:home' %}#sobre" class="py-2 text-sm font-medium text-gray-700">{% trans "Sobre Nós" %}</a>
+                    <a href="{% url 'website:home' %}#portfolio" class="py-2 text-sm font-medium text-gray-700">{% trans "Portfólio" %}</a>
+                    <a href="{% url 'website:home' %}#servicos" class="py-2 text-sm font-medium text-gray-700">{% trans "Serviços" %}</a>
+                    <a href="{% url 'website:home' %}#precos" class="py-2 text-sm font-medium text-gray-700">{% trans "Preços" %}</a>
+                    <a href="{% url 'website:home' %}#testemunhos" class="py-2 text-sm font-medium text-gray-700">{% trans "Testemunhos" %}</a>
+                    <a href="{% url 'website:home' %}#contacto" class="py-2 text-sm font-medium text-gray-700">{% trans "Contacto" %}</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Content -->
+    <main class="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 pt-36 pb-16">
+
+        <p class="text-sm font-semibold uppercase tracking-widest mb-2" style="color:#dbc693;">{% trans "Legal" %}</p>
+        <h1 class="text-4xl font-bold text-gray-900 mb-2">{% trans "Termos e Condições" %}</h1>
+        <p class="text-gray-400 text-sm mb-12">{% trans "Última atualização: Março 2026" %}</p>
+
+        <div class="space-y-10 text-sm leading-relaxed text-gray-600">
+
+            <section>
+                <h2 class="text-base font-bold mb-3" style="color:#dbc693;">1. {% trans "Identificação" %}</h2>
+                <p>{% trans "Fuet Mágico by Daisy é uma marca de confeitaria artesanal personalizada, sediada em Portugal. Para qualquer questão, pode contactar-nos através dos meios indicados no website." %}</p>
+            </section>
+
+            <section>
+                <h2 class="text-base font-bold mb-3" style="color:#dbc693;">2. {% trans "Encomendas" %}</h2>
+                <p>{% trans "Todas as encomendas estão sujeitas a disponibilidade e confirmação. A Fuet Mágico by Daisy reserva-se o direito de recusar ou cancelar encomendas em situações excecionais, com aviso prévio ao cliente e reembolso integral de qualquer valor pago." %}</p>
+            </section>
+
+            <section>
+                <h2 class="text-base font-bold mb-3" style="color:#dbc693;">3. {% trans "Preços e Pagamento" %}</h2>
+                <p>{% trans "Os preços apresentados incluem IVA à taxa legal em vigor, salvo indicação contrária. O pagamento poderá ser efectuado pelos métodos indicados no orçamento ou acordados previamente com o cliente." %}</p>
+            </section>
+
+            <section>
+                <h2 class="text-base font-bold mb-3" style="color:#dbc693;">4. {% trans "Cancelamentos e Alterações" %}</h2>
+                <p>{% trans "Cancelamentos ou alterações a encomendas devem ser comunicados com antecedência mínima de 72 horas relativamente à data de entrega acordada. Cancelamentos tardios podem implicar a cobrança parcial do valor do orçamento para cobertura de custos de produção já incorridos." %}</p>
+            </section>
+
+            <section>
+                <h2 class="text-base font-bold mb-3" style="color:#dbc693;">5. {% trans "Assinatura Digital de Orçamentos" %}</h2>
+                <p>{% trans "A aceitação de orçamentos através da plataforma de assinatura digital tem o mesmo valor legal que uma assinatura manuscrita, nos termos do Regulamento (UE) n.º 910/2014 (eIDAS) e da legislação portuguesa aplicável. Ao assinar, o cliente declara ter lido e aceite na íntegra o orçamento apresentado, incluindo preços, quantidades e condições de entrega e pagamento." %}</p>
+                <p class="mt-3">{% trans "A imagem da assinatura, o nome do signatário e a data/hora de assinatura serão conservados nos sistemas da Fuet Mágico by Daisy pelo período mínimo exigido por lei, sendo utilizados exclusivamente para efeitos de prova e execução do contrato." %}</p>
+            </section>
+
+            <section>
+                <h2 class="text-base font-bold mb-3" style="color:#dbc693;">6. {% trans "Propriedade Intelectual" %}</h2>
+                <p>{% trans "Todos os designs, fotografias e conteúdos presentes no website são propriedade exclusiva da Fuet Mágico by Daisy. É proibida a reprodução, distribuição ou utilização comercial sem autorização expressa." %}</p>
+            </section>
+
+            <section>
+                <h2 class="text-base font-bold mb-3" style="color:#dbc693;">7. {% trans "Privacidade e Dados Pessoais" %}</h2>
+                <p>{% trans "Os dados pessoais recolhidos são tratados em conformidade com o Regulamento Geral de Proteção de Dados (RGPD). Para mais informações, consulte a nossa Política de Privacidade." %}</p>
+            </section>
+
+            <section>
+                <h2 class="text-base font-bold mb-3" style="color:#dbc693;">8. {% trans "Lei Aplicável" %}</h2>
+                <p>{% trans "Estes termos são regidos pela lei portuguesa. Em caso de litígio, as partes comprometem-se a procurar uma resolução amigável, sendo competente, na falta de acordo, o tribunal da comarca competente nos termos da lei." %}</p>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Footer (same as home.html) -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4" style="color: #dbc693;">Fuet Mágico</h3>
+                    <p class="text-sm text-gray-400 mb-2">{% trans "by Daisy" %}</p>
+                    <p class="text-gray-400 mb-4 text-sm">{% trans "Criando momentos mágicos através de bolos artesanais personalizados desde 2018" %}</p>
+                    <div>
+                        <a href="{% url 'accounts:login' %}" class="text-sm text-gray-400 hover:text-white">Login</a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4">{% trans "Links Rápidos" %}</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="{% url 'website:home' %}#inicio" class="text-gray-400 hover:text-white">{% trans "Início" %}</a></li>
+                        <li><a href="{% url 'website:home' %}#sobre" class="text-gray-400 hover:text-white">{% trans "Sobre Nós" %}</a></li>
+                        <li><a href="{% url 'website:home' %}#portfolio" class="text-gray-400 hover:text-white">{% trans "Portfólio" %}</a></li>
+                        <li><a href="{% url 'website:home' %}#precos" class="text-gray-400 hover:text-white">{% trans "Preços" %}</a></li>
+                        <li><a href="{% url 'website:home' %}#contacto" class="text-gray-400 hover:text-white">{% trans "Contacto" %}</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4">{% trans "Informação" %}</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="text-gray-400 hover:text-white">{% trans "FAQ" %}</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">{% trans "Política de Privacidade" %}</a></li>
+                        <li><a href="{% url 'website:terms' %}" class="text-white font-semibold">{% trans "Termos e Condições" %}</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">{% trans "Política de Encomendas" %}</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">{% trans "Métodos de Pagamento" %}</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4">{% trans "Receba Novidades" %}</h4>
+                    <p class="text-gray-400 mb-4 text-sm">{% trans "Promoções e inspirações direto no seu email" %}</p>
+                    <form class="flex">
+                        <input type="email" placeholder="{% trans 'Seu email' %}" class="flex-1 px-4 py-2 rounded-l-lg text-gray-900 text-sm">
+                        <button type="button" class="px-4 py-2 rounded-r-lg hover:opacity-90" style="background-color: #dbc693;">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 pt-8 text-center text-sm text-gray-400">
+                <p class="mb-2">© 2026 Fuet Mágico by Daisy. {% trans "Todos os direitos reservados." %}</p>
+                <p>{% trans "Desenvolvido por" %} <a href="https://www.cubix.pt" target="_blank" class="font-semibold bg-gradient-to-r from-[#ed2109] to-[#ff5a19] bg-clip-text text-transparent hover:opacity-80">Cubix</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Mobile menu toggle
+        document.getElementById('menu-btn').addEventListener('click', () => {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+    </script>
+
+</body>
+</html>

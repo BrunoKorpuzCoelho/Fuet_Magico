@@ -1,0 +1,515 @@
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="pt" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orçamento {{ order.order_number }} – Fuet Mágico</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'website/favicon/favicon.ico' %}">
+    <link rel="icon" type="image/svg+xml" href="{% static 'website/favicon/favicon.svg' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'website/favicon/apple-touch-icon.png' %}">
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#dbc693',
+                        'primary-dark': '#c9b580',
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+</head>
+<body class="min-h-screen bg-gray-900 text-gray-100">
+
+<!-- Top bar -->
+<header class="bg-gray-800 border-b-4 border-primary shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-4">
+        <img src="{% static 'brand/logo.png' %}" alt="Fuet Mágico" class="h-10 w-auto"
+             onerror="this.style.display='none'">
+        <div class="flex flex-col leading-tight">
+            <span class="text-base font-bold text-primary">Fuet Mágico</span>
+            <span class="text-[10px] text-gray-400 -mt-0.5">by Daisy</span>
+        </div>
+        <div class="ml-auto text-right text-sm">
+            <p class="text-gray-300 font-semibold">{{ order.order_number }}</p>
+            <p class="text-xs text-gray-500">Orçamento de Encomenda</p>
+        </div>
+    </div>
+</header>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- â”€â”€ ALREADY DONE state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    {% if already_done %}
+    <div class="max-w-lg mx-auto bg-gray-800 rounded-2xl border border-gray-700 shadow-xl p-10 text-center">
+        {% if order.signature_status == 'signed' %}
+        <div class="text-5xl mb-4">✅</div>
+        <h1 class="text-xl font-bold text-green-400 mb-2">Orçamento já assinado</h1>
+        <p class="text-gray-400 text-sm">Aceite por <strong class="text-gray-200">{{ order.signed_by_name }}</strong>
+            em {{ order.signed_at|date:"d/m/Y" }} às {{ order.signed_at|date:"H:i" }}.</p>
+        {% if order.signature_image %}
+        <img src="{{ order.signature_image }}" alt="Assinatura"
+             class="mx-auto mt-6 max-h-20 border border-gray-600 rounded-lg bg-white p-1">
+        {% endif %}
+        {% else %}
+        <div class="text-5xl mb-4">❌</div>
+        <h1 class="text-xl font-bold text-red-400 mb-2">Orçamento recusado</h1>
+        <p class="text-gray-400 text-sm">
+            Recusado{% if order.signed_by_name %} por <strong class="text-gray-200">{{ order.signed_by_name }}</strong>{% endif %}
+            em {{ order.signed_at|date:"d/m/Y" }} às {{ order.signed_at|date:"H:i" }}.
+        </p>
+        {% endif %}
+    </div>
+
+    {% else %}
+    <!-- â”€â”€ MAIN LAYOUT: sidebar + content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <div class="flex flex-col lg:flex-row gap-6 items-start">
+
+        <!-- LEFT SIDEBAR -->
+        <aside class="w-full lg:w-72 flex-shrink-0 space-y-4">
+
+            <!-- Total card -->
+            <div class="bg-gray-800 rounded-xl border border-gray-700 shadow p-5">
+                <p class="text-xs text-gray-500 uppercase tracking-widest mb-1">Total do Orçamento</p>
+                <p class="text-3xl font-bold text-primary">{{ order.total|floatformat:2 }} €</p>
+                {% if order.token_expires_at %}
+                <p class="text-xs text-amber-400 mt-3">
+                    ⚠️ Link válido até {{ order.token_expires_at|date:"d/m/Y" }}
+                </p>
+                {% endif %}
+            </div>
+
+            <!-- Order info -->
+            <div class="bg-gray-800 rounded-xl border border-gray-700 shadow p-5 space-y-3 text-sm">
+                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest border-b border-gray-700 pb-2">
+                    Informação do Pedido
+                </h3>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Número</span>
+                    <span class="font-medium text-primary">{{ order.order_number }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Data</span>
+                    <span class="text-gray-200">{{ order.order_date|date:"d/m/Y" }}</span>
+                </div>
+                {% if order.delivery_date %}
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Entrega</span>
+                    <span class="text-gray-200">{{ order.delivery_date|date:"d/m/Y" }}</span>
+                </div>
+                {% endif %}
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Estado</span>
+                    <span class="text-yellow-400 font-medium">Aguarda assinatura</span>
+                </div>
+            </div>
+
+            <!-- Client / billing address -->
+            {% if order.client %}
+            <div class="bg-gray-800 rounded-xl border border-gray-700 shadow p-5 text-sm space-y-2">
+                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest border-b border-gray-700 pb-2">
+                    Faturação &amp; Entrega
+                </h3>
+                <p class="font-semibold text-gray-100">{{ order.client.name }}</p>
+                {% if order.client.address %}
+                <p class="text-gray-400 leading-snug">{{ order.client.address }}</p>
+                {% endif %}
+                {% if order.client.phone %}
+                <p class="text-gray-400">📞 {{ order.client.phone }}</p>
+                {% endif %}
+                {% if order.client.email %}
+                <p class="text-gray-400">✉️ {{ order.client.email }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Company contact -->
+            {% if company %}
+            <div class="bg-gray-800 rounded-xl border border-gray-700 shadow p-5 text-sm space-y-2">
+                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest border-b border-gray-700 pb-2">
+                    O vosso contacto
+                </h3>
+                <p class="font-semibold text-gray-100">{{ company.name }}</p>
+                {% if company.email %}
+                <p class="text-gray-400">✉️ {{ company.email }}</p>
+                {% endif %}
+                {% if company.phone %}
+                <p class="text-gray-400">📞 {{ company.phone }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Sign button -->
+            <button id="open-sign-modal"
+                    class="w-full py-3 rounded-xl font-bold text-white text-sm bg-primary hover:bg-primary-dark transition-colors shadow-lg">
+                ✍️ Assinar Orçamento
+            </button>
+            <button id="sidebar-refuse-btn"
+                    class="w-full py-2 rounded-xl font-semibold text-sm border border-gray-600 text-gray-400 hover:bg-gray-700 hover:text-gray-200 transition-colors">
+                ❌ Recusar
+            </button>
+
+        </aside>
+
+        <!-- RIGHT CONTENT -->
+        <div class="flex-1 min-w-0 space-y-6">
+
+            <!-- Page heading -->
+            <div>
+                <h1 class="text-2xl font-bold text-gray-100">
+                    Orçamento — <span class="text-primary">{{ order.order_number }}</span>
+                </h1>
+                <p class="text-gray-400 text-sm mt-1">
+                    Reveja os detalhes abaixo e assine para confirmar a encomenda.
+                </p>
+            </div>
+
+            <!-- Lines table -->
+            <div class="bg-gray-800 rounded-xl border border-gray-700 shadow overflow-hidden">
+                <div class="px-5 py-3 border-b border-gray-700">
+                    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-widest">Artigos</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-700 text-gray-400 text-xs uppercase tracking-wide">
+                                <th class="px-5 py-3 text-left font-medium">Descrição</th>
+                                <th class="px-4 py-3 text-right font-medium">Quantidade</th>
+                                <th class="px-4 py-3 text-right font-medium">Preço Unit.</th>
+                                <th class="px-4 py-3 text-right font-medium">Desc.%</th>
+                                <th class="px-4 py-3 text-right font-medium">IVA %</th>
+                                <th class="px-4 py-3 text-right font-medium">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-700/50">
+                            {% for line in lines %}
+                            <tr class="hover:bg-gray-700/30 transition-colors" data-row="{{ forloop.counter0 }}">
+                                <td class="px-5 py-3 text-gray-200">
+                                    {{ line.product.name|default:"—" }}
+                                    {% if line.notes %}
+                                    <p class="text-xs text-gray-500 mt-0.5">{{ line.notes }}</p>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-3 text-right text-gray-300">
+                                    {{ line.quantity|floatformat:"-2" }}{% if line.uom %} <span class="text-gray-500">{{ line.uom.symbol }}</span>{% endif %}
+                                </td>
+                                <td class="px-4 py-3 text-right text-gray-300">{{ line.unit_price|floatformat:2 }} €</td>
+                                <td class="px-4 py-3 text-right">
+                                    {% if line.discount_pct and line.discount_pct != 0 %}
+                                    <span class="text-primary font-medium">{{ line.discount_pct|floatformat:"-1" }}%</span>
+                                    {% else %}
+                                    <span class="text-gray-600">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-3 text-right text-gray-400">{{ line.tax_rate|floatformat:"-1" }}%</td>
+                                <td class="px-4 py-3 text-right font-semibold text-gray-100">{{ line.line_total|floatformat:2 }} €</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="px-5 py-8 text-center text-gray-500">Sem artigos neste orçamento</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination bar -->
+                <div id="lines-pagination" class="hidden border-t border-gray-700/50 px-5 py-2 flex items-center justify-between text-xs">
+                    <span id="page-info" class="text-gray-500"></span>
+                    <div class="flex items-center gap-1">
+                        <button id="pg-prev"
+                                class="px-2 py-1 rounded border border-gray-600 text-gray-400 hover:bg-gray-700 hover:text-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                aria-label="Página anterior">&#8592;</button>
+                        <button id="pg-all"
+                                class="px-3 py-1 rounded border border-gray-600 text-gray-400 hover:bg-gray-700 hover:text-gray-100 transition-colors">
+                            Ver todos
+                        </button>
+                        <button id="pg-next"
+                                class="px-2 py-1 rounded border border-gray-600 text-gray-400 hover:bg-gray-700 hover:text-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                aria-label="Página seguinte">&#8594;</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Totals card (separate) -->
+            <div class="flex justify-end">
+            <div class="bg-gray-800 rounded-xl border border-gray-700 shadow px-5 py-4 w-72 space-y-2 text-sm">
+                    <div class="flex justify-between text-gray-400">
+                        <span>Valor sem taxas</span>
+                        <span>{{ order.subtotal|floatformat:2 }} €</span>
+                    </div>
+                    <div class="flex justify-between text-gray-400">
+                        <span>IVA</span>
+                        <span>{{ order.tax|floatformat:2 }} €</span>
+                    </div>
+                    {% if order.amount_paid %}
+                    <div class="flex justify-between text-green-400">
+                        <span>Já pago</span>
+                        <span>- {{ order.amount_paid|floatformat:2 }} €</span>
+                    </div>
+                    {% endif %}
+                    <div class="flex justify-between font-bold text-base text-gray-100 pt-2 border-t border-gray-600">
+                        <span>Total</span>
+                        <span class="text-primary text-lg">{{ order.total|floatformat:2 }} €</span>
+                    </div>
+                    {% if order.amount_paid %}
+                    <div class="flex justify-between font-semibold text-amber-400 pt-1">
+                        <span>Valor em dívida</span>
+                        <span>{{ order.remaining_amount|floatformat:2 }} €</span>
+                    </div>
+                    {% endif %}
+            </div>
+            </div>
+
+        </div><!-- /right content -->
+    </div><!-- /layout -->
+    {% endif %}
+
+</div><!-- /container -->
+
+<!-- ═══════════════ SIGNATURE MODAL ═══════════════ -->
+<div id="sign-modal"
+     class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden"
+     role="dialog" aria-modal="true" aria-labelledby="modal-title">
+
+    <!-- Backdrop -->
+    <div id="modal-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+
+    <!-- Panel -->
+    <div class="relative w-full max-w-md bg-gray-800 rounded-2xl border border-gray-700 shadow-2xl overflow-hidden">
+
+        <!-- Modal header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+            <h2 id="modal-title" class="text-base font-semibold text-gray-100">Assinatura Digital</h2>
+            <button id="close-modal" class="text-gray-500 hover:text-gray-200 transition-colors" aria-label="Fechar">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Modal body -->
+        <div class="px-6 py-5">
+            <form id="sign-form" method="post" action="{% url 'sales:quotation_sign_submit' token=token %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" id="action-input" value="sign">
+                <input type="hidden" name="signature_data" id="signature-data">
+
+                <!-- Name -->
+                <div class="mb-5">
+                    <label for="signer-name" class="block text-sm font-medium text-gray-300 mb-1">
+                        Nome <span class="text-red-400">*</span>
+                    </label>
+                    <input type="text" id="signer-name" name="signer_name" required
+                           placeholder="O seu nome completo"
+                           class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm
+                                  text-gray-100 placeholder-gray-500
+                                  focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                </div>
+
+                <!-- Canvas -->
+                <div class="mb-1">
+                    <label class="block text-sm font-medium text-gray-300 mb-1">
+                        Assinatura <span class="text-red-400">*</span>
+                    </label>
+                    <div class="relative border-2 border-dashed border-gray-600 rounded-lg bg-white overflow-hidden"
+                         style="height:150px;">
+                        <canvas id="signature-canvas" class="absolute inset-0 w-full h-full touch-none cursor-crosshair"></canvas>
+                        <p id="canvas-placeholder" class="absolute inset-0 flex items-center justify-center
+                                                           text-gray-400 text-sm pointer-events-none select-none">
+                            Desenhe a sua assinatura aqui
+                        </p>
+                    </div>
+                    <p id="sig-error" class="text-red-400 text-xs mt-1 hidden">Por favor, adicione a sua assinatura.</p>
+                </div>
+                <button type="button" id="clear-btn"
+                        class="text-xs text-gray-500 hover:text-gray-300 mb-5 underline transition-colors">
+                    Limpar assinatura
+                </button>
+
+                <!-- Terms -->
+                <p class="text-xs text-gray-500 mb-5">
+                    Ao assinar, declara ter lido e aceite os
+                    <a href="{% url 'website:terms' %}" target="_blank"
+                       class="text-primary underline hover:text-primary-dark">Termos e Condições de Assinatura Digital</a>.
+                </p>
+
+                <!-- Buttons -->
+                <div class="flex gap-3">
+                    <button type="submit" id="sign-btn"
+                            class="flex-1 py-3 rounded-lg font-bold text-white text-sm
+                                   bg-primary hover:bg-primary-dark transition-colors">
+                        ✍️ Confirmar e Assinar
+                    </button>
+                    <button type="button" id="close-modal-cancel"
+                            class="px-5 py-3 rounded-lg font-semibold text-sm border border-gray-600
+                                   text-gray-400 hover:bg-gray-700 hover:text-gray-200 transition-colors">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<footer class="mt-12 pb-8 text-center text-xs text-gray-600 border-t border-gray-800 pt-6">
+    <p>Fuet Mágico by Daisy · Criações refinadas &amp; irresistíveis</p>
+    <p class="mt-2 text-gray-500">Desenvolvido por <a href="https://www.cubix.pt" target="_blank" class="font-semibold bg-gradient-to-r from-[#ed2109] to-[#ff5a19] bg-clip-text text-transparent hover:opacity-80">Cubix</a></p>
+</footer>
+
+<script>
+(function () {
+    const modal       = document.getElementById('sign-modal');
+    const backdrop    = document.getElementById('modal-backdrop');
+    const openBtn     = document.getElementById('open-sign-modal');
+    const closeBtn    = document.getElementById('close-modal');
+    const cancelBtn   = document.getElementById('close-modal-cancel');
+    const refuseBtn   = document.getElementById('sidebar-refuse-btn');
+    const canvas      = document.getElementById('signature-canvas');
+    const clearBtn    = document.getElementById('clear-btn');
+    const signBtn     = document.getElementById('sign-btn');
+    const actionInput = document.getElementById('action-input');
+    const sigData     = document.getElementById('signature-data');
+    const sigError    = document.getElementById('sig-error');
+    const placeholder = document.getElementById('canvas-placeholder');
+    const form        = document.getElementById('sign-form');
+
+    if (!modal) return;
+
+    let pad = null;
+
+    function openModal() {
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        // init SignaturePad after modal is visible so canvas has dimensions
+        if (!pad) {
+            pad = new SignaturePad(canvas, { penColor: '#1a1a2e', minWidth: 1.5, maxWidth: 3 });
+            pad.addEventListener('beginStroke', () => {
+                if (placeholder) placeholder.style.display = 'none';
+                sigError.classList.add('hidden');
+            });
+        }
+        // resize to current container
+        const rect = canvas.parentElement.getBoundingClientRect();
+        const ratio = window.devicePixelRatio || 1;
+        canvas.width  = rect.width  * ratio;
+        canvas.height = rect.height * ratio;
+        canvas.getContext('2d').scale(ratio, ratio);
+        pad.clear();
+        if (placeholder) placeholder.style.display = '';
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    if (openBtn)     openBtn.addEventListener('click', openModal);
+    if (closeBtn)    closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn)   cancelBtn.addEventListener('click', closeModal);
+    if (backdrop)    backdrop.addEventListener('click', closeModal);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
+    });
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            if (pad) pad.clear();
+            if (placeholder) placeholder.style.display = '';
+        });
+    }
+
+    if (signBtn) {
+        signBtn.addEventListener('click', (e) => {
+            if (!pad || pad.isEmpty()) {
+                e.preventDefault();
+                sigError.classList.remove('hidden');
+                return;
+            }
+            actionInput.value = 'sign';
+            sigData.value = pad.toDataURL('image/png');
+        });
+    }
+
+    if (refuseBtn) {
+        refuseBtn.addEventListener('click', () => {
+            if (!confirm('Tem a certeza que deseja recusar este orçamento?')) return;
+            actionInput.value = 'refuse';
+            sigData.value = '';
+            document.getElementById('signer-name').removeAttribute('required');
+            form.submit();
+        });
+    }
+})();
+</script>
+
+<script>
+(function () {
+    const PAGE_SIZE = 10;
+    const rows = Array.from(document.querySelectorAll('#sign-form, tbody tr[data-row]')).length
+        ? Array.from(document.querySelectorAll('tbody tr[data-row]'))
+        : [];
+    // re-query cleanly
+    const allRows = Array.from(document.querySelectorAll('tbody tr[data-row]'));
+    const total   = allRows.length;
+    if (total <= PAGE_SIZE) return; // no pagination needed
+
+    const pagination = document.getElementById('lines-pagination');
+    const pageInfo   = document.getElementById('page-info');
+    const btnPrev    = document.getElementById('pg-prev');
+    const btnNext    = document.getElementById('pg-next');
+    const btnAll     = document.getElementById('pg-all');
+
+    pagination.classList.remove('hidden');
+
+    let currentPage = 0; // 0-based
+    let showingAll  = false;
+
+    function render() {
+        if (showingAll) {
+            allRows.forEach(r => r.style.display = '');
+            pageInfo.textContent = 'Todos os ' + total + ' artigos';
+            btnPrev.disabled = true;
+            btnNext.disabled = true;
+            btnAll.textContent = 'Paginar';
+            btnAll.classList.add('text-primary', 'border-primary');
+            return;
+        }
+        const start = currentPage * PAGE_SIZE;
+        const end   = Math.min(start + PAGE_SIZE, total);
+        allRows.forEach((r, i) => {
+            r.style.display = (i >= start && i < end) ? '' : 'none';
+        });
+        const totalPages = Math.ceil(total / PAGE_SIZE);
+        pageInfo.textContent = 'Artigos ' + (start + 1) + '–' + end + ' de ' + total;
+        btnPrev.disabled = currentPage === 0;
+        btnNext.disabled = currentPage >= totalPages - 1;
+        btnAll.textContent = 'Ver todos';
+        btnAll.classList.remove('text-primary', 'border-primary');
+    }
+
+    btnPrev.addEventListener('click', () => {
+        if (currentPage > 0) { currentPage--; render(); }
+    });
+    btnNext.addEventListener('click', () => {
+        if ((currentPage + 1) * PAGE_SIZE < total) { currentPage++; render(); }
+    });
+    btnAll.addEventListener('click', () => {
+        showingAll = !showingAll;
+        if (!showingAll) currentPage = 0;
+        render();
+    });
+
+    render();
+})();
+</script>
+</body>
+</html>

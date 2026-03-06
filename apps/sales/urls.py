@@ -33,6 +33,12 @@ urlpatterns = [
     path('<uuid:pk>/followers/',                                views.sale_order_followers_api,   name='order_followers_api'),
     path('<uuid:pk>/followers/<uuid:user_id>/remove/',          views.sale_order_follower_remove, name='order_follower_remove'),
 
+    # ── Signature Portal (public — no login required) ───────────────
+    path('orcamento/<str:token>/',           views.quotation_sign,        name='quotation_sign'),
+    path('orcamento/<str:token>/submeter/',  views.quotation_sign_submit, name='quotation_sign_submit'),
+    path('orcamento/<str:token>/done/',      views.quotation_sign_done,   name='quotation_sign_done'),
+    path('orcamento/termos/',               views.quotation_terms,       name='quotation_terms'),
+
     # ── Bulk actions (AJAX) ──────────────────────────────────────────
     path('bulk/archive/',    views.sale_order_bulk_archive,   name='order_bulk_archive'),
     path('bulk/unarchive/', views.sale_order_bulk_unarchive, name='order_bulk_unarchive'),

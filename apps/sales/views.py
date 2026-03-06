@@ -1,5 +1,7 @@
 import json
 import re
+import secrets
+from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
@@ -493,6 +495,14 @@ def sale_order_send_quotation(request, pk):
         pk=pk,
     )
 
+    # ── Generate / refresh signature token ─────────────────────────────
+    from django.utils import timezone as tz
+    if not order.signature_token:
+        order.signature_token = secrets.token_urlsafe(32)
+    order.token_expires_at   = tz.now() + timedelta(days=30)
+    order.signature_status   = SaleOrder.SignatureStatus.PENDING
+    order.save(update_fields=['signature_token', 'token_expires_at', 'signature_status'])
+
     # ── Parse request (FormData or JSON) ──────────────────────────
     if 'application/json' in (request.content_type or ''):
         try:
@@ -620,6 +630,12 @@ def sale_order_quotation_email_compose(request, pk):
         pk=pk,
     )
 
+    # ── Generate signature token for preview (save if new) ──────────────────
+    if not order.signature_token:
+        order.signature_token = secrets.token_urlsafe(32)
+        order.save(update_fields=['signature_token'])
+    sign_url = request.build_absolute_uri(f'/sales/orcamento/{order.signature_token}/')
+
     client_name  = order.client.name  if order.client else 'Cliente'
     order_number = order.order_number or ''
     subject      = f'Orçamento {order_number}'
@@ -638,25 +654,40 @@ def sale_order_quotation_email_compose(request, pk):
             .replace('{{2}}', order_number)
         )
 
-    # Build preview: body wrapped in EmailLayout envelope
-    preview_html = body_html
-    if body_html:
-        try:
-            preview_html, _ = wrap_email_with_layout(
-                body_html=body_html,
-                user=request.user,
-                record=order,
-                subject=subject,
-            )
-        except Exception:
-            pass  # fall back to plain body_html
+    # ── Append sign CTA to body ──────────────────────────────────────────
+    sign_button_html = (
+        '<div style="margin: 28px 0; text-align: center;">'
+        f'<a href="{sign_url}" target="_blank" '
+        'style="display:inline-block; padding: 12px 32px; '
+        'background-color:#b89a5a; color:#ffffff; '
+        'text-decoration:none; border-radius:6px; '
+        'font-size:15px; font-weight:600; letter-spacing:0.5px;">'
+        '&#9997;&#65039; Ver e Assinar Or&ccedil;amento'
+        '</a></div>'
+        f'<p style="margin:8px 0 0 0; text-align:center; font-size:12px; color:#9ca3af;">'
+        f'Link v&aacute;lido por 30 dias: <a href="{sign_url}" style="color:#b89a5a;">{sign_url}</a></p>'
+    )
+    body_html_with_sign = (body_html + sign_button_html) if body_html else sign_button_html
+
+    # Build preview from final body (with sign button) wrapped in email layout
+    preview_html = body_html_with_sign
+    try:
+        preview_html, _ = wrap_email_with_layout(
+            body_html=body_html_with_sign,
+            user=request.user,
+            record=order,
+            subject=subject,
+        )
+    except Exception:
+        pass  # fall back to body_html_with_sign
 
     return JsonResponse({
         'to_email':          to_email,
         'to_name':           client_name,
         'subject':           subject,
-        'body_html':         body_html,
+        'body_html':         body_html_with_sign,
         'preview_html':      preview_html,
+        'sign_url':          sign_url,
         'quotation_url':     request.build_absolute_uri(
             reverse('sales:order_quotation_report', args=[str(pk)])
         ),
@@ -1122,6 +1153,175 @@ def sale_order_follower_remove(request, pk, user_id):
     ).delete()
     return JsonResponse({'success': True})
 
+
+# ────────────────────────────────────────────────────────────────────
+# Signature Portal — public views (no @login_required)
+# ────────────────────────────────────────────────────────────────────
+
+def quotation_sign(request, token):
+    """Public GET: render the quotation signature page for the client."""
+    from django.utils import timezone as tz
+
+    try:
+        order = (
+            SaleOrder.objects
+            .select_related('client', 'owner_company')
+            .prefetch_related('lines__product', 'lines__uom')
+            .get(signature_token=token)
+        )
+    except SaleOrder.DoesNotExist:
+        return render(request, 'sales/quotation_sign_expired.html', {
+            'reason': 'not_found',
+        }, status=404)
+
+    # Token expired?
+    if order.token_expires_at and tz.now() > order.token_expires_at:
+        return render(request, 'sales/quotation_sign_expired.html', {
+            'reason': 'expired',
+            'order':  order,
+        }, status=410)
+
+    # Already signed or refused?
+    already_done = order.signature_status in (
+        SaleOrder.SignatureStatus.SIGNED,
+        SaleOrder.SignatureStatus.REFUSED,
+    )
+
+    lines = order.lines.select_related('product', 'uom').order_by('created_at')
+    return render(request, 'sales/quotation_sign.html', {
+        'order':        order,
+        'company':      order.owner_company,
+        'lines':        lines,
+        'token':        token,
+        'already_done': already_done,
+    })
+
+
+@require_POST
+def quotation_sign_submit(request, token):
+    """Public POST: save the client signature (sign or refuse)."""
+    from django.utils import timezone as tz
+    from django.contrib.contenttypes.models import ContentType
+
+    try:
+        order = SaleOrder.objects.select_related('client', 'owner_company').get(
+            signature_token=token
+        )
+    except SaleOrder.DoesNotExist:
+        return render(request, 'sales/quotation_sign_expired.html', {
+            'reason': 'not_found',
+        }, status=404)
+
+    # Token expired?
+    if order.token_expires_at and tz.now() > order.token_expires_at:
+        return render(request, 'sales/quotation_sign_expired.html', {
+            'reason': 'expired',
+            'order':  order,
+        }, status=410)
+
+    # Already actioned — idempotent, just redirect to done
+    if order.signature_status in (
+        SaleOrder.SignatureStatus.SIGNED,
+        SaleOrder.SignatureStatus.REFUSED,
+    ):
+        return redirect('sales:quotation_sign_done', token=token)
+
+    action       = request.POST.get('action', '').strip()       # 'sign' | 'refuse'
+    signer_name  = request.POST.get('signer_name', '').strip()
+    signature_data = request.POST.get('signature_data', '').strip()  # base64 PNG
+
+    if action not in ('sign', 'refuse'):
+        return redirect('sales:quotation_sign', token=token)
+
+    now = tz.now()
+    ct  = ContentType.objects.get_for_model(SaleOrder)
+
+    if action == 'sign':
+        if not signer_name:
+            return redirect('sales:quotation_sign', token=token)
+
+        order.signature_status = SaleOrder.SignatureStatus.SIGNED
+        order.signed_at        = now
+        order.signed_by_name   = signer_name
+        order.signature_image  = signature_data
+        order.save(update_fields=[
+            'signature_status', 'signed_at', 'signed_by_name', 'signature_image',
+        ])
+
+        sig_html = ''
+        if signature_data:
+            sig_html = (
+                f'<br><img src="{signature_data}" alt="Assinatura" '
+                'style="max-height:80px; border:1px solid #dbc693; border-radius:4px; '
+                'margin-top:8px; display:block;">'
+            )
+        chatter_body_html = (
+            f'<p style="margin:0;">&#9989; <strong>Or&ccedil;amento aceite e assinado</strong> '
+            f'por <em>{signer_name}</em> em {now.strftime("%d/%m/%Y %H:%M")}.</p>'
+            f'{sig_html}'
+        )
+        ChatterMessage.objects.create(
+            content_type=ct,
+            object_id=order.pk,
+            author=None,
+            message_type='EMAIL',
+            subject=f'Assinatura — {order.order_number}',
+            body=f'Orçamento aceite e assinado por {signer_name} em {now.strftime("%d/%m/%Y %H:%M")}.',
+            body_html=chatter_body_html,
+            from_email=order.client.email if order.client else '',
+            to_email='',
+            direction=ChatterMessage.DIRECTION_INBOUND,
+            sent_at=now,
+            is_internal=False,
+        )
+
+    else:  # refuse
+        order.signature_status = SaleOrder.SignatureStatus.REFUSED
+        order.signed_at        = now
+        order.signed_by_name   = signer_name
+        order.save(update_fields=['signature_status', 'signed_at', 'signed_by_name'])
+
+        ChatterMessage.objects.create(
+            content_type=ct,
+            object_id=order.pk,
+            author=None,
+            message_type='EMAIL',
+            subject=f'Or\u00e7amento recusado — {order.order_number}',
+            body=f'Orçamento recusado por {signer_name or "o cliente"} em {now.strftime("%d/%m/%Y %H:%M")}.',
+            body_html=(
+                f'<p style="margin:0;">&#10060; <strong>Or&ccedil;amento recusado</strong> '
+                f'por <em>{signer_name or "o cliente"}</em> em {now.strftime("%d/%m/%Y %H:%M")}.</p>'
+            ),
+            from_email=order.client.email if order.client else '',
+            to_email='',
+            direction=ChatterMessage.DIRECTION_INBOUND,
+            sent_at=now,
+            is_internal=False,
+        )
+
+    return redirect('sales:quotation_sign_done', token=token)
+
+
+def quotation_sign_done(request, token):
+    """Public GET: confirmation page after signing or refusing."""
+    try:
+        order = SaleOrder.objects.select_related('client', 'owner_company').get(
+            signature_token=token
+        )
+    except SaleOrder.DoesNotExist:
+        return render(request, 'sales/quotation_sign_expired.html', {
+            'reason': 'not_found',
+        }, status=404)
+
+
+def quotation_terms(request):
+    """Public GET: terms and conditions for digital signature."""
+    return render(request, 'sales/quotation_terms.html')
+
+    return render(request, 'sales/quotation_sign_done.html', {
+        'order':   order,
+        'company': order.owner_company,
+    })
 
 
 _STATUS_FILTER_OPTIONS = [

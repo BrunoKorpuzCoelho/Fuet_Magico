@@ -1,0 +1,75 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Termos e Condições de Assinatura Digital – Fuet Mágico</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'website/favicon/favicon.ico' %}">
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { primary: '#dbc693', 'primary-dark': '#c9b580' } } }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-gray-900 text-gray-100">
+
+<header class="bg-gray-800 border-b-4 border-primary shadow-lg">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
+        <img src="{% static 'brand/logo.png' %}" alt="Fuet Mágico" class="h-10 w-auto"
+             onerror="this.style.display='none'">
+        <div class="flex flex-col leading-tight">
+            <span class="text-base font-bold text-primary">Fuet Mágico</span>
+            <span class="text-[10px] text-gray-400 -mt-0.5">by Daisy</span>
+        </div>
+    </div>
+</header>
+
+<div class="max-w-3xl mx-auto px-4 sm:px-6 py-10 space-y-6 text-sm text-gray-300 leading-relaxed">
+
+    <h1 class="text-2xl font-bold text-gray-100">Termos e Condições de Assinatura Digital</h1>
+    <p class="text-gray-400 text-xs">Última atualização: {{ "now"|date:"d/m/Y" }}</p>
+
+    <section>
+        <h2 class="text-base font-semibold text-gray-100 mb-2">1. Validade da Assinatura Digital</h2>
+        <p>A assinatura digital aposta neste documento tem o mesmo valor legal que uma assinatura manuscrita, nos termos do Regulamento (UE) n.º 910/2014 (eIDAS) e da legislação portuguesa aplicável. Ao assinar, o signatário declara ter lido, compreendido e aceite na íntegra o orçamento apresentado.</p>
+    </section>
+
+    <section>
+        <h2 class="text-base font-semibold text-gray-100 mb-2">2. Identificação do Signatário</h2>
+        <p>O signatário declara que o nome inserido no formulário de assinatura corresponde à sua identidade real e que está devidamente autorizado a aceitar o orçamento em nome próprio ou da entidade que representa.</p>
+    </section>
+
+    <section>
+        <h2 class="text-base font-semibold text-gray-100 mb-2">3. Conservação dos Dados</h2>
+        <p>A imagem da assinatura, o nome do signatário e a data/hora de assinatura serão conservados nos sistemas da Fuet Mágico by Daisy pelo período mínimo exigido por lei, e utilizados exclusivamente para efeitos de prova e execução do contrato.</p>
+    </section>
+
+    <section>
+        <h2 class="text-base font-semibold text-gray-100 mb-2">4. Efeitos da Aceitação</h2>
+        <p>A aceitação do orçamento através desta plataforma constitui um acordo vinculativo entre o cliente e a Fuet Mágico by Daisy, nas condições descritas no próprio orçamento, incluindo preços, quantidades, prazos de entrega e condições de pagamento.</p>
+    </section>
+
+    <section>
+        <h2 class="text-base font-semibold text-gray-100 mb-2">5. Recusa do Orçamento</h2>
+        <p>O cliente poderá recusar o orçamento através do botão "Recusar" disponível na mesma plataforma. A recusa não implica qualquer obrigação por parte do cliente, salvo se existir acordo prévio em contrário.</p>
+    </section>
+
+    <section>
+        <h2 class="text-base font-semibold text-gray-100 mb-2">6. Contacto</h2>
+        <p>Para qualquer questão relacionada com este orçamento ou com estes termos, contacte-nos através dos dados de contacto indicados no próprio orçamento.</p>
+    </section>
+
+</div>
+
+<footer class="mt-12 pb-8 text-center text-xs text-gray-600 border-t border-gray-800 pt-6">
+    <p>Fuet Mágico by Daisy · Criações refinadas &amp; irresistíveis</p>
+    <p class="mt-2 text-gray-500">Desenvolvido por <a href="https://www.cubix.pt" target="_blank"
+       class="font-semibold bg-gradient-to-r from-[#ed2109] to-[#ff5a19] bg-clip-text text-transparent hover:opacity-80">Cubix</a></p>
+</footer>
+
+</body>
+</html>

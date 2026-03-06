@@ -1,3 +1,4 @@
+import secrets
 import uuid
 from decimal import Decimal
 from django.db import models
@@ -85,6 +86,11 @@ class SaleOrder(AbstractBaseModel):
         PARTIAL = 'partial', 'Parcial'
         PAID    = 'paid',    'Pago'
 
+    class SignatureStatus(models.TextChoices):
+        PENDING = 'pending', 'Pendente'
+        SIGNED  = 'signed',  'Assinado'
+        REFUSED = 'refused', 'Recusado'
+
     # ── Identification ───────────────────────────────────────
     order_number = models.CharField(
         max_length=32,
@@ -162,6 +168,46 @@ class SaleOrder(AbstractBaseModel):
         blank=True,
         verbose_name='Valor Pago',
         help_text='Valor pago antecipadamente (sinal/adiantamento).',
+    )
+
+    # ── Signature portal ─────────────────────────────────
+    signature_token = models.CharField(
+        max_length=64,
+        unique=True,
+        blank=True,
+        null=True,
+        db_index=True,
+        verbose_name='Token de Assinatura',
+        help_text='Token único para o link público de assinatura. Gerado ao enviar email.',
+    )
+    token_expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Expiração do Token',
+    )
+    signature_status = models.CharField(
+        max_length=16,
+        choices=SignatureStatus.choices,
+        default=SignatureStatus.PENDING,
+        verbose_name='Estado de Assinatura',
+    )
+    signed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Data de Assinatura',
+    )
+    signed_by_name = models.CharField(
+        max_length=200,
+        blank=True,
+        default='',
+        verbose_name='Assinado Por',
+        help_text='Nome confirmado pelo cliente ao assinar.',
+    )
+    signature_image = models.TextField(
+        blank=True,
+        default='',
+        verbose_name='Imagem da Assinatura',
+        help_text='Base64 PNG do canvas de assinatura.',
     )
 
     # ── Notes ────────────────────────────────────────────

@@ -24,7 +24,7 @@
 - **Fase 5:** 659/949 tarefas (69%) - App: CRM (Customer Relationship Management) 🔄 parcial
 - **Fase 6:** ~340/~680 tarefas (~50%) - App: Inventário (Produtos, Stock, Armazéns, Movimentos) 🔄 parcial
 - **Fase 7:** 152/152 tarefas (100%) - App: Compras ✅
-- **Fase 8:** 0/247 tarefas (0%) - App: Vendas
+- **Fase 8:** ~60/247 tarefas (~24%) - App: Vendas 🔄 parcial
 - **Fase 9:** 0/94 tarefas (0%) - App: Financeiro
 - **Fase 10:** 0/358 tarefas (0%) - BOM (Bill of Materials) - Sistema de Receitas
 - **Fase 11:** 138/190 tarefas (73%) - Sistema de PDFs (Documentos) 🔄 parcial
@@ -7618,7 +7618,7 @@ Criar modelo de encomenda de venda / orçamento / fatura.
   - [x] Campo: **owner_company** (FK para Company, null=True, blank=True) - NULL=global, com valor=privado
   - [x] Método __str__, método generate_order_number()
   - [x] Filtrar por owner_company na SaleOrderListView usando filter_by_company()
-  - [ ] Auto-preencher owner_company na create view com get_active_company()
+  - [x] Auto-preencher owner_company na create view com get_active_company()
 
 - [x] **Criar migrations**
   - [x] makemigrations e migrate
@@ -7681,19 +7681,19 @@ Criar views para listar sale orders.
 
 Criar view para criar nova venda.
 
-- [ ] **Criar SaleOrderCreateView**
-  - [ ] Form: client, order_date, delivery_date, document_type
-  - [ ] JavaScript para adicionar linhas dinamicamente
-  - [ ] Calcular totais em tempo real (JS)
-  - [ ] Aplicar descontos por linha ou global
+- [x] **Criar SaleOrderCreateView**
+  - [x] Form: client, order_date, delivery_date, document_type
+  - [x] JavaScript para adicionar linhas dinamicamente
+  - [x] Calcular totais em tempo real (JS)
+  - [x] Aplicar descontos por linha ou global (desconto por linha)
 
-- [ ] **Criar template**
-  - [ ] `templates/sales/order_create.html` (standalone)
-  - [ ] Form com tabela de linhas dinâmicas
-  - [ ] Seletor de produtos com busca
+- [x] **Criar template**
+  - [x] `templates/sales/order_form.html` (criação + edição unificados)
+  - [x] Form com tabela de linhas dinâmicas via Alpine.js
+  - [x] Seletor de produtos com busca
 
-- [ ] **Configurar rota**
-  - [ ] `path('sales/new/', SaleOrderCreateView, name='sale_create')`
+- [x] **Configurar rota**
+  - [x] `path('sales/new/', sale_order_create, name='order_create')`
 
 - [ ] **Testing - Sale Create**
   - [ ] Test: criar venda funciona
@@ -7706,22 +7706,21 @@ Criar view para criar nova venda.
 
 Criar views para editar e visualizar venda.
 
-- [ ] **Criar SaleOrderDetailView**
-  - [ ] Mostrar cabeçalho e linhas
-  - [ ] Botões de ação: Editar, Confirmar, Entregar, Faturar, Cancelar
-  - [ ] Link para gerar PDF
+- [x] **Criar SaleOrderDetailView**
+  - [x] Mostrar cabeçalho e linhas
+  - [x] Botões de ação: Confirmar, Cancelar, Enviar Email, Ver Orçamento
+  - [x] Link para gerar PDF (Ver Orçamento)
 
-- [ ] **Criar SaleOrderUpdateView**
-  - [ ] Permitir editar apenas se status=DRAFT
-  - [ ] Form com linhas editáveis
+- [x] **Criar SaleOrderUpdateView**
+  - [x] Permitir editar apenas se status=DRAFT
+  - [x] Form com linhas editáveis (order_form.html unificado criação/edição)
 
-- [ ] **Criar templates**
-  - [ ] `templates/sales/order_detail.html` (standalone)
-  - [ ] `templates/sales/order_update.html` (standalone)
+- [x] **Criar templates**
+  - [x] `templates/sales/order_form.html` (criação + edição + detalhe unificados)
 
-- [ ] **Configurar rotas**
-  - [ ] `path('sales/<uuid:pk>/', SaleOrderDetailView, name='sale_detail')`
-  - [ ] `path('sales/<uuid:pk>/edit/', SaleOrderUpdateView, name='sale_update')`
+- [x] **Configurar rotas**
+  - [x] `path('<uuid:pk>/', sale_order_detail, name='order_detail')`
+  - [x] `path('<uuid:pk>/edit/', sale_order_edit, name='order_edit')`
 
 - [ ] **Testing - Sale Edit/Detail**
   - [ ] Test: visualizar detalhes funciona
@@ -7733,13 +7732,12 @@ Criar views para editar e visualizar venda.
 
 Criar ação para confirmar venda.
 
-- [ ] **Criar SaleOrderConfirmView**
-  - [ ] Verificar se tem linhas
-  - [ ] Mudar status para CONFIRMED
-  - [ ] Enviar email ao cliente (opcional)
+- [x] **Criar SaleOrderConfirmView**
+  - [x] Verificar se tem linhas
+  - [x] Mudar status para CONFIRMED
 
-- [ ] **Configurar rota**
-  - [ ] `path('sales/<uuid:pk>/confirm/', SaleOrderConfirmView, name='sale_confirm')`
+- [x] **Configurar rota**
+  - [x] `path('<uuid:pk>/confirm/', sale_order_confirm, name='order_confirm')`
 
 - [ ] **Testing - Sale Confirm**
   - [ ] Test: confirmar venda funciona
@@ -7787,44 +7785,61 @@ Criar ação para gerar fatura.
 
 ---
 
-## 8.10 Cancelamento de Venda
+## 8.10 Cancelamento de Venda ✅
 
 Criar ação para cancelar venda.
 
-- [ ] **Criar SaleOrderCancelView**
-  - [ ] Permitir apenas se status != DELIVERED/INVOICED
-  - [ ] Mudar status para CANCELLED
-  - [ ] Se já confirmado, reverter stock (opcional)
+- [x] **Criar sale_order_cancel (POST)**
+  - [x] Permitir apenas se status != DELIVERED/INVOICED
+  - [x] Mudar status para CANCELLED
 
-- [ ] **Criar template de confirmação**
-  - [ ] `templates/sales/order_confirm_cancel.html` (standalone)
+- [x] **Confirmação via modal inline** (sem template standalone)
 
-- [ ] **Configurar rota**
-  - [ ] `path('sales/<uuid:pk>/cancel/', SaleOrderCancelView, name='sale_cancel')`
+- [x] **Configurar rota**
+  - [x] `path('<uuid:pk>/cancel/', sale_order_cancel, name='order_cancel')`
 
 - [ ] **Testing - Sale Cancel**
   - [ ] Test: cancelar venda funciona
 
 ---
 
-## 8.11 Envio de Documentos por Email
+## 8.11 Envio de Documentos por Email ✅
 
 Criar funcionalidade para enviar orçamentos/faturas por email.
 
-- [ ] **Criar SaleOrderSendEmailView**
-  - [ ] Gerar PDF do documento
-  - [ ] Enviar email ao cliente com PDF anexado
-  - [ ] Template de email customizável
+- [x] **Criar sale_order_send_quotation (POST)**
+  - [x] Gerar PDF do documento via wkhtmltopdf + pdfkit
+  - [x] Enviar email ao cliente com PDF anexado
+  - [x] Template de email "Envio de Orçamento" seed na BD
+  - [x] Modal de composição rica com Quill editor, CC/BCC, preview
+  - [x] Registo no Chatter após envio
 
-- [ ] **Adicionar botão no detail**
-  - [ ] Botão "Enviar por Email"
+- [x] **Criar sale_order_quotation_email_compose (GET)**
+  - [x] Retorna dados pré-preenchidos (to_email, subject, body_html, preview_html)
 
-- [ ] **Configurar rota**
-  - [ ] `path('sales/<uuid:pk>/send-email/', SaleOrderSendEmailView, name='sale_send_email')`
+- [x] **Criar sale_order_quotation_report (browser)**
+  - [x] Visualização HTML no browser
+
+- [x] **PDF via wkhtmltopdf**
+  - [x] `_html_to_pdf()` com --header-html e --footer-html (repete em todas as páginas)
+  - [x] Header: logo + "Orçamento de Encomenda"
+  - [x] Footer: "Obrigada pela confiança..." + paginação "Página X de Y"
+  - [x] Layout 100% tabelas (sem CSS Grid/Flexbox) para compatibilidade wkhtmltopdf 0.12.6
+  - [x] Logo base64 para PDF (sem dependências externas)
+  - [x] Encoding UTF-8 correto (ficheiro temporário)
+
+- [x] **Adicionar botão no order_form**
+  - [x] Botão "Enviar Email" + "Ver Orçamento" no toolbar
+
+- [x] **Configurar rotas**
+  - [x] `path('<uuid:pk>/report/', sale_order_quotation_report)`
+  - [x] `path('<uuid:pk>/send-quotation/', sale_order_send_quotation)`
+  - [x] `path('<uuid:pk>/quotation-email-compose/', sale_order_quotation_email_compose)`
 
 - [ ] **Testing - Sale Send Email**
   - [ ] Test: enviar email funciona
   - [ ] Test: PDF é anexado
+  - [ ] Test: registo aparece no Chatter
 
 ---
 
@@ -7985,6 +8000,133 @@ Criar sistema de listas de preços e regras de desconto por cliente/empresa.
   - [ ] Test: vistas usam template base corretamente
   - [ ] Test: bidirecionalidade funciona (Contact ↔ Sale, Product ↔ Sale, Lead ↔ Sale)
   - [ ] Test: botão "Produtos Vendidos" NÃO existe (redundante com linhas)
+
+---
+
+## 8.15 Portal de Assinatura de Orçamentos (Cliente)
+
+Criar sistema de assinatura digital de orçamentos por parte do cliente, acessível via link único no email, sem necessidade de login — estilo Odoo portal.
+
+---
+
+### 8.15.1 Modelo — Campos de assinatura no SaleOrder ✅
+
+- [x] **Adicionar campos ao modelo SaleOrder**
+  - [x] `signature_token` — `CharField(max_length=64, unique=True, blank=True, db_index=True)` gerado com `secrets.token_urlsafe(32)`
+  - [x] `token_expires_at` — `DateTimeField(null=True, blank=True)` — expiração do link (default: 30 dias após envio)
+  - [x] `signature_status` — `CharField(choices: pending/signed/refused, default='pending')`
+  - [x] `signed_at` — `DateTimeField(null=True, blank=True)`
+  - [x] `signed_by_name` — `CharField(max_length=200, blank=True)` — nome confirmado pelo cliente
+  - [x] `signature_image` — `TextField(blank=True)` — base64 da assinatura (canvas PNG)
+
+- [x] **Criar e correr migração**
+  - [x] `python manage.py makemigrations sales` → `0007_add_signature_fields_to_saleorder.py`
+  - [x] `python manage.py migrate` → OK
+
+---
+
+### 8.15.2 Geração do token no envio do email ✅
+
+- [x] **Gerar token ao enviar email de orçamento**
+  - [x] Em `sale_order_send_quotation`, antes de enviar, gerar `signature_token` se não existir (via `secrets.token_urlsafe(32)`)
+  - [x] Definir `token_expires_at = now() + 30 dias`
+  - [x] Definir `signature_status = 'pending'`
+  - [x] Guardar `order.save(update_fields=[...])`
+
+- [x] **Incluir link de assinatura no email**
+  - [x] Em `sale_order_quotation_email_compose`, gerar/reutilizar token e construir `sign_url`
+  - [x] Botão CTA "Ver e Assinar Orçamento" appended ao `body_html` (dourado `#b89a5a`, link visível por baixo)
+  - [x] Preview do modal inclui o botão (preview gerado após o botão ser adicionado)
+  - [x] `sign_url` incluído no JSON response do compose endpoint
+
+- [x] **Incluir link de assinatura no Chatter**
+  - [x] `send_email_for_record` guarda `body_html` (com botão de assinatura) no `ChatterMessage` — link aparece automaticamente na bolha de email do Chatter
+
+---
+
+### 8.15.3 View pública — Página de assinatura ✅
+
+- [x] **Criar `quotation_sign` (GET)**
+  - [x] URL: `/sales/orcamento/<str:token>/`
+  - [x] Sem `@login_required` — pública
+  - [x] Validar token: 404 se não existe, 410 se expirado
+  - [x] Se já assinado/recusado → mostrar página de estado (não permite nova assinatura)
+  - [x] Passar contexto: `order`, `company`, `lines`, `token`, `already_done`
+
+- [x] **Criar `quotation_sign_submit` (POST)**
+  - [x] URL: `/sales/orcamento/<str:token>/submeter/`
+  - [x] Aceitar campos: `action` (sign/refuse), `signer_name`, `signature_data` (base64)
+  - [x] Validar token e expiração
+  - [x] Se `action == 'sign'`:
+    - [x] Guardar `signature_image`, `signed_by_name`, `signed_at`, `signature_status = 'signed'`
+    - [x] Criar `ChatterMessage` direction=inbound com "Orçamento aceite e assinado por {nome}"
+    - [x] Incluir imagem da assinatura na mensagem do Chatter (como base64 `<img>`)
+  - [x] Se `action == 'refuse'`:
+    - [x] Guardar `signature_status = 'refused'`, `signed_at`
+    - [x] Criar `ChatterMessage` direction=inbound com "Orçamento recusado por {nome}"
+  - [x] Redirecionar para página de confirmação
+
+- [x] **Criar `quotation_sign_done` (GET)**
+  - [x] Página de confirmação pós-assinatura / pós-recusa
+
+- [x] **Configurar rotas**
+  - [x] `path('orcamento/<str:token>/', quotation_sign, name='quotation_sign')`
+  - [x] `path('orcamento/<str:token>/submeter/', quotation_sign_submit, name='quotation_sign_submit')`
+  - [x] `path('orcamento/<str:token>/done/', quotation_sign_done, name='quotation_sign_done')`
+
+---
+
+### 8.15.4 Template — Página pública de assinatura ✅
+
+- [x] **Criar `templates/sales/quotation_sign.html`**
+  - [x] Página standalone (sem navbar de gestão, sem login)
+  - [x] Design limpo, cores da Fuet Mágico (dourado `#b89a5a`)
+  - [x] Mostrar: logo, cabeçalho do orçamento, tabela de artigos, totais, notas
+  - [x] **Signature pad** (canvas HTML5 com `signature_pad.js` v4.1.7 via jsDelivr CDN)
+    - [x] Botão "Limpar" para apagar a assinatura
+    - [x] Campo nome obrigatório
+  - [x] Botão "✅ Aceitar e Assinar" (submete com action=sign)
+  - [x] Botão "❌ Recusar Orçamento" (submete com action=refuse, pede confirmação)
+  - [x] Aviso de expiração visível (`token_expires_at`)
+  - [x] Estado `already_done`: mostra miniatura da assinatura e mensagem sem formulário
+
+- [x] **Criar `templates/sales/quotation_sign_done.html`**
+  - [x] Página de confirmação pós-assinatura / pós-recusa
+  - [x] Mensagem diferente para aceite vs recusa
+  - [x] Mostra data/hora e nome do signatário
+  - [x] Miniatura da assinatura (se signed)
+
+- [x] **Criar `templates/sales/quotation_sign_expired.html`**
+  - [x] Página para token expirado (`reason='expired'`) ou não encontrado (`reason='not_found'`)
+  - [x] Instruções para contactar a Fuet Mágico
+
+---
+
+### 8.15.5 Integração com Chatter (resposta do cliente)
+
+- [ ] **Assinatura aparece como mensagem inbound no Chatter**
+  - [ ] Usar `ChatterMessage` ou `ChatterActivity` com `direction='inbound'`
+  - [ ] `from_email` = email do cliente (se conhecido)
+  - [ ] `from_name` = nome confirmado pelo cliente
+  - [ ] Conteúdo da mensagem:
+    - [ ] ✅ "Aceite: {nome} assinou o orçamento {order_number} em {data hora}"
+    - [ ] Incluir `<img>` com a assinatura base64 visível na bolha da mensagem
+    - [ ] ❌ "Recusado: {nome} recusou o orçamento {order_number} em {data hora}"
+  - [ ] Aparece no tab "Enviar Mensagem" como bolha do lado esquerdo (inbound)
+
+---
+
+### 8.15.6 Indicador visual no order_form
+
+- [ ] **Badge de estado de assinatura no formulário de venda**
+  - [ ] Se `signature_status == 'signed'`: badge verde "✅ Assinado" + data + nome
+  - [ ] Se `signature_status == 'refused'`: badge vermelho "❌ Recusado" + data + nome
+  - [ ] Se `signature_status == 'pending'` e token existe: badge amarelo "⏳ Aguarda assinatura" + link copiável
+  - [ ] Se sem token: sem badge
+
+- [ ] **Miniatura da assinatura**
+  - [ ] Se `signature_image` existe, mostrar imagem pequena (50px altura) no formulário
+  - [ ] Clique abre modal com assinatura em tamanho real
 
 ---
 
