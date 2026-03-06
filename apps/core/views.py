@@ -852,3 +852,332 @@ def notifications_mark_all_read(request):
     has_today    = unread_qs.filter(notification_type='ACTIVITY_TODAY').exists()
     badge_color  = 'red' if has_overdue else ('yellow' if has_today else 'default')
     return JsonResponse({'success': True, 'unread_count': unread_count, 'badge_color': badge_color})
+
+
+# ---------------------------------------------------------------------------
+# Generic Chatter Email API  (funciona com QUALQUER modelo via ContentType)
+# ---------------------------------------------------------------------------
+
+def _get_object_for_chatter_email(object_type: str, object_id: str):
+    """
+    Resolve (ContentType, model_instance) a partir de object_type="app.model" e object_id (UUID/int).
+    Devolve (ct, obj) ou lança Http404.
+    """
+    from django.contrib.contenttypes.models import ContentType as CT
+    from django.http import Http404
+
+    if not object_type or not object_id:
+        raise Http404('object_type e object_id são obrigatórios')
+
+    try:
+        app_label, model_name = object_type.lower().split('.')
+        ct = CT.objects.get(app_label=app_label, model=model_name)
+    except (ValueError, CT.DoesNotExist):
+        raise Http404(f'Tipo de objeto inválido: {object_type}')
+
+    model_class = ct.model_class()
+    if model_class is None:
+        raise Http404(f'Modelo não encontrado: {object_type}')
+
+    try:
+        obj = model_class.objects.get(pk=object_id)
+    except model_class.DoesNotExist:
+        raise Http404(f'Objeto não encontrado: {object_type} id={object_id}')
+
+    return ct, obj
+
+
+@login_required
+@require_http_methods(['GET'])
+def chatter_email_list(request):
+    """
+    GET /api/chatter/emails/?object_type=crm.lead&object_id=<uuid>
+    Devolve os emails (ChatterMessage type=EMAIL) do objeto indicado.
+    """
+    object_type = request.GET.get('object_type', '')
+    object_id   = request.GET.get('object_id', '')
+
+    ct, _ = _get_object_for_chatter_email(object_type, object_id)
+
+    from apps.core.models import ChatterMessage
+    qs = ChatterMessage.objects.filter(
+        content_type=ct,
+        object_id=object_id,
+        message_type='EMAIL',
+    ).select_related('author').order_by('created_at')
+
+    emails = []
+    for em in qs:
+        author = em.author
+        emails.append({
+            'id':          str(em.id),
+            'direction':   em.direction,
+            'from_email':  em.from_email,
+            'to_email':    em.to_email,
+            'cc_emails':   em.cc_emails or '',
+            'bcc_emails':  em.bcc_emails or '',
+            'subject':     em.subject,
+            'body':        em.body,
+            'body_html':   em.body_html or '',
+            'attachments': em.attachments or [],
+            'sent_by':     author.get_full_name() or author.username if author else None,
+            'sent_by_initials': ''.join(
+                p[0].upper() for p in ((author.get_full_name() or author.username).split()[:2])
+            ) if author else '?',
+            'sent_at':     em.sent_at.isoformat() if em.sent_at else em.created_at.isoformat(),
+            'created_at':  em.created_at.isoformat(),
+        })
+
+    return JsonResponse({'emails': emails})
+
+
+@login_required
+@require_http_methods(['POST'])
+def chatter_email_send(request):
+    """
+    POST /api/chatter/emails/send/   (multipart/form-data)
+    Envia um email para qualquer registo via SMTP e regista no chatter.
+
+    Campos: object_type, object_id, body, body_html, to_email, cc, bcc, attachments (file)
+    """
+    import os
+    import mimetypes
+    from django.core.files.storage import default_storage
+    from django.core.files.base import ContentFile
+    from apps.core.email_utils import send_email_for_record
+
+    object_type = (request.POST.get('object_type') or '').strip()
+    object_id   = (request.POST.get('object_id')   or '').strip()
+
+    ct, record = _get_object_for_chatter_email(object_type, object_id)
+
+    to_email  = (request.POST.get('to_email')  or '').strip()
+    body      = (request.POST.get('body')      or '').strip()
+    body_html = (request.POST.get('body_html') or '').strip()
+    cc        = (request.POST.get('cc')        or '').strip()
+    bcc       = (request.POST.get('bcc')       or '').strip()
+
+    if not to_email:
+        return JsonResponse({'success': False, 'error': 'O destinatário (to_email) é obrigatório.'})
+    if not body and not request.FILES.getlist('attachments'):
+        return JsonResponse({'success': False, 'error': 'Escreve uma mensagem ou adiciona um ficheiro antes de enviar.'})
+
+    # Usar __str__ do objeto como assunto por omissão
+    subject = str(record)[:150] or 'Mensagem'
+
+    # Guardar ficheiros
+    attachments = []
+    for f in request.FILES.getlist('attachments'):
+        rel  = f'chatter/{object_id}/{f.name}'
+        path = default_storage.save(rel, ContentFile(f.read()))
+        url  = default_storage.url(path)
+        mime = mimetypes.guess_type(f.name)[0] or 'application/octet-stream'
+        with default_storage.open(path, 'rb') as fp:
+            content = fp.read()
+        attachments.append({
+            'filename' : f.name,
+            'url'      : url,
+            'size'     : f.size,
+            'mime_type': mime,
+            'content'  : content,
+        })
+
+    # Threading — ligar ao fio de conversa existente
+    from apps.core.models import ChatterMessage as _CM
+    thread_msgs = (
+        _CM.objects
+        .filter(content_type=ct, object_id=object_id, message_type='EMAIL')
+        .exclude(message_id='')
+        .order_by('created_at')
+        .values_list('message_id', flat=True)
+    )
+    thread_ids  = list(thread_msgs)
+    in_reply_to = thread_ids[-1] if thread_ids else ''
+    references  = ' '.join(thread_ids) if thread_ids else ''
+    if thread_ids and not subject.startswith('Re:'):
+        subject = f'Re: {subject}'
+
+    result = send_email_for_record(
+        user=request.user,
+        record=record,
+        to_email=to_email,
+        subject=subject,
+        body=body,
+        body_html=body_html or None,
+        attachments=attachments,
+        cc=cc,
+        bcc=bcc,
+        in_reply_to=in_reply_to,
+        references=references,
+    )
+
+    if not result['success']:
+        return JsonResponse(result)
+
+    from apps.core.models import ChatterMessage
+    em = ChatterMessage.objects.filter(
+        content_type=ct,
+        object_id=object_id,
+        message_type='EMAIL',
+        message_id=result['message_id'],
+    ).select_related('author').first()
+
+    email_data = None
+    if em:
+        author = em.author
+        email_data = {
+            'id':          str(em.id),
+            'direction':   em.direction,
+            'from_email':  em.from_email,
+            'to_email':    em.to_email,
+            'cc_emails':   em.cc_emails or '',
+            'bcc_emails':  em.bcc_emails or '',
+            'subject':     em.subject,
+            'body':        em.body,
+            'body_html':   em.body_html or '',
+            'attachments': em.attachments or [],
+            'sent_by':     author.get_full_name() or author.username if author else None,
+            'sent_by_initials': ''.join(
+                p[0].upper() for p in ((author.get_full_name() or author.username).split()[:2])
+            ) if author else '?',
+            'sent_at':     em.sent_at.isoformat() if em.sent_at else em.created_at.isoformat(),
+        }
+
+    return JsonResponse({'success': True, 'email': email_data})
+
+
+@login_required
+@require_http_methods(['POST'])
+def chatter_email_poll(request):
+    """
+    POST /api/chatter/emails/poll/
+    Verifica o IMAP do utilizador e guarda respostas inbound para o objeto indicado.
+
+    Body JSON: { "object_type": "crm.lead", "object_id": "<uuid>" }
+    """
+    import json as _json
+    from apps.core.models import ChatterMessage
+    from apps.core.email_utils import poll_imap_replies_for_user
+
+    try:
+        data = _json.loads(request.body)
+    except _json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+
+    object_type = (data.get('object_type') or '').strip()
+    object_id   = (data.get('object_id')   or '').strip()
+
+    ct, record = _get_object_for_chatter_email(object_type, object_id)
+
+    try:
+        config = request.user.email_config
+    except Exception:
+        return JsonResponse({'success': False, 'error': 'Sem configuração de email. Configura o SMTP no teu perfil.'})
+
+    if not config.is_active or not config.has_smtp_configured:
+        return JsonResponse({'success': False, 'error': 'Configuração de email inativa ou incompleta.'})
+
+    known_ids = set(
+        ChatterMessage.objects
+        .filter(
+            content_type=ct,
+            object_id=object_id,
+            message_type='EMAIL',
+            direction=ChatterMessage.DIRECTION_OUTBOUND,
+        )
+        .exclude(message_id='')
+        .values_list('message_id', flat=True)
+    )
+
+    if not known_ids:
+        return JsonResponse({
+            'success':    True,
+            'new_emails': [],
+            'count':      0,
+            'message':    'Ainda não enviaste nenhum email para este registo.',
+        })
+
+    try:
+        inbound = poll_imap_replies_for_user(config, known_message_ids=known_ids)
+    except Exception as e:
+        logger.error('chatter_email_poll: erro IMAP para %s %s: %s', object_type, object_id, e)
+        return JsonResponse({'success': False, 'error': f'Erro ao ligar ao servidor IMAP: {e}'})
+
+    new_emails = []
+    for em_data in inbound:
+        # Verificar se já existe pelo message_id
+        if ChatterMessage.objects.filter(
+            content_type=ct,
+            object_id=object_id,
+            message_id=em_data.get('message_id', ''),
+            message_type='EMAIL',
+        ).exists():
+            continue
+
+        em = ChatterMessage.objects.create(
+            content_type=ct,
+            object_id=object_id,
+            message_type='EMAIL',
+            direction=ChatterMessage.DIRECTION_INBOUND,
+            from_email=em_data.get('from_email', ''),
+            to_email=em_data.get('to_email', ''),
+            subject=em_data.get('subject', ''),
+            body=em_data.get('body', ''),
+            body_html=em_data.get('body_html', ''),
+            message_id=em_data.get('message_id', ''),
+            author=None,
+        )
+        new_emails.append({
+            'id':          str(em.id),
+            'direction':   em.direction,
+            'from_email':  em.from_email,
+            'to_email':    em.to_email,
+            'cc_emails':   em.cc_emails or '',
+            'bcc_emails':  em.bcc_emails or '',
+            'subject':     em.subject,
+            'body':        em.body,
+            'body_html':   em.body_html or '',
+            'attachments': [],
+            'sent_by':     None,
+            'sent_by_initials': '?',
+            'sent_at':     em.created_at.isoformat(),
+        })
+
+    return JsonResponse({
+        'success':    True,
+        'new_emails': new_emails,
+        'count':      len(new_emails),
+    })
+
+
+@login_required
+@require_http_methods(['GET'])
+def chatter_email_templates(request):
+    """
+    GET /api/chatter/email-templates/?object_type=crm.lead
+    Devolve templates de email disponíveis (filtrados pelo módulo se possível).
+    """
+    from apps.core.models import EmailTemplate
+
+    object_type = (request.GET.get('object_type') or '').strip()
+    app_label   = object_type.split('.')[0] if '.' in object_type else ''
+
+    # Tenta filtrar pelo módulo; se não houver field module, devolve todos
+    qs = EmailTemplate.objects.filter(is_active=True).order_by('name')
+    if app_label:
+        try:
+            qs_filtered = qs.filter(module__iexact=app_label)
+            if qs_filtered.exists():
+                qs = qs_filtered
+        except Exception:
+            pass  # campo module não existe — devolve todos
+
+    templates = [{
+        'id':        str(t.id),
+        'name':      t.name,
+        'subject':   getattr(t, 'subject', ''),
+        'body':      getattr(t, 'body', ''),
+        'body_html': getattr(t, 'body_html', '') or '',
+    } for t in qs]
+
+    return JsonResponse({'templates': templates})

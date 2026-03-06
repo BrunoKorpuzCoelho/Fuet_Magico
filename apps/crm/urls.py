@@ -27,6 +27,7 @@ urlpatterns = [
     
     # Lead Actions (API)
     path('leads/<uuid:lead_id>/change-stage/', views.lead_change_stage, name='lead_change_stage'),
+    path('leads/<uuid:lead_id>/create-quote/', views.lead_create_quote, name='lead_create_quote'),
     
     # Configuração
     path('lost-reasons/', views.lost_reasons_list_view, name='lost_reasons_list'),

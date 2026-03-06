@@ -220,6 +220,48 @@ TEMPLATES = [
 </p>''',
     },
 
+    # ══════════════════════════════════════
+    # 5. Envio de Orçamento (SALES)
+    # ══════════════════════════════════════
+    {
+        'name': 'Envio de Orçamento',
+        'module': 'SALES',
+        'language': 'pt_PT',
+        'default_body_path': 'defaults/sales_quotation.html',
+        'subject': 'Orçamento {{2}}',
+        'available_placeholders': {
+            '1': {'field': 'order.client.name',    'fallback': 'Cliente'},
+            '2': {'field': 'order.order_number',   'fallback': 'o seu orçamento'},
+            '3': {'field': 'order.total',          'fallback': ''},
+        },
+        'body_html': '''<p style="margin: 0 0 16px 0;">Olá <strong style="color: #f9fafb;">{{1}}</strong>,</p>
+
+<p style="margin: 0 0 16px 0;">
+    Temos o prazer de lhe enviar o orçamento <strong style="color: #dbc693;">{{2}}</strong>,
+    conforme solicitado.
+</p>
+
+<p style="margin: 0 0 16px 0;">
+    Em anexo encontrará o documento completo com todos os artigos, quantidades,
+    preços e condições de pagamento. Este orçamento é válido por 30 dias a partir
+    da data de emissão.
+</p>
+
+<p style="margin: 0 0 16px 0;">
+    Para confirmar a encomenda ou esclarecer qualquer dúvida, não hesite em
+    responder a este email ou contactar-nos diretamente. Teremos todo o gosto
+    em ajudar.
+</p>
+
+<p style="margin: 0 0 16px 0;">
+    Muito obrigada pela sua preferência. Esperamos ter o prazer de trabalhar consigo.
+</p>
+
+<p style="margin: 0;">
+    Com os melhores cumprimentos,
+</p>''',
+    },
+
 ]
 
 

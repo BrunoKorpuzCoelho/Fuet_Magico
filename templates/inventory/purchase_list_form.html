@@ -742,7 +742,7 @@
 
     <!-- RIGHT COLUMN: Chatter -->
     {% if purchase_list %}
-    {% include 'components/chatter_inventory.html' with object=purchase_list chatter_api_base='/inventory/listas-de-compras' %}
+    {% include 'components/chatter_inventory.html' with object=purchase_list chatter_api_base='/inventory/purchase-lists' %}
     {% else %}
     <!-- Chatter placeholder for unsaved records -->
     <div class="w-full md:w-[30%] border-t md:border-t-0 md:border-l border-gray-700 bg-[#1a2332] h-auto md:h-[80vh] md:sticky md:top-0 flex flex-col">

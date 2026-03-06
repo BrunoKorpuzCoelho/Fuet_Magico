@@ -20,8 +20,8 @@ urlpatterns = [
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('switch-company/<uuid:company_id>/', switch_company, name='switch_company'),
-    path('perfil/', profile_settings, name='profile_settings'),
-    path('perfil/testar-smtp/', test_smtp, name='test_smtp'),
+    path('profile/', profile_settings, name='profile_settings'),
+    path('profile/test-smtp/', test_smtp, name='test_smtp'),
 
     # ── User Management (ADMIN only) ──────────────────────────────────────
     path('users/', user_list_view, name='user_list'),

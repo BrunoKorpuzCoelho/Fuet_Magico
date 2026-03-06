@@ -22,6 +22,11 @@ cryptography==46.0.5
 
 # PDF Generation (para gerar orçamentos/faturas)
 # reportlab==4.2.5
+# xhtml2pdf==0.2.17  # substituído por wkhtmltopdf
+pdfkit==1.0.0
+# ATENÇÃO: wkhtmltopdf precisa ser instalado no sistema operativo:
+#   Linux:   sudo apt install wkhtmltopdf
+#   Windows: https://wkhtmltopdf.org/downloads.html
 
 # PDF Reading/Manipulation (para ler/editar PDFs)
 # pypdf==4.3.1

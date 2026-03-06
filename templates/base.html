@@ -708,8 +708,8 @@
 
             init() {
                 this.load();
-                // polling cada 60 segundos
-                this._pollInterval = setInterval(() => this.load(), 15000);
+                // polling cada 5 minutos
+                this._pollInterval = setInterval(() => this.load(), 300000);
             },
 
             async load() {

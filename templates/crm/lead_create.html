@@ -409,6 +409,7 @@
                         <!-- Novo Orçamento -->
                         <button type="button"
                                 x-show="!isLostStage()"
+                                {% if is_edit and lead %}@click="window.location.href='{% url 'crm:lead_create_quote' lead.id %}'; showActionsMenu = false"{% endif %}
                                 class="w-full text-left px-4 py-3 hover:bg-gray-700 transition-colors border-b border-gray-700 flex items-center gap-2">
                             <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -506,6 +507,7 @@
                     <!-- Novo Orçamento: Sempre visível exceto quando Lost -->
                     <button type="button" 
                             x-show="!isLostStage()"
+                            {% if is_edit and lead %}@click="window.location.href='{% url 'crm:lead_create_quote' lead.id %}'"{% endif %}
                             class="px-4 py-1.5 rounded-md bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors"
                             x-transition>
                         Novo Orçamento

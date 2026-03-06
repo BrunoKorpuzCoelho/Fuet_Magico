@@ -142,6 +142,11 @@ class SaleOrder(AbstractBaseModel):
         max_digits=14, decimal_places=2, default=Decimal('0.00'),
         verbose_name='Subtotal (s/ IVA)',
     )
+    global_discount_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal('0.00'),
+        verbose_name='Desconto Global (%)',
+        help_text='Desconto aplicado ao subtotal total antes do IVA.',
+    )
     tax = models.DecimalField(
         max_digits=14, decimal_places=2, default=Decimal('0.00'),
         verbose_name='IVA',
@@ -149,6 +154,14 @@ class SaleOrder(AbstractBaseModel):
     total = models.DecimalField(
         max_digits=14, decimal_places=2, default=Decimal('0.00'),
         verbose_name='Total (c/ IVA)',
+    )
+
+    # ── Prepayment ────────────────────────────────────────
+    amount_paid = models.DecimalField(
+        max_digits=14, decimal_places=2, default=Decimal('0.00'),
+        blank=True,
+        verbose_name='Valor Pago',
+        help_text='Valor pago antecipadamente (sinal/adiantamento).',
     )
 
     # ── Notes ────────────────────────────────────────────
@@ -216,6 +229,11 @@ class SaleOrder(AbstractBaseModel):
         self.tax = vat
         self.total = sub + vat
         self.save(update_fields=['subtotal', 'tax', 'total'])
+
+    @property
+    def remaining_amount(self):
+        """Amount still owed after prepayment."""
+        return max(self.total - self.amount_paid, Decimal('0.00'))
 
     @property
     def is_editable(self):

@@ -398,7 +398,7 @@ def template_note_create(request, template_id):
                 notification_type='MENTION',
                 title=f'{author_display} mencionou-te numa nota',
                 message=f'Template: {template.display_name}',
-                link=f'/whatsapp/{str(template.id)}/editar/',
+                link=f'/whatsapp/{str(template.id)}/edit/',
                 related_object_id=note.id,
                 is_urgent=urgent,
             )
@@ -599,7 +599,7 @@ def template_activity_create(request, template_id):
             notification_type=_notif_type,
             title=activity.summary,
             message=f'Template: {template.display_name}',
-            link=f'/whatsapp/{str(template.id)}/editar/',
+            link=f'/whatsapp/{str(template.id)}/edit/',
             related_object_id=activity.id,
         )
     except Exception as _e:

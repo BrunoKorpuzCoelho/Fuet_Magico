@@ -2048,7 +2048,7 @@ def movement_edit(request, pk):
             from apps.purchases.models import PurchaseOrder as _PO
             _po = _PO.objects.filter(order_number=movement.origin).first()
             if _po:
-                origin_url = f'/purchases/{_po.pk}/editar/'
+                origin_url = f'/purchases/{_po.pk}/edit/'
         except Exception:
             pass
         if not origin_url:
@@ -2056,7 +2056,7 @@ def movement_edit(request, pk):
                 from apps.sales.models import SaleOrder as _SO
                 _so = _SO.objects.filter(order_number=movement.origin).first()
                 if _so:
-                    origin_url = f'/vendas/{_so.pk}/editar/'
+                    origin_url = f'/sales/{_so.pk}/edit/'
             except Exception:
                 pass
 
@@ -2079,6 +2079,8 @@ def movement_edit(request, pk):
         'scrap_reason_choices': StockMovement.SCRAP_REASON_CHOICES,
         # origin link
         'origin_url': origin_url,
+        'has_smtp':   getattr(getattr(request.user, 'email_config', None), 'has_smtp_configured', False),
+        'chatter_contact_email': getattr(movement.partner, 'email', '') if movement.partner else '',
     })
 
 
@@ -3482,6 +3484,8 @@ def _purchase_list_context(request, purchase_list=None):
         'uom_json':      uom_json,
         'form_errors':   [],
         'activities':    activities,
+        'has_smtp':      getattr(getattr(request.user, 'email_config', None), 'has_smtp_configured', False),
+        'chatter_contact_email': '',
     }
 
 
@@ -3723,7 +3727,7 @@ def purchase_list_note_create(request, pk):
                     notification_type='MENTION',
                     title=f'{author_display} mencionou-te numa nota',
                     message=f'Lista de compras: {pl.name}',
-                    link=f'/inventory/listas-de-compras/{str(pl.id)}/editar/',
+                    link=f'/inventory/purchase-lists/{str(pl.id)}/edit/',
                     related_object_id=note.id,
                     is_urgent=urgent,
                 )

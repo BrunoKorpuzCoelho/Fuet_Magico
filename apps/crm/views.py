@@ -696,6 +696,50 @@ def lead_pipeline_view(request):
 
 
 @login_required
+def lead_create_quote(request, lead_id):
+    """
+    GET /crm/leads/<uuid:lead_id>/create-quote/
+    Cria uma nova SaleOrder (orçamento) a partir da lead, pré-preenchendo
+    o cliente e adicionando nas Notas Internas: título, receita esperada e fecho previsto.
+    Redireciona para o formulário de edição da venda criada.
+    """
+    from apps.sales.models import SaleOrder
+    from apps.core.models import ChatterActivity
+
+    lead = get_object_or_404(Lead, pk=lead_id)
+    company = get_active_company(request)
+
+    # Construir notas internas com info da lead
+    notes_parts = [f"Lead: {lead.title}"]
+    if lead.estimated_value:
+        notes_parts.append(f"Receita esperada: {lead.estimated_value}€")
+    notes_parts.append(
+        f"Fecho previsto: {lead.expected_close_date.strftime('%d/%m/%Y') if lead.expected_close_date else 'Não definido'}"
+    )
+    notes = "\n".join(notes_parts)
+
+    order = SaleOrder(
+        client=lead.contact if lead.contact else None,
+        notes=notes,
+        owner_company=company,
+        status=SaleOrder.Status.DRAFT,
+        document_type=SaleOrder.DocumentType.QUOTATION,
+    )
+    order.save()
+
+    # Registo de atividade na lead
+    ChatterActivity.objects.create(
+        content_object=lead,
+        user=request.user,
+        activity_type='NOTE',
+        description=f'Orçamento {order.order_number} criado a partir desta lead.',
+    )
+
+    messages.success(request, f'Orçamento {order.order_number} criado.')
+    return redirect('sales:order_edit', pk=order.pk)
+
+
+@login_required
 @require_http_methods(["POST"])
 def lead_change_stage(request, lead_id):
     """

@@ -117,6 +117,11 @@ class PurchaseOrder(AbstractBaseModel):
         max_digits=14, decimal_places=2, default=Decimal('0.00'),
         verbose_name='Subtotal (s/ IVA)',
     )
+    global_discount_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal('0.00'),
+        verbose_name='Desconto Global (%)',
+        help_text='Desconto aplicado ao subtotal total antes do IVA.',
+    )
     tax = models.DecimalField(
         max_digits=14, decimal_places=2, default=Decimal('0.00'),
         verbose_name='IVA',

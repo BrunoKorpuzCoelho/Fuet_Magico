@@ -2081,7 +2081,7 @@ function waTemplateActivities(templateId) {
             this.donePopover.saving = true;
             const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
             try {
-                await fetch(`/whatsapp/${templateId}/atividades/${a.id}/concluir/`, {
+                await fetch(`/whatsapp/${templateId}/activities/${a.id}/done/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
                     body: JSON.stringify({ feedback: this.donePopover.feedback }),
@@ -2148,7 +2148,7 @@ function waTemplateActivities(templateId) {
             this.saving = true;
             try {
                 const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-                const resp = await fetch(`/whatsapp/${templateId}/atividades/criar/`, {
+                const resp = await fetch(`/whatsapp/${templateId}/activities/create/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
                     body: JSON.stringify({
@@ -2177,7 +2177,7 @@ function waTemplateActivities(templateId) {
         async deleteActivity(activityId) {
             const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
             try {
-                await fetch(`/whatsapp/${templateId}/atividades/${activityId}/eliminar/`, {
+                await fetch(`/whatsapp/${templateId}/activities/${activityId}/delete/`, {
                     method: 'DELETE',
                     headers: { 'X-CSRFToken': csrf },
                 });
@@ -2209,7 +2209,7 @@ function waTemplateNotesPanel(templateId) {
         async load() {
             this.loading = true;
             try {
-                const res = await fetch(`/whatsapp/${templateId}/notas/`);
+                const res = await fetch(`/whatsapp/${templateId}/notes/`);
                 const data = await res.json();
                 this.notes = data.notes || [];
             } catch (e) {
@@ -2263,7 +2263,7 @@ function waTemplateNotesPanel(templateId) {
             if (!content || this.saving) return;
             this.saving = true;
             try {
-                const res = await fetch(`/whatsapp/${templateId}/notas/criar/`, {
+                const res = await fetch(`/whatsapp/${templateId}/notes/create/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2311,7 +2311,7 @@ function waTemplateFollowersWidget(templateId) {
 
         async load() {
             try {
-                const r = await fetch(`/whatsapp/${this.templateId}/seguidores/`);
+                const r = await fetch(`/whatsapp/${this.templateId}/followers/`);
                 const d = await r.json();
                 this.followers = d.followers || [];
             } catch(e) {}
@@ -2334,7 +2334,7 @@ function waTemplateFollowersWidget(templateId) {
 
         async addFollower(u) {
             try {
-                const r = await fetch(`/whatsapp/${this.templateId}/seguidores/`, {
+                const r = await fetch(`/whatsapp/${this.templateId}/followers/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrf() },
                     body: JSON.stringify({ user_id: u.id }),
@@ -2350,7 +2350,7 @@ function waTemplateFollowersWidget(templateId) {
 
         async removeFollower(userId) {
             try {
-                await fetch(`/whatsapp/${this.templateId}/seguidores/${userId}/remover/`, {
+                await fetch(`/whatsapp/${this.templateId}/followers/${userId}/remove/`, {
                     method: 'DELETE',
                     headers: { 'X-CSRFToken': this.csrf() },
                 });

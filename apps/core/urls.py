@@ -21,6 +21,12 @@ urlpatterns = [
     # Chatter APIs
     path('api/chatter/message/', views.chatter_create_message, name='chatter_create_message'),
     path('api/chatter/whatsapp/', views.chatter_send_whatsapp, name='chatter_send_whatsapp'),
+
+    # Chatter Email APIs (genérico — qualquer modelo via ContentType)
+    path('api/chatter/emails/', views.chatter_email_list, name='chatter_email_list'),
+    path('api/chatter/emails/send/', views.chatter_email_send, name='chatter_email_send'),
+    path('api/chatter/emails/poll/', views.chatter_email_poll, name='chatter_email_poll'),
+    path('api/chatter/email-templates/', views.chatter_email_templates, name='chatter_email_templates'),
     path('api/users/search/', views.users_search_api, name='users_search_api'),
 
     # WhatsApp Webhook (unauthenticated — Meta calls this)

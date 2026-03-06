@@ -274,7 +274,10 @@ def sale_order_edit(request, pk):
         'activities':              chatter_activities,
         'delivery_count':          delivery_count,
         'payment_terms_qs':        payment_terms_qs,
+        'amount_paid_raw':         str(order.amount_paid),  # dot-decimal, safe for <input type="number">
         'selected_payment_term_id': selected_payment_term_id,
+        'has_smtp':                getattr(getattr(request.user, 'email_config', None), 'has_smtp_configured', False),
+        'chatter_contact_email':   order.client.email if order.client else '',
     })
 
 
@@ -285,6 +288,380 @@ def sale_order_edit(request, pk):
 @login_required
 def sale_order_detail(request, pk):
     return redirect('sales:order_edit', pk=pk)
+
+
+# ────────────────────────────────────────────────────────────────────
+# Sale Order — Quotation Report (HTML)
+# ────────────────────────────────────────────────────────────────────
+
+_PT_MONTHS = {
+    1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
+    5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
+    9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro',
+}
+
+
+def _html_to_pdf(html_string: str, request=None, header_html: str = '') -> bytes | None:
+    """Convert an HTML string to PDF bytes using wkhtmltopdf (via pdfkit).
+
+    Requires wkhtmltopdf to be installed on the system:
+      - Windows: https://wkhtmltopdf.org/downloads.html
+      - Linux:   sudo apt install wkhtmltopdf
+
+    Args:
+        header_html: Complete HTML for the repeating page header (--header-html).
+
+    Returns the PDF bytes on success, or None if conversion fails.
+    """
+    import sys
+    import pdfkit
+    from django.conf import settings
+
+    # ── Resolve /static/ URLs to absolute file:// paths ──────────
+    # wkhtmltopdf cannot fetch relative URLs like /static/...
+    # Use STATICFILES_DIRS[0] in dev, STATIC_ROOT in production.
+    static_dir = (
+        settings.STATICFILES_DIRS[0]
+        if settings.DEBUG and settings.STATICFILES_DIRS
+        else settings.STATIC_ROOT
+    )
+    static_file_base = 'file:///' + str(static_dir).replace('\\', '/')
+    # Replace both quoted and unquoted occurrences
+    html_string = html_string.replace('/static/', static_file_base + '/')
+
+    # ── Footer HTML for pagination ──────────────────────────────
+    footer_html = '''<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+body { margin: 0; padding: 0 18mm; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; }
+</style></head><body>
+<table style="width:100%; border-collapse:collapse;">
+<tr>
+  <td style="border-top:2px solid #dbc693; padding-top:6px; font-size:10px; font-style:italic; color:#7a6e64; letter-spacing:0.3px;">
+    Obrigada pela confiança. Com carinho, Fuet Mágico by Daisy
+  </td>
+  <td style="border-top:2px solid #dbc693; padding-top:6px; font-size:10px; color:#7a6e64; letter-spacing:0.5px; text-align:right; white-space:nowrap;">
+    Página <span class="page"></span> de <span class="topage"></span>
+  </td>
+</tr>
+</table>
+</body></html>'''
+
+    import tempfile
+    import os
+
+    # Write footer HTML to temp file
+    footer_tmp = tempfile.NamedTemporaryFile(
+        mode='w', suffix='.html', encoding='utf-8', delete=False
+    )
+    footer_tmp.write(footer_html)
+    footer_tmp.close()
+    footer_path = footer_tmp.name
+
+    # Write header HTML to temp file (if provided)
+    header_path = None
+    if header_html:
+        header_tmp = tempfile.NamedTemporaryFile(
+            mode='w', suffix='.html', encoding='utf-8', delete=False
+        )
+        header_tmp.write(header_html)
+        header_tmp.close()
+        header_path = header_tmp.name
+
+    options = {
+        'enable-local-file-access': '',
+        'print-media-type': '',
+        'no-outline': '',
+        'quiet': '',
+        'page-size': 'A4',
+        'margin-top': '32mm' if header_path else '0',
+        'margin-bottom': '18mm',
+        'margin-left': '0',
+        'margin-right': '0',
+        'footer-html': footer_path,
+        'footer-spacing': '0',
+    }
+    if header_path:
+        options['header-html'] = header_path
+        options['header-spacing'] = '0'
+
+    # On Windows the installer doesn't add the binary to PATH automatically.
+    # Use explicit path; on Linux wkhtmltopdf is expected to be in PATH.
+    config = None
+    if sys.platform == 'win32':
+        config = pdfkit.configuration(
+            wkhtmltopdf=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+        )
+
+    # pdfkit.from_string() writes to a temp file using the system default encoding
+    # (Windows-1252 on Windows), which garbles UTF-8 characters.
+    # Write the temp file ourselves in explicit UTF-8 and use from_file() instead.
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode='w', suffix='.html', encoding='utf-8', delete=False
+        ) as tmp:
+            tmp.write(html_string)
+            tmp_path = tmp.name
+        try:
+            return pdfkit.from_file(tmp_path, False, options=options, configuration=config)
+        finally:
+            os.unlink(tmp_path)
+            os.unlink(footer_path)
+            if header_path:
+                os.unlink(header_path)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning('wkhtmltopdf conversion error: %s', exc)
+        for p in [footer_path, header_path]:
+            if p:
+                try:
+                    os.unlink(p)
+                except OSError:
+                    pass
+        return None
+
+
+def _get_logo_base64() -> str:
+    """Return the brand logo as a base64 data URI so PDFs have no external dependencies."""
+    import base64
+    import os
+    from django.conf import settings
+    static_dir = (
+        settings.STATICFILES_DIRS[0]
+        if settings.DEBUG and settings.STATICFILES_DIRS
+        else settings.STATIC_ROOT
+    )
+    logo_path = os.path.join(
+        str(static_dir), 'brand', 'watermarks', 'black', 'watermark-logo-secondary.png'
+    )
+    try:
+        with open(logo_path, 'rb') as f:
+            data = base64.b64encode(f.read()).decode('utf-8')
+        return f'data:image/png;base64,{data}'
+    except Exception:
+        return ''
+
+
+def _fmt_date_pt(d):
+    if not d:
+        return ''
+    return f"{d.day:02d} de {_PT_MONTHS[d.month]} de {d.year}"
+
+
+@login_required
+def sale_order_quotation_report(request, pk):
+    order = get_object_or_404(
+        filter_by_company(
+            SaleOrder.objects.select_related('client', 'owner_company')
+                      .prefetch_related('lines__product', 'lines__uom'),
+            request,
+        ),
+        pk=pk,
+    )
+    from django.templatetags.static import static
+    return render(request, 'sales/quotation_report.html', {
+        'order':                  order,
+        'company':                order.owner_company,
+        'lines':                  order.lines.select_related('product', 'uom').order_by('created_at'),
+        'order_date_formatted':   _fmt_date_pt(order.order_date),
+        'delivery_date_formatted': _fmt_date_pt(order.delivery_date),
+        'logo_src':               request.build_absolute_uri(static('brand/watermarks/black/watermark-logo-secondary.png')),
+        'pdf_mode':               False,
+    })
+
+
+@login_required
+@require_POST
+def sale_order_send_quotation(request, pk):
+    """Send the quotation by email with the report attached as an HTML file.
+
+    Accepts both multipart/form-data (rich compose modal) and application/json (legacy).
+    FormData fields: to_email, subject, body, body_html, cc, bcc, extra_attachments (files).
+    """
+    import html as _html
+    import mimetypes
+    from django.core.files.storage import default_storage
+    from django.core.files.base import ContentFile
+    from django.template.loader import render_to_string
+    from apps.core.email_utils import send_email_for_record
+
+    order = get_object_or_404(
+        filter_by_company(
+            SaleOrder.objects.select_related('client', 'owner_company')
+                     .prefetch_related('lines__product', 'lines__uom'),
+            request,
+        ),
+        pk=pk,
+    )
+
+    # ── Parse request (FormData or JSON) ──────────────────────────
+    if 'application/json' in (request.content_type or ''):
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({'success': False, 'error': 'Pedido inválido.'}, status=400)
+        to_email  = (data.get('to_email')  or '').strip()
+        subject   = (data.get('subject')   or f'Orçamento {order.order_number}').strip()
+        body      = (data.get('body')      or '').strip()
+        body_html = (data.get('body_html') or '').strip()
+        cc        = (data.get('cc')        or '').strip()
+        bcc       = (data.get('bcc')       or '').strip()
+        extra_files = []
+    else:
+        to_email  = (request.POST.get('to_email')  or '').strip()
+        subject   = (request.POST.get('subject')   or f'Orçamento {order.order_number}').strip()
+        body      = (request.POST.get('body')      or '').strip()
+        body_html = (request.POST.get('body_html') or '').strip()
+        cc        = (request.POST.get('cc')        or '').strip()
+        bcc       = (request.POST.get('bcc')       or '').strip()
+        extra_files = request.FILES.getlist('extra_attachments')
+
+    if not to_email:
+        return JsonResponse({'success': False, 'error': 'O email do destinatário é obrigatório.'})
+
+    # ── Normalise body / body_html ────────────────────────────────
+    if not body_html and body:
+        body_html = ''.join(
+            f'<p style="margin: 0 0 16px 0;">{_html.escape(para)}</p>'
+            for para in body.split('\n') if para.strip()
+        )
+    if body_html and not body:
+        body = re.sub(r'<[^>]+>', '', body_html).strip()
+
+    # ── Auto-attach the quotation as PDF ───────────────────────────
+    logo_b64 = _get_logo_base64()
+    report_html = render_to_string('sales/quotation_report.html', {
+        'order':                   order,
+        'company':                 order.owner_company,
+        'lines':                   order.lines.select_related('product', 'uom').order_by('created_at'),
+        'order_date_formatted':    _fmt_date_pt(order.order_date),
+        'delivery_date_formatted': _fmt_date_pt(order.delivery_date),
+        'logo_src':                logo_b64,
+        'pdf_mode':                True,
+    }, request=request)
+
+    # Header HTML for wkhtmltopdf --header-html (repeats on every page)
+    header_html = f'''<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+body {{ margin: 0; padding: 0 18mm; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; }}
+</style></head><body>
+<table style="width:100%; border-collapse:collapse;">
+<tr>
+  <td style="width:110px; vertical-align:middle; padding-bottom:14px; border-bottom:2.5px solid #dbc693;">
+    <img src="{logo_b64}" alt="Fuet Mágico" style="height:90px; width:auto; display:block;">
+  </td>
+  <td style="vertical-align:middle; text-align:center; padding:0 20px 14px; border-bottom:2.5px solid #dbc693;">
+    <div style="font-size:11px; color:#7a6e64; font-style:italic; letter-spacing:1px; margin-bottom:5px;">Criações refinadas &amp; irresistíveis</div>
+    <div style="font-size:20px; font-weight:600; color:#b89a5a; text-transform:uppercase; letter-spacing:3.5px;">Orçamento de Encomenda</div>
+  </td>
+  <td style="width:90px; padding-bottom:14px; border-bottom:2.5px solid #dbc693;"></td>
+</tr>
+</table>
+</body></html>'''
+
+    pdf_bytes = _html_to_pdf(report_html, request, header_html=header_html)
+    if pdf_bytes:
+        attachments = [{
+            'filename':  f'orcamento_{order.order_number}.pdf',
+            'content':   pdf_bytes,
+            'mime_type': 'application/pdf',
+        }]
+    else:
+        # Fallback to HTML if PDF conversion fails
+        attachments = [{
+            'filename':  f'orcamento_{order.order_number}.html',
+            'content':   report_html.encode('utf-8'),
+            'mime_type': 'text/html',
+        }]
+
+    # ── Save & attach extra uploaded files ────────────────────────
+    for f in extra_files:
+        rel_path = f'chatter/{order.pk}/{f.name}'
+        saved_path = default_storage.save(rel_path, ContentFile(f.read()))
+        url = default_storage.url(saved_path)
+        mime = mimetypes.guess_type(f.name)[0] or 'application/octet-stream'
+        with default_storage.open(saved_path, 'rb') as fp:
+            content = fp.read()
+        attachments.append({
+            'filename':  f.name,
+            'url':       url,
+            'size':      f.size,
+            'mime_type': mime,
+            'content':   content,
+        })
+
+    result = send_email_for_record(
+        user=request.user,
+        record=order,
+        to_email=to_email,
+        subject=subject,
+        body=body,
+        body_html=body_html or None,
+        to_name=order.client.name if order.client else '',
+        attachments=attachments,
+        cc=cc,
+        bcc=bcc,
+    )
+    return JsonResponse(result)
+
+
+@login_required
+@require_http_methods(['GET'])
+def sale_order_quotation_email_compose(request, pk):
+    """Return compose data (pre-filled fields + preview HTML) for the email modal."""
+    from apps.core.models import EmailTemplate
+    from apps.core.email_utils import wrap_email_with_layout
+    from django.urls import reverse
+
+    order = get_object_or_404(
+        filter_by_company(
+            SaleOrder.objects.select_related('client', 'owner_company'),
+            request,
+        ),
+        pk=pk,
+    )
+
+    client_name  = order.client.name  if order.client else 'Cliente'
+    order_number = order.order_number or ''
+    subject      = f'Orçamento {order_number}'
+    to_email     = order.client.email if order.client else ''
+
+    # Resolve body from the "Envio de Orçamento" email template
+    body_html = ''
+    tmpl = EmailTemplate.objects.filter(
+        module='SALES',
+        default_body_path='defaults/sales_quotation.html',
+    ).first()
+    if tmpl and tmpl.body_html:
+        body_html = (
+            tmpl.body_html
+            .replace('{{1}}', client_name)
+            .replace('{{2}}', order_number)
+        )
+
+    # Build preview: body wrapped in EmailLayout envelope
+    preview_html = body_html
+    if body_html:
+        try:
+            preview_html, _ = wrap_email_with_layout(
+                body_html=body_html,
+                user=request.user,
+                record=order,
+                subject=subject,
+            )
+        except Exception:
+            pass  # fall back to plain body_html
+
+    return JsonResponse({
+        'to_email':          to_email,
+        'to_name':           client_name,
+        'subject':           subject,
+        'body_html':         body_html,
+        'preview_html':      preview_html,
+        'quotation_url':     request.build_absolute_uri(
+            reverse('sales:order_quotation_report', args=[str(pk)])
+        ),
+        'quotation_filename': f'orcamento_{order_number}.pdf',
+    })
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -669,7 +1046,7 @@ def sale_order_note_create(request, pk):
                     notification_type='MENTION',
                     title=f'{author_display} mencionou-te numa nota',
                     message=f'Venda: {order.order_number}',
-                    link=f'/vendas/{str(order.id)}/editar/',
+                    link=f'/sales/{str(order.id)}/edit/',
                     related_object_id=note.id,
                     is_urgent=urgent,
                 )

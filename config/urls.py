@@ -34,7 +34,7 @@ urlpatterns += i18n_patterns(
     path('whatsapp/', include('apps.whatsapp.urls')),
     path('inventory/', include('apps.inventory.urls')),
     path('purchases/', include('apps.purchases.urls')),
-    path('vendas/', include('apps.sales.urls')),
+    path('sales/', include('apps.sales.urls')),
     path('accounts/', include('apps.accounts.urls')),
     path('', include('apps.website.urls')),
     prefix_default_language=False,

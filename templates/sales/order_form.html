@@ -4,7 +4,27 @@
 {% block extra_css %}
 <!-- Air Datepicker -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/air-datepicker@3.5.3/air-datepicker.css">
+<!-- Quill editor (quotation email compose) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css">
 <style>
+    /* Quill toolbar dark theme inside modal */
+    #quotation-quill-editor .ql-toolbar.ql-snow {
+        background: #111827;
+        border-color: #374151;
+    }
+    #quotation-quill-editor .ql-container.ql-snow {
+        border-color: #374151;
+        background: #1a2332;
+        color: #d1d5db;
+    }
+    #quotation-quill-editor .ql-editor { color: #d1d5db; min-height: 180px; }
+    #quotation-quill-editor .ql-editor.ql-blank::before { color: #6b7280; }
+    #quotation-quill-editor .ql-picker, #quotation-quill-editor .ql-stroke { stroke: #9ca3af; }
+    #quotation-quill-editor .ql-fill { fill: #9ca3af; }
+    #quotation-quill-editor button:hover .ql-stroke,
+    #quotation-quill-editor button.ql-active .ql-stroke { stroke: #dbc693 !important; }
+    #quotation-quill-editor button:hover .ql-fill,
+    #quotation-quill-editor button.ql-active .ql-fill { fill: #dbc693 !important; }
     .air-datepicker {
         --adp-font-family: inherit;
         --adp-font-size: 14px;
@@ -98,7 +118,7 @@
         <div class="px-8 py-6">
 
             <!-- ── Botões de acção + Status ─────────────────────── -->
-            <div class="flex items-center justify-between mb-8" x-data="{ showCancelModal: false }">
+            <div class="flex items-center justify-between mb-8" x-data="{ showCancelModal: false, showEmailModal: false, emailSending: false, emailError: '', emailSuccess: false }">
 
                 <!-- Left: action buttons -->
                 <div class="flex items-center gap-3">
@@ -118,6 +138,27 @@
                                 class="px-4 py-1.5 rounded-md border border-red-500 text-red-500 bg-transparent hover:bg-red-500/10 text-sm font-medium transition-colors">
                             Cancelar
                         </button>
+                        <!-- Enviar Email -->
+                        <button type="button"
+                                @click="showEmailModal = true; emailError = ''; emailSuccess = false"
+                                class="px-4 py-1.5 rounded-md border border-[#dbc693] text-[#dbc693] bg-transparent hover:bg-[#dbc693]/10 text-sm font-medium transition-colors flex items-center gap-1.5">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                            Enviar Email
+                        </button>
+                        <!-- Ver Orçamento -->
+                        <a href="{% url 'sales:order_quotation_report' order.pk %}" target="_blank"
+                           class="px-4 py-1.5 rounded-md border border-gray-600 text-gray-400 bg-transparent hover:bg-gray-700/40 text-sm font-medium transition-colors flex items-center gap-1.5">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            Ver Orçamento
+                        </a>
 
                         {% elif order.status == 'confirmed' %}
                         <!-- Create Invoice -->
@@ -218,6 +259,213 @@
                     </div>
                 </div>
                 {% endif %}
+
+                <!-- ── Quotation Email Compose Modal ──────────────────────── -->
+                {% if order %}
+                <div x-show="showEmailModal"
+                     style="display:none;"
+                     class="fixed inset-0 z-[300] flex items-center justify-center p-4"
+                     x-data="quotationEmailCompose('{{ order.pk }}')"
+                     x-effect="if(showEmailModal && !loaded && !loading) fetchData()"
+                     @keydown.escape.window="showEmailModal = false; resetCompose()">
+
+                    <!-- Backdrop -->
+                    <div class="absolute inset-0 bg-black/75 backdrop-blur-sm"
+                         @click="showEmailModal = false; resetCompose()"></div>
+
+                    <!-- Dialog -->
+                    <div class="relative w-full max-w-3xl flex flex-col bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden"
+                         style="height: min(88vh, 720px);"
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+                         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-150"
+                         x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                         x-transition:leave-end="opacity-0 scale-95 translate-y-2"
+                         @click.stop>
+
+                        <!-- ── Header ─────────────────────────────────────────── -->
+                        <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-700/60 flex-shrink-0">
+                            <div class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+                                 style="background:rgba(219,198,147,.12);border:1px solid rgba(219,198,147,.3);">
+                                <svg class="h-4.5 w-4.5 text-[#dbc693]" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:18px;height:18px;">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="text-sm font-semibold text-white leading-tight">Enviar Orçamento por Email</h3>
+                                <p class="text-xs text-gray-500 truncate">{{ order.order_number }}</p>
+                            </div>
+                            <button type="button" @click="showEmailModal = false; resetCompose()"
+                                    class="ml-auto p-1.5 text-gray-500 hover:text-gray-300 rounded-lg transition-colors flex-shrink-0">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- ── Loading skeleton ───────────────────────────────── -->
+                        <div x-show="loading" class="flex-1 flex flex-col items-center justify-center gap-3 text-gray-500">
+                            <svg class="animate-spin h-7 w-7 text-[#dbc693]" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                            </svg>
+                            <span class="text-sm">A preparar email…</span>
+                        </div>
+
+                        <!-- ── Compose area (when loaded) ─────────────────────── -->
+                        <div x-show="loaded && !loading" class="flex-1 flex flex-col overflow-hidden">
+
+                            <!-- Recipients + Subject ──────────────────────────── -->
+                            <div class="px-5 py-3 space-y-1.5 border-b border-gray-700/40 flex-shrink-0">
+
+                                <!-- To row -->
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-gray-500 w-14 flex-shrink-0 text-right font-medium">Para</span>
+                                    <input type="email" x-model="toEmail"
+                                           class="flex-1 h-8 bg-transparent border-0 border-b border-gray-700 text-sm text-gray-200 placeholder-gray-600 focus:border-[#dbc693] focus:outline-none px-1 transition-colors"
+                                           placeholder="email@exemplo.pt">
+                                    <button type="button" @click="showCC = !showCC"
+                                            :class="showCC ? 'text-[#dbc693] border-[#dbc693]/40' : 'text-gray-500 border-gray-700'"
+                                            class="px-2 py-0.5 text-xs border rounded transition-colors hover:text-[#dbc693]">CC</button>
+                                    <button type="button" @click="showBCC = !showBCC"
+                                            :class="showBCC ? 'text-[#dbc693] border-[#dbc693]/40' : 'text-gray-500 border-gray-700'"
+                                            class="px-2 py-0.5 text-xs border rounded transition-colors hover:text-[#dbc693]">BCC</button>
+                                </div>
+
+                                <!-- CC row -->
+                                <div x-show="showCC" x-transition class="flex items-center gap-3">
+                                    <span class="text-xs text-gray-500 w-14 flex-shrink-0 text-right font-medium">CC</span>
+                                    <input type="text" x-model="cc"
+                                           class="flex-1 h-8 bg-transparent border-0 border-b border-gray-700 text-sm text-gray-200 placeholder-gray-600 focus:border-[#dbc693] focus:outline-none px-1 transition-colors"
+                                           placeholder="email1@x.com, email2@x.com">
+                                </div>
+
+                                <!-- BCC row -->
+                                <div x-show="showBCC" x-transition class="flex items-center gap-3">
+                                    <span class="text-xs text-gray-500 w-14 flex-shrink-0 text-right font-medium">BCC</span>
+                                    <input type="text" x-model="bcc"
+                                           class="flex-1 h-8 bg-transparent border-0 border-b border-gray-700 text-sm text-gray-200 placeholder-gray-600 focus:border-[#dbc693] focus:outline-none px-1 transition-colors"
+                                           placeholder="email1@x.com, email2@x.com">
+                                </div>
+
+                                <!-- Subject row -->
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-gray-500 w-14 flex-shrink-0 text-right font-medium">Assunto</span>
+                                    <input type="text" x-model="subject"
+                                           class="flex-1 h-8 bg-transparent border-0 border-b border-gray-700 text-sm text-gray-200 placeholder-gray-600 focus:border-[#dbc693] focus:outline-none px-1 transition-colors">
+                                </div>
+                            </div>
+
+                            <!-- Tab bar ───────────────────────────────────────── -->
+                            <div class="flex border-b border-gray-700/40 flex-shrink-0 bg-gray-900/60">
+                                <button type="button" @click="switchTab('compose')"
+                                        :class="tab === 'compose' ? 'border-[#dbc693] text-[#dbc693]' : 'border-transparent text-gray-500 hover:text-gray-300'"
+                                        class="px-5 py-2.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
+                                    Escrever
+                                </button>
+                                <button type="button" @click="switchTab('preview')"
+                                        :class="tab === 'preview' ? 'border-[#dbc693] text-[#dbc693]' : 'border-transparent text-gray-500 hover:text-gray-300'"
+                                        class="px-5 py-2.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                    </svg>
+                                    Pré-visualizar
+                                </button>
+                            </div>
+
+                            <!-- Compose tab (Quill editor) ──────────────────── -->
+                            <div x-show="tab === 'compose'" class="flex-1 overflow-hidden flex flex-col">
+                                <div id="quotation-quill-editor" class="flex-1 overflow-y-auto"
+                                     style="background:#1a2332; font-size:14px; color:#d1d5db;"></div>
+                            </div>
+
+                            <!-- Preview tab (iframe) ─────────────────────────── -->
+                            <div x-show="tab === 'preview'" class="flex-1 overflow-hidden" style="display:none;">
+                                <iframe x-ref="previewFrame"
+                                        class="w-full h-full border-0"
+                                        sandbox="allow-same-origin"
+                                        style="background:#111827;"></iframe>
+                            </div>
+
+                            <!-- Attachments bar ──────────────────────────────── -->
+                            <div class="flex items-center gap-2 px-5 py-2.5 border-t border-gray-700/40 flex-shrink-0 flex-wrap min-h-[44px] bg-gray-900/40">
+                                <!-- Fixed: quotation attachment chip -->
+                                <a :href="quotationUrl" target="_blank"
+                                   class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-gray-300 border border-gray-600/60 bg-black/20 hover:bg-black/30 transition-colors">
+                                    <svg class="h-3 w-3 text-[#dbc693] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                                    </svg>
+                                    <span x-text="quotationFilename" class="max-w-[180px] truncate"></span>
+                                    <span class="text-[10px] text-gray-600">· automático</span>
+                                </a>
+                                <!-- Extra uploaded files -->
+                                <template x-for="(f, i) in extraFiles" :key="i">
+                                    <div class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs text-gray-300 border border-gray-600/60 bg-black/20">
+                                        <span x-text="fileIcon(f.type)"></span>
+                                        <span class="max-w-[120px] truncate" x-text="f.name"></span>
+                                        <span class="text-[10px] text-gray-500" x-text="fileSize(f.size)"></span>
+                                        <button type="button" @click="extraFiles.splice(i, 1)"
+                                                class="ml-0.5 text-gray-500 hover:text-red-400 leading-none text-base">&times;</button>
+                                    </div>
+                                </template>
+                                <!-- Add attachment -->
+                                <label class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs text-gray-500 border border-dashed border-gray-700 hover:border-[#dbc693]/50 hover:text-[#dbc693] cursor-pointer transition-colors">
+                                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                    Anexar
+                                    <input type="file" multiple class="hidden" x-ref="fileInput" @change="addFiles($event)">
+                                </label>
+                            </div>
+                        </div><!-- /compose area -->
+
+                        <!-- ── Footer ─────────────────────────────────────────── -->
+                        <div class="flex items-center px-6 py-4 border-t border-gray-700/60 bg-gray-800/40 flex-shrink-0 gap-3">
+                            <!-- Status messages -->
+                            <div x-show="composeError" x-text="composeError"
+                                 class="text-sm text-red-400 flex-1 truncate"></div>
+                            <div x-show="sent && !composeError"
+                                 class="text-sm text-green-400 flex items-center gap-1.5 flex-1">
+                                <svg class="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Email enviado com sucesso!
+                            </div>
+                            <div x-show="!composeError && !sent" class="flex-1 text-xs text-gray-600">
+                                O orçamento é enviado como anexo HTML (abre no browser, imprimível como PDF)
+                            </div>
+                            <!-- Actions -->
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                <button type="button" @click="showEmailModal = false; resetCompose()"
+                                        class="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white bg-gray-700/50 hover:bg-gray-700 rounded-lg transition-colors">
+                                    Cancelar
+                                </button>
+                                <button type="button"
+                                        :disabled="sending || sent || !toEmail"
+                                        @click="send()"
+                                        class="px-5 py-2 text-sm font-semibold text-[#1a1a2e] bg-[#dbc693] hover:bg-[#c9b07e] rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <svg x-show="!sending" class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                                    </svg>
+                                    <svg x-show="sending" class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                    </svg>
+                                    <span x-text="sent ? 'Enviado!' : (sending ? 'A enviar…' : 'Enviar')"></span>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div><!-- /dialog -->
+                </div><!-- /modal overlay -->
+                {% endif %}
+
             </div><!-- /action bar -->
 
             <!-- ── Erro de validação ─────────────────────────── -->
@@ -493,6 +741,28 @@
                         {% endif %}
                     </div>
 
+                    <!-- Valor Pago (Sinal / Adiantamento) -->
+                    <div>
+                        <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500" for="id_amount_paid">
+                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Valor Pago (Sinal)
+                        </label>
+                        {% if order and order.status != 'draft' %}
+                        <div class="flex h-9 w-full items-center px-3 text-sm text-green-400 border border-gray-700 rounded-md bg-[#1a2332] opacity-60 cursor-not-allowed">
+                            {{ order.amount_paid|floatformat:2 }} €
+                        </div>
+                        <input type="hidden" name="amount_paid" value="{{ order.amount_paid }}">
+                        {% else %}
+                        <input type="number" name="amount_paid" id="id_amount_paid"
+                               step="0.01" min="0"
+                               value="{% if order %}{{ amount_paid_raw }}{% else %}0.00{% endif %}"
+                               class="flex h-9 w-full rounded-md border border-gray-700 bg-[#1a2332] px-3 text-sm text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                        {% endif %}
+                    </div>
+
                     <!-- Notas Internas -->
                     <div>
                         <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500" for="id_notes">
@@ -618,9 +888,17 @@
                     <span class="text-xs text-gray-500 uppercase tracking-wider">IVA</span>
                     <span class="text-sm text-gray-300">{{ order.tax|floatformat:2 }} €</span>
                 </div>
-                <div class="flex items-center justify-between px-6 py-3">
+                <div class="flex items-center justify-between px-6 py-3 border-b border-gray-700/60">
                     <span class="text-xs text-gray-400 uppercase tracking-wider font-semibold">Total</span>
                     <span class="text-xl font-bold text-white">{{ order.total|floatformat:2 }} €</span>
+                </div>
+                <div class="flex items-center justify-between px-6 py-2 border-b border-gray-700/60">
+                    <span class="text-xs text-green-400 uppercase tracking-wider">Pago</span>
+                    <span class="text-sm text-green-400">{{ order.amount_paid|floatformat:2 }} €</span>
+                </div>
+                <div class="flex items-center justify-between px-6 py-2">
+                    <span class="text-xs text-primary uppercase tracking-wider font-semibold">Restante</span>
+                    <span class="text-sm font-bold text-primary">{{ order.remaining_amount|floatformat:2 }} €</span>
                 </div>
             </div>
         </div>
@@ -833,10 +1111,18 @@
                     <span class="text-sm text-gray-300"
                           x-text="lines.reduce((s,l) => s + l.quantity * l.unit_price * (1 - (l.discount_pct || 0) / 100) * (l.tax_rate || 0) / 100, 0).toFixed(2) + ' €'"></span>
                 </div>
-                <div class="flex items-center justify-between px-6 py-3">
+                <div class="flex items-center justify-between px-6 py-3 border-b border-gray-700/60">
                     <span class="text-xs text-gray-400 uppercase tracking-wider font-semibold">Total</span>
                     <span class="text-xl font-bold text-white"
                           x-text="lines.reduce((s,l) => { const net = l.quantity * l.unit_price * (1 - (l.discount_pct || 0) / 100); return s + net * (1 + (l.tax_rate || 0) / 100); }, 0).toFixed(2) + ' €'"></span>
+                </div>
+                <div class="flex items-center justify-between px-6 py-2 border-b border-gray-700/60">
+                    <span class="text-xs text-green-400 uppercase tracking-wider">Pago</span>
+                    <span class="text-sm text-green-400">{{ order.amount_paid|floatformat:2 }} €</span>
+                </div>
+                <div class="flex items-center justify-between px-6 py-2">
+                    <span class="text-xs text-primary uppercase tracking-wider font-semibold">Restante</span>
+                    <span class="text-sm font-bold text-primary">{{ order.remaining_amount|floatformat:2 }} €</span>
                 </div>
             </div>
         </div>
@@ -850,7 +1136,7 @@
 
     <!-- ─────────────────────────── RIGHT COLUMN (Chatter) ───────── -->
     {% if order %}
-    {% include 'components/chatter_inventory.html' with object=order chatter_api_base='/vendas' %}
+    {% include 'components/chatter_inventory.html' with object=order chatter_api_base='/sales' %}
     {% else %}
     <div class="w-96 flex-shrink-0 border-l border-gray-700 bg-[#1a2332]"></div>
     {% endif %}
@@ -958,7 +1244,7 @@ function saleOrderForm() {
             };
 
             if (line.id) {
-                const url = `/vendas/${this.orderPk}/linhas/${line.id}/actualizar/`;
+                const url = `/sales/${this.orderPk}/lines/${line.id}/update/`;
                 try {
                     const resp = await fetch(url, {
                         method:  'POST',
@@ -969,7 +1255,7 @@ function saleOrderForm() {
                     if (data.success) line.line_total = data.line.line_total;
                 } catch(e) {}
             } else {
-                const url = `/vendas/${this.orderPk}/linhas/adicionar/`;
+                const url = `/sales/${this.orderPk}/lines/add/`;
                 try {
                     const resp = await fetch(url, {
                         method:  'POST',
@@ -994,7 +1280,7 @@ function saleOrderForm() {
         async removeLine(index) {
             const line = this.lines[index];
             if (line.id) {
-                const url = `/vendas/${this.orderPk}/linhas/${line.id}/remover/`;
+                const url = `/sales/${this.orderPk}/lines/${line.id}/remove/`;
                 try {
                     const resp = await fetch(url, {
                         method:  'POST',
@@ -1039,7 +1325,7 @@ function saleOrderForm() {
             if (this.orderPk) {
                 const saves = this.lines
                     .filter(line => line.id && line.product_id)
-                    .map(line => fetch(`/vendas/${this.orderPk}/linhas/${line.id}/actualizar/`, {
+                    .map(line => fetch(`/sales/${this.orderPk}/lines/${line.id}/update/`, {
                         method:  'POST',
                         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this._csrf() },
                         body: JSON.stringify({
@@ -1169,5 +1455,190 @@ document.addEventListener('DOMContentLoaded', function () {
     initDatePicker('id_order_date_display',    'id_order_date');
     initDatePicker('id_delivery_date_display', 'id_delivery_date');
 });
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script>
+// ── Quotation Email Compose — Alpine.js component ─────────────────────
+function quotationEmailCompose(orderId) {
+    return {
+        orderId:           orderId,
+        loading:           false,
+        loaded:            false,
+        sending:           false,
+        sent:              false,
+        composeError:      '',
+        tab:               'compose',  // 'compose' | 'preview'
+
+        // Header fields
+        toEmail:   '',
+        toName:    '',
+        cc:        '',
+        bcc:       '',
+        showCC:    false,
+        showBCC:   false,
+        subject:   '',
+
+        // Body
+        bodyHtml:     '',
+        previewHtml:  '',
+
+        // Attachment
+        quotationUrl:      '',
+        quotationFilename: '',
+        extraFiles:        [],
+
+        // Quill instance
+        _quill: null,
+
+        // ── Fetch compose data from backend ─────────────────────
+        async fetchData() {
+            if (this.loading || this.loaded) return;
+            this.loading = true;
+            this.composeError = '';
+            try {
+                const res  = await fetch(`/sales/${this.orderId}/quotation-email-compose/`);
+                const data = await res.json();
+                this.toEmail          = data.to_email          || '';
+                this.toName           = data.to_name           || '';
+                this.subject          = data.subject           || '';
+                this.bodyHtml         = data.body_html         || '';
+                this.previewHtml      = data.preview_html      || '';
+                this.quotationUrl     = data.quotation_url     || '';
+                this.quotationFilename = data.quotation_filename || 'orcamento.html';
+                this.loaded = true;
+                this.$nextTick(() => this._initQuill());
+            } catch(e) {
+                this.composeError = 'Erro ao carregar os dados do email. Tenta novamente.';
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        // ── Initialise Quill editor ──────────────────────────────
+        _initQuill() {
+            if (this._quill) return;
+            const el = document.getElementById('quotation-quill-editor');
+            if (!el) return;
+            this._quill = new Quill('#quotation-quill-editor', {
+                theme: 'snow',
+                modules: {
+                    toolbar: [
+                        ['bold', 'italic', 'underline'],
+                        [{ list: 'ordered' }, { list: 'bullet' }],
+                        ['link'],
+                        ['clean'],
+                    ],
+                },
+            });
+            if (this.bodyHtml) {
+                this._quill.clipboard.dangerouslyPasteHTML(this.bodyHtml);
+            }
+        },
+
+        // ── Switch compose / preview tab ────────────────────────
+        switchTab(newTab) {
+            if (this._quill && newTab === 'preview') {
+                this.bodyHtml = this._quill.root.innerHTML;
+            }
+            this.tab = newTab;
+            if (newTab === 'preview') {
+                this.$nextTick(() => {
+                    const frame = this.$refs.previewFrame;
+                    if (frame && this.previewHtml) {
+                        frame.srcdoc = this.previewHtml;
+                    }
+                });
+            }
+        },
+
+        // ── Add extra file attachments ───────────────────────────
+        addFiles(event) {
+            const added = Array.from(event.target.files);
+            this.extraFiles = [...this.extraFiles, ...added];
+            event.target.value = '';
+        },
+
+        // ── Send email via FormData POST ─────────────────────────
+        async send() {
+            if (this.sending || this.sent || !this.toEmail) return;
+            this.sending = true;
+            this.composeError = '';
+
+            const bodyHtml = this._quill ? this._quill.root.innerHTML : this.bodyHtml;
+            const bodyText = this._quill ? this._quill.getText().trim() : '';
+
+            const fd = new FormData();
+            fd.append('to_email',  this.toEmail);
+            fd.append('subject',   this.subject);
+            fd.append('body',      bodyText);
+            fd.append('body_html', bodyHtml);
+            fd.append('cc',        this.cc);
+            fd.append('bcc',       this.bcc);
+            this.extraFiles.forEach(f => fd.append('extra_attachments', f));
+
+            const csrfToken = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+            try {
+                const res  = await fetch(`/sales/${this.orderId}/send-quotation/`, {
+                    method:  'POST',
+                    headers: { 'X-CSRFToken': csrfToken },
+                    body:    fd,
+                });
+                const data = await res.json();
+                if (data.success) {
+                    this.sent = true;
+                    // Close modal and reload page so the Chatter updates
+                    setTimeout(() => {
+                        // Access parent Alpine scope to close modal
+                        const parentScope = Alpine.$data(this.$el.closest('[x-data]'));
+                        if (parentScope && 'showEmailModal' in parentScope) {
+                            parentScope.showEmailModal = false;
+                        }
+                        window.location.reload();
+                    }, 1200);
+                } else {
+                    this.composeError = data.error || 'Erro ao enviar email.';
+                }
+            } catch(e) {
+                this.composeError = 'Erro de rede. Tenta novamente.';
+            } finally {
+                this.sending = false;
+            }
+        },
+
+        // ── Reset state when modal closes ────────────────────────
+        resetCompose() {
+            this.loaded       = false;
+            this.sent         = false;
+            this.composeError = '';
+            this.tab          = 'compose';
+            this.cc           = '';
+            this.bcc          = '';
+            this.showCC       = false;
+            this.showBCC      = false;
+            this.extraFiles   = [];
+            if (this._quill) {
+                try { this._quill.root.innerHTML = '<p><br></p>'; } catch(e) {}
+                this._quill = null;
+            }
+        },
+
+        // ── Helpers ──────────────────────────────────────────────
+        fileIcon(type) {
+            if (!type) return '📎';
+            if (type.startsWith('image/')) return '🖼️';
+            if (type === 'application/pdf') return '📄';
+            return '📎';
+        },
+        fileSize(bytes) {
+            if (!bytes) return '';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(0) + ' KB';
+            return (bytes / 1048576).toFixed(1) + ' MB';
+        },
+    };
+}
 </script>
 {% endblock %}

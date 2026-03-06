@@ -537,6 +537,11 @@ class StockMovement(AbstractBaseModel):
         default='',
         verbose_name='Notas',
     )
+    global_discount_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0,
+        verbose_name='Desconto Global (%)',
+        help_text='Desconto aplicado ao valor total antes do IVA.',
+    )
     responsible = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

@@ -261,6 +261,8 @@ def purchase_order_edit(request, pk):
         'receipt_count': receipt_count,
         'payment_terms_qs': payment_terms_qs,
         'selected_payment_term_id': request.POST.get('payment_terms', str(order.payment_terms_id) if order.payment_terms_id else '') if request.method == 'POST' else str(order.payment_terms_id) if order.payment_terms_id else '',
+        'has_smtp':                getattr(getattr(request.user, 'email_config', None), 'has_smtp_configured', False),
+        'chatter_contact_email':   order.supplier.email if order.supplier else '',
     })
 
 
@@ -671,7 +673,7 @@ def purchase_order_note_create(request, pk):
                     notification_type='MENTION',
                     title=f'{author_display} mencionou-te numa nota',
                     message=f'Encomenda: {order.order_number}',
-                    link=f'/purchases/{str(order.id)}/editar/',
+                    link=f'/purchases/{str(order.id)}/edit/',
                     related_object_id=note.id,
                     is_urgent=urgent,
                 )

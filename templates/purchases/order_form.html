@@ -960,7 +960,7 @@ function purchaseOrderForm() {
 
             if (line.id) {
                 // PATCH existing line
-                const url = `/purchases/${this.orderPk}/linhas/${line.id}/actualizar/`;
+                const url = `/purchases/${this.orderPk}/lines/${line.id}/update/`;
                 try {
                     const resp = await fetch(url, {
                         method:  'POST',
@@ -972,7 +972,7 @@ function purchaseOrderForm() {
                 } catch(e) {}
             } else {
                 // CREATE line
-                const url = `/purchases/${this.orderPk}/linhas/adicionar/`;
+                const url = `/purchases/${this.orderPk}/lines/add/`;
                 try {
                     const resp = await fetch(url, {
                         method:  'POST',
@@ -998,7 +998,7 @@ function purchaseOrderForm() {
         async removeLine(index) {
             const line = this.lines[index];
             if (line.id) {
-                const url = `/purchases/${this.orderPk}/linhas/${line.id}/remover/`;
+                const url = `/purchases/${this.orderPk}/lines/${line.id}/remove/`;
                 try {
                     const resp = await fetch(url, {
                         method:  'POST',
@@ -1045,7 +1045,7 @@ function purchaseOrderForm() {
             if (this.orderPk) {
                 const saves = this.lines
                     .filter(line => line.id && line.product_id)
-                    .map(line => fetch(`/purchases/${this.orderPk}/linhas/${line.id}/actualizar/`, {
+                    .map(line => fetch(`/purchases/${this.orderPk}/lines/${line.id}/update/`, {
                         method:  'POST',
                         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this._csrf() },
                         body: JSON.stringify({

@@ -12,6 +12,7 @@ class SaleOrderForm(forms.ModelForm):
             'order_date',
             'delivery_date',
             'payment_terms',
+            'amount_paid',
             'notes',
         ]
         widgets = {
