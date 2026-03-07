@@ -20,54 +20,61 @@
         * { font-family: 'Delius', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     </style>
 </head>
-<body class="bg-white text-gray-800 min-h-screen flex flex-col">
+<body class="text-gray-800 min-h-screen flex flex-col" style="background: url('{% static 'images/cake-background.jpg' %}') center/cover no-repeat fixed; background-color:#f5f0e8;">
+    <!-- Dark overlay over background image -->
+    <div class="fixed inset-0 bg-black/50 pointer-events-none" style="z-index:0;"></div>
 
-    <!-- Navbar (same structure as home.html — starts in scrolled/white state) -->
-    <header id="navbar" class="fixed top-0 z-50 w-full bg-white shadow-md transition-all duration-300">
+    <!-- Navbar -->
+    <header id="navbar" class="fixed top-0 z-50 w-full bg-gray-900 shadow-md" style="z-index:50;">
         <div class="container mx-auto px-4">
             <div class="flex h-20 items-center justify-between">
                 <a href="{% url 'website:home' %}" class="flex flex-col items-start">
-                    <span id="logo-main" class="text-2xl font-bold transition-colors duration-300" style="color:#dbc693;">Fuet Mágico</span>
-                    <span id="logo-sub" class="text-xs text-gray-900 transition-colors duration-300 -mt-0.5">by Daisy</span>
+                    <span id="logo-main" class="text-2xl font-bold" style="color:#dbc693;">Fuet Mágico</span>
+                    <span id="logo-sub" class="text-xs text-gray-400 -mt-0.5">by Daisy</span>
                 </a>
                 <nav class="hidden md:flex items-center gap-8">
-                    <a href="{% url 'website:home' %}#inicio" class="nav-link text-base font-medium text-gray-700 hover:text-pink-400 transition-colors">{% trans "Início" %}</a>
-                    <a href="{% url 'website:home' %}#sobre" class="nav-link text-base font-medium text-gray-700 hover:text-pink-400 transition-colors">{% trans "Sobre Nós" %}</a>
-                    <a href="{% url 'website:home' %}#portfolio" class="nav-link text-base font-medium text-gray-700 hover:text-pink-400 transition-colors">{% trans "Portfólio" %}</a>
-                    <a href="{% url 'website:home' %}#servicos" class="nav-link text-base font-medium text-gray-700 hover:text-pink-400 transition-colors">{% trans "Serviços" %}</a>
-                    <a href="{% url 'website:home' %}#precos" class="nav-link text-base font-medium text-gray-700 hover:text-pink-400 transition-colors">{% trans "Preços" %}</a>
-                    <a href="{% url 'website:home' %}#testemunhos" class="nav-link text-base font-medium text-gray-700 hover:text-pink-400 transition-colors">{% trans "Testemunhos" %}</a>
-                    <a href="{% url 'website:home' %}#contacto" class="nav-link text-base font-medium text-gray-700 hover:text-pink-400 transition-colors">{% trans "Contacto" %}</a>
+                    <a href="{% url 'website:home' %}#inicio" class="nav-link text-base font-medium text-gray-300 hover:text-pink-400 transition-colors">{% trans "Início" %}</a>
+                    <a href="{% url 'website:home' %}#sobre" class="nav-link text-base font-medium text-gray-300 hover:text-pink-400 transition-colors">{% trans "Sobre Nós" %}</a>
+                    <a href="{% url 'website:home' %}#portfolio" class="nav-link text-base font-medium text-gray-300 hover:text-pink-400 transition-colors">{% trans "Portfólio" %}</a>
+                    <a href="{% url 'website:home' %}#servicos" class="nav-link text-base font-medium text-gray-300 hover:text-pink-400 transition-colors">{% trans "Serviços" %}</a>
+                    <a href="{% url 'website:home' %}#precos" class="nav-link text-base font-medium text-gray-300 hover:text-pink-400 transition-colors">{% trans "Preços" %}</a>
+                    <a href="{% url 'website:home' %}#testemunhos" class="nav-link text-base font-medium text-gray-300 hover:text-pink-400 transition-colors">{% trans "Testemunhos" %}</a>
+                    <a href="{% url 'website:home' %}#contacto" class="nav-link text-base font-medium text-gray-300 hover:text-pink-400 transition-colors">{% trans "Contacto" %}</a>
                 </nav>
                 <div class="hidden md:flex items-center gap-3">
                     <a href="{% url 'website:home' %}#contacto" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-base font-semibold transition-all h-10 px-6 py-2 text-white hover:opacity-90" style="background-color: #dbc693;">{% trans "Faça a sua Encomenda" %}</a>
                 </div>
-                <button class="md:hidden transition-colors duration-300 text-gray-900" id="menu-btn">
-                    <svg class="menu-icon text-gray-900 transition-colors duration-300" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                <button class="md:hidden text-gray-300" id="menu-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </button>
             </div>
             <div class="hidden md:hidden pb-4" id="mobile-menu">
-                <nav class="flex flex-col gap-2 bg-white border border-gray-100 shadow-lg p-4 rounded-lg mt-2">
-                    <a href="{% url 'website:home' %}#inicio" class="py-2 text-sm font-medium text-gray-700">{% trans "Início" %}</a>
-                    <a href="{% url 'website:home' %}#sobre" class="py-2 text-sm font-medium text-gray-700">{% trans "Sobre Nós" %}</a>
-                    <a href="{% url 'website:home' %}#portfolio" class="py-2 text-sm font-medium text-gray-700">{% trans "Portfólio" %}</a>
-                    <a href="{% url 'website:home' %}#servicos" class="py-2 text-sm font-medium text-gray-700">{% trans "Serviços" %}</a>
-                    <a href="{% url 'website:home' %}#precos" class="py-2 text-sm font-medium text-gray-700">{% trans "Preços" %}</a>
-                    <a href="{% url 'website:home' %}#testemunhos" class="py-2 text-sm font-medium text-gray-700">{% trans "Testemunhos" %}</a>
-                    <a href="{% url 'website:home' %}#contacto" class="py-2 text-sm font-medium text-gray-700">{% trans "Contacto" %}</a>
+                <nav class="flex flex-col gap-2 bg-gray-800 border border-gray-700 p-4 rounded-lg mt-2">
+                    <a href="{% url 'website:home' %}#inicio" class="py-2 text-sm font-medium text-gray-300">{% trans "Início" %}</a>
+                    <a href="{% url 'website:home' %}#sobre" class="py-2 text-sm font-medium text-gray-300">{% trans "Sobre Nós" %}</a>
+                    <a href="{% url 'website:home' %}#portfolio" class="py-2 text-sm font-medium text-gray-300">{% trans "Portfólio" %}</a>
+                    <a href="{% url 'website:home' %}#servicos" class="py-2 text-sm font-medium text-gray-300">{% trans "Serviços" %}</a>
+                    <a href="{% url 'website:home' %}#precos" class="py-2 text-sm font-medium text-gray-300">{% trans "Preços" %}</a>
+                    <a href="{% url 'website:home' %}#testemunhos" class="py-2 text-sm font-medium text-gray-300">{% trans "Testemunhos" %}</a>
+                    <a href="{% url 'website:home' %}#contacto" class="py-2 text-sm font-medium text-gray-300">{% trans "Contacto" %}</a>
                 </nav>
             </div>
         </div>
     </header>
 
+    <!-- Hero banner -->
+    <div class="pt-20 relative" style="height:320px; z-index:1;">
+        <div class="h-full flex flex-col items-center justify-center text-center px-4">
+            <p class="text-sm font-semibold uppercase tracking-widest mb-3" style="color:#dbc693;">{% trans "Legal" %}</p>
+            <h1 class="text-4xl font-bold text-white mb-3" style="text-shadow:0 2px 8px rgba(0,0,0,0.5);">{% trans "Termos e Condições" %}</h1>
+            <p class="text-gray-200 text-sm">{% trans "Última atualização: Março 2026" %}</p>
+        </div>
+    </div>
+
     <!-- Content -->
-    <main class="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 pt-36 pb-16">
+    <main class="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 pt-16 pb-16 relative" style="z-index:1;">
 
-        <p class="text-sm font-semibold uppercase tracking-widest mb-2" style="color:#dbc693;">{% trans "Legal" %}</p>
-        <h1 class="text-4xl font-bold text-gray-900 mb-2">{% trans "Termos e Condições" %}</h1>
-        <p class="text-gray-400 text-sm mb-12">{% trans "Última atualização: Março 2026" %}</p>
-
-        <div class="space-y-10 text-sm leading-relaxed text-gray-600">
+        <div class="space-y-10 text-sm leading-relaxed text-white">
 
             <section>
                 <h2 class="text-base font-bold mb-3" style="color:#dbc693;">1. {% trans "Identificação" %}</h2>
@@ -114,7 +121,7 @@
     </main>
 
     <!-- Footer (same as home.html) -->
-    <footer class="bg-gray-900 text-white py-12">
+    <footer class="bg-gray-900 text-white py-12 relative" style="z-index:1;">
         <div class="container mx-auto px-4">
             <div class="grid md:grid-cols-4 gap-8 mb-8">
                 <div>

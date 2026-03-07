@@ -12,6 +12,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_http_methods
 
 from apps.core.models import ChatterMessage, ChatterActivity, ChatterFollower
@@ -699,42 +700,35 @@ def sale_order_quotation_email_compose(request, pk):
 # Sale Order — State transitions
 # ────────────────────────────────────────────────────────────────────
 
-@login_required
-@require_POST
-def sale_order_confirm(request, pk):
-    """Confirm a DRAFT sale order → CONFIRMED."""
-    order = get_object_or_404(
-        filter_by_company(SaleOrder.objects, request), pk=pk
-    )
-    if order.status != SaleOrder.Status.DRAFT:
-        messages.error(request, 'Apenas vendas em rascunho podem ser confirmadas.')
-        return redirect('sales:order_detail', pk=order.pk)
-
-    if not order.lines.exists():
-        messages.error(request, 'Não é possível confirmar uma venda sem linhas.')
-        return redirect('sales:order_edit', pk=order.pk)
-
+def _auto_confirm_order(order, user=None):
+    """
+    Confirm a DRAFT SaleOrder programmatically (no request needed).
+    Returns (True, movement) on success, (False, reason_str) on failure.
+    Called both from sale_order_confirm view and from the signature portal.
+    """
     from apps.inventory.models import StockMovement, StockMovementLine, Warehouse
 
-    so_lines = list(order.lines.select_related('product', 'uom').all())
+    if order.status != SaleOrder.Status.DRAFT:
+        return False, 'not_draft'
 
-    # Resolve default warehouse for this company
+    if not order.lines.exists():
+        return False, 'no_lines'
+
     warehouse = (
         Warehouse.objects.filter(owner_company=order.owner_company, is_default=True).first()
         or Warehouse.objects.filter(owner_company=order.owner_company).first()
         or Warehouse.objects.filter(owner_company__isnull=True).first()
     )
     if not warehouse:
-        messages.error(request, 'Não existe nenhum armazém configurado. Cria um armazém antes de confirmar.')
-        return redirect('sales:order_edit', pk=order.pk)
+        return False, 'no_warehouse'
+
+    so_lines = list(order.lines.select_related('product', 'uom').all())
 
     with transaction.atomic():
-        # 1. Confirm the sale order → document becomes Encomenda
         order.status = SaleOrder.Status.CONFIRMED
         order.document_type = SaleOrder.DocumentType.ORDER
         order.save(update_fields=['status', 'document_type'])
 
-        # 2. Create a draft delivery movement linked via origin (espelho das compras, saída de stock)
         movement = StockMovement.objects.create(
             movement_type='delivery',
             state='draft',
@@ -742,11 +736,10 @@ def sale_order_confirm(request, pk):
             partner=order.client,
             origin=order.order_number,
             notes=f'Gerado automaticamente a partir da venda {order.order_number}.',
-            responsible=request.user,
+            responsible=user,
             owner_company=order.owner_company,
         )
 
-        # 3. Copy every SO line into the movement
         StockMovementLine.objects.bulk_create([
             StockMovementLine(
                 stock_movement=movement,
@@ -761,7 +754,7 @@ def sale_order_confirm(request, pk):
         ])
 
         _log(
-            order, request.user, 'STATUS_CHANGE',
+            order, user, 'STATUS_CHANGE',
             f'Estado alterado: Rascunho → Confirmado (Encomenda). Entrega {movement.reference} criada.',
             {
                 'field':        'status',
@@ -772,6 +765,31 @@ def sale_order_confirm(request, pk):
             },
         )
 
+    return True, movement
+
+
+@login_required
+@require_POST
+def sale_order_confirm(request, pk):
+    """Confirm a DRAFT sale order → CONFIRMED."""
+    order = get_object_or_404(
+        filter_by_company(SaleOrder.objects, request), pk=pk
+    )
+
+    ok, result = _auto_confirm_order(order, user=request.user)
+
+    if not ok:
+        if result == 'not_draft':
+            messages.error(request, 'Apenas vendas em rascunho podem ser confirmadas.')
+            return redirect('sales:order_detail', pk=order.pk)
+        elif result == 'no_lines':
+            messages.error(request, 'Não é possível confirmar uma venda sem linhas.')
+            return redirect('sales:order_edit', pk=order.pk)
+        elif result == 'no_warehouse':
+            messages.error(request, 'Não existe nenhum armazém configurado. Cria um armazém antes de confirmar.')
+            return redirect('sales:order_edit', pk=order.pk)
+
+    movement = result
     messages.success(
         request,
         f'Venda {order.order_number} confirmada. Entrega {movement.reference} criada em rascunho.',
@@ -1197,6 +1215,7 @@ def quotation_sign(request, token):
     })
 
 
+@csrf_exempt
 @require_POST
 def quotation_sign_submit(request, token):
     """Public POST: save the client signature (sign or refuse)."""
@@ -1275,6 +1294,28 @@ def quotation_sign_submit(request, token):
             is_internal=False,
         )
 
+        # Auto-confirm: trigger the same flow as the "Confirmar" button
+        ok, result = _auto_confirm_order(order, user=None)
+        if ok:
+            movement = result
+            ChatterMessage.objects.create(
+                content_type=ct,
+                object_id=order.pk,
+                author=None,
+                message_type='NOTE',
+                subject=f'Encomenda confirmada — {order.order_number}',
+                body=f'Encomenda confirmada automaticamente após assinatura do cliente. Entrega {movement.reference} criada.',
+                body_html=(
+                    f'<p style="margin:0;">&#128230; <strong>Encomenda confirmada automaticamente</strong> '
+                    f'após assinatura do cliente. Entrega <strong>{movement.reference}</strong> criada em rascunho.</p>'
+                ),
+                from_email='',
+                to_email='',
+                direction=ChatterMessage.DIRECTION_INBOUND,
+                sent_at=now,
+                is_internal=True,
+            )
+
     else:  # refuse
         order.signature_status = SaleOrder.SignatureStatus.REFUSED
         order.signed_at        = now
@@ -1313,15 +1354,15 @@ def quotation_sign_done(request, token):
             'reason': 'not_found',
         }, status=404)
 
-
-def quotation_terms(request):
-    """Public GET: terms and conditions for digital signature."""
-    return render(request, 'sales/quotation_terms.html')
-
     return render(request, 'sales/quotation_sign_done.html', {
         'order':   order,
         'company': order.owner_company,
     })
+
+
+def quotation_terms(request):
+    """Public GET: terms and conditions for digital signature."""
+    return render(request, 'sales/quotation_terms.html')
 
 
 _STATUS_FILTER_OPTIONS = [
@@ -1452,6 +1493,174 @@ def sale_order_bulk_delete(request):
 
 # ──────────────────────────────────────────────────────────────────
 # Payment Terms — CRUD
+# ──────────────────────────────────────────────────────────────────
+
+
+@login_required
+def sale_reports(request):
+    """
+    Página de Relatórios de Vendas — 6 gráficos profissionais com Chart.js.
+    Funil de Vendas | Vendas Mensais | Top Clientes | Previsão | Tipo Documento | Estado Pagamento
+    """
+    from dateutil.relativedelta import relativedelta
+    from django.db.models import Count, Sum, Avg, Q
+    from django.utils import timezone
+
+    active_company = get_active_company(request)
+    now = timezone.now()
+
+    def base_qs():
+        qs = SaleOrder.objects.all()
+        if active_company:
+            qs = qs.filter(owner_company=active_company)
+        return qs
+
+    # ── KPI Cards ──────────────────────────────────────────────────
+    kpi_in_progress = base_qs().filter(
+        status__in=[SaleOrder.Status.CONFIRMED, SaleOrder.Status.DELIVERED]
+    ).count()
+
+    kpi_invoiced_month = base_qs().filter(
+        status=SaleOrder.Status.INVOICED,
+        order_date__year=now.year, order_date__month=now.month,
+    ).count()
+
+    kpi_revenue_month = base_qs().filter(
+        status__in=[SaleOrder.Status.CONFIRMED, SaleOrder.Status.DELIVERED, SaleOrder.Status.INVOICED],
+        order_date__year=now.year, order_date__month=now.month,
+    ).aggregate(v=Sum('total'))['v'] or 0
+
+    ticket_medio_raw = base_qs().filter(
+        status__in=[SaleOrder.Status.CONFIRMED, SaleOrder.Status.DELIVERED, SaleOrder.Status.INVOICED]
+    ).aggregate(v=Avg('total'))['v'] or 0
+    kpi_ticket_medio = round(float(ticket_medio_raw), 2)
+
+    # ── 1. Funil de Vendas (por estado) ────────────────────────────
+    funnel_statuses = ['draft', 'confirmed', 'delivered', 'invoiced']
+    funnel_display  = ['Rascunho', 'Confirmada', 'Entregue', 'Faturada']
+    funnel_counts = []
+    funnel_values = []
+    for s in funnel_statuses:
+        agg = base_qs().filter(status=s).aggregate(cnt=Count('id'), val=Sum('total'))
+        funnel_counts.append(agg['cnt'] or 0)
+        funnel_values.append(float(agg['val'] or 0))
+
+    # ── 2. Vendas Mensais (últimos 12 meses) ───────────────────────
+    monthly_labels    = []
+    monthly_active    = []   # confirmed + delivered + invoiced
+    monthly_cancelled = []
+    monthly_revenue   = []
+    for i in range(11, -1, -1):
+        d = now - relativedelta(months=i)
+        monthly_labels.append(d.strftime('%b %Y'))
+        active_cnt = base_qs().filter(
+            status__in=['confirmed', 'delivered', 'invoiced'],
+            order_date__year=d.year, order_date__month=d.month,
+        ).count()
+        cancelled_cnt = base_qs().filter(
+            status='cancelled',
+            order_date__year=d.year, order_date__month=d.month,
+        ).count()
+        rev = base_qs().filter(
+            status__in=['confirmed', 'delivered', 'invoiced'],
+            order_date__year=d.year, order_date__month=d.month,
+        ).aggregate(v=Sum('total'))['v'] or 0
+        monthly_active.append(active_cnt)
+        monthly_cancelled.append(cancelled_cnt)
+        monthly_revenue.append(float(rev))
+
+    # ── 3. Top Clientes (top 8 por receita) ────────────────────────
+    top_clients_qs = (
+        base_qs()
+        .filter(client__isnull=False, status__in=['confirmed', 'delivered', 'invoiced'])
+        .values('client__name')
+        .annotate(
+            total_orders=Count('id'),
+            total_revenue=Sum('total'),
+            invoiced_cnt=Count('id', filter=Q(status='invoiced')),
+        )
+        .order_by('-total_revenue')[:8]
+    )
+    client_labels   = [r['client__name'] or 'Sem nome' for r in top_clients_qs]
+    client_orders   = [r['total_orders'] for r in top_clients_qs]
+    client_revenue  = [float(r['total_revenue'] or 0) for r in top_clients_qs]
+    client_invoiced = [r['invoiced_cnt'] for r in top_clients_qs]
+
+    # ── 4. Previsão de Receita (próximos 6 meses) ──────────────────
+    forecast_labels    = []
+    forecast_expected  = []
+    forecast_confirmed = []
+    for i in range(0, 6):
+        d = now + relativedelta(months=i)
+        forecast_labels.append(d.strftime('%b %Y'))
+        agg_all = base_qs().filter(
+            status__in=['confirmed', 'delivered', 'invoiced'],
+            delivery_date__year=d.year, delivery_date__month=d.month,
+        ).aggregate(v=Sum('total'))
+        agg_conf = base_qs().filter(
+            status='confirmed',
+            delivery_date__year=d.year, delivery_date__month=d.month,
+        ).aggregate(v=Sum('total'))
+        forecast_expected.append(float(agg_all['v'] or 0))
+        forecast_confirmed.append(float(agg_conf['v'] or 0))
+
+    # ── 5. Análise por Tipo de Documento ───────────────────────────
+    DOC_LABELS = {'quotation': 'Orçamento', 'order': 'Encomenda', 'invoice': 'Fatura'}
+    doc_data = (
+        base_qs()
+        .values('document_type')
+        .annotate(cnt=Count('id'), revenue=Sum('total'))
+        .order_by('-cnt')
+    )
+    doc_labels  = [DOC_LABELS.get(r['document_type'], r['document_type']) for r in doc_data]
+    doc_counts  = [r['cnt'] for r in doc_data]
+    doc_revenue = [float(r['revenue'] or 0) for r in doc_data]
+
+    # ── 6. Estado de Pagamento ─────────────────────────────────────
+    PAY_LABELS = {'unpaid': 'Não Pago', 'partial': 'Parcial', 'paid': 'Pago'}
+    pay_data = (
+        base_qs()
+        .filter(status__in=['confirmed', 'delivered', 'invoiced'])
+        .values('payment_status')
+        .annotate(cnt=Count('id'), val=Sum('total'))
+        .order_by('-val')
+    )
+    pay_labels = [PAY_LABELS.get(r['payment_status'], r['payment_status']) for r in pay_data]
+    pay_counts = [r['cnt'] for r in pay_data]
+    pay_values = [float(r['val'] or 0) for r in pay_data]
+
+    context = {
+        # KPIs
+        'kpi_in_progress':   kpi_in_progress,
+        'kpi_invoiced_month': kpi_invoiced_month,
+        'kpi_revenue_month': kpi_revenue_month,
+        'kpi_ticket_medio':  kpi_ticket_medio,
+        # Chart JSON
+        'funnel_labels_json':     json.dumps(funnel_display),
+        'funnel_counts_json':     json.dumps(funnel_counts),
+        'funnel_values_json':     json.dumps(funnel_values),
+        'monthly_labels_json':    json.dumps(monthly_labels),
+        'monthly_active_json':    json.dumps(monthly_active),
+        'monthly_cancelled_json': json.dumps(monthly_cancelled),
+        'monthly_revenue_json':   json.dumps(monthly_revenue),
+        'client_labels_json':     json.dumps(client_labels),
+        'client_orders_json':     json.dumps(client_orders),
+        'client_revenue_json':    json.dumps(client_revenue),
+        'client_invoiced_json':   json.dumps(client_invoiced),
+        'forecast_labels_json':   json.dumps(forecast_labels),
+        'forecast_expected_json': json.dumps(forecast_expected),
+        'forecast_confirmed_json':json.dumps(forecast_confirmed),
+        'doc_labels_json':        json.dumps(doc_labels),
+        'doc_counts_json':        json.dumps(doc_counts),
+        'doc_revenue_json':       json.dumps(doc_revenue),
+        'pay_labels_json':        json.dumps(pay_labels),
+        'pay_counts_json':        json.dumps(pay_counts),
+        'pay_values_json':        json.dumps(pay_values),
+    }
+
+    return render(request, 'sales/reports.html', context)
+
+
 # ──────────────────────────────────────────────────────────────────
 
 @login_required

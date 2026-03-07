@@ -183,7 +183,7 @@
                 </div>
 
                 <!-- Right: Status pill -->
-                <div class="flex items-center">
+                <div class="flex items-center gap-2">
                     {% if not order %}
                     <div class="px-5 py-1.5 text-xs font-semibold rounded-md bg-gray-700 border border-gray-600 text-gray-300">Novo</div>
                     {% elif order.status == 'draft' %}
@@ -196,6 +196,16 @@
                     <div class="px-5 py-1.5 text-xs font-semibold rounded-md bg-green-900/40 border border-green-700 text-green-300">Faturado</div>
                     {% elif order.status == 'cancelled' %}
                     <div class="px-5 py-1.5 text-xs font-semibold rounded-md bg-red-900/40 border border-red-700 text-red-300">Cancelado</div>
+                    {% endif %}
+
+                    {% if order and order.signature_token %}
+                        {% if order.signature_status == 'signed' %}
+                        <div class="px-3 py-1.5 text-xs font-semibold rounded-md bg-green-900/40 border border-green-600 text-green-300">✍️ Assinado</div>
+                        {% elif order.signature_status == 'refused' %}
+                        <div class="px-3 py-1.5 text-xs font-semibold rounded-md bg-red-900/40 border border-red-600 text-red-300">❌ Recusado</div>
+                        {% else %}
+                        <div class="px-3 py-1.5 text-xs font-semibold rounded-md bg-amber-900/40 border border-amber-600 text-amber-300">⏳ Aguarda Assinatura</div>
+                        {% endif %}
                     {% endif %}
                 </div>
 

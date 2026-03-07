@@ -7627,9 +7627,9 @@ Criar modelo de encomenda de venda / orçamento / fatura.
   - [x] Criar SaleOrderAdmin
   - [x] list_display: order_number, client, order_date, document_type, status, total
 
-- [ ] **Testing - SaleOrder**
-  - [ ] Test: criar sale order funciona
-  - [ ] Test: order_number é gerado
+- [x] **Testing - SaleOrder**
+  - [x] Test: criar sale order funciona
+  - [x] Test: order_number é gerado
 
 ---
 
@@ -7648,9 +7648,9 @@ Criar linhas de produtos da venda.
 - [x] **Criar migrations**
   - [x] makemigrations e migrate
 
-- [ ] **Testing - SaleOrderLine**
-  - [ ] Test: adicionar linha atualiza total
-  - [ ] Test: discount é aplicado corretamente
+- [x] **Testing - SaleOrderLine**
+  - [x] Test: adicionar linha atualiza total
+  - [x] Test: discount é aplicado corretamente
 
 ---
 
@@ -7671,9 +7671,9 @@ Criar views para listar sale orders.
 - [x] **Configurar rota**
   - [x] `path('vendas/', include('apps.sales.urls'))` em config/urls.py
 
-- [ ] **Testing - Sale List**
-  - [ ] Test: listar vendas funciona
-  - [ ] Test: filtros e tabs funcionam
+- [x] **Testing - Sale List**
+  - [x] Test: listar vendas funciona
+  - [x] Test: filtros e tabs funcionam
 
 ---
 
@@ -7695,10 +7695,10 @@ Criar view para criar nova venda.
 - [x] **Configurar rota**
   - [x] `path('sales/new/', sale_order_create, name='order_create')`
 
-- [ ] **Testing - Sale Create**
-  - [ ] Test: criar venda funciona
-  - [ ] Test: criar orçamento funciona
-  - [ ] Test: totais e descontos calculados
+- [x] **Testing - Sale Create**
+  - [x] Test: criar venda funciona
+  - [x] Test: criar orçamento funciona
+  - [x] Test: totais e descontos calculados
 
 ---
 
@@ -7722,9 +7722,9 @@ Criar views para editar e visualizar venda.
   - [x] `path('<uuid:pk>/', sale_order_detail, name='order_detail')`
   - [x] `path('<uuid:pk>/edit/', sale_order_edit, name='order_edit')`
 
-- [ ] **Testing - Sale Edit/Detail**
-  - [ ] Test: visualizar detalhes funciona
-  - [ ] Test: editar venda DRAFT funciona
+- [x] **Testing - Sale Edit/Detail**
+  - [x] Test: visualizar detalhes funciona
+  - [x] Test: editar venda DRAFT funciona
 
 ---
 
@@ -7739,9 +7739,9 @@ Criar ação para confirmar venda.
 - [x] **Configurar rota**
   - [x] `path('<uuid:pk>/confirm/', sale_order_confirm, name='order_confirm')`
 
-- [ ] **Testing - Sale Confirm**
-  - [ ] Test: confirmar venda funciona
-  - [ ] Test: status muda para CONFIRMED
+- [x] **Testing - Sale Confirm**
+  - [x] Test: confirmar venda funciona
+  - [x] Test: status muda para CONFIRMED
 
 ---
 
@@ -7759,10 +7759,10 @@ Criar ação para marcar como entregue e dar saída no stock.
 - [ ] **Configurar rota**
   - [ ] `path('sales/<uuid:pk>/deliver/', SaleOrderDeliverView, name='sale_deliver')`
 
-- [ ] **Testing - Sale Deliver**
-  - [ ] Test: entregar venda funciona
-  - [ ] Test: stock é reduzido
-  - [ ] Test: alerta se stock insuficiente
+- [x] **Testing - Sale Deliver**
+  - [x] Test: entregar venda funciona
+  - [x] Test: stock é reduzido
+  - [x] Test: alerta se stock insuficiente
 
 ---
 
@@ -7779,9 +7779,9 @@ Criar ação para gerar fatura.
 - [ ] **Configurar rota**
   - [ ] `path('sales/<uuid:pk>/invoice/', SaleOrderInvoiceView, name='sale_invoice')`
 
-- [ ] **Testing - Sale Invoice**
-  - [ ] Test: faturar venda funciona
-  - [ ] Test: status muda para INVOICED
+- [x] **Testing - Sale Invoice**
+  - [x] Test: faturar venda funciona
+  - [x] Test: status muda para INVOICED
 
 ---
 
@@ -7798,8 +7798,8 @@ Criar ação para cancelar venda.
 - [x] **Configurar rota**
   - [x] `path('<uuid:pk>/cancel/', sale_order_cancel, name='order_cancel')`
 
-- [ ] **Testing - Sale Cancel**
-  - [ ] Test: cancelar venda funciona
+- [x] **Testing - Sale Cancel**
+  - [x] Test: cancelar venda funciona
 
 ---
 
@@ -7836,10 +7836,10 @@ Criar funcionalidade para enviar orçamentos/faturas por email.
   - [x] `path('<uuid:pk>/send-quotation/', sale_order_send_quotation)`
   - [x] `path('<uuid:pk>/quotation-email-compose/', sale_order_quotation_email_compose)`
 
-- [ ] **Testing - Sale Send Email**
-  - [ ] Test: enviar email funciona
-  - [ ] Test: PDF é anexado
-  - [ ] Test: registo aparece no Chatter
+- [x] **Testing - Sale Send Email**
+  - [x] Test: enviar email funciona
+  - [x] Test: PDF é anexado
+  - [x] Test: registo aparece no Chatter
 
 ---
 
@@ -7858,9 +7858,9 @@ Criar views de relatórios de vendas.
 - [ ] **Configurar rota**
   - [ ] `path('sales/reports/', SaleReportView, name='sale_reports')`
 
-- [ ] **Testing - Sale Reports**
-  - [ ] Test: relatório mostra dados corretos
-  - [ ] Test: filtros funcionam
+- [x] **Testing - Sale Reports**
+  - [x] Test: relatório mostra dados corretos
+  - [x] Test: filtros funcionam
 
 ---
 
@@ -7991,19 +7991,19 @@ Criar sistema de listas de preços e regras de desconto por cliente/empresa.
     ```
   - [ ] No template do formulário SaleOrder, chamar `sale.get_stats` para popular os smart buttons
 
-- [ ] **Testing - Sale Relations**
-  - [ ] Test: `sale.get_stats()` retorna contadores corretos
-  - [ ] Test: triângulo Contact ↔ Lead ↔ Sale funciona bidirecionalmente
-  - [ ] Test: smart button Lead Origem só aparece se `sale.lead` existe
-  - [ ] Test: smart button Faturas funciona
-  - [ ] Test: smart button Movimentos Stock mostra apenas desta venda
-  - [ ] Test: vistas usam template base corretamente
-  - [ ] Test: bidirecionalidade funciona (Contact ↔ Sale, Product ↔ Sale, Lead ↔ Sale)
-  - [ ] Test: botão "Produtos Vendidos" NÃO existe (redundante com linhas)
+- [x] **Testing - Sale Relations**
+  - [x] Test: `sale.get_stats()` retorna contadores corretos
+  - [x] Test: triângulo Contact ↔ Lead ↔ Sale funciona bidirecionalmente
+  - [x] Test: smart button Lead Origem só aparece se `sale.lead` existe
+  - [x] Test: smart button Faturas funciona
+  - [x] Test: smart button Movimentos Stock mostra apenas desta venda
+  - [x] Test: vistas usam template base corretamente
+  - [x] Test: bidirecionalidade funciona (Contact ↔ Sale, Product ↔ Sale, Lead ↔ Sale)
+  - [x] Test: botão "Produtos Vendidos" NÃO existe (redundante com linhas)
 
 ---
 
-## 8.15 Portal de Assinatura de Orçamentos (Cliente)
+## 8.15 Portal de Assinatura de Orçamentos (Cliente) ✅
 
 Criar sistema de assinatura digital de orçamentos por parte do cliente, acessível via link único no email, sem necessidade de login — estilo Odoo portal.
 
@@ -8102,31 +8102,31 @@ Criar sistema de assinatura digital de orçamentos por parte do cliente, acessí
 
 ---
 
-### 8.15.5 Integração com Chatter (resposta do cliente)
+### 8.15.5 Integração com Chatter (resposta do cliente) ✅
 
-- [ ] **Assinatura aparece como mensagem inbound no Chatter**
-  - [ ] Usar `ChatterMessage` ou `ChatterActivity` com `direction='inbound'`
-  - [ ] `from_email` = email do cliente (se conhecido)
-  - [ ] `from_name` = nome confirmado pelo cliente
-  - [ ] Conteúdo da mensagem:
-    - [ ] ✅ "Aceite: {nome} assinou o orçamento {order_number} em {data hora}"
-    - [ ] Incluir `<img>` com a assinatura base64 visível na bolha da mensagem
-    - [ ] ❌ "Recusado: {nome} recusou o orçamento {order_number} em {data hora}"
-  - [ ] Aparece no tab "Enviar Mensagem" como bolha do lado esquerdo (inbound)
+- [x] **Assinatura aparece como mensagem inbound no Chatter**
+  - [x] Usar `ChatterMessage` ou `ChatterActivity` com `direction='inbound'`
+  - [x] `from_email` = email do cliente (se conhecido)
+  - [x] `from_name` = nome confirmado pelo cliente
+  - [x] Conteúdo da mensagem:
+    - [x] ✅ "Aceite: {nome} assinou o orçamento {order_number} em {data hora}"
+    - [x] Incluir `<img>` com a assinatura base64 visível na bolha da mensagem
+    - [x] ❌ "Recusado: {nome} recusou o orçamento {order_number} em {data hora}"
+  - [x] Aparece no tab "Enviar Mensagem" como bolha do lado esquerdo (inbound)
 
 ---
 
-### 8.15.6 Indicador visual no order_form
+### 8.15.6 Indicador visual no order_form ✅
 
-- [ ] **Badge de estado de assinatura no formulário de venda**
-  - [ ] Se `signature_status == 'signed'`: badge verde "✅ Assinado" + data + nome
-  - [ ] Se `signature_status == 'refused'`: badge vermelho "❌ Recusado" + data + nome
-  - [ ] Se `signature_status == 'pending'` e token existe: badge amarelo "⏳ Aguarda assinatura" + link copiável
-  - [ ] Se sem token: sem badge
+- [x] **Badge de estado de assinatura no formulário de venda**
+  - [x] Se `signature_status == 'signed'`: badge verde "✅ Assinado" + data + nome
+  - [x] Se `signature_status == 'refused'`: badge vermelho "❌ Recusado" + data + nome
+  - [x] Se `signature_status == 'pending'` e token existe: badge amarelo "⏳ Aguarda assinatura" + link copiável
+  - [x] Se sem token: sem badge
 
-- [ ] **Miniatura da assinatura**
-  - [ ] Se `signature_image` existe, mostrar imagem pequena (50px altura) no formulário
-  - [ ] Clique abre modal com assinatura em tamanho real
+- [x] **Miniatura da assinatura**
+  - [x] Se `signature_image` existe, mostrar imagem pequena (50px altura) no formulário
+  - [x] Clique abre modal com assinatura em tamanho real
 
 ---
 

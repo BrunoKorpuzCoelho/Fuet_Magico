@@ -1,75 +1,166 @@
 {% load static %}
+{% load i18n %}
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Confirmação — Fuet Mágico</title>
     <link rel="icon" type="image/x-icon" href="{% static 'website/favicon/favicon.ico' %}">
+    <link rel="icon" type="image/svg+xml" href="{% static 'website/favicon/favicon.svg' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'website/favicon/apple-touch-icon.png' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Delius&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { primary: '#dbc693', 'primary-dark': '#c9b580' } } }
+        }
+    </script>
+    <style>* { font-family: 'Delius', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }</style>
 </head>
-<body class="min-h-screen bg-gray-50 flex flex-col"
-      style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
 
-<header class="bg-white border-b border-gray-200 shadow-sm">
-    <div class="max-w-3xl mx-auto px-4 py-4 flex items-center gap-4">
-        <img src="{% static 'brand/logo.png' %}" alt="Fuet Mágico" class="h-12 w-auto"
-             onerror="this.style.display='none'">
-        <div>
-            <p class="text-xs text-gray-400 italic">Criações refinadas &amp; irresistíveis</p>
-            <p class="text-sm font-semibold text-gray-700">
-                {% if company %}{{ company.name }}{% else %}Fuet Mágico{% endif %}
+    <!-- Navbar -->
+    <header class="bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
+        <div class="container mx-auto px-4">
+            <div class="flex h-20 items-center justify-between">
+                <a href="{% url 'website:home' %}" class="flex flex-col items-start">
+                    <span class="text-2xl font-bold" style="color:#dbc693;">Fuet Mágico</span>
+                    <span class="text-xs text-gray-400 -mt-0.5">by Daisy</span>
+                </a>
+                <nav class="hidden md:flex items-center gap-8">
+                    <a href="{% url 'website:home' %}#inicio" class="text-base font-medium text-gray-300 hover:text-pink-400 transition-colors">Início</a>
+                    <a href="{% url 'website:home' %}#sobre" class="text-base font-medium text-gray-300 hover:text-pink-400 transition-colors">Sobre Nós</a>
+                    <a href="{% url 'website:home' %}#portfolio" class="text-base font-medium text-gray-300 hover:text-pink-400 transition-colors">Portfólio</a>
+                    <a href="{% url 'website:home' %}#servicos" class="text-base font-medium text-gray-300 hover:text-pink-400 transition-colors">Serviços</a>
+                    <a href="{% url 'website:home' %}#precos" class="text-base font-medium text-gray-300 hover:text-pink-400 transition-colors">Preços</a>
+                    <a href="{% url 'website:home' %}#contacto" class="text-base font-medium text-gray-300 hover:text-pink-400 transition-colors">Contacto</a>
+                </nav>
+                <div class="hidden md:flex items-center gap-3">
+                    <a href="{% url 'website:home' %}#contacto"
+                       class="inline-flex items-center justify-center rounded-md text-sm font-semibold h-10 px-5 text-white hover:opacity-90 transition-opacity"
+                       style="background-color:#dbc693;">Faça a sua Encomenda</a>
+                </div>
+                <button class="md:hidden text-gray-300" id="menu-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="hidden md:hidden pb-4" id="mobile-menu">
+                <nav class="flex flex-col gap-2 bg-gray-800 border border-gray-700 p-4 rounded-lg mt-2">
+                    <a href="{% url 'website:home' %}#inicio" class="py-2 text-sm font-medium text-gray-300">Início</a>
+                    <a href="{% url 'website:home' %}#sobre" class="py-2 text-sm font-medium text-gray-300">Sobre Nós</a>
+                    <a href="{% url 'website:home' %}#portfolio" class="py-2 text-sm font-medium text-gray-300">Portfólio</a>
+                    <a href="{% url 'website:home' %}#servicos" class="py-2 text-sm font-medium text-gray-300">Serviços</a>
+                    <a href="{% url 'website:home' %}#precos" class="py-2 text-sm font-medium text-gray-300">Preços</a>
+                    <a href="{% url 'website:home' %}#contacto" class="py-2 text-sm font-medium text-gray-300">Contacto</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Content -->
+    <main class="flex-1 flex items-center justify-center px-4 py-16">
+        <div class="bg-gray-800 rounded-2xl border border-gray-700 shadow-xl p-10 max-w-md w-full text-center">
+
+            {% if order.signature_status == 'signed' %}
+            <div class="text-6xl mb-5">✅</div>
+            <h1 class="text-2xl font-bold text-green-400 mb-3">Orçamento aceite!</h1>
+            <p class="text-gray-300 mb-4">
+                Obrigada, <strong class="text-gray-100">{{ order.signed_by_name }}</strong>.<br>
+                O orçamento <strong class="text-primary">{{ order.order_number }}</strong>
+                foi aceite e assinado com sucesso em {{ order.signed_at|date:"d/m/Y" }} às {{ order.signed_at|date:"H:i" }}.
             </p>
+            {% if order.signature_image %}
+            <div class="flex justify-center mt-4 mb-4">
+                <img src="{{ order.signature_image }}" alt="Assinatura"
+                     class="max-h-20 border border-gray-600 rounded-lg p-2 bg-white">
+            </div>
+            {% endif %}
+            <p class="text-sm text-gray-400 mt-4 mb-8">
+                Em breve entraremos em contacto para confirmar todos os detalhes da sua encomenda.
+                Obrigada pela preferência 🌸
+            </p>
+
+            {% elif order.signature_status == 'refused' %}
+            <div class="text-6xl mb-5">❌</div>
+            <h1 class="text-2xl font-bold text-red-400 mb-3">Orçamento recusado</h1>
+            <p class="text-gray-300 mb-4">
+                O orçamento <strong class="text-primary">{{ order.order_number }}</strong> foi recusado
+                {% if order.signed_by_name %}por <strong class="text-gray-100">{{ order.signed_by_name }}</strong>{% endif %}
+                em {{ order.signed_at|date:"d/m/Y" }} às {{ order.signed_at|date:"H:i" }}.
+            </p>
+            <p class="text-sm text-gray-400 mb-8">
+                Se mudou de ideias ou tiver alguma dúvida, não hesite em contactar-nos.
+                Teremos muito gosto em ajudar. 💛
+            </p>
+
+            {% else %}
+            <div class="text-6xl mb-5">⏳</div>
+            <h1 class="text-2xl font-bold text-gray-300 mb-3">Aguarda resposta</h1>
+            <p class="text-gray-500 mb-8">O estado deste orçamento ainda não foi definido.</p>
+            {% endif %}
+
+            <a href="{% url 'website:home' %}"
+               class="inline-flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-white text-sm bg-primary hover:bg-primary-dark transition-colors shadow-lg">
+                🌸 Visitar o nosso Website
+            </a>
         </div>
-    </div>
-</header>
+    </main>
 
-<main class="flex-1 flex items-center justify-center px-4 py-16">
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-10 max-w-md w-full text-center">
-
-        {% if order.signature_status == 'signed' %}
-        <div class="text-6xl mb-5">✅</div>
-        <h1 class="text-2xl font-bold text-green-700 mb-3">Orçamento aceite!</h1>
-        <p class="text-gray-600 mb-4">
-            Obrigada, <strong>{{ order.signed_by_name }}</strong>.<br>
-            O orçamento <strong style="color:#b89a5a;">{{ order.order_number }}</strong>
-            foi aceite e assinado com sucesso em {{ order.signed_at|date:"d/m/Y" }} às {{ order.signed_at|date:"H:i" }}.
-        </p>
-        {% if order.signature_image %}
-        <div class="flex justify-center mt-4">
-            <img src="{{ order.signature_image }}" alt="Assinatura"
-                 class="max-h-20 border border-gray-200 rounded-lg p-2 bg-gray-50">
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12 border-t border-gray-800">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4" style="color:#dbc693;">Fuet Mágico</h3>
+                    <p class="text-sm text-gray-400 mb-2">by Daisy</p>
+                    <p class="text-gray-400 mb-4 text-sm">Criando momentos mágicos através de bolos artesanais personalizados desde 2018</p>
+                    <a href="{% url 'accounts:login' %}" class="text-sm text-gray-400 hover:text-white">Login</a>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4">Links Rápidos</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="{% url 'website:home' %}#inicio" class="text-gray-400 hover:text-white">Início</a></li>
+                        <li><a href="{% url 'website:home' %}#sobre" class="text-gray-400 hover:text-white">Sobre Nós</a></li>
+                        <li><a href="{% url 'website:home' %}#portfolio" class="text-gray-400 hover:text-white">Portfólio</a></li>
+                        <li><a href="{% url 'website:home' %}#precos" class="text-gray-400 hover:text-white">Preços</a></li>
+                        <li><a href="{% url 'website:home' %}#contacto" class="text-gray-400 hover:text-white">Contacto</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4">Informação</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="text-gray-400 hover:text-white">FAQ</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Política de Privacidade</a></li>
+                        <li><a href="{% url 'website:terms' %}" class="text-gray-400 hover:text-white">Termos e Condições</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Métodos de Pagamento</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4">Receba Novidades</h4>
+                    <p class="text-gray-400 mb-4 text-sm">Promoções e inspirações direto no seu email</p>
+                    <form class="flex">
+                        <input type="email" placeholder="Seu email" class="flex-1 px-4 py-2 rounded-l-lg text-gray-900 text-sm">
+                        <button type="button" class="px-4 py-2 rounded-r-lg hover:opacity-90" style="background-color:#dbc693;">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 pt-8 text-center text-sm text-gray-400">
+                <p class="mb-2">© 2026 Fuet Mágico by Daisy. Todos os direitos reservados.</p>
+                <p>Desenvolvido por <a href="https://www.cubix.pt" target="_blank" class="font-semibold bg-gradient-to-r from-[#ed2109] to-[#ff5a19] bg-clip-text text-transparent hover:opacity-80">Cubix</a></p>
+            </div>
         </div>
-        {% endif %}
-        <p class="text-sm text-gray-400 mt-6">
-            Em breve entraremos em contacto para confirmar todos os detalhes da sua encomenda.
-            Obrigada pela preferência 🌸
-        </p>
+    </footer>
 
-        {% elif order.signature_status == 'refused' %}
-        <div class="text-6xl mb-5">❌</div>
-        <h1 class="text-2xl font-bold text-red-700 mb-3">Orçamento recusado</h1>
-        <p class="text-gray-600 mb-4">
-            O orçamento <strong>{{ order.order_number }}</strong> foi recusado
-            {% if order.signed_by_name %}por <strong>{{ order.signed_by_name }}</strong>{% endif %}
-            em {{ order.signed_at|date:"d/m/Y" }} às {{ order.signed_at|date:"H:i" }}.
-        </p>
-        <p class="text-sm text-gray-400 mt-2">
-            Se mudou de ideias ou tiver alguma dúvida, não hesite em contactar-nos.
-            Teremos muito gosto em ajudar. 💛
-        </p>
-
-        {% else %}
-        <div class="text-6xl mb-5">⏳</div>
-        <h1 class="text-2xl font-bold text-gray-700 mb-3">Aguarda resposta</h1>
-        <p class="text-gray-500">O estado deste orçamento ainda não foi definido.</p>
-        {% endif %}
-
-    </div>
-</main>
-
-<footer class="pb-8 text-center text-xs text-gray-400">
-    <p>Fuet Mágico · Criações refinadas &amp; irresistíveis</p>
-</footer>
+    <script>
+        document.getElementById('menu-btn').addEventListener('click', () => {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+    </script>
 </body>
 </html>

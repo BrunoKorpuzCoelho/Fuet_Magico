@@ -44,6 +44,9 @@ urlpatterns = [
     path('bulk/unarchive/', views.sale_order_bulk_unarchive, name='order_bulk_unarchive'),
     path('bulk/delete/',    views.sale_order_bulk_delete,    name='order_bulk_delete'),
 
+    # ── Reports ──────────────────────────────────────────────────────
+    path('relatorios/', views.sale_reports, name='sale_reports'),
+
     # ── Payment Terms ────────────────────────────────────────────────
     path('config/payment-terms/',                                      views.payment_term_list,             name='payment_term_list'),
     path('config/payment-terms/new/',                                  views.payment_term_create,           name='payment_term_create'),

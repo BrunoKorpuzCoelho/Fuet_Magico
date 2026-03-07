@@ -11,6 +11,12 @@
                 Vendas
             </a>
 
+            <!-- Relatórios -->
+            <a href="{% url 'sales:sale_reports' %}"
+               class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+                Relatórios
+            </a>
+
             <!-- Configuração dropdown -->
             <div class="relative" x-data="{ open: false }">
                 <button @click="open = !open"
