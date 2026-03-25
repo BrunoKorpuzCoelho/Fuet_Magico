@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Financeiro — Fuet Mágico{% endblock %}
+
+{% block extra_css %}
+<style>
+.reports-bg { background: linear-gradient(160deg, #0a1120 0%, #0f172a 40%, #0c1a14 100%); min-height: 100vh; }
+.kpi-card {
+    background: linear-gradient(135deg, rgba(219,198,147,0.06) 0%, rgba(219,198,147,0.02) 100%);
+    border: 1px solid rgba(219,198,147,0.18); border-radius: 16px;
+    backdrop-filter: blur(12px); transition: transform 0.2s ease, box-shadow 0.2s ease; position: relative; overflow: hidden;
+}
+.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background: linear-gradient(90deg, transparent, #dbc693, transparent); opacity: 0.6; }
+.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(219,198,147,0.12); }
+.kpi-glow { position:absolute; top:-20px; right:-20px; width:80px; height:80px; border-radius:50%; filter: blur(30px); opacity: 0.25; }
+.kpi-number { font-size: 2.2rem; font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
+.report-card {
+    background: rgba(15,23,42,0.7); border: 1px solid rgba(219,198,147,0.12); border-radius: 20px;
+    backdrop-filter: blur(16px); transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease; overflow: hidden;
+}
+.report-card:hover { transform: translateY(-4px); box-shadow: 0 24px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(219,198,147,0.25); border-color: rgba(219,198,147,0.3); }
+.report-card-header { padding: 1.5rem 1.5rem 0; }
+.report-card-body { padding: 0 1.5rem 1.5rem; }
+.report-icon { width: 48px; height: 48px; border-radius: 14px; display:flex; align-items:center; justify-content:center; margin-bottom: 1rem; }
+.section-label { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #dbc693; opacity: 0.7; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px; }
+.section-label::after { content:''; flex:1; height:1px; background: linear-gradient(90deg, rgba(219,198,147,0.2), transparent); }
+.text-gold { background: linear-gradient(135deg, #dbc693 0%, #f5e6c8 50%, #c9a96e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+</style>
+{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/financial_navbar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="reports-bg">
+<div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+    <div>
+      <h1 class="text-3xl font-extrabold text-gold tracking-tight">Dashboard Financeiro</h1>
+      <p class="text-sm text-slate-400 mt-1">{{ current_month }} {{ current_year }} — dados em tempo real</p>
+    </div>
+    <div class="flex items-center gap-2 text-xs text-slate-500 bg-slate-800/50 rounded-lg px-3 py-2 border border-slate-700/50">
+      <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+      Dados em tempo real
+    </div>
+  </div>
+
+  <!-- KPI — Este Mês -->
+  <div class="section-label">Este Mês ({{ current_month }} {{ current_year }})</div>
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#22c55e;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Receita s/IVA</p>
+      <div class="kpi-number text-emerald-400 mb-1">€{{ month_sales|floatformat:0|intcomma }}</div>
+      <p class="text-xs text-slate-500">vendas confirmadas</p>
+    </div>
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#f59e0b;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Custos s/IVA</p>
+      <div class="kpi-number text-amber-400 mb-1">€{{ month_costs|floatformat:0|intcomma }}</div>
+      <p class="text-xs text-slate-500">compras confirmadas</p>
+    </div>
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:{% if month_profit >= 0 %}#dbc693{% else %}#ef4444{% endif %};"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Lucro Bruto</p>
+      <div class="kpi-number {% if month_profit >= 0 %}text-gold{% else %}text-red-400{% endif %} mb-1">€{{ month_profit|floatformat:0|intcomma }}</div>
+      <p class="text-xs text-slate-500">receita − custos</p>
+    </div>
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:{% if month_margin >= 30 %}#22c55e{% elif month_margin >= 15 %}#f59e0b{% else %}#ef4444{% endif %};"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Margem Global</p>
+      <div class="kpi-number {% if month_margin >= 30 %}text-emerald-400{% elif month_margin >= 15 %}text-amber-400{% else %}text-red-400{% endif %} mb-1">{{ month_margin|floatformat:1 }}%</div>
+      <p class="text-xs text-slate-500">sobre receita</p>
+    </div>
+  </div>
+
+  <!-- KPI — Ano -->
+  <div class="section-label">Acumulado {{ current_year }}</div>
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#22c55e;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Receita YTD</p>
+      <div class="kpi-number text-emerald-400 mb-1">€{{ ytd_sales|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#f59e0b;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Custos YTD</p>
+      <div class="kpi-number text-amber-400 mb-1">€{{ ytd_costs|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:{% if ytd_profit >= 0 %}#dbc693{% else %}#ef4444{% endif %};"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Lucro YTD</p>
+      <div class="kpi-number {% if ytd_profit >= 0 %}text-gold{% else %}text-red-400{% endif %} mb-1">€{{ ytd_profit|floatformat:0|intcomma }}</div>
+    </div>
+  </div>
+
+  <!-- Mini Chart — últimos 6 meses -->
+  <div class="section-label">Últimos 6 Meses</div>
+  <div class="bg-slate-900/60 border border-slate-700/40 rounded-2xl p-6 mb-10">
+    <canvas id="dashChart" height="100"></canvas>
+  </div>
+
+  <!-- Reports Grid -->
+  <div class="section-label">Relatórios Disponíveis</div>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+    <!-- P&L Mensal -->
+    <a href="{% url 'financial:report_pnl' %}" class="report-card block group">
+      <div class="report-card-header">
+        <div class="report-icon" style="background:rgba(219,198,147,0.12);">
+          <svg class="h-6 w-6" style="color:#dbc693;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-slate-100 group-hover:text-gold transition-colors mb-2">P&L Mensal</h3>
+        <p class="text-sm text-slate-400 mb-4">Receita, custos e lucro por mês para o ano selecionado com gráfico de barras.</p>
+      </div>
+      <div class="report-card-body">
+        <div class="flex items-center gap-3 text-xs text-slate-500">
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Filtro por ano</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Gráfico de barras</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Comparativo Anual -->
+    <a href="{% url 'financial:report_annual_comparison' %}" class="report-card block group">
+      <div class="report-card-header">
+        <div class="report-icon" style="background:rgba(139,92,246,0.12);">
+          <svg class="h-6 w-6" style="color:#a78bfa;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-slate-100 group-hover:text-violet-400 transition-colors mb-2">Comparativo Anual</h3>
+        <p class="text-sm text-slate-400 mb-4">Confronta dois anos lado a lado: receita, custos, lucro e variação percentual mês a mês.</p>
+      </div>
+      <div class="report-card-body">
+        <div class="flex items-center gap-3 text-xs text-slate-500">
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Dois anos</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Variação %</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Evolução Receita -->
+    <a href="{% url 'financial:report_sales_evolution' %}" class="report-card block group">
+      <div class="report-card-header">
+        <div class="report-icon" style="background:rgba(34,197,94,0.12);">
+          <svg class="h-6 w-6" style="color:#4ade80;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-slate-100 group-hover:text-green-400 transition-colors mb-2">Evolução da Receita</h3>
+        <p class="text-sm text-slate-400 mb-4">Gráfico de linha com receita, custos e lucro nos últimos 12 ou 24 meses.</p>
+      </div>
+      <div class="report-card-body">
+        <div class="flex items-center gap-3 text-xs text-slate-500">
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> 12 ou 24 meses</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Gráfico de linha</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Vendas por Período -->
+    <a href="{% url 'financial:report_sales_period' %}" class="report-card block group">
+      <div class="report-card-header">
+        <div class="report-icon" style="background:rgba(6,182,212,0.12);">
+          <svg class="h-6 w-6" style="color:#22d3ee;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-slate-100 group-hover:text-cyan-400 transition-colors mb-2">Vendas por Período</h3>
+        <p class="text-sm text-slate-400 mb-4">Lista de todas as encomendas de venda confirmadas no período selecionado.</p>
+      </div>
+      <div class="report-card-body">
+        <div class="flex items-center gap-3 text-xs text-slate-500">
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Filtro mês/ano</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Por cliente</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Vendas por Produto -->
+    <a href="{% url 'financial:report_sales_products' %}" class="report-card block group">
+      <div class="report-card-header">
+        <div class="report-icon" style="background:rgba(245,158,11,0.12);">
+          <svg class="h-6 w-6" style="color:#fbbf24;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-slate-100 group-hover:text-amber-400 transition-colors mb-2">Vendas por Produto</h3>
+        <p class="text-sm text-slate-400 mb-4">Ranking de produtos por receita gerada, quantidade vendida e nº de encomendas.</p>
+      </div>
+      <div class="report-card-body">
+        <div class="flex items-center gap-3 text-xs text-slate-500">
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Ranking por receita</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Qtd. vendida</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Top Clientes -->
+    <a href="{% url 'financial:report_sales_clients' %}" class="report-card block group">
+      <div class="report-card-header">
+        <div class="report-icon" style="background:rgba(14,165,233,0.12);">
+          <svg class="h-6 w-6" style="color:#38bdf8;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-slate-100 group-hover:text-sky-400 transition-colors mb-2">Top Clientes</h3>
+        <p class="text-sm text-slate-400 mb-4">Ranking de clientes por valor de vendas e número de encomendas no período.</p>
+      </div>
+      <div class="report-card-body">
+        <div class="flex items-center gap-3 text-xs text-slate-500">
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Por valor</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Nº encomendas</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Margens por Produto -->
+    <a href="{% url 'financial:report_margins' %}" class="report-card block group">
+      <div class="report-card-header">
+        <div class="report-icon" style="background:rgba(16,185,129,0.12);">
+          <svg class="h-6 w-6" style="color:#34d399;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-slate-100 group-hover:text-emerald-400 transition-colors mb-2">Margens por Produto</h3>
+        <p class="text-sm text-slate-400 mb-4">Receita, custo e margem de lucro por produto nas vendas do período.</p>
+      </div>
+      <div class="report-card-body">
+        <div class="flex items-center gap-3 text-xs text-slate-500">
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Margem %</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Custo vs receita</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Compras por Período -->
+    <a href="{% url 'financial:report_purchases_period' %}" class="report-card block group">
+      <div class="report-card-header">
+        <div class="report-icon" style="background:rgba(239,68,68,0.12);">
+          <svg class="h-6 w-6" style="color:#f87171;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-slate-100 group-hover:text-red-400 transition-colors mb-2">Compras por Período</h3>
+        <p class="text-sm text-slate-400 mb-4">Lista de encomendas de compra confirmadas e recebidas no período.</p>
+      </div>
+      <div class="report-card-body">
+        <div class="flex items-center gap-3 text-xs text-slate-500">
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Filtro mês/ano</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Por fornecedor</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Compras por Fornecedor -->
+    <a href="{% url 'financial:report_purchases_suppliers' %}" class="report-card block group">
+      <div class="report-card-header">
+        <div class="report-icon" style="background:rgba(251,146,60,0.12);">
+          <svg class="h-6 w-6" style="color:#fb923c;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-slate-100 group-hover:text-orange-400 transition-colors mb-2">Compras por Fornecedor</h3>
+        <p class="text-sm text-slate-400 mb-4">Ranking de fornecedores por valor de compra e número de encomendas.</p>
+      </div>
+      <div class="report-card-body">
+        <div class="flex items-center gap-3 text-xs text-slate-500">
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Ranking</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> % do total</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Perdas de Stock -->
+    <a href="{% url 'financial:report_stock_losses' %}" class="report-card block group">
+      <div class="report-card-header">
+        <div class="report-icon" style="background:rgba(239,68,68,0.12);">
+          <svg class="h-6 w-6" style="color:#f87171;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-slate-100 group-hover:text-red-400 transition-colors mb-2">Perdas de Stock</h3>
+        <p class="text-sm text-slate-400 mb-4">Movimentos de sucata validados e valor destruído (qty × custo médio) no período.</p>
+      </div>
+      <div class="report-card-body">
+        <div class="flex items-center gap-3 text-xs text-slate-500">
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Filtro período</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Valor real</span>
+        </div>
+      </div>
+    </a>
+
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const ctx = document.getElementById('dashChart');
+if (ctx) {
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: {{ chart_labels_json|safe }},
+      datasets: [
+        {
+          label: 'Receita',
+          data: {{ chart_rev_json|safe }},
+          backgroundColor: 'rgba(34,197,94,0.6)',
+          borderColor: '#22c55e',
+          borderWidth: 1.5,
+          borderRadius: 6,
+        },
+        {
+          label: 'Custos',
+          data: {{ chart_cost_json|safe }},
+          backgroundColor: 'rgba(245,158,11,0.5)',
+          borderColor: '#f59e0b',
+          borderWidth: 1.5,
+          borderRadius: 6,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#94a3b8', font: { size: 12 } } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ' €' + ctx.parsed.y.toLocaleString('pt-PT', { minimumFractionDigits: 2 }),
+          }
+        },
+      },
+      scales: {
+        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: {
+          ticks: {
+            color: '#64748b',
+            callback: (v) => '€' + v.toLocaleString('pt-PT', { minimumFractionDigits: 0 }),
+          },
+          grid: { color: 'rgba(255,255,255,0.05)' },
+        },
+      },
+    },
+  });
+}
+</script>
+{% endblock %}

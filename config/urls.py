@@ -36,6 +36,7 @@ urlpatterns += i18n_patterns(
     path('purchases/', include('apps.purchases.urls')),
     path('sales/', include('apps.sales.urls')),
     path('bom/', include('apps.bom.urls')),
+    path('finance/', include('apps.financial.urls')),
     path('accounts/', include('apps.accounts.urls')),
     path('', include('apps.website.urls')),
     prefix_default_language=False,

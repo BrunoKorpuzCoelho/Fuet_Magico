@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Evolução da Receita — Financeiro{% endblock %}
+
+{% block extra_css %}
+<style>
+.reports-bg { background: linear-gradient(160deg, #0a1120 0%, #0f172a 40%, #0c1a14 100%); min-height: 100vh; }
+.text-gold { background: linear-gradient(135deg, #dbc693 0%, #f5e6c8 50%, #c9a96e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.section-label { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #dbc693; opacity: 0.7; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px; }
+.section-label::after { content:''; flex:1; height:1px; background: linear-gradient(90deg, rgba(219,198,147,0.2), transparent); }
+</style>
+{% endblock %}
+
+{% block sub_navbar %}{% include 'components/financial_navbar.html' %}{% endblock %}
+
+{% block content %}
+<div class="reports-bg">
+<div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+    <div>
+      <a href="{% url 'financial:index' %}" class="text-xs text-slate-500 hover:text-amber-300 mb-2 inline-flex items-center gap-1">
+        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Dashboard
+      </a>
+      <h1 class="text-2xl font-extrabold text-gold tracking-tight">Evolução da Receita</h1>
+      <p class="text-sm text-slate-400 mt-1">Tendência de receita, custos e lucro ao longo do tempo</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="?period=12" class="px-4 py-2 text-sm rounded-lg border transition-colors
+        {% if period == 12 %}bg-amber-500/20 border-amber-500/50 text-amber-300{% else %}border-slate-600 text-slate-400 hover:border-amber-500/50 hover:text-amber-300{% endif %}">
+        12 meses
+      </a>
+      <a href="?period=24" class="px-4 py-2 text-sm rounded-lg border transition-colors
+        {% if period == 24 %}bg-amber-500/20 border-amber-500/50 text-amber-300{% else %}border-slate-600 text-slate-400 hover:border-amber-500/50 hover:text-amber-300{% endif %}">
+        24 meses
+      </a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+    <div class="bg-slate-900/60 border border-slate-700/40 rounded-xl p-4">
+      <p class="text-xs text-slate-400 uppercase tracking-widest mb-2">Receita Total</p>
+      <p class="text-2xl font-bold text-emerald-400">€{{ total_revenue|floatformat:0|intcomma }}</p>
+      <p class="text-xs text-slate-500 mt-1">últimos {{ period }} meses</p>
+    </div>
+    <div class="bg-slate-900/60 border border-slate-700/40 rounded-xl p-4">
+      <p class="text-xs text-slate-400 uppercase tracking-widest mb-2">Custos Totais</p>
+      <p class="text-2xl font-bold text-amber-400">€{{ total_cost|floatformat:0|intcomma }}</p>
+    </div>
+    <div class="bg-slate-900/60 border border-slate-700/40 rounded-xl p-4">
+      <p class="text-xs text-slate-400 uppercase tracking-widest mb-2">Lucro Total</p>
+      <p class="text-2xl font-bold {% if total_profit >= 0 %}text-gold{% else %}text-red-400{% endif %}">€{{ total_profit|floatformat:0|intcomma }}</p>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="section-label">Evolução Mensal</div>
+  <div class="bg-slate-900/60 border border-slate-700/40 rounded-2xl p-6">
+    <canvas id="evolutionChart" height="120"></canvas>
+  </div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+new Chart(document.getElementById('evolutionChart'), {
+  type: 'line',
+  data: {
+    labels: {{ chart_labels_json|safe }},
+    datasets: [
+      { label: 'Receita', data: {{ chart_rev_json|safe }}, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.08)', fill: true, tension: 0.3, pointRadius: 3 },
+      { label: 'Custos', data: {{ chart_cost_json|safe }}, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.06)', fill: true, tension: 0.3, pointRadius: 3 },
+      { label: 'Lucro', data: {{ chart_profit_json|safe }}, borderColor: '#dbc693', backgroundColor: 'rgba(219,198,147,0.06)', fill: true, tension: 0.3, pointRadius: 3, borderDash: [4, 2] },
+    ],
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { labels: { color: '#94a3b8' } },
+      tooltip: { callbacks: { label: (c) => ' €' + c.parsed.y.toLocaleString('pt-PT', { minimumFractionDigits: 2 }) } },
+    },
+    scales: {
+      x: { ticks: { color: '#64748b', maxTicksLimit: 12 }, grid: { color: 'rgba(255,255,255,0.04)' } },
+      y: { ticks: { color: '#64748b', callback: (v) => '€' + v.toLocaleString('pt-PT') }, grid: { color: 'rgba(255,255,255,0.05)' } },
+    },
+  },
+});
+</script>
+{% endblock %}

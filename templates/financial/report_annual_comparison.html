@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Comparativo Anual — Financeiro{% endblock %}
+
+{% block extra_css %}
+<style>
+.reports-bg { background: linear-gradient(160deg, #0a1120 0%, #0f172a 40%, #0c1a14 100%); min-height: 100vh; }
+.text-gold { background: linear-gradient(135deg, #dbc693 0%, #f5e6c8 50%, #c9a96e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.section-label { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #dbc693; opacity: 0.7; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px; }
+.section-label::after { content:''; flex:1; height:1px; background: linear-gradient(90deg, rgba(219,198,147,0.2), transparent); }
+</style>
+{% endblock %}
+
+{% block sub_navbar %}{% include 'components/financial_navbar.html' %}{% endblock %}
+
+{% block content %}
+<div class="reports-bg">
+<div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+    <div>
+      <a href="{% url 'financial:index' %}" class="text-xs text-slate-500 hover:text-amber-300 mb-2 inline-flex items-center gap-1">
+        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Dashboard
+      </a>
+      <h1 class="text-2xl font-extrabold text-gold tracking-tight">Comparativo Anual</h1>
+      <p class="text-sm text-slate-400 mt-1">Comparação de vendas e lucros entre dois anos</p>
+    </div>
+    <form method="get" class="flex items-center gap-2 flex-wrap">
+      <label class="text-xs text-slate-400">Ano A</label>
+      <select name="year_a" onchange="this.form.submit()"
+        class="bg-slate-800 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2 focus:border-amber-500 focus:outline-none">
+        {% for y in years %}<option value="{{ y }}" {% if y == year_a %}selected{% endif %}>{{ y }}</option>{% endfor %}
+      </select>
+      <span class="text-slate-500">vs</span>
+      <label class="text-xs text-slate-400">Ano B</label>
+      <select name="year_b" onchange="this.form.submit()"
+        class="bg-slate-800 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2 focus:border-amber-500 focus:outline-none">
+        {% for y in years %}<option value="{{ y }}" {% if y == year_b %}selected{% endif %}>{{ y }}</option>{% endfor %}
+      </select>
+    </form>
+  </div>
+
+  <!-- KPI Totals -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+    <div class="bg-slate-900/60 border border-slate-700/40 rounded-xl p-4">
+      <p class="text-xs text-slate-400 uppercase tracking-widest mb-2">Vendas {{ year_a }}</p>
+      <p class="text-xl font-bold text-amber-400">€{{ totals_a_sales|floatformat:2|intcomma }}</p>
+    </div>
+    <div class="bg-slate-900/60 border border-slate-700/40 rounded-xl p-4">
+      <p class="text-xs text-slate-400 uppercase tracking-widest mb-2">Vendas {{ year_b }}</p>
+      <p class="text-xl font-bold text-sky-400">€{{ totals_b_sales|floatformat:2|intcomma }}</p>
+    </div>
+    <div class="bg-slate-900/60 border border-slate-700/40 rounded-xl p-4">
+      <p class="text-xs text-slate-400 uppercase tracking-widest mb-2">Lucro {{ year_a }}</p>
+      <p class="text-xl font-bold {% if totals_a_profit >= 0 %}text-emerald-400{% else %}text-red-400{% endif %}">€{{ totals_a_profit|floatformat:2|intcomma }}</p>
+    </div>
+    <div class="bg-slate-900/60 border border-slate-700/40 rounded-xl p-4">
+      <p class="text-xs text-slate-400 uppercase tracking-widest mb-2">Lucro {{ year_b }}</p>
+      <p class="text-xl font-bold {% if totals_b_profit >= 0 %}text-emerald-400{% else %}text-red-400{% endif %}">€{{ totals_b_profit|floatformat:2|intcomma }}</p>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="section-label">Evolução de Vendas — {{ year_a }} vs {{ year_b }}</div>
+  <div class="bg-slate-900/60 border border-slate-700/40 rounded-2xl p-5 mb-8">
+    <canvas id="comparisonChart" height="100"></canvas>
+  </div>
+
+  <!-- Monthly Table -->
+  <div class="section-label">Detalhe Mensal</div>
+  <div class="bg-slate-900/60 border border-slate-700/40 rounded-2xl overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-700/60">
+          <th class="text-left px-5 py-3 text-xs font-bold uppercase tracking-wider text-slate-400">Mês</th>
+          <th class="text-right px-5 py-3 text-xs font-bold uppercase tracking-wider text-amber-500">Vendas {{ year_a }}</th>
+          <th class="text-right px-5 py-3 text-xs font-bold uppercase tracking-wider text-amber-500">Custos {{ year_a }}</th>
+          <th class="text-right px-5 py-3 text-xs font-bold uppercase tracking-wider text-amber-500">Lucro {{ year_a }}</th>
+          <th class="text-right px-5 py-3 text-xs font-bold uppercase tracking-wider text-sky-400">Vendas {{ year_b }}</th>
+          <th class="text-right px-5 py-3 text-xs font-bold uppercase tracking-wider text-sky-400">Custos {{ year_b }}</th>
+          <th class="text-right px-5 py-3 text-xs font-bold uppercase tracking-wider text-sky-400">Lucro {{ year_b }}</th>
+          <th class="text-center px-5 py-3 text-xs font-bold uppercase tracking-wider text-slate-400">Δ Vendas</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-800/60">
+        {% for row in rows %}
+        <tr class="hover:bg-slate-800/30 transition-colors">
+          <td class="px-5 py-3 text-slate-300 font-semibold">{{ row.month }}</td>
+          <td class="px-5 py-3 text-right font-mono text-amber-300">€{{ row.sales_a|floatformat:2|intcomma }}</td>
+          <td class="px-5 py-3 text-right font-mono text-red-400">€{{ row.costs_a|floatformat:2|intcomma }}</td>
+          <td class="px-5 py-3 text-right font-mono font-semibold {% if row.profit_a >= 0 %}text-emerald-400{% else %}text-red-400{% endif %}">€{{ row.profit_a|floatformat:2|intcomma }}</td>
+          <td class="px-5 py-3 text-right font-mono text-sky-300">€{{ row.sales_b|floatformat:2|intcomma }}</td>
+          <td class="px-5 py-3 text-right font-mono text-red-400">€{{ row.costs_b|floatformat:2|intcomma }}</td>
+          <td class="px-5 py-3 text-right font-mono font-semibold {% if row.profit_b >= 0 %}text-emerald-400{% else %}text-red-400{% endif %}">€{{ row.profit_b|floatformat:2|intcomma }}</td>
+          <td class="px-5 py-3 text-center">
+            {% if row.delta > 0 %}
+            <span class="inline-flex items-center gap-1 text-emerald-400 text-xs font-bold">
+              <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7 7 7M5 19l7-7 7 7"/></svg>
+              {{ row.delta_pct|floatformat:1 }}%
+            </span>
+            {% elif row.delta < 0 %}
+            <span class="inline-flex items-center gap-1 text-red-400 text-xs font-bold">
+              <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7-7-7M19 5l-7 7-7-7"/></svg>
+              {{ row.delta_pct|floatformat:1 }}%
+            </span>
+            {% else %}
+            <span class="text-slate-500 text-xs">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="border-t border-slate-600/60 bg-slate-800/40">
+          <td class="px-5 py-3 text-xs font-bold text-slate-400 uppercase tracking-wide">Total</td>
+          <td class="px-5 py-3 text-right font-mono font-bold text-amber-300">€{{ totals_a_sales|floatformat:2|intcomma }}</td>
+          <td class="px-5 py-3"></td>
+          <td class="px-5 py-3 text-right font-mono font-bold {% if totals_a_profit >= 0 %}text-emerald-400{% else %}text-red-400{% endif %}">€{{ totals_a_profit|floatformat:2|intcomma }}</td>
+          <td class="px-5 py-3 text-right font-mono font-bold text-sky-300">€{{ totals_b_sales|floatformat:2|intcomma }}</td>
+          <td class="px-5 py-3"></td>
+          <td class="px-5 py-3 text-right font-mono font-bold {% if totals_b_profit >= 0 %}text-emerald-400{% else %}text-red-400{% endif %}">€{{ totals_b_profit|floatformat:2|intcomma }}</td>
+          <td class="px-5 py-3"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+  const labels = {{ chart_labels|safe }};
+  const dataA  = {{ chart_a|safe }};
+  const dataB  = {{ chart_b|safe }};
+
+  new Chart(document.getElementById('comparisonChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Vendas {{ year_a }}',
+          data: dataA,
+          backgroundColor: 'rgba(245,158,11,0.6)',
+          borderColor: 'rgba(245,158,11,0.9)',
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+        {
+          label: 'Vendas {{ year_b }}',
+          data: dataB,
+          backgroundColor: 'rgba(56,189,248,0.6)',
+          borderColor: 'rgba(56,189,248,0.9)',
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#94a3b8' } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ' €' + ctx.parsed.y.toLocaleString('pt-PT', {minimumFractionDigits:2, maximumFractionDigits:2})
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } },
+        y: {
+          ticks: {
+            color: '#94a3b8',
+            callback: v => '€' + v.toLocaleString('pt-PT', {minimumFractionDigits:0})
+          },
+          grid: { color: 'rgba(148,163,184,0.08)' }
+        }
+      }
+    }
+  });
+})();
+</script>
+{% endblock %}

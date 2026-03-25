@@ -846,6 +846,51 @@ def sale_order_cancel(request, pk):
 # ────────────────────────────────────────────────────────────────────
 
 @login_required
+def sale_order_margins(request, pk):
+    """Return margin analysis for a sale order as JSON."""
+    order = get_object_or_404(
+        filter_by_company(SaleOrder.objects, request), pk=pk
+    )
+    lines = order.lines.select_related('product').all()
+
+    line_data = []
+    total_cost = 0
+    total_sale = float(order.subtotal or 0)
+
+    for line in lines:
+        sale_value = float(line.line_total)
+        cost_unit = float(line.product.cost_price or 0) if line.product else 0
+        cost_value = cost_unit * float(line.quantity or 0)
+        profit = sale_value - cost_value
+        margin_pct = (profit / sale_value * 100) if sale_value else 0
+        total_cost += cost_value
+        line_data.append({
+            'product': line.product.name if line.product else '—',
+            'quantity': str(line.quantity),
+            'unit_price': str(line.unit_price),
+            'sale_value': round(sale_value, 2),
+            'cost_unit': round(cost_unit, 4),
+            'cost_value': round(cost_value, 2),
+            'profit': round(profit, 2),
+            'margin_pct': round(margin_pct, 1),
+        })
+
+    total_profit = total_sale - total_cost
+    total_margin_pct = (total_profit / total_sale * 100) if total_sale else 0
+
+    return JsonResponse({
+        'order_number': order.order_number,
+        'lines': line_data,
+        'totals': {
+            'sale': round(total_sale, 2),
+            'cost': round(total_cost, 2),
+            'profit': round(total_profit, 2),
+            'margin_pct': round(total_margin_pct, 1),
+        },
+    })
+
+
+@login_required
 @require_POST
 def sale_order_line_add(request, pk):
     """Add a line to a DRAFT sale order (JSON body)."""

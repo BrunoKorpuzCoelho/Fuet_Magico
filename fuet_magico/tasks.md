@@ -26,7 +26,7 @@
 - **Fase 7:** 152/152 tarefas (100%) - App: Compras ✅
 - **Fase 8:** ~60/247 tarefas (~24%) - App: Vendas 🔄 parcial
 - **Fase 9:** 0/94 tarefas (0%) - App: Financeiro
-- **Fase 10:** 0/358 tarefas (0%) - BOM (Bill of Materials) - Sistema de Receitas
+- **Fase 10:** 358/358 tarefas (100%) - BOM (Bill of Materials) - Sistema de Receitas ✅
 - **Fase 11:** 138/190 tarefas (73%) - Sistema de PDFs (Documentos) 🔄 parcial
 - **Fase 12:** 203/511 tarefas (40%) - App: WhatsApp Templates & Activities 🔄 parcial
 - **Fase 13:** 0/44 tarefas (0%) - Stock Management Avançado
@@ -36,7 +36,7 @@
 - **Fase 17:** 0/53 tarefas (0%) - Integração Final e Deployment
 - **Fase 18:** 96/410 tarefas (23%) - Testes Automatizados UI (Playwright) 🔄 parcial
 
-**TOTAL:** 2263/4955 tarefas (45.7%)
+**TOTAL:** 2621/4955 tarefas (52.9%)
 
 ---
 
@@ -8322,12 +8322,12 @@ Permitir exportar relatórios para Excel/CSV.
 
 Criar app Django para gestão de Bill of Materials (Receitas).
 
-- [ ] **Criar app**
-  - [ ] Executar `python manage.py startapp bom apps/bom`
-  - [ ] Adicionar 'apps.bom' ao INSTALLED_APPS
+- [x] **Criar app**
+  - [x] Executar `python manage.py startapp bom apps/bom`
+  - [x] Adicionar 'apps.bom' ao INSTALLED_APPS
 
-- [ ] **Criar estrutura de arquivos**
-  - [ ] Criar models.py, views.py, forms.py, urls.py, utils.py
+- [x] **Criar estrutura de arquivos**
+  - [x] Criar models.py, views.py, forms.py, urls.py, utils.py
 
 ---
 
@@ -8335,22 +8335,22 @@ Criar app Django para gestão de Bill of Materials (Receitas).
 
 Adicionar campos necessários no modelo Product existente para suportar BOM.
 
-- [ ] **Criar migration para adicionar campos**
-  - [ ] Adicionar campo `product_type`: CHOICES ['RAW_MATERIAL', 'COMPONENT', 'FINISHED_PRODUCT']
-  - [ ] Adicionar campo `has_bom`: Boolean (default=False)
-  - [ ] Adicionar campo `bom_cost`: Decimal (custo calculado via BOM, nullable)
-  - [ ] Adicionar campo `labor_cost_per_unit`: Decimal (custo de mão-de-obra por unidade)
-  - [ ] Adicionar campo `uom` (FK para UnitOfMeasure - criar depois)
+- [x] **Criar migration para adicionar campos**
+  - [x] Adicionar campo `product_type`: CHOICES ['RAW_MATERIAL', 'COMPONENT', 'FINISHED_PRODUCT']
+  - [x] Adicionar campo `has_bom`: Boolean (default=False)
+  - [x] Adicionar campo `bom_cost`: Decimal (custo calculado via BOM, nullable)
+  - [x] Adicionar campo `labor_cost_per_unit`: Decimal (custo de mão-de-obra por unidade)
+  - [x] Adicionar campo `uom` (FK para UnitOfMeasure - criar depois)
 
-- [ ] **Atualizar Product Admin**
-  - [ ] Adicionar novos campos ao list_display
-  - [ ] Adicionar filtro por product_type
-  - [ ] Adicionar indicador visual se has_bom=True
+- [x] **Atualizar Product Admin**
+  - [x] Adicionar novos campos ao list_display
+  - [x] Adicionar filtro por product_type
+  - [x] Adicionar indicador visual se has_bom=True
 
-- [ ] **Testing - Product Update**
-  - [ ] Test: migration aplicada sem erros
-  - [ ] Test: produtos existentes mantêm dados
-  - [ ] Test: novos campos aparecem no admin
+- [x] **Testing - Product Update**
+  - [x] Test: migration aplicada sem erros
+  - [x] Test: produtos existentes mantêm dados
+  - [x] Test: novos campos aparecem no admin
 
 ---
 
@@ -8358,31 +8358,31 @@ Adicionar campos necessários no modelo Product existente para suportar BOM.
 
 Criar sistema de unidades de medida para conversões precisas.
 
-- [ ] **Criar modelo UnitOfMeasure**
-  - [ ] Campos: name (ex: 'Quilograma', 'Grama', 'Litro', 'Unidade', 'Fatia')
-  - [ ] Campos: abbreviation ('KG', 'G', 'L', 'UN', 'SLICE')
-  - [ ] Campos: category: CHOICES ['WEIGHT', 'VOLUME', 'UNIT']
-  - [ ] Campos: is_reference (Boolean - unidade base da categoria)
-  - [ ] Método __str__ retorna abbreviation
+- [x] **Criar modelo UnitOfMeasure**
+  - [x] Campos: name (ex: 'Quilograma', 'Grama', 'Litro', 'Unidade', 'Fatia')
+  - [x] Campos: abbreviation ('KG', 'G', 'L', 'UN', 'SLICE')
+  - [x] Campos: category: CHOICES ['WEIGHT', 'VOLUME', 'UNIT']
+  - [x] Campos: is_reference (Boolean - unidade base da categoria)
+  - [x] Método __str__ retorna abbreviation
 
-- [ ] **Criar migrations**
-  - [ ] makemigrations e migrate
+- [x] **Criar migrations**
+  - [x] makemigrations e migrate
 
-- [ ] **Criar data migration para unidades padrão**
-  - [ ] Criar: KG (WEIGHT, reference), G (WEIGHT), MG (WEIGHT)
-  - [ ] Criar: L (VOLUME, reference), ML (VOLUME)
-  - [ ] Criar: UN (UNIT, reference)
-  - [ ] Criar: SLICE (UNIT), DOZEN (UNIT)
+- [x] **Criar data migration para unidades padrão**
+  - [x] Criar: KG (WEIGHT, reference), G (WEIGHT), MG (WEIGHT)
+  - [x] Criar: L (VOLUME, reference), ML (VOLUME)
+  - [x] Criar: UN (UNIT, reference)
+  - [x] Criar: SLICE (UNIT), DOZEN (UNIT)
 
-- [ ] **Registrar no Admin**
-  - [ ] Criar UnitOfMeasureAdmin
-  - [ ] list_display: name, abbreviation, category, is_reference
-  - [ ] list_filter: category
+- [x] **Registrar no Admin**
+  - [x] Criar UnitOfMeasureAdmin
+  - [x] list_display: name, abbreviation, category, is_reference
+  - [x] list_filter: category
 
-- [ ] **Testing - UnitOfMeasure**
-  - [ ] Test: criar unidade de medida funciona
-  - [ ] Test: data migration cria unidades padrão
-  - [ ] Test: visualizar no admin
+- [x] **Testing - UnitOfMeasure**
+  - [x] Test: criar unidade de medida funciona
+  - [x] Test: data migration cria unidades padrão
+  - [x] Test: visualizar no admin
 
 ---
 
@@ -8390,38 +8390,38 @@ Criar sistema de unidades de medida para conversões precisas.
 
 Criar sistema de conversões automáticas entre unidades.
 
-- [ ] **Criar modelo UnitConversion**
-  - [ ] Campos: from_uom (FK → UnitOfMeasure)
-  - [ ] Campos: to_uom (FK → UnitOfMeasure)
-  - [ ] Campos: factor (Decimal) - ex: 1 KG = 1000 G → factor=1000
-  - [ ] Constraint: from_uom e to_uom devem ter mesma category
-  - [ ] Método __str__: "1 KG = 1000 G"
+- [x] **Criar modelo UnitConversion**
+  - [x] Campos: from_uom (FK → UnitOfMeasure)
+  - [x] Campos: to_uom (FK → UnitOfMeasure)
+  - [x] Campos: factor (Decimal) - ex: 1 KG = 1000 G → factor=1000
+  - [x] Constraint: from_uom e to_uom devem ter mesma category
+  - [x] Método __str__: "1 KG = 1000 G"
 
-- [ ] **Criar migrations**
-  - [ ] makemigrations e migrate
+- [x] **Criar migrations**
+  - [x] makemigrations e migrate
 
-- [ ] **Criar data migration para conversões padrão**
-  - [ ] KG → G: factor=1000
-  - [ ] KG → MG: factor=1000000
-  - [ ] G → MG: factor=1000
-  - [ ] L → ML: factor=1000
-  - [ ] DOZEN → UN: factor=12
+- [x] **Criar data migration para conversões padrão**
+  - [x] KG → G: factor=1000
+  - [x] KG → MG: factor=1000000
+  - [x] G → MG: factor=1000
+  - [x] L → ML: factor=1000
+  - [x] DOZEN → UN: factor=12
 
-- [ ] **Criar função de conversão em utils.py**
-  - [ ] Função `convert_quantity(value, from_uom, to_uom)`
-  - [ ] Verificar se conversão existe
-  - [ ] Aplicar factor (direto ou inverso)
-  - [ ] Retornar valor convertido com alta precisão (Decimal)
+- [x] **Criar função de conversão em utils.py**
+  - [x] Função `convert_quantity(value, from_uom, to_uom)`
+  - [x] Verificar se conversão existe
+  - [x] Aplicar factor (direto ou inverso)
+  - [x] Retornar valor convertido com alta precisão (Decimal)
 
-- [ ] **Registrar no Admin**
-  - [ ] Criar UnitConversionAdmin
-  - [ ] list_display: from_uom, to_uom, factor
+- [x] **Registrar no Admin**
+  - [x] Criar UnitConversionAdmin
+  - [x] list_display: from_uom, to_uom, factor
 
-- [ ] **Testing - UnitConversion**
-  - [ ] Test: conversão KG → G funciona (1 → 1000)
-  - [ ] Test: conversão G → KG funciona (1000 → 1)
-  - [ ] Test: converter entre categorias diferentes retorna erro
-  - [ ] Test: alta precisão mantida (ex: 0.0015)
+- [x] **Testing - UnitConversion**
+  - [x] Test: conversão KG → G funciona (1 → 1000)
+  - [x] Test: conversão G → KG funciona (1000 → 1)
+  - [x] Test: converter entre categorias diferentes retorna erro
+  - [x] Test: alta precisão mantida (ex: 0.0015)
 
 ---
 
@@ -8429,32 +8429,32 @@ Criar sistema de conversões automáticas entre unidades.
 
 Criar modelo de Bill of Materials (receita) para produtos manufaturados.
 
-- [ ] **Criar modelo ProductBOM**
-  - [ ] Campos: product (OneToOne → Product) - produto que esta receita produz
-  - [ ] Campos: name (ex: "Receita Massa Fina Standard")
-  - [ ] Campos: quantity_produced (Decimal) - quantidade produzida (ex: 1.0)
-  - [ ] Campos: uom_produced (FK → UnitOfMeasure) - unidade do produzido
-  - [ ] Campos: labor_time_minutes (Integer) - tempo de mão-de-obra em minutos
-  - [ ] Campos: labor_cost_per_hour (Decimal) - custo por hora de trabalho
-  - [ ] Campos: total_component_cost (Decimal, auto-calculado)
-  - [ ] Campos: total_labor_cost (Decimal, auto-calculado)
-  - [ ] Campos: total_cost (Decimal, auto-calculado)
-  - [ ] Campos: cost_per_unit (Decimal, auto-calculado) - total_cost / quantity_produced
-  - [ ] Campos: is_active, notes
-  - [ ] Método __str__
+- [x] **Criar modelo ProductBOM**
+  - [x] Campos: product (OneToOne → Product) - produto que esta receita produz
+  - [x] Campos: name (ex: "Receita Massa Fina Standard")
+  - [x] Campos: quantity_produced (Decimal) - quantidade produzida (ex: 1.0)
+  - [x] Campos: uom_produced (FK → UnitOfMeasure) - unidade do produzido
+  - [x] Campos: labor_time_minutes (Integer) - tempo de mão-de-obra em minutos
+  - [x] Campos: labor_cost_per_hour (Decimal) - custo por hora de trabalho
+  - [x] Campos: total_component_cost (Decimal, auto-calculado)
+  - [x] Campos: total_labor_cost (Decimal, auto-calculado)
+  - [x] Campos: total_cost (Decimal, auto-calculado)
+  - [x] Campos: cost_per_unit (Decimal, auto-calculado) - total_cost / quantity_produced
+  - [x] Campos: is_active, notes
+  - [x] Método __str__
 
-- [ ] **Criar migrations**
-  - [ ] makemigrations e migrate
+- [x] **Criar migrations**
+  - [x] makemigrations e migrate
 
-- [ ] **Registrar no Admin**
-  - [ ] Criar ProductBOMAdmin
-  - [ ] list_display: product, name, quantity_produced, total_cost, cost_per_unit
-  - [ ] readonly_fields: custos calculados
-  - [ ] Inline para ProductBOMLine (próxima tarefa)
+- [x] **Registrar no Admin**
+  - [x] Criar ProductBOMAdmin
+  - [x] list_display: product, name, quantity_produced, total_cost, cost_per_unit
+  - [x] readonly_fields: custos calculados
+  - [x] Inline para ProductBOMLine (próxima tarefa)
 
-- [ ] **Testing - ProductBOM**
-  - [ ] Test: criar BOM funciona
-  - [ ] Test: relacionamento OneToOne com Product funciona
+- [x] **Testing - ProductBOM**
+  - [x] Test: criar BOM funciona
+  - [x] Test: relacionamento OneToOne com Product funciona
 
 ---
 
@@ -8462,29 +8462,29 @@ Criar modelo de Bill of Materials (receita) para produtos manufaturados.
 
 Criar linhas de componentes que compõem a receita.
 
-- [ ] **Criar modelo ProductBOMLine**
-  - [ ] Campos: bom (FK → ProductBOM, related_name='lines')
-  - [ ] Campos: component (FK → Product) - produto componente
-  - [ ] Campos: quantity (Decimal) - quantidade necessária
-  - [ ] Campos: uom (FK → UnitOfMeasure) - unidade da quantidade
-  - [ ] Campos: sequence (Integer) - ordem na receita
-  - [ ] Campos: component_cost_per_unit (Decimal, auto-calculado)
-  - [ ] Campos: line_total_cost (Decimal, auto-calculado)
-  - [ ] Método calculate_cost() - calcula custo da linha
-  - [ ] Método __str__
+- [x] **Criar modelo ProductBOMLine**
+  - [x] Campos: bom (FK → ProductBOM, related_name='lines')
+  - [x] Campos: component (FK → Product) - produto componente
+  - [x] Campos: quantity (Decimal) - quantidade necessária
+  - [x] Campos: uom (FK → UnitOfMeasure) - unidade da quantidade
+  - [x] Campos: sequence (Integer) - ordem na receita
+  - [x] Campos: component_cost_per_unit (Decimal, auto-calculado)
+  - [x] Campos: line_total_cost (Decimal, auto-calculado)
+  - [x] Método calculate_cost() - calcula custo da linha
+  - [x] Método __str__
 
-- [ ] **Criar migrations**
-  - [ ] makemigrations e migrate
+- [x] **Criar migrations**
+  - [x] makemigrations e migrate
 
-- [ ] **Registrar no Admin**
-  - [ ] Criar ProductBOMLineInline para usar no ProductBOMAdmin
-  - [ ] list_display: sequence, component, quantity, uom, line_total_cost
-  - [ ] readonly_fields: custos calculados
-  - [ ] Ordenar por sequence
+- [x] **Registrar no Admin**
+  - [x] Criar ProductBOMLineInline para usar no ProductBOMAdmin
+  - [x] list_display: sequence, component, quantity, uom, line_total_cost
+  - [x] readonly_fields: custos calculados
+  - [x] Ordenar por sequence
 
-- [ ] **Testing - ProductBOMLine**
-  - [ ] Test: criar linha de BOM funciona
-  - [ ] Test: múltiplas linhas em uma BOM
+- [x] **Testing - ProductBOMLine**
+  - [x] Test: criar linha de BOM funciona
+  - [x] Test: múltiplas linhas em uma BOM
 
 ---
 
@@ -8492,41 +8492,41 @@ Criar linhas de componentes que compõem a receita.
 
 Implementar cálculo automático de custos multi-nível (componentes que têm componentes).
 
-- [ ] **Criar método em Product: get_real_cost()**
-  - [ ] Se product_type = 'RAW_MATERIAL': retornar cost_price (custo de compra)
-  - [ ] Se has_bom = False: retornar cost_price
-  - [ ] Se has_bom = True: calcular via BOM (RECURSIVO)
-  - [ ] Adicionar labor_cost_per_unit ao custo final
-  - [ ] Retornar custo total por unidade base
+- [x] **Criar método em Product: get_real_cost()**
+  - [x] Se product_type = 'RAW_MATERIAL': retornar cost_price (custo de compra)
+  - [x] Se has_bom = False: retornar cost_price
+  - [x] Se has_bom = True: calcular via BOM (RECURSIVO)
+  - [x] Adicionar labor_cost_per_unit ao custo final
+  - [x] Retornar custo total por unidade base
 
-- [ ] **Criar método em ProductBOMLine: calculate_cost()**
-  - [ ] Obter custo do componente: self.component.get_real_cost() (RECURSIVO!)
-  - [ ] Converter quantidade para unidade base do componente
-  - [ ] Calcular: custo_componente * quantidade_convertida
-  - [ ] Atualizar component_cost_per_unit e line_total_cost
-  - [ ] Salvar
+- [x] **Criar método em ProductBOMLine: calculate_cost()**
+  - [x] Obter custo do componente: self.component.get_real_cost() (RECURSIVO!)
+  - [x] Converter quantidade para unidade base do componente
+  - [x] Calcular: custo_componente * quantidade_convertida
+  - [x] Atualizar component_cost_per_unit e line_total_cost
+  - [x] Salvar
 
-- [ ] **Criar método em ProductBOM: calculate_total_cost()**
-  - [ ] Iterar por todas as linhas: for line in self.lines.all()
-  - [ ] Chamar line.calculate_cost() para cada linha
-  - [ ] Somar todos os line_total_cost → total_component_cost
-  - [ ] Calcular total_labor_cost: (labor_time_minutes / 60) * labor_cost_per_hour
-  - [ ] total_cost = total_component_cost + total_labor_cost
-  - [ ] cost_per_unit = total_cost / quantity_produced
-  - [ ] Salvar BOM
-  - [ ] Atualizar product.bom_cost = cost_per_unit
+- [x] **Criar método em ProductBOM: calculate_total_cost()**
+  - [x] Iterar por todas as linhas: for line in self.lines.all()
+  - [x] Chamar line.calculate_cost() para cada linha
+  - [x] Somar todos os line_total_cost → total_component_cost
+  - [x] Calcular total_labor_cost: (labor_time_minutes / 60) * labor_cost_per_hour
+  - [x] total_cost = total_component_cost + total_labor_cost
+  - [x] cost_per_unit = total_cost / quantity_produced
+  - [x] Salvar BOM
+  - [x] Atualizar product.bom_cost = cost_per_unit
 
-- [ ] **Criar signal post_save para ProductBOMLine**
-  - [ ] Quando linha é criada/editada/deletada
-  - [ ] Recalcular bom.calculate_total_cost()
+- [x] **Criar signal post_save para ProductBOMLine**
+  - [x] Quando linha é criada/editada/deletada
+  - [x] Recalcular bom.calculate_total_cost()
 
-- [ ] **Testing - Cálculo em Cascata**
-  - [ ] Test: custo de RAW_MATERIAL retorna cost_price
-  - [ ] Test: BOM nível 1 calcula corretamente
-  - [ ] Test: BOM nível 2 (componente tem BOM) calcula em cascata
-  - [ ] Test: BOM nível 3 (componente de componente tem BOM) calcula
-  - [ ] Test: alterar custo de matéria-prima atualiza BOM que usa
-  - [ ] Test: labor_cost é incluído no cálculo
+- [x] **Testing - Cálculo em Cascata**
+  - [x] Test: custo de RAW_MATERIAL retorna cost_price
+  - [x] Test: BOM nível 1 calcula corretamente
+  - [x] Test: BOM nível 2 (componente tem BOM) calcula em cascata
+  - [x] Test: BOM nível 3 (componente de componente tem BOM) calcula
+  - [x] Test: alterar custo de matéria-prima atualiza BOM que usa
+  - [x] Test: labor_cost é incluído no cálculo
 
 ---
 
@@ -8534,38 +8534,38 @@ Implementar cálculo automático de custos multi-nível (componentes que têm co
 
 Criar funcionalidade para recalcular todos os custos do sistema.
 
-- [ ] **Criar management command**
-  - [ ] Criar `apps/bom/management/commands/recalculate_bom_costs.py`
-  - [ ] Comando: `python manage.py recalculate_bom_costs`
-  - [ ] Obter todos os BOMs ativos
-  - [ ] Recalcular em ordem: RAW → COMPONENT → FINISHED_PRODUCT
-  - [ ] Exibir progresso e resumo
+- [x] **Criar management command**
+  - [x] Criar `apps/bom/management/commands/recalculate_bom_costs.py`
+  - [x] Comando: `python manage.py recalculate_bom_costs`
+  - [x] Obter todos os BOMs ativos
+  - [x] Recalcular em ordem: RAW → COMPONENT → FINISHED_PRODUCT
+  - [x] Exibir progresso e resumo
 
-- [ ] **Criar Celery task para recálculo assíncrono**
-  - [ ] Task `recalculate_all_bom_costs_async()`
-  - [ ] Executar comando em background
-  - [ ] Notificar usuário quando concluir
+- [x] **Criar Celery task para recálculo assíncrono**
+  - [x] Task `recalculate_all_bom_costs_async()`
+  - [x] Executar comando em background
+  - [x] Notificar usuário quando concluir
 
-- [ ] **Criar view de recálculo manual**
-  - [ ] Criar BOMRecalculateView
-  - [ ] Botão "Recalcular Todos os Custos"
-  - [ ] Confirmação antes de executar
-  - [ ] Executar via Celery task
-  - [ ] Mostrar status de progresso (opcional)
+- [x] **Criar view de recálculo manual**
+  - [x] Criar BOMRecalculateView
+  - [x] Botão "Recalcular Todos os Custos"
+  - [x] Confirmação antes de executar
+  - [x] Executar via Celery task
+  - [x] Mostrar status de progresso (opcional)
 
-- [ ] **Criar template**
-  - [ ] `templates/bom/recalculate.html` (standalone)
-  - [ ] Aviso de que pode demorar
-  - [ ] Botão de confirmação
+- [x] **Criar template**
+  - [x] `templates/bom/recalculate.html` (standalone)
+  - [x] Aviso de que pode demorar
+  - [x] Botão de confirmação
 
-- [ ] **Configurar rota**
-  - [ ] `path('bom/recalculate/', BOMRecalculateView, name='bom_recalculate')`
+- [x] **Configurar rota**
+  - [x] `path('bom/recalculate/', BOMRecalculateView, name='bom_recalculate')`
 
-- [ ] **Testing - Recálculo Global**
-  - [ ] Test: comando recalcula todos os BOMs
-  - [ ] Test: ordem de cálculo está correta
-  - [ ] Test: task Celery funciona
-  - [ ] Test: view dispara recálculo
+- [x] **Testing - Recálculo Global**
+  - [x] Test: comando recalcula todos os BOMs
+  - [x] Test: ordem de cálculo está correta
+  - [x] Test: task Celery funciona
+  - [x] Test: view dispara recálculo
 
 ---
 
@@ -8573,27 +8573,27 @@ Criar funcionalidade para recalcular todos os custos do sistema.
 
 Criar interface para visualizar todas as receitas.
 
-- [ ] **Criar BOMListView**
-  - [ ] Listar todos os BOMs ativos
-  - [ ] Filtros: product_type, produto
-  - [ ] Busca por nome de produto
-  - [ ] Mostrar: produto, nome BOM, custo total, custo/unidade
-  - [ ] Link para visualizar/editar
+- [x] **Criar BOMListView**
+  - [x] Listar todos os BOMs ativos
+  - [x] Filtros: product_type, produto
+  - [x] Busca por nome de produto
+  - [x] Mostrar: produto, nome BOM, custo total, custo/unidade
+  - [x] Link para visualizar/editar
 
-- [ ] **Criar template**
-  - [ ] `templates/bom/bom_list.html` (standalone)
-  - [ ] Tabela com colunas importantes
-  - [ ] Badges visuais para product_type
-  - [ ] Botão "Nova Receita"
-  - [ ] Botão "Recalcular Todos os Custos"
+- [x] **Criar template**
+  - [x] `templates/bom/bom_list.html` (standalone)
+  - [x] Tabela com colunas importantes
+  - [x] Badges visuais para product_type
+  - [x] Botão "Nova Receita"
+  - [x] Botão "Recalcular Todos os Custos"
 
-- [ ] **Configurar rota**
-  - [ ] `path('bom/', BOMListView, name='bom_list')`
+- [x] **Configurar rota**
+  - [x] `path('bom/', BOMListView, name='bom_list')`
 
-- [ ] **Testing - BOM List**
-  - [ ] Test: listar BOMs funciona
-  - [ ] Test: filtros funcionam
-  - [ ] Test: custos exibidos corretamente
+- [x] **Testing - BOM List**
+  - [x] Test: listar BOMs funciona
+  - [x] Test: filtros funcionam
+  - [x] Test: custos exibidos corretamente
 
 ---
 
@@ -8601,34 +8601,34 @@ Criar interface para visualizar todas as receitas.
 
 Criar interface para criar nova receita.
 
-- [ ] **Criar BOMCreateView**
-  - [ ] Form: selecionar produto (filtrar apenas has_bom=True ou criar novo)
-  - [ ] Campos: name, quantity_produced, uom_produced
-  - [ ] Campos: labor_time_minutes, labor_cost_per_hour
-  - [ ] JavaScript para adicionar linhas de componentes dinamicamente
-  - [ ] Seletor de componentes com busca
-  - [ ] Campos por linha: component, quantity, uom
-  - [ ] Validação: não permitir ciclos (produto A → B → A)
+- [x] **Criar BOMCreateView**
+  - [x] Form: selecionar produto (filtrar apenas has_bom=True ou criar novo)
+  - [x] Campos: name, quantity_produced, uom_produced
+  - [x] Campos: labor_time_minutes, labor_cost_per_hour
+  - [x] JavaScript para adicionar linhas de componentes dinamicamente
+  - [x] Seletor de componentes com busca
+  - [x] Campos por linha: component, quantity, uom
+  - [x] Validação: não permitir ciclos (produto A → B → A)
 
-- [ ] **Criar form**
-  - [ ] Criar ProductBOMForm em forms.py
-  - [ ] Formset para ProductBOMLine
-  - [ ] Validação de ciclos recursivos
+- [x] **Criar form**
+  - [x] Criar ProductBOMForm em forms.py
+  - [x] Formset para ProductBOMLine
+  - [x] Validação de ciclos recursivos
 
-- [ ] **Criar template**
-  - [ ] `templates/bom/bom_create.html` (standalone)
-  - [ ] Formulário principal
-  - [ ] Tabela dinâmica de componentes
-  - [ ] Botão "Adicionar Componente"
-  - [ ] Preview de custo (calculado em tempo real via JS - opcional)
+- [x] **Criar template**
+  - [x] `templates/bom/bom_create.html` (standalone)
+  - [x] Formulário principal
+  - [x] Tabela dinâmica de componentes
+  - [x] Botão "Adicionar Componente"
+  - [x] Preview de custo (calculado em tempo real via JS - opcional)
 
-- [ ] **Configurar rota**
-  - [ ] `path('bom/new/', BOMCreateView, name='bom_create')`
+- [x] **Configurar rota**
+  - [x] `path('bom/new/', BOMCreateView, name='bom_create')`
 
-- [ ] **Testing - BOM Create**
-  - [ ] Test: criar BOM com linhas funciona
-  - [ ] Test: validação de ciclos funciona
-  - [ ] Test: custos são calculados automaticamente após salvar
+- [x] **Testing - BOM Create**
+  - [x] Test: criar BOM com linhas funciona
+  - [x] Test: validação de ciclos funciona
+  - [x] Test: custos são calculados automaticamente após salvar
 
 ---
 
@@ -8636,32 +8636,32 @@ Criar interface para criar nova receita.
 
 Criar interface para visualizar e editar receita.
 
-- [ ] **Criar BOMDetailView**
-  - [ ] Mostrar informações do BOM
-  - [ ] Tabela de componentes com custos calculados
-  - [ ] Mostrar total_component_cost, total_labor_cost, total_cost
-  - [ ] Mostrar cost_per_unit (destaque visual)
-  - [ ] Botão "Editar", "Duplicar", "Recalcular Esta Receita"
-  - [ ] Mostrar onde este produto é usado (reverse lookup)
+- [x] **Criar BOMDetailView**
+  - [x] Mostrar informações do BOM
+  - [x] Tabela de componentes com custos calculados
+  - [x] Mostrar total_component_cost, total_labor_cost, total_cost
+  - [x] Mostrar cost_per_unit (destaque visual)
+  - [x] Botão "Editar", "Duplicar", "Recalcular Esta Receita"
+  - [x] Mostrar onde este produto é usado (reverse lookup)
 
-- [ ] **Criar BOMUpdateView**
-  - [ ] Form pré-preenchido
-  - [ ] Permitir editar linhas
-  - [ ] Recalcular ao salvar
+- [x] **Criar BOMUpdateView**
+  - [x] Form pré-preenchido
+  - [x] Permitir editar linhas
+  - [x] Recalcular ao salvar
 
-- [ ] **Criar templates**
-  - [ ] `templates/bom/bom_detail.html` (standalone)
-  - [ ] `templates/bom/bom_update.html` (standalone)
+- [x] **Criar templates**
+  - [x] `templates/bom/bom_detail.html` (standalone)
+  - [x] `templates/bom/bom_update.html` (standalone)
 
-- [ ] **Configurar rotas**
-  - [ ] `path('bom/<uuid:pk>/', BOMDetailView, name='bom_detail')`
-  - [ ] `path('bom/<uuid:pk>/edit/', BOMUpdateView, name='bom_update')`
+- [x] **Configurar rotas**
+  - [x] `path('bom/<uuid:pk>/', BOMDetailView, name='bom_detail')`
+  - [x] `path('bom/<uuid:pk>/edit/', BOMUpdateView, name='bom_update')`
 
-- [ ] **Testing - BOM Edit/Detail**
-  - [ ] Test: visualizar detalhes funciona
-  - [ ] Test: todos os custos são exibidos
-  - [ ] Test: editar BOM funciona
-  - [ ] Test: recalcular recalcula corretamente
+- [x] **Testing - BOM Edit/Detail**
+  - [x] Test: visualizar detalhes funciona
+  - [x] Test: todos os custos são exibidos
+  - [x] Test: editar BOM funciona
+  - [x] Test: recalcular recalcula corretamente
 
 ---
 
@@ -8669,21 +8669,21 @@ Criar interface para visualizar e editar receita.
 
 Criar ação para recalcular uma receita específica.
 
-- [ ] **Criar BOMRecalculateSingleView**
-  - [ ] Obter BOM por PK
-  - [ ] Executar bom.calculate_total_cost()
-  - [ ] Mensagem de sucesso
-  - [ ] Redirecionar para detail
+- [x] **Criar BOMRecalculateSingleView**
+  - [x] Obter BOM por PK
+  - [x] Executar bom.calculate_total_cost()
+  - [x] Mensagem de sucesso
+  - [x] Redirecionar para detail
 
-- [ ] **Configurar rota**
-  - [ ] `path('bom/<uuid:pk>/recalculate/', BOMRecalculateSingleView, name='bom_recalculate_single')`
+- [x] **Configurar rota**
+  - [x] `path('bom/<uuid:pk>/recalculate/', BOMRecalculateSingleView, name='bom_recalculate_single')`
 
-- [ ] **Adicionar botão no detail template**
-  - [ ] Botão "Recalcular Custos"
+- [x] **Adicionar botão no detail template**
+  - [x] Botão "Recalcular Custos"
 
-- [ ] **Testing - Single Recalculate**
-  - [ ] Test: recalcular uma receita funciona
-  - [ ] Test: custos são atualizados
+- [x] **Testing - Single Recalculate**
+  - [x] Test: recalcular uma receita funciona
+  - [x] Test: custos são atualizados
 
 ---
 
@@ -8691,30 +8691,30 @@ Criar ação para recalcular uma receita específica.
 
 Adicionar funcionalidade de venda de bolos por fatias.
 
-- [ ] **Criar modelo ProductSlicing**
-  - [ ] Campos: product (FK → Product)
-  - [ ] Campos: slice_configuration_name (ex: "15 Fatias", "30 Fatias")
-  - [ ] Campos: total_slices (Integer)
-  - [ ] Campos: cost_per_slice (Decimal, auto-calculado)
-  - [ ] Campos: price_per_slice (Decimal, definido manualmente)
-  - [ ] Método calculate_cost_per_slice(): product.get_real_cost() / total_slices
+- [x] **Criar modelo ProductSlicing**
+  - [x] Campos: product (FK → Product)
+  - [x] Campos: slice_configuration_name (ex: "15 Fatias", "30 Fatias")
+  - [x] Campos: total_slices (Integer)
+  - [x] Campos: cost_per_slice (Decimal, auto-calculado)
+  - [x] Campos: price_per_slice (Decimal, definido manualmente)
+  - [x] Método calculate_cost_per_slice(): product.get_real_cost() / total_slices
 
-- [ ] **Criar migrations**
-  - [ ] makemigrations e migrate
+- [x] **Criar migrations**
+  - [x] makemigrations e migrate
 
-- [ ] **Atualizar SaleOrderLine (Fase 7)**
-  - [ ] Adicionar campo opcional: slicing_config (FK → ProductSlicing, nullable)
-  - [ ] Se preenchido, calcular preço com base em fatias
-  - [ ] Exemplo: 1 bolo vendido em 15 fatias = 15 * price_per_slice
+- [x] **Atualizar SaleOrderLine (Fase 7)**
+  - [x] Adicionar campo opcional: slicing_config (FK → ProductSlicing, nullable)
+  - [x] Se preenchido, calcular preço com base em fatias
+  - [x] Exemplo: 1 bolo vendido em 15 fatias = 15 * price_per_slice
 
-- [ ] **Registrar no Admin**
-  - [ ] Criar ProductSlicingAdmin
-  - [ ] Inline no ProductAdmin
+- [x] **Registrar no Admin**
+  - [x] Criar ProductSlicingAdmin
+  - [x] Inline no ProductAdmin
 
-- [ ] **Testing - Slicing**
-  - [ ] Test: criar configuração de fatias funciona
-  - [ ] Test: cost_per_slice calculado corretamente
-  - [ ] Test: venda com slicing funciona
+- [x] **Testing - Slicing**
+  - [x] Test: criar configuração de fatias funciona
+  - [x] Test: cost_per_slice calculado corretamente
+  - [x] Test: venda com slicing funciona
 
 ---
 
@@ -8722,26 +8722,26 @@ Adicionar funcionalidade de venda de bolos por fatias.
 
 Criar relatório de análise de custos de produtos.
 
-- [ ] **Criar BOMCostReportView**
-  - [ ] Listar todos os produtos FINISHED_PRODUCT
-  - [ ] Mostrar: custo componentes, custo mão-de-obra, custo total
-  - [ ] Mostrar: preço de venda, margem de lucro (%), markup
-  - [ ] Filtros: categoria, margem mínima
-  - [ ] Destacar produtos com margem baixa (<30%)
-  - [ ] Opção de exportar para Excel
+- [x] **Criar BOMCostReportView**
+  - [x] Listar todos os produtos FINISHED_PRODUCT
+  - [x] Mostrar: custo componentes, custo mão-de-obra, custo total
+  - [x] Mostrar: preço de venda, margem de lucro (%), markup
+  - [x] Filtros: categoria, margem mínima
+  - [x] Destacar produtos com margem baixa (<30%)
+  - [x] Opção de exportar para Excel
 
-- [ ] **Criar template**
-  - [ ] `templates/bom/cost_report.html` (standalone)
-  - [ ] Tabela com todas as métricas
-  - [ ] Gráficos (opcional)
+- [x] **Criar template**
+  - [x] `templates/bom/cost_report.html` (standalone)
+  - [x] Tabela com todas as métricas
+  - [x] Gráficos (opcional)
 
-- [ ] **Configurar rota**
-  - [ ] `path('bom/reports/costs/', BOMCostReportView, name='bom_cost_report')`
+- [x] **Configurar rota**
+  - [x] `path('bom/reports/costs/', BOMCostReportView, name='bom_cost_report')`
 
-- [ ] **Testing - Cost Report**
-  - [ ] Test: relatório mostra dados corretos
-  - [ ] Test: margens calculadas corretamente
-  - [ ] Test: filtros funcionam
+- [x] **Testing - Cost Report**
+  - [x] Test: relatório mostra dados corretos
+  - [x] Test: margens calculadas corretamente
+  - [x] Test: filtros funcionam
 
 ---
 
@@ -8749,36 +8749,36 @@ Criar relatório de análise de custos de produtos.
 
 Criar interface específica para configurar bolos customizados.
 
-- [ ] **Criar CakeConfiguratorView**
-  - [ ] Interface wizard/passo-a-passo:
-    - [ ] Passo 1: Escolher base/massa (filtrar products por categoria)
-    - [ ] Passo 2: Escolher recheio
-    - [ ] Passo 3: Escolher cobertura
-    - [ ] Passo 4: Escolher decorações/extras
-    - [ ] Passo 5: Escolher tamanho (fatias)
-  - [ ] Calcular custo em tempo real (via AJAX)
-  - [ ] Calcular preço sugerido (custo * markup padrão)
-  - [ ] Permitir ajustar preço final
-  - [ ] Botão "Adicionar ao Orçamento" (cria SaleOrderLine)
+- [x] **Criar CakeConfiguratorView**
+  - [x] Interface wizard/passo-a-passo:
+    - [x] Passo 1: Escolher base/massa (filtrar products por categoria)
+    - [x] Passo 2: Escolher recheio
+    - [x] Passo 3: Escolher cobertura
+    - [x] Passo 4: Escolher decorações/extras
+    - [x] Passo 5: Escolher tamanho (fatias)
+  - [x] Calcular custo em tempo real (via AJAX)
+  - [x] Calcular preço sugerido (custo * markup padrão)
+  - [x] Permitir ajustar preço final
+  - [x] Botão "Adicionar ao Orçamento" (cria SaleOrderLine)
 
-- [ ] **Criar template**
-  - [ ] `templates/bom/cake_configurator.html` (standalone)
-  - [ ] Design visual atraente
-  - [ ] Cards para seleção de componentes
-  - [ ] Preview de custo e preço
+- [x] **Criar template**
+  - [x] `templates/bom/cake_configurator.html` (standalone)
+  - [x] Design visual atraente
+  - [x] Cards para seleção de componentes
+  - [x] Preview de custo e preço
 
-- [ ] **Criar API endpoint para cálculo**
-  - [ ] POST `/bom/api/calculate-cake-cost/`
-  - [ ] Recebe: lista de component IDs e quantidades
-  - [ ] Retorna: JSON com custo total
+- [x] **Criar API endpoint para cálculo**
+  - [x] POST `/bom/api/calculate-cake-cost/`
+  - [x] Recebe: lista de component IDs e quantidades
+  - [x] Retorna: JSON com custo total
 
-- [ ] **Configurar rota**
-  - [ ] `path('bom/configurator/', CakeConfiguratorView, name='cake_configurator')`
+- [x] **Configurar rota**
+  - [x] `path('bom/configurator/', CakeConfiguratorView, name='cake_configurator')`
 
-- [ ] **Testing - Configurator**
-  - [ ] Test: selecionar componentes funciona
-  - [ ] Test: cálculo em tempo real funciona
-  - [ ] Test: adicionar ao orçamento cria SaleOrderLine
+- [x] **Testing - Configurator**
+  - [x] Test: selecionar componentes funciona
+  - [x] Test: cálculo em tempo real funciona
+  - [x] Test: adicionar ao orçamento cria SaleOrderLine
 
 ---
 
@@ -8786,27 +8786,27 @@ Criar interface específica para configurar bolos customizados.
 
 Implementar validações específicas do sistema BOM.
 
-- [ ] **Validação de ciclos recursivos**
-  - [ ] Produto A não pode ter componente que eventualmente usa A
-  - [ ] Validar ao criar/editar BOMLine
-  - [ ] Exibir erro claro
+- [x] **Validação de ciclos recursivos**
+  - [x] Produto A não pode ter componente que eventualmente usa A
+  - [x] Validar ao criar/editar BOMLine
+  - [x] Exibir erro claro
 
-- [ ] **Validação de unidades compatíveis**
-  - [ ] Componente e linha devem ter UOMs da mesma categoria
-  - [ ] Ou permitir conversão automática
+- [x] **Validação de unidades compatíveis**
+  - [x] Componente e linha devem ter UOMs da mesma categoria
+  - [x] Ou permitir conversão automática
 
-- [ ] **Validação de product_type**
-  - [ ] RAW_MATERIAL não pode ter BOM
-  - [ ] COMPONENT e FINISHED_PRODUCT devem ter BOM
+- [x] **Validação de product_type**
+  - [x] RAW_MATERIAL não pode ter BOM
+  - [x] COMPONENT e FINISHED_PRODUCT devem ter BOM
 
-- [ ] **Alertas de custo**
-  - [ ] Se custo BOM > preço venda, alertar
-  - [ ] Se margem < 20%, alertar
+- [x] **Alertas de custo**
+  - [x] Se custo BOM > preço venda, alertar
+  - [x] Se margem < 20%, alertar
 
-- [ ] **Testing - Validations**
-  - [ ] Test: ciclo recursivo é bloqueado
-  - [ ] Test: unidades incompatíveis geram erro
-  - [ ] Test: alertas são exibidos
+- [x] **Testing - Validations**
+  - [x] Test: ciclo recursivo é bloqueado
+  - [x] Test: unidades incompatíveis geram erro
+  - [x] Test: alertas são exibidos
 
 ---
 
@@ -8814,18 +8814,18 @@ Implementar validações específicas do sistema BOM.
 
 Criar documentação interna do sistema BOM.
 
-- [ ] **Criar página de ajuda**
-  - [ ] `templates/bom/help.html` (standalone)
-  - [ ] Explicar conceitos: BOM, componentes, custos
-  - [ ] Tutorial passo-a-passo
-  - [ ] FAQs
+- [x] **Criar página de ajuda**
+  - [x] `templates/bom/help.html` (standalone)
+  - [x] Explicar conceitos: BOM, componentes, custos
+  - [x] Tutorial passo-a-passo
+  - [x] FAQs
 
-- [ ] **Adicionar tooltips**
-  - [ ] Campos complexos têm explicação
-  - [ ] Ícones de ajuda nos formulários
+- [x] **Adicionar tooltips**
+  - [x] Campos complexos têm explicação
+  - [x] Ícones de ajuda nos formulários
 
-- [ ] **Configurar rota**
-  - [ ] `path('bom/help/', BOMHelpView, name='bom_help')`
+- [x] **Configurar rota**
+  - [x] `path('bom/help/', BOMHelpView, name='bom_help')`
 
 ---
 
@@ -8833,34 +8833,34 @@ Criar documentação interna do sistema BOM.
 
 Criar testes completos do sistema BOM.
 
-- [ ] **Testar fluxo completo**
-  - [ ] Criar matéria-prima (farinha, ovos, açúcar)
-  - [ ] Criar componente (massa fina) com BOM
-  - [ ] Criar produto final (bolo) com BOM que usa massa fina
-  - [ ] Verificar custo calculado em cascata
-  - [ ] Alterar custo da farinha
-  - [ ] Recalcular e verificar propagação
+- [x] **Testar fluxo completo**
+  - [x] Criar matéria-prima (farinha, ovos, açúcar)
+  - [x] Criar componente (massa fina) com BOM
+  - [x] Criar produto final (bolo) com BOM que usa massa fina
+  - [x] Verificar custo calculado em cascata
+  - [x] Alterar custo da farinha
+  - [x] Recalcular e verificar propagação
 
-- [ ] **Testar cenário de 3 níveis**
-  - [ ] Nível 1: RAW_MATERIAL (farinha)
-  - [ ] Nível 2: COMPONENT (massa) usa farinha
-  - [ ] Nível 3: FINISHED_PRODUCT (bolo) usa massa
-  - [ ] Verificar custos em todos os níveis
+- [x] **Testar cenário de 3 níveis**
+  - [x] Nível 1: RAW_MATERIAL (farinha)
+  - [x] Nível 2: COMPONENT (massa) usa farinha
+  - [x] Nível 3: FINISHED_PRODUCT (bolo) usa massa
+  - [x] Verificar custos em todos os níveis
 
-- [ ] **Testar conversões**
-  - [ ] Comprar farinha em KG
-  - [ ] BOM usa G
-  - [ ] Verificar conversão automática
+- [x] **Testar conversões**
+  - [x] Comprar farinha em KG
+  - [x] BOM usa G
+  - [x] Verificar conversão automática
 
-- [ ] **Testar mão-de-obra**
-  - [ ] BOM com labor_time_minutes = 60
-  - [ ] labor_cost_per_hour = 10
-  - [ ] Verificar labor_cost = 10
+- [x] **Testar mão-de-obra**
+  - [x] BOM com labor_time_minutes = 60
+  - [x] labor_cost_per_hour = 10
+  - [x] Verificar labor_cost = 10
 
-- [ ] **Testing - Integration**
-  - [ ] Test: fluxo completo funciona sem erros
-  - [ ] Test: todos os custos são precisos
-  - [ ] Test: recálculo propaga corretamente
+- [x] **Testing - Integration**
+  - [x] Test: fluxo completo funciona sem erros
+  - [x] Test: todos os custos são precisos
+  - [x] Test: recálculo propaga corretamente
 
 ---
 

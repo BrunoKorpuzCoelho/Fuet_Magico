@@ -118,7 +118,7 @@
         <div class="px-8 py-6">
 
             <!-- ── Botões de acção + Status ─────────────────────── -->
-            <div class="flex items-center justify-between mb-8" x-data="{ showCancelModal: false, showEmailModal: false, emailSending: false, emailError: '', emailSuccess: false }">
+            <div class="flex items-center justify-between mb-8" x-data="{ showCancelModal: false, showEmailModal: false, emailSending: false, emailError: '', emailSuccess: false, showMarginsModal: false, marginsLoading: false, marginsData: null, marginsError: '' }">
 
                 <!-- Left: action buttons -->
                 <div class="flex items-center gap-3">
@@ -179,6 +179,23 @@
                             Cancelar
                         </button>
                         {% endif %}
+
+                        {% if order.status != 'cancelled' %}
+                        <!-- Margens — visível em todos os estados excepto cancelado -->
+                        <button type="button"
+                                @click="showMarginsModal = true; marginsData = null; marginsError = ''; marginsLoading = true;
+                                        fetch('{% url 'sales:order_margins' order.pk %}', {headers:{'X-CSRFToken':'{{ csrf_token }}'}})
+                                          .then(r => r.json())
+                                          .then(d => { marginsData = d; marginsLoading = false; })
+                                          .catch(() => { marginsError = 'Erro ao carregar dados.'; marginsLoading = false; })"
+                                class="px-4 py-1.5 rounded-md border border-purple-500/60 text-purple-300 bg-transparent hover:bg-purple-500/10 text-sm font-medium transition-colors flex items-center gap-1.5">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
+                            Margens
+                        </button>
+                        {% endif %}
                     {% endif %}
                 </div>
 
@@ -208,6 +225,165 @@
                         {% endif %}
                     {% endif %}
                 </div>
+
+                <!-- ── Margins Modal ──────────────────────────────────────── -->
+                {% if order %}
+                <div x-show="showMarginsModal"
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0"
+                     x-transition:enter-end="opacity-100"
+                     x-transition:leave="transition ease-in duration-150"
+                     x-transition:leave-start="opacity-100"
+                     x-transition:leave-end="opacity-0"
+                     class="fixed inset-0 z-[250] flex items-center justify-center p-4"
+                     style="display:none;"
+                     @keydown.escape.window="showMarginsModal = false">
+                    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="showMarginsModal = false"></div>
+                    <div x-show="showMarginsModal"
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+                         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-150"
+                         x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                         x-transition:leave-end="opacity-0 scale-95 translate-y-2"
+                         class="relative w-full max-w-3xl bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+                         style="max-height: min(88vh, 680px); display:none;"
+                         @click.stop>
+
+                        <!-- Header -->
+                        <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-700/60 flex-shrink-0">
+                            <div class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+                                 style="background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.35);">
+                                <svg class="h-4 w-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-white">Análise de Margens</h3>
+                                <p class="text-xs text-gray-500 mt-0.5">{{ order.order_number }}</p>
+                            </div>
+                            <button type="button" @click="showMarginsModal = false"
+                                    class="ml-auto p-1.5 text-gray-500 hover:text-gray-300 rounded-lg transition-colors">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Loading -->
+                        <div x-show="marginsLoading" class="flex-1 flex items-center justify-center gap-3 text-gray-500 py-12">
+                            <svg class="animate-spin h-6 w-6 text-purple-400" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                            </svg>
+                            <span class="text-sm">A calcular margens…</span>
+                        </div>
+
+                        <!-- Error -->
+                        <div x-show="marginsError && !marginsLoading"
+                             class="flex-1 flex items-center justify-center text-red-400 text-sm py-12" x-text="marginsError"></div>
+
+                        <!-- Content -->
+                        <div x-show="marginsData && !marginsLoading" class="flex-1 overflow-y-auto" style="display:none;">
+
+                            <!-- Lines table -->
+                            <div class="px-6 pt-5 pb-2">
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Linhas</p>
+                                <div class="overflow-x-auto rounded-xl border border-gray-700/60">
+                                    <table class="w-full text-sm">
+                                        <thead>
+                                            <tr class="border-b border-gray-700/60 bg-gray-800/60">
+                                                <th class="text-left px-4 py-2.5 text-xs text-gray-400 font-medium">Produto</th>
+                                                <th class="text-right px-4 py-2.5 text-xs text-gray-400 font-medium">Qtd</th>
+                                                <th class="text-right px-4 py-2.5 text-xs text-gray-400 font-medium">Venda s/IVA</th>
+                                                <th class="text-right px-4 py-2.5 text-xs text-gray-400 font-medium">Custo</th>
+                                                <th class="text-right px-4 py-2.5 text-xs text-gray-400 font-medium">Lucro</th>
+                                                <th class="text-right px-4 py-2.5 text-xs text-gray-400 font-medium">Margem</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template x-for="(line, i) in marginsData.lines" :key="i">
+                                                <tr class="border-b border-gray-700/30 hover:bg-gray-800/30 transition-colors">
+                                                    <td class="px-4 py-2.5 text-gray-200" x-text="line.product"></td>
+                                                    <td class="px-4 py-2.5 text-right text-gray-400" x-text="line.quantity"></td>
+                                                    <td class="px-4 py-2.5 text-right text-gray-300" x-text="'€' + line.sale_value.toFixed(2)"></td>
+                                                    <td class="px-4 py-2.5 text-right text-gray-400" x-text="'€' + line.cost_value.toFixed(2)"></td>
+                                                    <td class="px-4 py-2.5 text-right font-medium"
+                                                        :class="line.profit >= 0 ? 'text-green-400' : 'text-red-400'"
+                                                        x-text="'€' + line.profit.toFixed(2)"></td>
+                                                    <td class="px-4 py-2.5 text-right">
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                                                              :class="line.margin_pct >= 30 ? 'bg-green-900/40 text-green-300 border border-green-700/50'
+                                                                     : line.margin_pct >= 15 ? 'bg-yellow-900/40 text-yellow-300 border border-yellow-700/50'
+                                                                     : 'bg-red-900/40 text-red-300 border border-red-700/50'"
+                                                              x-text="line.margin_pct.toFixed(1) + '%'"></span>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Totals cards -->
+                            <div class="px-6 pt-4 pb-6 grid grid-cols-2 sm:grid-cols-4 gap-3" x-show="marginsData">
+                                <!-- Total Venda -->
+                                <div class="rounded-xl border border-gray-700/60 bg-gray-800/40 px-4 py-3">
+                                    <p class="text-xs text-gray-500 mb-1">Venda s/IVA</p>
+                                    <p class="text-lg font-bold text-white" x-text="'€' + marginsData.totals.sale.toFixed(2)"></p>
+                                </div>
+                                <!-- Total Custo -->
+                                <div class="rounded-xl border border-gray-700/60 bg-gray-800/40 px-4 py-3">
+                                    <p class="text-xs text-gray-500 mb-1">Custo Total</p>
+                                    <p class="text-lg font-bold text-gray-300" x-text="'€' + marginsData.totals.cost.toFixed(2)"></p>
+                                </div>
+                                <!-- Lucro -->
+                                <div class="rounded-xl border border-gray-700/60 bg-gray-800/40 px-4 py-3">
+                                    <p class="text-xs text-gray-500 mb-1">Lucro</p>
+                                    <p class="text-lg font-bold"
+                                       :class="marginsData.totals.profit >= 0 ? 'text-green-400' : 'text-red-400'"
+                                       x-text="'€' + marginsData.totals.profit.toFixed(2)"></p>
+                                </div>
+                                <!-- Margem -->
+                                <div class="rounded-xl border px-4 py-3"
+                                     :class="marginsData.totals.margin_pct >= 30 ? 'border-green-700/50 bg-green-900/20'
+                                            : marginsData.totals.margin_pct >= 15 ? 'border-yellow-700/50 bg-yellow-900/20'
+                                            : 'border-red-700/50 bg-red-900/20'">
+                                    <p class="text-xs text-gray-500 mb-1">Margem Global</p>
+                                    <p class="text-lg font-bold"
+                                       :class="marginsData.totals.margin_pct >= 30 ? 'text-green-400'
+                                              : marginsData.totals.margin_pct >= 15 ? 'text-yellow-400'
+                                              : 'text-red-400'"
+                                       x-text="marginsData.totals.margin_pct.toFixed(1) + '%'"></p>
+                                </div>
+                            </div>
+
+                            <!-- Legend -->
+                            <div class="px-6 pb-5 flex items-center gap-4 text-xs text-gray-600">
+                                <span class="flex items-center gap-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span>≥ 30%
+                                </span>
+                                <span class="flex items-center gap-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-yellow-500 inline-block"></span>15–30%
+                                </span>
+                                <span class="flex items-center gap-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>< 15%
+                                </span>
+                                <span class="ml-auto italic">Custo baseado no preço de custo actual do produto</span>
+                            </div>
+                        </div><!-- /content -->
+
+                        <!-- Footer -->
+                        <div class="flex justify-end px-6 py-4 border-t border-gray-700/60 bg-gray-800/40 flex-shrink-0">
+                            <button type="button" @click="showMarginsModal = false"
+                                    class="px-5 py-2 text-sm font-medium text-gray-400 hover:text-white bg-gray-700/50 hover:bg-gray-700 rounded-lg transition-colors">
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
 
                 <!-- Cancel confirmation modal -->
                 {% if order and order.status != 'cancelled' and order.status != 'invoiced' %}

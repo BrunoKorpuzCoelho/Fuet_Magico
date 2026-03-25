@@ -27,6 +27,9 @@ urlpatterns = [
     path('<uuid:pk>/lines/<uuid:line_pk>/remove/',            views.sale_order_line_remove, name='order_line_remove'),
     path('<uuid:pk>/lines/<uuid:line_pk>/update/',            views.sale_order_line_update, name='order_line_update'),
 
+    # ── Margins (AJAX) ───────────────────────────────────────────────
+    path('<uuid:pk>/margins/', views.sale_order_margins, name='order_margins'),
+
     # ── Chatter ──────────────────────────────────────────────────────
     path('<uuid:pk>/notes/',                                    views.sale_order_notes_list,      name='order_notes_list'),
     path('<uuid:pk>/notes/create/',                             views.sale_order_note_create,     name='order_note_create'),

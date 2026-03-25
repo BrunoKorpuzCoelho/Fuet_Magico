@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}P&L Mensal — Financeiro{% endblock %}
+
+{% block extra_css %}
+<style>
+.reports-bg { background: linear-gradient(160deg, #0a1120 0%, #0f172a 40%, #0c1a14 100%); min-height: 100vh; }
+.text-gold { background: linear-gradient(135deg, #dbc693 0%, #f5e6c8 50%, #c9a96e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.section-label { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #dbc693; opacity: 0.7; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px; }
+.section-label::after { content:''; flex:1; height:1px; background: linear-gradient(90deg, rgba(219,198,147,0.2), transparent); }
+</style>
+{% endblock %}
+
+{% block sub_navbar %}{% include 'components/financial_navbar.html' %}{% endblock %}
+
+{% block content %}
+<div class="reports-bg">
+<div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Header + Filters -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+    <div>
+      <a href="{% url 'financial:index' %}" class="text-xs text-slate-500 hover:text-amber-300 mb-2 inline-flex items-center gap-1">
+        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Dashboard
+      </a>
+      <h1 class="text-2xl font-extrabold text-gold tracking-tight">P&L Mensal</h1>
+      <p class="text-sm text-slate-400 mt-1">Receita, custos e resultado por mês</p>
+    </div>
+    <form method="get" class="flex items-center gap-2">
+      <select name="year" onchange="this.form.submit()"
+        class="bg-slate-800 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2 focus:border-amber-500 focus:outline-none">
+        {% for y in years %}
+        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+    <div class="bg-slate-900/60 border border-slate-700/40 rounded-xl p-4">
+      <p class="text-xs text-slate-400 uppercase tracking-widest mb-2">Receita {{ year }}</p>
+      <p class="text-xl font-bold text-emerald-400">€{{ total_sales|floatformat:0|intcomma }}</p>
+    </div>
+    <div class="bg-slate-900/60 border border-slate-700/40 rounded-xl p-4">
+      <p class="text-xs text-slate-400 uppercase tracking-widest mb-2">Custos {{ year }}</p>
+      <p class="text-xl font-bold text-amber-400">€{{ total_costs|floatformat:0|intcomma }}</p>
+    </div>
+    <div class="bg-slate-900/60 border border-slate-700/40 rounded-xl p-4">
+      <p class="text-xs text-slate-400 uppercase tracking-widest mb-2">Lucro {{ year }}</p>
+      <p class="text-xl font-bold {% if total_profit >= 0 %}text-gold{% else %}text-red-400{% endif %}">€{{ total_profit|floatformat:0|intcomma }}</p>
+    </div>
+    <div class="bg-slate-900/60 border border-slate-700/40 rounded-xl p-4">
+      <p class="text-xs text-slate-400 uppercase tracking-widest mb-2">Margem Média</p>
+      <p class="text-xl font-bold {% if total_margin >= 30 %}text-emerald-400{% elif total_margin >= 15 %}text-amber-400{% else %}text-red-400{% endif %}">{{ total_margin|floatformat:1 }}%</p>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="section-label">Receita e Custos por Mês</div>
+  <div class="bg-slate-900/60 border border-slate-700/40 rounded-2xl p-6 mb-8">
+    <canvas id="pnlChart" height="110"></canvas>
+  </div>
+
+  <!-- Table -->
+  <div class="section-label">Detalhe Mensal</div>
+  <div class="bg-slate-900/60 border border-slate-700/40 rounded-2xl overflow-hidden">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-700/60">
+          <th class="text-left px-5 py-3 text-xs font-bold uppercase tracking-wider text-slate-400">Mês</th>
+          <th class="text-right px-5 py-3 text-xs font-bold uppercase tracking-wider text-slate-400">Receita s/IVA</th>
+          <th class="text-right px-5 py-3 text-xs font-bold uppercase tracking-wider text-slate-400">Custos s/IVA</th>
+          <th class="text-right px-5 py-3 text-xs font-bold uppercase tracking-wider text-slate-400">Lucro Bruto</th>
+          <th class="text-right px-5 py-3 text-xs font-bold uppercase tracking-wider text-slate-400">Margem</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-800/60">
+        {% for row in rows %}
+        <tr class="hover:bg-slate-800/30 transition-colors">
+          <td class="px-5 py-3 font-medium text-slate-200">{{ row.month }}</td>
+          <td class="px-5 py-3 text-right text-emerald-400 font-mono">€{{ row.sales|floatformat:2|intcomma }}</td>
+          <td class="px-5 py-3 text-right text-amber-400 font-mono">€{{ row.costs|floatformat:2|intcomma }}</td>
+          <td class="px-5 py-3 text-right font-mono font-semibold {% if row.profit >= 0 %}text-white{% else %}text-red-400{% endif %}">€{{ row.profit|floatformat:2|intcomma }}</td>
+          <td class="px-5 py-3 text-right">
+            <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold
+              {% if row.margin >= 30 %}bg-emerald-500/20 text-emerald-300
+              {% elif row.margin >= 15 %}bg-amber-500/20 text-amber-300
+              {% else %}bg-red-500/20 text-red-300{% endif %}">
+              {{ row.margin|floatformat:1 }}%
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="border-t-2 border-slate-600/60 bg-slate-800/30">
+          <td class="px-5 py-3 font-bold text-slate-200 uppercase text-xs tracking-wider">Total</td>
+          <td class="px-5 py-3 text-right font-bold text-emerald-400 font-mono">€{{ total_sales|floatformat:2|intcomma }}</td>
+          <td class="px-5 py-3 text-right font-bold text-amber-400 font-mono">€{{ total_costs|floatformat:2|intcomma }}</td>
+          <td class="px-5 py-3 text-right font-bold font-mono {% if total_profit >= 0 %}text-white{% else %}text-red-400{% endif %}">€{{ total_profit|floatformat:2|intcomma }}</td>
+          <td class="px-5 py-3 text-right">
+            <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold
+              {% if total_margin >= 30 %}bg-emerald-500/20 text-emerald-300
+              {% elif total_margin >= 15 %}bg-amber-500/20 text-amber-300
+              {% else %}bg-red-500/20 text-red-300{% endif %}">
+              {{ total_margin|floatformat:1 }}%
+            </span>
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+new Chart(document.getElementById('pnlChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ chart_labels|safe }},
+    datasets: [
+      { label: 'Receita', data: {{ chart_rev|safe }}, backgroundColor: 'rgba(34,197,94,0.6)', borderColor: '#22c55e', borderWidth: 1.5, borderRadius: 5 },
+      { label: 'Custos', data: {{ chart_cost|safe }}, backgroundColor: 'rgba(245,158,11,0.5)', borderColor: '#f59e0b', borderWidth: 1.5, borderRadius: 5 },
+      { label: 'Lucro', data: {{ chart_profit|safe }}, type: 'line', borderColor: '#dbc693', backgroundColor: 'rgba(219,198,147,0.1)', fill: true, tension: 0.3, pointRadius: 4 },
+    ],
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { labels: { color: '#94a3b8' } },
+      tooltip: { callbacks: { label: (c) => ' €' + c.parsed.y.toLocaleString('pt-PT', { minimumFractionDigits: 2 }) } },
+    },
+    scales: {
+      x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+      y: { ticks: { color: '#64748b', callback: (v) => '€' + v.toLocaleString('pt-PT') }, grid: { color: 'rgba(255,255,255,0.05)' } },
+    },
+  },
+});
+</script>
+{% endblock %}
