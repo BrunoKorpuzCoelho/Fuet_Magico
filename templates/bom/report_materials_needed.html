@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+{% load l10n %}
+
+{% block title %}Lista de Materiais Necessários — BOM{% endblock %}
+
+{% block extra_css %}
+<style>
+.reports-bg { background: linear-gradient(160deg, #0a1120 0%, #0f172a 40%, #0c1a14 100%); min-height: 100vh; }
+.kpi-card { background: linear-gradient(135deg, rgba(219,198,147,0.06) 0%, rgba(219,198,147,0.02) 100%); border: 1px solid rgba(219,198,147,0.18); border-radius: 16px; backdrop-filter: blur(12px); position: relative; overflow: hidden; }
+.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background: linear-gradient(90deg, transparent, #dbc693, transparent); opacity: 0.6; }
+.kpi-glow { position:absolute; top:-20px; right:-20px; width:80px; height:80px; border-radius:50%; filter: blur(30px); opacity: 0.25; }
+.kpi-number { font-size: 2.4rem; font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
+.chart-card { background: rgba(15,23,42,0.7); border: 1px solid rgba(219,198,147,0.12); border-radius: 20px; backdrop-filter: blur(16px); overflow: hidden; }
+.section-label { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #dbc693; opacity: 0.7; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px; }
+.section-label::after { content:''; flex:1; height:1px; background: linear-gradient(90deg, rgba(219,198,147,0.2), transparent); }
+.text-gold { background: linear-gradient(135deg, #dbc693 0%, #f5e6c8 50%, #c9a96e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.filter-card { background: rgba(15,23,42,0.6); border: 1px solid rgba(219,198,147,0.1); border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 2rem; }
+.filter-select { background: rgba(30,41,59,0.8); border: 1px solid rgba(219,198,147,0.18); color: #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.875rem; outline: none; width: 100%; }
+.filter-select:focus { border-color: #dbc693; box-shadow: 0 0 0 2px rgba(219,198,147,0.2); }
+.filter-input { background: rgba(30,41,59,0.8); border: 1px solid rgba(219,198,147,0.18); color: #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.875rem; outline: none; width: 100%; }
+.filter-input:focus { border-color: #dbc693; box-shadow: 0 0 0 2px rgba(219,198,147,0.2); }
+.btn-gold { background: linear-gradient(135deg, #dbc693, #c9a96e); color: #0f172a; font-weight: 700; font-size: 0.85rem; padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer; transition: opacity 0.2s; }
+.btn-gold:hover { opacity: 0.85; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.data-table thead th { padding: 10px 14px; text-align: left; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; border-bottom: 1px solid rgba(219,198,147,0.1); white-space: nowrap; }
+.data-table tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
+.data-table tbody tr:hover { background: rgba(219,198,147,0.04); }
+.data-table tbody td { padding: 10px 14px; color: #cbd5e1; vertical-align: middle; }
+</style>
+{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/bom_navbar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="reports-bg">
+<div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Header -->
+  <div class="flex items-center gap-3 mb-8">
+    <a href="{% url 'bom:bom_reports' %}" class="text-slate-500 hover:text-gold transition-colors">
+      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </a>
+    <div>
+      <h1 class="text-3xl font-extrabold text-gold tracking-tight">Lista de Materiais Necessários</h1>
+      <p class="text-sm text-slate-400 mt-1">Componentes necessários para produzir uma quantidade específica</p>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <form method="get" class="filter-card">
+    <div class="flex flex-wrap items-end gap-4">
+      <div class="flex-1 min-w-[220px]">
+        <label class="block text-xs font-semibold text-slate-400 mb-1 tracking-wide">Receita (BOM)</label>
+        <select name="bom" class="filter-select">
+          <option value="">— Seleccionar receita —</option>
+          {% for b in all_boms %}
+          <option value="{{ b.pk }}" {% if b.pk|stringformat:"s" == bom_id %}selected{% endif %}>
+            {{ b.product.name }}{% if b.internal_reference %} [{{ b.internal_reference }}]{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="w-40">
+        <label class="block text-xs font-semibold text-slate-400 mb-1 tracking-wide">Quantidade a Produzir</label>
+        <input type="number" name="qty" value="{{ qty_req|unlocalize }}" min="0.0001" step="0.0001" class="filter-input">
+      </div>
+      <button type="submit" class="btn-gold">Calcular</button>
+    </div>
+  </form>
+
+  {% if selected_bom %}
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#dbc693;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Receita</p>
+      <div class="text-lg font-bold text-gold leading-tight">{{ selected_bom.product.name }}</div>
+      <p class="text-xs text-slate-500 mt-1">Produz {{ selected_bom.qty_produced }} {{ selected_bom.uom.symbol }} por execução</p>
+    </div>
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#22c55e;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Quantidade Alvo</p>
+      <div class="kpi-number text-emerald-400 mb-1">{{ qty_req|floatformat:4|unlocalize }}</div>
+      <p class="text-xs text-slate-500">{{ selected_bom.uom.symbol }}</p>
+    </div>
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#dbc693;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Custo Total Estimado</p>
+      <div class="kpi-number text-gold mb-1">€{{ total_cost|floatformat:2 }}</div>
+      <p class="text-xs text-slate-500">incl. mão-de-obra €{{ labor_total|floatformat:2 }}</p>
+    </div>
+  </div>
+
+  <!-- Lista de materiais -->
+  <div class="section-label">Componentes Necessários</div>
+  <div class="chart-card">
+    <div class="overflow-x-auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Componente</th>
+            <th>Ref.</th>
+            <th class="text-right">Quantidade Necessária</th>
+            <th>UdM</th>
+            <th class="text-right">Preço Unit.</th>
+            <th class="text-right">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in materials %}
+          <tr>
+            <td class="font-medium text-slate-200">{{ m.component.name }}</td>
+            <td class="text-slate-500 text-xs">{{ m.component.internal_reference|default:"—" }}</td>
+            <td class="text-right font-mono font-bold text-amber-400">{{ m.qty_needed|floatformat:4|unlocalize }}</td>
+            <td class="text-slate-400">{{ m.uom.symbol }}</td>
+            <td class="text-right font-mono text-slate-300">€{{ m.unit_cost|floatformat:4 }}</td>
+            <td class="text-right font-mono text-gold">€{{ m.subtotal|floatformat:4 }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center text-slate-500 py-8">Esta receita não tem componentes.</td></tr>
+          {% endfor %}
+        </tbody>
+        {% if materials %}
+        <tfoot>
+          <tr style="border-top: 1px solid rgba(219,198,147,0.2);">
+            <td colspan="5" class="text-right text-xs font-bold text-slate-400 uppercase tracking-wide py-3 px-4">Mão-de-obra</td>
+            <td class="text-right font-mono text-slate-300 py-3 px-4">€{{ labor_total|floatformat:2 }}</td>
+          </tr>
+          <tr>
+            <td colspan="5" class="text-right text-xs font-bold text-slate-400 uppercase tracking-wide py-3 px-4">Total</td>
+            <td class="text-right font-bold text-gold py-3 px-4">€{{ total_cost|floatformat:2 }}</td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="chart-card p-16 text-center">
+    <svg class="mx-auto h-12 w-12 text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+    </svg>
+    <p class="text-slate-400">Seleccione uma receita e a quantidade a produzir para calcular os materiais.</p>
+  </div>
+  {% endif %}
+
+</div>
+</div>
+{% endblock %}

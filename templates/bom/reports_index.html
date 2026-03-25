@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Relatórios BOM — Fuet Mágico{% endblock %}
+
+{% block extra_css %}
+<style>
+.reports-bg { background: linear-gradient(160deg, #0a1120 0%, #0f172a 40%, #0c1a14 100%); min-height: 100vh; }
+.kpi-card {
+    background: linear-gradient(135deg, rgba(219,198,147,0.06) 0%, rgba(219,198,147,0.02) 100%);
+    border: 1px solid rgba(219,198,147,0.18); border-radius: 16px;
+    backdrop-filter: blur(12px); transition: transform 0.2s ease, box-shadow 0.2s ease; position: relative; overflow: hidden;
+}
+.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background: linear-gradient(90deg, transparent, #dbc693, transparent); opacity: 0.6; }
+.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(219,198,147,0.12); }
+.kpi-glow { position:absolute; top:-20px; right:-20px; width:80px; height:80px; border-radius:50%; filter: blur(30px); opacity: 0.25; }
+.kpi-number { font-size: 2.4rem; font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
+.report-card {
+    background: rgba(15,23,42,0.7); border: 1px solid rgba(219,198,147,0.12); border-radius: 20px;
+    backdrop-filter: blur(16px); transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease; overflow: hidden;
+}
+.report-card:hover { transform: translateY(-4px); box-shadow: 0 24px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(219,198,147,0.25); border-color: rgba(219,198,147,0.3); }
+.report-card-header { padding: 1.5rem 1.5rem 0; }
+.report-card-body { padding: 0 1.5rem 1.5rem; }
+.report-icon { width: 48px; height: 48px; border-radius: 14px; display:flex; align-items:center; justify-content:center; margin-bottom: 1rem; }
+.section-label { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #dbc693; opacity: 0.7; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px; }
+.section-label::after { content:''; flex:1; height:1px; background: linear-gradient(90deg, rgba(219,198,147,0.2), transparent); }
+.text-gold { background: linear-gradient(135deg, #dbc693 0%, #f5e6c8 50%, #c9a96e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.tier-badge { font-size: 0.6rem; font-weight: 800; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.08em; text-transform: uppercase; }
+</style>
+{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/bom_navbar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="reports-bg">
+<div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+    <div>
+      <h1 class="text-3xl font-extrabold text-gold tracking-tight">Relatórios BOM</h1>
+      <p class="text-sm text-slate-400 mt-1">Análise de custos, margens e necessidades de produção</p>
+    </div>
+    <div class="flex items-center gap-2 text-xs text-slate-500 bg-slate-800/50 rounded-lg px-3 py-2 border border-slate-700/50">
+      <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+      Dados em tempo real
+    </div>
+  </div>
+
+  <!-- KPI Summary -->
+  <div class="section-label">Resumo Actual</div>
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#dbc693;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Receitas Activas</p>
+      <div class="kpi-number text-gold mb-1">{{ total_boms }}</div>
+      <p class="text-xs text-slate-500">bill of materials</p>
+    </div>
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#22c55e;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Produtos Fabricados</p>
+      <div class="kpi-number text-emerald-400 mb-1">{{ total_manufactured }}</div>
+      <p class="text-xs text-slate-500">is_manufactured = ativo</p>
+    </div>
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#818cf8;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Margem Média</p>
+      <div class="kpi-number text-indigo-400 mb-1">{{ avg_margin_pct }}%</div>
+      <p class="text-xs text-slate-500">sobre preço de venda</p>
+    </div>
+    <div class="kpi-card p-5">
+      <div class="kpi-glow" style="background:#ef4444;"></div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Sem Receita</p>
+      <div class="kpi-number text-red-400 mb-1">{{ boms_without_bom }}</div>
+      <p class="text-xs text-slate-500">produtos fabricados sem BOM</p>
+    </div>
+  </div>
+
+  <!-- Reports Grid -->
+  <div class="section-label">Relatórios Disponíveis</div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <!-- Análise de Custo -->
+    <a href="{% url 'bom:report_cost_analysis' %}" class="report-card block group">
+      <div class="report-card-header">
+        <div class="report-icon" style="background:rgba(219,198,147,0.12);">
+          <svg class="h-6 w-6" style="color:#dbc693;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <div class="flex items-start justify-between mb-2">
+          <h3 class="text-lg font-bold text-slate-100 group-hover:text-gold transition-colors">Análise de Custo por Receita</h3>
+          <span class="tier-badge" style="background:rgba(239,68,68,0.15);color:#f87171;">Crítico</span>
+        </div>
+        <p class="text-sm text-slate-400 mb-4">Custo unitário de cada produto fabricado com breakdown detalhado por componente e percentagem de peso.</p>
+      </div>
+      <div class="report-card-body">
+        <div class="flex items-center gap-4 text-xs text-slate-500">
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Por componente</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Peso percentual</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Gráfico de custos</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Margem de Lucro -->
+    <a href="{% url 'bom:report_margin' %}" class="report-card block group">
+      <div class="report-card-header">
+        <div class="report-icon" style="background:rgba(34,197,94,0.12);">
+          <svg class="h-6 w-6" style="color:#4ade80;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+          </svg>
+        </div>
+        <div class="flex items-start justify-between mb-2">
+          <h3 class="text-lg font-bold text-slate-100 group-hover:text-green-400 transition-colors">Margem de Lucro</h3>
+          <span class="tier-badge" style="background:rgba(239,68,68,0.15);color:#f87171;">Crítico</span>
+        </div>
+        <p class="text-sm text-slate-400 mb-4">Margem em € e % por produto fabricado. Identifica as receitas mais e menos rentáveis.</p>
+      </div>
+      <div class="report-card-body">
+        <div class="flex items-center gap-4 text-xs text-slate-500">
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Margem em € e %</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Melhor e pior produto</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Gráfico de margens</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Custo vs. Venda -->
+    <a href="{% url 'bom:report_cost_vs_sale' %}" class="report-card block group">
+      <div class="report-card-header">
+        <div class="report-icon" style="background:rgba(99,102,241,0.12);">
+          <svg class="h-6 w-6" style="color:#818cf8;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/>
+          </svg>
+        </div>
+        <div class="flex items-start justify-between mb-2">
+          <h3 class="text-lg font-bold text-slate-100 group-hover:text-indigo-400 transition-colors">Comparação Custo vs. Preço de Venda</h3>
+          <span class="tier-badge" style="background:rgba(239,68,68,0.15);color:#f87171;">Crítico</span>
+        </div>
+        <p class="text-sm text-slate-400 mb-4">Comparação visual entre custo de produção e preço de venda. Destaca produtos com margem negativa.</p>
+      </div>
+      <div class="report-card-body">
+        <div class="flex items-center gap-4 text-xs text-slate-500">
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Gráfico comparativo</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Alertas negativos</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Lista de Materiais -->
+    <a href="{% url 'bom:report_materials_needed' %}" class="report-card block group">
+      <div class="report-card-header">
+        <div class="report-icon" style="background:rgba(245,158,11,0.12);">
+          <svg class="h-6 w-6" style="color:#fbbf24;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+          </svg>
+        </div>
+        <div class="flex items-start justify-between mb-2">
+          <h3 class="text-lg font-bold text-slate-100 group-hover:text-amber-400 transition-colors">Lista de Materiais Necessários</h3>
+          <span class="tier-badge" style="background:rgba(245,158,11,0.15);color:#fbbf24;">Operacional</span>
+        </div>
+        <p class="text-sm text-slate-400 mb-4">Para uma receita e quantidade pretendida, calcula todos os componentes necessários e custo total de produção.</p>
+      </div>
+      <div class="report-card-body">
+        <div class="flex items-center gap-4 text-xs text-slate-500">
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Selecção de receita</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Quantidade custom</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Custo total</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Stock vs. Necessidade -->
+    <a href="{% url 'bom:report_stock_vs_need' %}" class="report-card block group md:col-span-2">
+      <div class="report-card-header">
+        <div class="report-icon" style="background:rgba(239,68,68,0.12);">
+          <svg class="h-6 w-6" style="color:#f87171;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+          </svg>
+        </div>
+        <div class="flex items-start justify-between mb-2">
+          <h3 class="text-lg font-bold text-slate-100 group-hover:text-red-400 transition-colors">Stock vs. Necessidade</h3>
+          <span class="tier-badge" style="background:rgba(239,68,68,0.15);color:#f87171;">Crítico</span>
+        </div>
+        <p class="text-sm text-slate-400 mb-4">Compara o stock actual de cada componente com a quantidade necessária para produzir N unidades. Identifica rutura de stock antes de iniciar produção.</p>
+      </div>
+      <div class="report-card-body">
+        <div class="flex items-center gap-4 text-xs text-slate-500">
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Stock actual em tempo real</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Alerta de rutura</span>
+          <span class="flex items-center gap-1"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg> Quantidade em falta</span>
+        </div>
+      </div>
+    </a>
+
+  </div>
+</div>
+</div>
+{% endblock %}

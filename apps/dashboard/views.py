@@ -17,7 +17,7 @@ _APP_TILES = [
     {'slug': 'sales',     'name': 'Vendas',        'icon': '💰', 'url_name': 'sales:order_index'},
     {'slug': 'website',   'name': 'Website',       'icon': '🌐', 'url_name': None, 'url': '/'},
     {'slug': 'financial', 'name': 'Financeiro',    'icon': '💳', 'url_name': None, 'url': '#'},
-    {'slug': 'bom',       'name': 'BOM',           'icon': '🎂', 'url_name': None, 'url': '#'},
+    {'slug': 'bom',       'name': 'BOM',           'icon': '🎂', 'url_name': 'bom:bom_dashboard'},
     {'slug': 'documents', 'name': 'Documentos',    'icon': '📄', 'url_name': None, 'url': '#'},
     {'slug': 'marketing', 'name': 'Marketing',     'icon': '📱', 'url_name': None, 'url': '#'},
     {'slug': 'reports',       'name': 'Relatórios',       'icon': '📊', 'url_name': None, 'url': '#'},

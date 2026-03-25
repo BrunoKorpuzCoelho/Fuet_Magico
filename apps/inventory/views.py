@@ -1844,7 +1844,12 @@ def product_search(request):
         Q(name__icontains=q)
         | Q(internal_reference__icontains=q)
         | Q(reference__icontains=q)
-    )[:7]
+    )
+
+    if request.GET.get('manufactured') == '1':
+        qs = qs.filter(is_manufactured=True)
+
+    qs = qs[:7]
 
     results = []
     for p in qs:

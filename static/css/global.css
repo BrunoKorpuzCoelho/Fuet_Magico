@@ -1,5 +1,12 @@
 /* Global CSS Styles for Fuet Mágico */
 
+/* ==========================================
+   CHECKBOXES — Cor primária (dourado)
+   ========================================== */
+input[type="checkbox"] {
+    accent-color: #dbc693;
+}
+
 * {
     margin: 0;
     padding: 0;

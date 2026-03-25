@@ -28,7 +28,6 @@ def setup_companies():
             'phone': '+351 123 456 789',
             'country': 'Portugal',
             'currency': 'EUR',
-            'language': 'pt_PT'
         }
     )
     print(f"✓ {'Created' if created else 'Found'} company: {fuet_magico.name}")
@@ -42,7 +41,6 @@ def setup_companies():
             'phone': '+351 234 567 890',
             'country': 'Portugal',
             'currency': 'EUR',
-            'language': 'pt_PT'
         },
         {
             'name': 'Embala+ Packaging',
@@ -51,7 +49,6 @@ def setup_companies():
             'phone': '+351 245 678 901',
             'country': 'Portugal',
             'currency': 'EUR',
-            'language': 'pt_PT'
         },
     ]
     

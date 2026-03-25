@@ -10,7 +10,7 @@
 {% block content %}
 <div class="min-h-screen bg-[#1f2937]">
     <form method="post" enctype="multipart/form-data" id="product-form"
-          x-data="{}"
+          x-data="{ isManufactured: {{ form.is_manufactured.value|yesno:'true,false' }} }"
           @submit.prevent="async function(e) {
               if (window._productSuppliersComp) {
                   const ok = await window._productSuppliersComp.saveAllPending();
@@ -197,14 +197,17 @@
                             </svg>
                             Preço de Venda
                             <span class="text-[10px] text-gray-600">(€)</span>
+                            <span x-show="isManufactured" class="text-[10px] text-amber-500 font-semibold" style="display:none">calculado pela BOM</span>
                         </label>
                         <input class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                               :class="isManufactured ? 'opacity-50 cursor-not-allowed' : ''"
                                id="id_sale_price"
                                name="sale_price"
                                type="number"
                                step="0.01"
                                min="0"
                                placeholder="0.00"
+                               :readonly="isManufactured"
                                value="{{ form.sale_price.value|unlocalize|default:'0.00' }}">
                     </div>
 
@@ -217,14 +220,17 @@
                             </svg>
                             Preço de Custo
                             <span class="text-[10px] text-gray-600">(€)</span>
+                            <span x-show="isManufactured" class="text-[10px] text-amber-500 font-semibold" style="display:none">calculado pela BOM</span>
                         </label>
                         <input class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                               :class="isManufactured ? 'opacity-50 cursor-not-allowed' : ''"
                                id="id_cost_price"
                                name="cost_price"
                                type="number"
                                step="0.01"
                                min="0"
                                placeholder="0.00"
+                               :readonly="isManufactured"
                                value="{{ form.cost_price.value|unlocalize|default:'0.00' }}">
                     </div>
                 </div>
@@ -806,20 +812,42 @@
 
                     <!-- ── CONFIGURAÇÃO ───────────────────────────────── -->
                     <p class="text-[10px] font-semibold tracking-widest text-gray-500 uppercase mb-3">Configuração de Stock</p>
-                    <div class="max-w-xs">
-                        <label for="{{ form.min_stock.id_for_label }}" class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
-                            Stock Mínimo
-                            <span class="text-gray-600">({{ uom_label }})</span>
-                        </label>
-                        <input class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                               id="{{ form.min_stock.id_for_label }}"
-                               name="min_stock"
-                               type="number"
-                               step="0.001"
-                               min="0"
-                               placeholder="0"
-                               value="{{ form.min_stock.value|unlocalize|default:'0' }}">
-                        <p class="mt-1 text-xs text-gray-500">Alerta quando o stock em mão cair abaixo deste valor.</p>
+                    <div class="flex items-start gap-6 flex-wrap">
+                        <!-- Stock Mínimo -->
+                        <div class="w-48">
+                            <label for="{{ form.min_stock.id_for_label }}" class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                                Stock Mínimo
+                                <span class="text-gray-600">({{ uom_label }})</span>
+                            </label>
+                            <input class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                   id="{{ form.min_stock.id_for_label }}"
+                                   name="min_stock"
+                                   type="number"
+                                   step="0.001"
+                                   min="0"
+                                   placeholder="0"
+                                   value="{{ form.min_stock.value|unlocalize|default:'0' }}">
+                            <p class="mt-1 text-xs text-gray-500">Alerta quando o stock em mão cair abaixo deste valor.</p>
+                        </div>
+
+                        <!-- Produto de Fabrico (BOM) -->
+                        <div class="flex flex-col gap-2 pt-0.5">
+                            <span class="text-xs text-gray-500 font-medium">Produto de Fabrico (BOM)</span>
+                            <label class="relative inline-flex items-center cursor-pointer"
+                                   title="Indica que este produto é produzido internamente a partir de uma Receita (BOM)">
+                                <input type="hidden" name="is_manufactured" value="false">
+                                <input type="checkbox"
+                                       id="id_is_manufactured"
+                                       name="is_manufactured"
+                                       value="true"
+                                       class="sr-only peer"
+                                       x-model="isManufactured"
+                                       {% if form.is_manufactured.value %}checked{% endif %}>
+                                <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                <span class="ml-3 text-sm text-gray-400" x-text="isManufactured ? 'Sim' : 'Não'"></span>
+                            </label>
+                            <p class="text-xs text-gray-500">Produzido internamente via BOM.</p>
+                        </div>
                     </div>
 
                     {% endwith %}

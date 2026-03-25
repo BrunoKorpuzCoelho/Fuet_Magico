@@ -18,7 +18,6 @@ class Command(BaseCommand):
             name='Fuet Mágico',
             legal_name='Fuet Mágico, Lda.',
             currency='EUR',
-            language='pt_PT',
             country='Portugal',
             is_active=True
         )

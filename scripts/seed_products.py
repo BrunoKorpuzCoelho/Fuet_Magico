@@ -29,7 +29,7 @@ import django
 
 django.setup()
 
-from apps.inventory.models import Product, Category, UoM
+from apps.inventory.models import Product, Category, UoM, StockMovement, StockMovementLine
 from apps.core.models import Company
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -916,9 +916,18 @@ def run():
     print(f'  UdMs disponíveis: {len(uom_map)}')
     print()
 
-    # ── Clean existing products ──────────────────────────────────────
-    deleted, _ = Product.objects.filter(owner_company=company).delete()
-    if deleted:
+    # ── Clean existing products (+ dependent stock movements) ───────
+    products_qs = Product.objects.filter(owner_company=company)
+    if products_qs.exists():
+        # Delete stock movement lines referencing these products first
+        lines_deleted, _ = StockMovementLine.objects.filter(product__owner_company=company).delete()
+        if lines_deleted:
+            print(f'🗑️  Removidas {lines_deleted} linhas de movimento de stock dependentes.')
+        # Delete now-empty or company-owned stock movements
+        moves_deleted, _ = StockMovement.objects.filter(owner_company=company).delete()
+        if moves_deleted:
+            print(f'🗑️  Removidos {moves_deleted} movimentos de stock dependentes.')
+        deleted, _ = products_qs.delete()
         print(f'🗑️  Removidos {deleted} produtos existentes.\n')
 
     # ── Create products ──────────────────────────────────────────────

@@ -80,12 +80,14 @@ def run():
     # ── Unidade (referência = Unidade) ──────────────────────────────────
 
     print('\n  Unidade:')
-    get_or_create_uom('Unidade',  'un',  cat_unidade, 'reference', 1, rounding=Decimal('1'))
-    get_or_create_uom('Dúzia',    'dz',  cat_unidade, 'bigger',    12, rounding=Decimal('1'))
-    get_or_create_uom('Caixa',    'cx',  cat_unidade, 'bigger',    1, rounding=Decimal('1'))
-    get_or_create_uom('Pacote',   'pct', cat_unidade, 'bigger',    1, rounding=Decimal('1'))
-    get_or_create_uom('Par',      'par', cat_unidade, 'bigger',    2, rounding=Decimal('1'))
-    get_or_create_uom('Centena',  'cen', cat_unidade, 'bigger',    100, rounding=Decimal('1'))
+    get_or_create_uom('Unidade',  'un',    cat_unidade, 'reference', 1,   rounding=Decimal('1'))
+    get_or_create_uom('Dúzia',    'dz',    cat_unidade, 'bigger',    12,  rounding=Decimal('1'))
+    get_or_create_uom('Caixa',    'cx',    cat_unidade, 'bigger',    1,   rounding=Decimal('1'))
+    get_or_create_uom('Pacote',   'pct',   cat_unidade, 'bigger',    1,   rounding=Decimal('1'))
+    get_or_create_uom('Par',      'par',   cat_unidade, 'bigger',    2,   rounding=Decimal('1'))
+    get_or_create_uom('Centena',  'cen',   cat_unidade, 'bigger',    100, rounding=Decimal('1'))
+    get_or_create_uom('Fatia',    'fatia', cat_unidade, 'bigger',    1,   rounding=Decimal('1'))
+    get_or_create_uom('Porção',   'porç',  cat_unidade, 'bigger',    1,   rounding=Decimal('1'))
 
     # ── Tempo (referência = Minuto) ─────────────────────────────────────
 

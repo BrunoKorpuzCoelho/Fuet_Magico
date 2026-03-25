@@ -342,6 +342,11 @@ class Product(AbstractBaseModel):
         verbose_name='Stock Mínimo',
         help_text='Alerta quando o stock em mão cair abaixo deste valor.',
     )
+    is_manufactured = models.BooleanField(
+        default=False,
+        verbose_name='Produto de Fabrico (BOM)',
+        help_text='Indica que este produto é produzido internamente a partir de uma Receita (BOM).',
+    )
 
     class Meta:
         verbose_name = 'Produto'
@@ -622,15 +627,36 @@ class StockMovement(AbstractBaseModel):
         )
 
         # ── Pre-validation: check sufficient stock for all out-lines ─────
+        # For manufactured products (is_manufactured=True with a BOM), stock is
+        # checked against BOM components instead of the finished product itself.
+        # The movement line keeps the finished product (for delivery notes / guia
+        # de remessa), but the actual stock deduction targets the components.
         if is_out:
             shortages = []
             for line in self.lines.select_related('product'):
                 qty_needed = abs(Decimal(str(line.quantity)))
-                available = Decimal(str(line.product.get_on_hand_quantity()))
-                if available < qty_needed:
-                    shortages.append(
-                        f'{line.product.name}: disponível {available:f}, necessário {qty_needed:f}'
-                    )
+                product = line.product
+                bom = getattr(product, 'bom', None)
+                if product.is_manufactured and bom and bom.qty_produced:
+                    # Check each component
+                    multiplier = qty_needed / Decimal(str(bom.qty_produced))
+                    for bom_line in bom.lines.select_related('component').all():
+                        comp = bom_line.component
+                        comp_qty_needed = (
+                            Decimal(str(bom_line.quantity)) * multiplier
+                        ).quantize(Decimal('0.0001'))
+                        available = Decimal(str(comp.get_on_hand_quantity()))
+                        if available < comp_qty_needed:
+                            shortages.append(
+                                f'{comp.name} (componente de {product.name}): '
+                                f'disponível {available:f}, necessário {comp_qty_needed:f}'
+                            )
+                else:
+                    available = Decimal(str(product.get_on_hand_quantity()))
+                    if available < qty_needed:
+                        shortages.append(
+                            f'{product.name}: disponível {available:f}, necessário {qty_needed:f}'
+                        )
             if shortages:
                 raise ValidationError(
                     'Stock insuficiente para validar este movimento:\n'
@@ -668,9 +694,23 @@ class StockMovement(AbstractBaseModel):
                 StockQuant.update_quantity(product, self.warehouse, qty, 'add')
 
             elif is_out:
-                # ── Cost of goods removed = current average ─────────────
-                line.cost_price_at_move = current_cost
-                StockQuant.update_quantity(product, self.warehouse, qty, 'subtract')
+                bom = getattr(product, 'bom', None)
+                if product.is_manufactured and bom and bom.qty_produced:
+                    # ── Manufactured product: deduct BOM components ──────
+                    # The line records the finished product cost for the delivery note.
+                    # Stock is deducted from each component proportionally.
+                    multiplier = qty / Decimal(str(bom.qty_produced))
+                    line.cost_price_at_move = Decimal(str(product.cost_price or 0))
+                    for bom_line in bom.lines.select_related('component', 'uom').all():
+                        comp = bom_line.component
+                        comp_qty = (
+                            Decimal(str(bom_line.quantity)) * multiplier
+                        ).quantize(Decimal('0.0001'))
+                        StockQuant.update_quantity(comp, self.warehouse, comp_qty, 'subtract')
+                else:
+                    # ── Regular product: deduct directly ────────────────
+                    line.cost_price_at_move = current_cost
+                    StockQuant.update_quantity(product, self.warehouse, qty, 'subtract')
 
             lines_to_save.append(line)
 

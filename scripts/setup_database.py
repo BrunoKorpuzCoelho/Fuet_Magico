@@ -4,7 +4,7 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 POSTGRES_HOST = 'localhost'
 POSTGRES_PORT = 5432
 POSTGRES_USER = 'postgres'
-POSTGRES_PASSWORD = 'admin123'
+POSTGRES_PASSWORD = 'postgres'
 
 DB_NAME = 'fuet_magico_db'
 DB_USER = 'cubix'

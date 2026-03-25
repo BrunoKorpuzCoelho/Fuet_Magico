@@ -89,6 +89,7 @@
                 </button>
 
                 <!-- Previsão (Forecast) -->
+                {% if product.pk %}
                 <a href="{% url 'inventory:product_forecast' product.pk %}"
                    class="flex items-center gap-2 px-3 py-1 rounded-md border border-blue-500 bg-transparent hover:bg-blue-500/10 transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-blue-400">
@@ -97,6 +98,7 @@
                     <span class="text-sm font-semibold text-blue-400">{{ forecast_count|floatformat:'-3' }}</span>
                     <span class="text-xs text-blue-400">Previsão</span>
                 </a>
+                {% endif %}
 
                 <!-- Unidades Vendidas -->
                 <button class="flex items-center gap-2 px-3 py-1 rounded-md border border-green-500 bg-transparent hover:bg-green-500/10 transition-all">

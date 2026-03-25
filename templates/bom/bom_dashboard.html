@@ -1,0 +1,510 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}BOM — Receitas — Fuet Mágico{% endblock %}
+
+{% block extra_css %}
+<style>
+.bom-bg {
+    background: linear-gradient(160deg, #0a1120 0%, #0f172a 40%, #0c1220 100%);
+    min-height: 100vh;
+}
+.section-label {
+    font-size: 0.7rem; font-weight: 800; letter-spacing: 0.15em;
+    text-transform: uppercase; color: #dbc693; opacity: 0.7;
+    margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px;
+}
+.section-label::after {
+    content:''; flex:1; height:1px;
+    background: linear-gradient(90deg, rgba(219,198,147,0.2), transparent);
+}
+.text-gold {
+    background: linear-gradient(135deg, #dbc693 0%, #f5e6c8 50%, #c9a96e 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.kpi-card {
+    background: linear-gradient(135deg, rgba(219,198,147,0.06) 0%, rgba(219,198,147,0.02) 100%);
+    border: 1px solid rgba(219,198,147,0.18); border-radius: 16px;
+    backdrop-filter: blur(12px); transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative; overflow: hidden;
+}
+.kpi-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+    background: linear-gradient(90deg, transparent, #dbc693, transparent); opacity: 0.6;
+}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(219,198,147,0.12); }
+.kpi-number { font-size: 2.4rem; font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
+.op-card {
+    background: rgba(15,23,42,0.7); border: 1px solid rgba(219,198,147,0.12); border-radius: 20px;
+    backdrop-filter: blur(16px); transition: box-shadow 0.3s ease, transform 0.2s ease;
+    display: flex; flex-direction: column; overflow: hidden;
+}
+.op-card:hover {
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(219,198,147,0.2);
+    transform: translateY(-2px);
+}
+</style>
+{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/bom_navbar.html' %}
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="bom-bg" x-data="{
+    selectedBoms: [],
+    selectAll: false,
+
+    init() {
+        window.getSelectedBoms = () => this.selectedBoms;
+    },
+
+    toggleAll() {
+        if (this.selectAll) {
+            this.selectedBoms = Array.from(document.querySelectorAll('.bom-checkbox')).map(el => el.value);
+        } else {
+            this.selectedBoms = [];
+        }
+    },
+
+    isSelected(id) {
+        return this.selectedBoms.includes(id);
+    },
+
+    toggleBom(id) {
+        const index = this.selectedBoms.indexOf(id);
+        if (index > -1) {
+            this.selectedBoms.splice(index, 1);
+        } else {
+            this.selectedBoms.push(id);
+        }
+        const totalCheckboxes = document.querySelectorAll('.bom-checkbox').length;
+        this.selectAll = this.selectedBoms.length === totalCheckboxes;
+    }
+}">
+
+    <!-- Search & Actions Bar -->
+    <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-3">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between gap-4">
+
+                <!-- Left: New Button + Bulk Actions -->
+                <div class="flex items-center space-x-3">
+                    <a href="{% url 'bom:bom_create' %}" id="newBomBtn" title="Nova Receita"
+                       class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        <span class="sr-only">Nova Receita</span>
+                    </a>
+
+                    <!-- Bulk Actions Button -->
+                    <div x-show="selectedBoms.length > 0"
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 scale-95"
+                         x-transition:enter-end="opacity-100 scale-100"
+                         class="relative"
+                         x-data="{ actionsOpen: false }"
+                         style="display: none;">
+                        <button @click="actionsOpen = !actionsOpen"
+                                class="relative p-2 bg-primary/10 dark:bg-primary/20 border-2 border-primary hover:bg-primary/20 rounded-lg transition-colors">
+                            <svg class="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            <span class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white text-xs font-bold" x-text="selectedBoms.length"></span>
+                        </button>
+
+                        <div x-show="actionsOpen"
+                             @click.away="actionsOpen = false"
+                             x-transition:enter="transition ease-out duration-100"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             class="absolute left-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+                             style="display: none;">
+                            <div class="py-1">
+                                <button @click="archiveBoms()" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                                    </svg>
+                                    <span>Arquivar</span>
+                                </button>
+                                <button @click="unarchiveBoms()" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                                    </svg>
+                                    <span>Desarquivar</span>
+                                </button>
+                                {% if user.role == 'ADMIN' %}
+                                <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                                <button @click="deleteBoms()" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                    <span>Eliminar</span>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Center: Search Bar -->
+                <div class="flex-1 max-w-2xl relative" x-data="{ filtersOpen: false, searchQuery: '{{ search_query }}' }">
+                    <form method="GET" action="{% url 'bom:bom_dashboard' %}" id="bomSearchForm">
+                        <div class="relative">
+                            <input
+                                type="text"
+                                name="search"
+                                x-model="searchQuery"
+                                @focus="filtersOpen = true"
+                                @input="filtersOpen = searchQuery.length > 0"
+                                placeholder="Pesquisar receitas..."
+                                class="w-full px-4 py-2 pl-10 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <input type="hidden" name="field" id="bomSearchField" value="{{ search_field }}">
+                            {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+
+                            <!-- Search Icon -->
+                            <svg class="absolute left-3 top-2.5 h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+
+                            <!-- Chevron Button -->
+                            <button
+                                type="button"
+                                @click="filtersOpen = !filtersOpen"
+                                class="absolute right-2 top-2 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                <svg class="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Filters Dropdown -->
+                        <div x-show="filtersOpen"
+                             @click.away="filtersOpen = false"
+                             x-transition:enter="transition ease-out duration-100"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             class="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto"
+                             style="display: none;">
+                            <div class="p-3">
+                                <!-- Status Filter -->
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">FILTRAR POR STATUS:</p>
+                                <a href="?status=active{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}"
+                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if status_filter == 'active' %}bg-primary/10 text-primary font-semibold{% endif %}">
+                                    <div class="flex items-center justify-between">
+                                        <span>Ativos</span>
+                                        {% if status_filter == 'active' %}
+                                        <svg class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        {% endif %}
+                                    </div>
+                                </a>
+                                <a href="?status=archived{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}"
+                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded {% if status_filter == 'archived' %}bg-primary/10 text-primary font-semibold{% endif %}">
+                                    <div class="flex items-center justify-between">
+                                        <span>Arquivados</span>
+                                        {% if status_filter == 'archived' %}
+                                        <svg class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        {% endif %}
+                                    </div>
+                                </a>
+
+                                <div class="my-3 border-t border-gray-200 dark:border-gray-700"></div>
+
+                                <!-- Search by Field -->
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">PESQUISAR POR CAMPO:</p>
+                                <a href="#" @click.prevent="document.getElementById('bomSearchField').value=''; document.getElementById('bomSearchForm').submit();"
+                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Pesquisar <strong>Produto</strong>: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('bomSearchField').value='reference'; document.getElementById('bomSearchForm').submit();"
+                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Pesquisar <strong>Referência</strong>: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                                <a href="#" @click.prevent="document.getElementById('bomSearchField').value='uom'; document.getElementById('bomSearchForm').submit();"
+                                   class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                    Pesquisar <strong>Unidade de Medida</strong>: <span class="text-primary" x-text="searchQuery || '...'"></span>
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Right: Pagination -->
+                <div class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                    <span>{{ boms.start_index }}-{{ boms.end_index }} / {{ total_count }}</span>
+                    <span class="text-gray-400">|</span>
+                    <div class="flex items-center space-x-1">
+                        <input
+                            type="text"
+                            id="bomPageSizeInput"
+                            value="{{ page_size }}"
+                            class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <span>/página</span>
+                    </div>
+                    {% if boms.has_previous %}
+                    <a href="?page={{ boms.previous_page_number }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}&status={{ status_filter }}"
+                       class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </a>
+                    {% else %}
+                    <button disabled class="p-1 opacity-50 cursor-not-allowed">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    {% endif %}
+                    {% if boms.has_next %}
+                    <a href="?page={{ boms.next_page_number }}{% if search_query %}&search={{ search_query }}&field={{ search_field }}{% endif %}&page_size={{ page_size }}&status={{ status_filter }}"
+                       class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </a>
+                    {% else %}
+                    <button disabled class="p-1 opacity-50 cursor-not-allowed">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-900">
+                        <tr>
+                            <th class="px-6 py-3 text-left w-12">
+                                <input type="checkbox"
+                                       x-model="selectAll"
+                                       @change="toggleAll()"
+                                       class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Produto</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">UdM</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Qtd. Produzida</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Ingredientes</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Custo Total</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Custo Unit.</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {% for bom in boms %}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                            data-href="{% url 'bom:bom_edit' bom.pk %}"
+                            @click="if (!$event.target.closest('.checkbox-cell')) { window.location=$event.currentTarget.dataset.href; }">
+                            <td class="px-6 py-4 whitespace-nowrap checkbox-cell" @click.stop>
+                                <input type="checkbox"
+                                       value="{{ bom.pk }}"
+                                       :checked="isSelected('{{ bom.pk }}')"
+                                       @change="toggleBom('{{ bom.pk }}')"
+                                       class="bom-checkbox h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div>
+                                    <a href="{% url 'bom:bom_edit' bom.pk %}" class="text-sm font-medium text-gray-900 dark:text-white hover:text-primary dark:hover:text-primary transition-colors">
+                                        {{ bom.product.name }}
+                                    </a>
+                                    {% if bom.product.internal_reference %}
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ bom.product.internal_reference }}</div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                {{ bom.uom.name }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white text-right">
+                                {{ bom.qty_produced|floatformat:"-4" }} {{ bom.uom.symbol }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white text-right">
+                                {{ bom.lines_count }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white text-right font-medium">
+                                {{ bom.calculate_total_cost|floatformat:2 }} €
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white text-right">
+                                {{ bom.calculate_unit_cost|floatformat:4 }} €
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                                Nenhuma receita encontrada.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showNotification(type, message) {
+    const bg = type === 'success' ? 'bg-green-500' : type === 'warning' ? 'bg-amber-500' : 'bg-red-500';
+    const el = document.createElement('div');
+    el.className = `fixed top-4 right-4 ${bg} text-white px-6 py-4 rounded-lg shadow-lg z-50 transition-opacity duration-300`;
+    el.textContent = message;
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3000);
+}
+
+async function archiveBoms() {
+    const selected = window.getSelectedBoms ? window.getSelectedBoms() : [];
+    if (!selected.length) { showNotification('error', 'Nenhuma receita selecionada'); return; }
+    try {
+        const response = await fetch('{% url "bom:bulk_archive" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ bom_ids: selected })
+        });
+        const data = await response.json();
+        if (data.success) { showNotification('success', data.message); setTimeout(() => window.location.reload(), 1500); }
+        else { showNotification('error', data.error?.message || 'Erro ao arquivar.'); }
+    } catch (e) {
+        showNotification('error', 'Erro de conexão.');
+    }
+}
+
+async function unarchiveBoms() {
+    const selected = window.getSelectedBoms ? window.getSelectedBoms() : [];
+    if (!selected.length) { showNotification('error', 'Nenhuma receita selecionada'); return; }
+    try {
+        const response = await fetch('{% url "bom:bulk_unarchive" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ bom_ids: selected })
+        });
+        const data = await response.json();
+        if (data.success) { showNotification('success', data.message); setTimeout(() => window.location.reload(), 1500); }
+        else { showNotification('error', data.error?.message || 'Erro ao desarquivar.'); }
+    } catch (e) {
+        showNotification('error', 'Erro de conexão.');
+    }
+}
+
+function deleteBoms() {
+    const selected = window.getSelectedBoms ? window.getSelectedBoms() : [];
+    if (!selected.length) { showNotification('error', 'Nenhuma receita selecionada'); return; }
+    openDeleteConfirmationModal(selected);
+}
+
+function openDeleteConfirmationModal(bomIds) {
+    const count = bomIds.length;
+    const modal = document.createElement('div');
+    modal.id = 'delete-confirmation-modal';
+    modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+    modal.style.animation = 'fadeIn 0.2s ease-out';
+    modal.innerHTML = `
+        <div class="bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full border-2 border-red-600/50" style="animation: scaleIn 0.2s ease-out;">
+            <div class="bg-gradient-to-r from-red-900 to-red-800 px-6 py-4 rounded-t-2xl border-b border-red-700/50">
+                <div class="flex items-center space-x-3">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-full bg-red-600/30 border-2 border-red-500 flex-shrink-0">
+                        <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">ATENÇÃO!</h3>
+                        <p class="text-red-300 text-xs mt-0.5">Esta ação é <span class="font-bold text-red-200">IRREVERSÍVEL</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-5">
+                <div class="bg-red-950/40 border border-red-800/50 rounded-lg p-3 mb-4">
+                    <p class="text-gray-200 text-sm leading-relaxed">
+                        Está prestes a <span class="font-bold text-red-400">ELIMINAR PERMANENTEMENTE</span>
+                        <span class="font-bold text-white text-base">${count}</span> receita(s).
+                    </p>
+                    <p class="text-gray-400 text-xs mt-2">
+                        Esta modificação é <span class="font-semibold text-red-400">IRREVERSÍVEL</span>
+                        e todos os dados serão perdidos para sempre.
+                    </p>
+                </div>
+                <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-3 mb-4">
+                    <label class="flex items-start space-x-2 cursor-pointer">
+                        <input type="checkbox" id="deleteConfirmCheckbox"
+                               class="mt-0.5 w-4 h-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500 focus:ring-2">
+                        <span class="text-gray-300 text-xs leading-relaxed">
+                            Confirmo que compreendo que esta ação vai
+                            <span class="font-semibold text-red-400">eliminar permanentemente</span>
+                            as receitas selecionadas e que
+                            <span class="font-semibold text-red-400">não existe forma de recuperar</span>
+                            os dados.
+                        </span>
+                    </label>
+                </div>
+                <div class="flex space-x-3">
+                    <button onclick="closeDeleteConfirmationModal()" class="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors">Cancelar</button>
+                    <button id="confirmDeleteButton" disabled
+                            class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-900/30">
+                        <div class="flex items-center justify-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            <span>ELIMINAR PERMANENTEMENTE</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>`;
+
+    const checkbox = modal.querySelector('#deleteConfirmCheckbox');
+    const confirmBtn = modal.querySelector('#confirmDeleteButton');
+    checkbox.addEventListener('change', function() { confirmBtn.disabled = !this.checked; });
+
+    confirmBtn.addEventListener('click', async function() {
+        if (!checkbox.checked) return;
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<div class="flex items-center justify-center space-x-2"><svg class="animate-spin h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg><span>A eliminar...</span></div>';
+        try {
+            const resp = await fetch('{% url "bom:bulk_delete" %}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ bom_ids: bomIds })
+            });
+            const data = await resp.json();
+            closeDeleteConfirmationModal();
+            if (data.success) { showNotification('success', data.message); setTimeout(() => window.location.reload(), 1500); }
+            else { showNotification('error', data.error?.message || 'Erro ao eliminar.'); }
+        } catch (e) { closeDeleteConfirmationModal(); showNotification('error', 'Erro ao eliminar receitas.'); }
+    });
+
+    modal.onclick = (e) => { if (e.target === modal) closeDeleteConfirmationModal(); };
+    document.body.appendChild(modal);
+}
+
+function closeDeleteConfirmationModal() {
+    const m = document.getElementById('delete-confirmation-modal');
+    if (m) { m.style.animation = 'fadeOut 0.2s ease-out'; setTimeout(() => m.remove(), 200); }
+}
+</script>
+{% endblock %}

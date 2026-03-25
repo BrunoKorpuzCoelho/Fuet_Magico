@@ -1,0 +1,699 @@
+{% extends 'base.html' %}
+{% load l10n %}
+
+{% block title %}{% if bom %}{{ bom.product.name }} — Editar Receita{% else %}Nova Receita{% endif %} — Fuet Mágico{% endblock %}
+
+{% block sub_navbar %}
+{% include 'components/bom_form_navbar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#1f2937]">
+    <form method="post" id="bom-form"
+          x-data="{}"
+          @submit.prevent="async function(e) {
+              if (window._bomLinesComp) {
+                  const ok = await window._bomLinesComp.saveAllPending();
+                  if (!ok) return;
+              }
+              e.target.submit();
+          }($event)">
+        {% csrf_token %}
+
+        <div class="mx-auto max-w-7xl p-6">
+
+            <!-- ═══════════════════════════════════════════════════ -->
+            <!-- TOPO: Produto + Referência Interna                 -->
+            <!-- ═══════════════════════════════════════════════════ -->
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <!-- Coluna de ícone/logo (decorativa) -->
+                <div class="lg:col-span-1 flex flex-col items-center justify-center gap-3">
+                    <div class="rounded-lg overflow-hidden w-[120px] h-[120px] bg-[#1a2332] border border-gray-700 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="text-primary opacity-40">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                            <path d="M2 17l10 5 10-5"></path>
+                            <path d="M2 12l10 5 10-5"></path>
+                        </svg>
+                    </div>
+                    <span class="text-xs text-gray-500 font-medium uppercase tracking-wider">Receita (BOM)</span>
+                </div>
+
+                <!-- Produto + Referência Interna (col-span-2) -->
+                <div class="lg:col-span-2">
+                    <div class="space-y-6">
+
+                        <!-- Produto — Autocomplete -->
+                        <div x-data="productAutocomplete()" @click.away="showResults = false">
+                            <label class="sr-only">Produto Final</label>
+                            <div class="relative flex items-center">
+                                <input type="text"
+                                       x-model="query"
+                                       @input.debounce.300ms="doSearch()"
+                                       @focus="doSearch(true)"
+                                       @keydown.escape="showResults = false"
+                                       autocomplete="off"
+                                       required
+                                       placeholder="Pesquisar produto final..."
+                                       class="flex w-full px-3 py-2 h-14 border-0 border-b-2 border-gray-600 bg-transparent text-2xl font-light text-gray-400 placeholder:text-gray-600 focus-visible:border-primary focus-visible:ring-0 rounded-none focus-visible:outline-none pr-10">
+                                <input type="hidden" name="product" :value="selectedId" x-ref="hiddenProduct">
+
+                                <!-- Clear -->
+                                <button type="button"
+                                        x-show="query.length > 0"
+                                        x-cloak
+                                        @click="clear()"
+                                        class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-400 transition-colors"
+                                        title="Limpar">
+                                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <!-- Dropdown results -->
+                            <div x-show="showResults && (results.length > 0 || (query.length > 0 && !isLoading))"
+                                 x-cloak
+                                 x-transition
+                                 class="absolute z-50 w-full max-w-xl mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-72 overflow-y-auto">
+
+                                <div x-show="isLoading" class="p-3 text-center">
+                                    <svg class="animate-spin h-4 w-4 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                    </svg>
+                                </div>
+
+                                <div x-show="!isLoading">
+                                    <template x-for="p in results" :key="p.id">
+                                        <button type="button"
+                                                @click="pick(p)"
+                                                class="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-gray-700 transition-colors border-b border-gray-700/50 last:border-0">
+                                            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary text-xs font-bold flex-shrink-0"
+                                                 x-text="p.name.charAt(0).toUpperCase()"></div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm text-gray-200 font-medium truncate" x-text="p.name"></p>
+                                                <p class="text-xs text-gray-500 truncate" x-text="p.internal_reference || ''"></p>
+                                            </div>
+                                            <span class="text-xs text-gray-500 flex-shrink-0" x-text="p.uom_symbol"></span>
+                                        </button>
+                                    </template>
+                                    <div x-show="results.length === 0 && query.length > 0 && !isLoading"
+                                         class="px-4 py-3 text-sm text-gray-500">
+                                        Nenhum produto encontrado
+                                    </div>
+                                </div>
+
+                                <!-- Criar e Editar -->
+                                <div class="border-t border-gray-700">
+                                    <button type="button"
+                                            @click="createAndEdit()"
+                                            class="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-primary hover:bg-gray-700 transition-colors font-medium">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                        </svg>
+                                        Criar e Editar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Referência Interna -->
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-primary flex-shrink-0">
+                                <path d="M4 9V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"></path>
+                                <path d="M20 15v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4"></path>
+                                <line x1="12" x2="12" y1="3" y2="21"></line>
+                            </svg>
+                            <input class="flex w-full px-3 py-2 h-9 border-0 border-b border-gray-700 bg-transparent text-gray-400 placeholder:text-gray-600 focus-visible:border-primary focus-visible:ring-0 rounded-none focus-visible:outline-none"
+                                   id="id_internal_reference"
+                                   name="internal_reference"
+                                   placeholder="Referência Interna (ex: BOM-001)"
+                                   value="{{ form.internal_reference.value|default:'' }}"
+                                   maxlength="64">
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════ -->
+            <!-- SECÇÃO PRINCIPAL: Grid 2 Colunas                   -->
+            <!-- ═══════════════════════════════════════════════════ -->
+            <div class="mt-10 grid grid-cols-1 gap-x-12 gap-y-6 lg:grid-cols-2">
+
+                <!-- ─── Coluna ESQUERDA ─────────────────────── -->
+                <div class="space-y-5">
+
+                    <!-- Quantidade Produzida -->
+                    <div>
+                        <label for="id_qty_produced" class="block text-xs font-medium text-gray-500 mb-1">
+                            Quantidade Produzida
+                        </label>
+                        <div class="flex gap-3">
+                            <input type="number"
+                                   id="id_qty_produced"
+                                   name="qty_produced"
+                                   step="0.0001"
+                                   min="0.0001"
+                                   required
+                                   value="{{ form.qty_produced.value|unlocalize|default:'1.0000' }}"
+                                   class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                            <!-- UoM inline -->
+                            <select id="id_uom"
+                                    name="uom"
+                                    required
+                                    class="flex w-48 rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                                <option value="">UdM</option>
+                                {% for u in uoms %}
+                                <option value="{{ u.pk }}"
+                                    {% if form.uom.value|stringformat:"s" == u.pk|stringformat:"s" %}selected{% endif %}>
+                                    {{ u.name }} ({{ u.symbol }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% if form.qty_produced.errors %}
+                        <p class="mt-1 text-xs text-red-400">{{ form.qty_produced.errors|join:', ' }}</p>
+                        {% endif %}
+                        {% if form.uom.errors %}
+                        <p class="mt-1 text-xs text-red-400">{{ form.uom.errors|join:', ' }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Notas -->
+                    <div>
+                        <label for="id_notes" class="block text-xs font-medium text-gray-500 mb-1">
+                            Notas
+                        </label>
+                        <textarea id="id_notes"
+                                  name="notes"
+                                  rows="4"
+                                  placeholder="Instruções de preparação, anotações..."
+                                  class="flex w-full rounded-md border px-3 py-2 border-gray-700 bg-[#1a2332] text-gray-300 placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary resize-none text-sm">{{ form.notes.value|default:'' }}</textarea>
+                    </div>
+
+                </div>
+
+                <!-- ─── Coluna DIREITA ──────────────────────── -->
+                <div class="space-y-5">
+
+                    <!-- Empresa -->
+                    <div>
+                        <label for="id_owner_company" class="block text-xs font-medium text-gray-500 mb-1">
+                            Empresa
+                        </label>
+                        <select id="id_owner_company"
+                                name="owner_company"
+                                class="flex w-full rounded-md border px-3 py-2 h-9 border-gray-700 bg-[#1a2332] text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                            <option value="">— Global (todas as empresas) —</option>
+                            {% for c in companies %}
+                            <option value="{{ c.pk }}"
+                                {% if form.owner_company.value|stringformat:"s" == c.pk|stringformat:"s" %}selected{% endif %}>
+                                {{ c.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.owner_company.errors %}
+                        <p class="mt-1 text-xs text-red-400">{{ form.owner_company.errors|join:', ' }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Totais (actualizados via Alpine bomLines) -->
+                    {% if bom.pk %}
+                    <div x-data="{ costTotal: '—', saleTotal: '—' }"
+                         x-init="setInterval(() => {
+                             if (window._bomLinesComp) {
+                                 costTotal = window._bomLinesComp.totalCost.toFixed(4) + ' €';
+                                 saleTotal = window._bomLinesComp.totalSale.toFixed(4) + ' €';
+                             }
+                         }, 150)"
+                         class="mt-4 rounded-lg border border-gray-700 bg-gray-900/40 divide-y divide-gray-700/60">
+                        <div class="flex items-center justify-between px-4 py-3">
+                            <span class="text-xs text-gray-500 font-medium uppercase tracking-wider">Total Custo</span>
+                            <span class="text-sm font-semibold text-gray-200" x-text="costTotal"></span>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3">
+                            <span class="text-xs text-gray-500 font-medium uppercase tracking-wider">Total Venda</span>
+                            <span class="text-sm font-semibold text-primary" x-text="saleTotal"></span>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════ -->
+            <!-- Erros globais do formulário                         -->
+            <!-- ═══════════════════════════════════════════════════ -->
+            {% if form.non_field_errors %}
+            <div class="mt-6 rounded-md bg-red-500/10 border border-red-500/30 p-4">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm text-red-400">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if form.product.errors %}
+            <div class="mt-6 rounded-md bg-red-500/10 border border-red-500/30 p-4">
+                <p class="text-sm text-red-400">Produto: {{ form.product.errors|join:', ' }}</p>
+            </div>
+            {% endif %}
+
+            <!-- ═══════════════════════════════════════════════════ -->
+            <!-- COMPONENTES (BOM Lines)                            -->
+            <!-- ═══════════════════════════════════════════════════ -->
+            <div class="mt-10"
+                 x-data="bomLines(
+                     '{{ bom.pk|default:'' }}',
+                     '{% if bom.pk %}{% url 'bom:bom_lines_api' bom.pk %}{% endif %}',
+                     '{% url 'inventory:product_search' %}',
+                     {{ initial_lines_json }}
+                 )">
+
+                <!-- Header -->
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-semibold text-gray-300 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                        </svg>
+                        Componentes
+                        <span class="ml-1 px-2 py-0.5 rounded-full text-xs bg-gray-700 text-gray-300" x-text="rows.filter(r=>!r._deleted).length"></span>
+                    </h3>
+                    {% if not bom.pk %}
+                    <span class="text-xs text-gray-500 italic">Guarda a receita primeiro para adicionar componentes.</span>
+                    {% endif %}
+                </div>
+
+                {% if bom.pk %}
+                <!-- Tabela -->
+                <div class="rounded-t-xl border border-gray-700 overflow-visible">
+                    <table class="min-w-full divide-y divide-gray-700">
+                        <thead class="bg-gray-900/50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-14">Seq.</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Componente / Ingrediente</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Quantidade</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">UdM</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Pr. Custo Unit.</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Subtotal Custo</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notas</th>
+                                <th class="px-4 py-3 w-10"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-700/50" id="bom-lines-tbody">
+
+                            <template x-for="(row, idx) in rows.filter(r => !r._deleted)" :key="row._key">
+                                <tr class="hover:bg-gray-700/20 transition-colors group">
+
+                                    <!-- SEQ -->
+                                    <td class="px-4 py-2.5">
+                                        <input type="number" x-model.number="row.sequence" min="1" max="999"
+                                               class="w-12 bg-transparent text-sm text-gray-300 text-center border-0 border-b border-gray-700 focus:border-primary focus:outline-none py-1"/>
+                                    </td>
+
+                                    <!-- COMPONENTE — autocomplete -->
+                                    <td class="px-4 py-2.5 relative">
+                                        <div class="relative flex items-center gap-2">
+                                            <div class="flex-1 relative">
+                                                <input type="text"
+                                                       :value="row.component_name + (row.component_ref ? ' [' + row.component_ref + ']' : '')"
+                                                       @input="searchComponent(row, $event.target.value)"
+                                                       @focus="row._results.length && (row._showDrop = true)"
+                                                       @keydown.escape="row._showDrop = false"
+                                                       :placeholder="row.component_id ? '' : 'Pesquisar componente...'"
+                                                       autocomplete="off"
+                                                       class="w-full bg-transparent text-sm text-gray-200 placeholder-gray-600 border-0 border-b border-gray-700 focus:border-primary focus:outline-none py-1"/>
+                                                <!-- Loading -->
+                                                <span x-show="row._loading" class="absolute right-1 top-1.5" style="display:none;">
+                                                    <svg class="h-3.5 w-3.5 text-primary animate-spin" fill="none" viewBox="0 0 24 24">
+                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                                    </svg>
+                                                </span>
+                                                <!-- Dropdown -->
+                                                <div x-show="row._showDrop && row._results.length > 0"
+                                                     @click.outside="row._showDrop = false"
+                                                     class="absolute left-0 top-full mt-1 w-80 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl z-[500]"
+                                                     style="display:none;">
+                                                    <template x-for="p in row._results" :key="p.id">
+                                                        <button type="button"
+                                                                @click.prevent="selectComponent(row, p)"
+                                                                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 transition-colors text-left border-b border-gray-700/50 last:border-0">
+                                                            <span class="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0"
+                                                                  x-text="p.name.charAt(0).toUpperCase()"></span>
+                                                            <div class="min-w-0 flex-1">
+                                                                <div class="font-medium truncate text-gray-200" x-text="p.name"></div>
+                                                                <div class="text-xs text-gray-500 truncate" x-text="p.internal_reference || p.uom_symbol"></div>
+                                                            </div>
+                                                            <span class="text-xs text-gray-500 flex-shrink-0" x-text="p.uom_symbol"></span>
+                                                        </button>
+                                                    </template>
+                                                    <!-- Criar e Editar -->
+                                                    <div class="border-t border-gray-700">
+                                                        <button type="button"
+                                                                @click="openCreateProduct(); row._showDrop = false"
+                                                                class="w-full flex items-center gap-2 px-4 py-2 text-xs text-primary hover:bg-gray-700 transition-colors font-medium">
+                                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                                            </svg>
+                                                            Criar e Editar
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- Abrir produto -->
+                                            <a x-show="row.component_id && !row._loading"
+                                               :href="'/inventory/products/' + row.component_id + '/edit/'"
+                                               target="_blank"
+                                               class="flex-shrink-0 p-0.5 text-gray-600 hover:text-primary transition-colors"
+                                               title="Abrir produto"
+                                               style="display:none;"
+                                               @click.stop>
+                                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                                </svg>
+                                            </a>
+                                        </div>
+                                    </td>
+
+                                    <!-- QUANTIDADE -->
+                                    <td class="px-4 py-2.5 text-right"
+                                        :class="!row.component_id ? 'opacity-30 pointer-events-none' : ''">
+                                        <input type="number" x-model.number="row.quantity" step="0.0001" min="0.0001"
+                                               class="w-full bg-transparent text-sm text-gray-300 text-right border-0 border-b border-gray-700 focus:border-primary focus:outline-none py-1"/>
+                                    </td>
+
+                                    <!-- UdM -->
+                                    <td class="px-4 py-2.5"
+                                        :class="!row.component_id ? 'opacity-30 pointer-events-none' : ''">
+                                        <select x-model="row.uom_id"
+                                                class="w-full bg-transparent text-sm text-gray-300 border-0 border-b border-gray-700 focus:border-primary focus:outline-none py-1">
+                                            {% for u in uoms %}
+                                            <option value="{{ u.pk }}">{{ u.symbol }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+
+                                    <!-- PREÇO CUSTO UNIT -->
+                                    <td class="px-4 py-2.5 text-right"
+                                        :class="!row.component_id ? 'opacity-30 pointer-events-none' : ''">
+                                        <span class="text-sm text-gray-400" x-text="row.cost_price != null ? row.cost_price.toFixed(4) + ' €' : '—'"></span>
+                                    </td>
+
+                                    <!-- SUBTOTAL CUSTO -->
+                                    <td class="px-4 py-2.5 text-right"
+                                        :class="!row.component_id ? 'opacity-30 pointer-events-none' : ''">
+                                        <span class="text-sm font-medium text-gray-300"
+                                              x-text="row.cost_price != null ? (row.quantity * row.cost_price).toFixed(4) + ' €' : '—'"></span>
+                                    </td>
+
+                                    <!-- NOTAS -->
+                                    <td class="px-4 py-2.5"
+                                        :class="!row.component_id ? 'opacity-30 pointer-events-none' : ''">
+                                        <input type="text" x-model="row.notes"
+                                               placeholder="Opcional..."
+                                               class="w-full bg-transparent text-sm text-gray-400 placeholder-gray-600 border-0 border-b border-gray-700 focus:border-primary focus:outline-none py-1"/>
+                                    </td>
+
+                                    <!-- ACÇÕES -->
+                                    <td class="px-4 py-2.5">
+                                        <div class="flex items-center justify-end">
+                                            <button x-show="row.id === null" type="button"
+                                                    @click="cancelRow(row)"
+                                                    class="p-1 rounded text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                                    title="Descartar linha" style="display:none;">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </button>
+                                            <button x-show="row.id !== null" type="button"
+                                                    @click="deleteRow(row)"
+                                                    class="p-1 rounded text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                                                    title="Remover" style="display:none;">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+
+                                </tr>
+                            </template>
+
+                            <!-- Add line -->
+                            <tr>
+                                <td colspan="8" class="px-4 py-2 border-t border-gray-700/40">
+                                    <button type="button" @click="addRow()"
+                                            class="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary transition-colors py-1">
+                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                        </svg>
+                                        Adicionar linha
+                                    </button>
+                                </td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty state -->
+                <div x-show="rows.filter(r => !r._deleted).length === 0"
+                     class="py-10 text-center text-gray-500 text-sm" style="display:none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-8 w-8 mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                    Nenhum componente. Clica em "Adicionar linha".
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+function productAutocomplete() {
+    return {
+        query:       '{% if selected_product %}{{ selected_product.name|escapejs }}{% if selected_product.internal_reference %} [{{ selected_product.internal_reference|escapejs }}]{% endif %}{% endif %}',
+        selectedId:  '{% if selected_product %}{{ selected_product.id }}{% endif %}',
+        results:     [],
+        isLoading:   false,
+        showResults: false,
+
+        async doSearch(fromFocus = false) {
+            if (!fromFocus && this.selectedId && this.query.length > 0) {
+                this.selectedId = '';
+            }
+            if (this.query.length === 0 && !fromFocus) {
+                this.results = [];
+                this.showResults = false;
+                return;
+            }
+            this.isLoading   = true;
+            this.showResults = true;
+            try {
+                const url  = `{% url 'inventory:product_search' %}?q=${encodeURIComponent(this.query)}&manufactured=1`;
+                const resp = await fetch(url);
+                if (!resp.ok) throw new Error(resp.status);
+                const data = await resp.json();
+                this.results = data.results || [];
+            } catch(e) { this.results = []; }
+            finally { this.isLoading = false; }
+        },
+
+        pick(p) {
+            this.query       = p.internal_reference ? `${p.name} [${p.internal_reference}]` : p.name;
+            this.selectedId  = p.id;
+            this.showResults = false;
+            // Auto-fill UoM if a match exists in the select
+            const uomSelect = document.getElementById('id_uom');
+            if (uomSelect && p.uom_id) {
+                const opt = uomSelect.querySelector(`option[value="${p.uom_id}"]`);
+                if (opt) uomSelect.value = p.uom_id;
+            }
+        },
+
+        clear() {
+            this.query       = '';
+            this.selectedId  = '';
+            this.results     = [];
+            this.showResults = false;
+        },
+
+        createAndEdit() {
+            window.open('{% url "inventory:product_create" %}', '_blank');
+            this.showResults = false;
+        },
+    };
+}
+
+function bomLines(bomId, apiUrl, searchUrl, initialRows) {
+    return {
+        init() { window._bomLinesComp = this; },
+        rows: initialRows.map(r => ({
+            ...r,
+            quantity:   parseFloat(r.quantity)   || 1,
+            cost_price: parseFloat(r.cost_price) || 0,
+            sale_price: parseFloat(r.sale_price) || 0,
+            _deleted:  false,
+            _key:      r.id,
+            _showDrop: false,
+            _results:  [],
+            _loading:  false,
+            _saving:   false,
+        })),
+        _timers: {},
+
+        addRow() {
+            const key = 'new_' + Date.now();
+            this.rows.push({
+                id: null, _key: key,
+                sequence: 10,
+                component_id: '', component_name: '', component_ref: '',
+                quantity: 1,
+                uom_id: '', uom_name: '', uom_symbol: '',
+                notes: '',
+                cost_price: 0, sale_price: 0,
+                _deleted: false, _showDrop: false, _results: [], _loading: false, _saving: false,
+            });
+            this.$nextTick(() => {
+                const inputs = document.querySelectorAll('#bom-lines-tbody input[type="text"]');
+                if (inputs.length) inputs[inputs.length - 1].focus();
+            });
+        },
+
+        cancelRow(row) { row._deleted = true; },
+
+        async deleteRow(row) {
+            if (!confirm('Remover "' + (row.component_name || 'este componente') + '"?')) return;
+            if (row.id === null) { row._deleted = true; return; }
+            const url = apiUrl.replace(/\/?$/, '/') + row.id + '/';
+            const resp = await fetch(url, { method: 'DELETE', headers: { 'X-CSRFToken': this._csrf() } });
+            if (resp.ok) row._deleted = true;
+            else alert('Erro ao remover.');
+        },
+
+        async saveAllPending() {
+            // Save all complete rows (skip empty new rows that are mid-edit)
+            for (const row of this.rows.filter(r => !r._deleted && r.component_id && !r._saving)) {
+                await this._saveRow(row);
+            }
+            return true;
+        },
+
+        async _saveRow(row) {
+            if (row._saving) return;
+            row._saving = true;
+            const payload = {
+                sequence:     row.sequence,
+                component_id: row.component_id,
+                quantity:     row.quantity,
+                uom_id:       row.uom_id,
+                notes:        row.notes,
+            };
+            try {
+                let resp, data;
+                if (row.id === null) {
+                    resp = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this._csrf() },
+                        body: JSON.stringify(payload),
+                    });
+                    data = await resp.json();
+                    if (!resp.ok) { alert(data.error || 'Erro ao criar linha.'); return; }
+                    row.id   = data.id;
+                    row._key = data.id;
+                } else {
+                    const url = apiUrl.replace(/\/?$/, '/') + row.id + '/';
+                    resp = await fetch(url, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this._csrf() },
+                        body: JSON.stringify(payload),
+                    });
+                    data = await resp.json();
+                    if (!resp.ok) { alert(data.error || 'Erro ao actualizar linha.'); return; }
+                }
+                Object.assign(row, data, {
+                    quantity:   parseFloat(data.quantity) || row.quantity,
+                    cost_price: parseFloat(data.cost_price) || row.cost_price,
+                    sale_price: parseFloat(data.sale_price) || row.sale_price,
+                    _deleted: false, _showDrop: false, _results: [], _loading: false,
+                });
+            } catch(e) {
+                alert('Erro de rede: ' + e.message);
+            } finally {
+                row._saving = false;
+            }
+        },
+
+        searchComponent(row, q) {
+            row.component_name = q;
+            row.component_id   = '';
+            row._showDrop      = false;
+            clearTimeout(this._timers[row._key]);
+            if (q.length < 1) { row._results = []; return; }
+            row._loading = true;
+            this._timers[row._key] = setTimeout(async () => {
+                try {
+                    const r    = await fetch(searchUrl + '?q=' + encodeURIComponent(q));
+                    const data = await r.json();
+                    // ID do produto final desta BOM (lido do campo hidden)
+                    const bomProductId = (document.querySelector('input[name="product"]') || {}).value || '';
+                    // IDs já usados noutras linhas (excluindo a linha actual)
+                    const usedIds = new Set(
+                        this.rows
+                            .filter(r2 => !r2._deleted && r2.component_id && r2._key !== row._key)
+                            .map(r2 => r2.component_id)
+                    );
+                    row._results = (data.results || []).filter(p => {
+                        if (bomProductId && p.id === bomProductId) return false;
+                        if (usedIds.has(p.id)) return false;
+                        return true;
+                    });
+                    row._showDrop = row._results.length > 0;
+                } finally { row._loading = false; }
+            }, 250);
+        },
+
+        selectComponent(row, p) {
+            row.component_id   = p.id;
+            row.component_name = p.name;
+            row.component_ref  = p.internal_reference || '';
+            row.cost_price     = parseFloat(p.cost_price)  || 0;
+            row.sale_price     = parseFloat(p.sale_price)  || 0;
+            row._results       = [];
+            row._showDrop      = false;
+            // Auto-fill UoM from product
+            if (p.uom_id) {
+                row.uom_id     = p.uom_id;
+                row.uom_symbol = p.uom_symbol || '';
+            }
+            // Auto-save immediately on component pick
+            this._saveRow(row);
+        },
+
+        get totalCost() {
+            return this.rows
+                .filter(r => !r._deleted && r.component_id)
+                .reduce((s, r) => s + (parseFloat(r.quantity) || 0) * (parseFloat(r.cost_price) || 0), 0);
+        },
+
+        get totalSale() {
+            return this.rows
+                .filter(r => !r._deleted && r.component_id)
+                .reduce((s, r) => s + (parseFloat(r.quantity) || 0) * (parseFloat(r.sale_price) || 0), 0);
+        },
+
+        openCreateProduct() {
+            window.open('{% url "inventory:product_create" %}', '_blank');
+        },
+
+        _csrf() {
+            return document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
+        },
+    };
+}
+</script>
+{% endblock %}

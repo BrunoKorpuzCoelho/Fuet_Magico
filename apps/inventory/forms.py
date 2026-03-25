@@ -88,7 +88,7 @@ class ProductForm(forms.ModelForm):
             'uom', 'uom_purchase',
             'sale_price', 'cost_price', 'tax_rate',
             'description', 'image',
-            'min_stock',
+            'min_stock', 'is_manufactured',
         ]
 
     def __init__(self, *args, company=None, **kwargs):

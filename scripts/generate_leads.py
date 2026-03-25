@@ -30,10 +30,17 @@ from apps.core.models import Company
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils import timezone
-from faker import Faker
-
-fake = Faker('pt_PT')
 User = get_user_model()
+
+_PT_NAMES = [
+    'Ana Silva', 'João Ferreira', 'Maria Santos', 'Pedro Oliveira', 'Sofia Costa',
+    'Rui Martins', 'Catarina Lopes', 'Tiago Rodrigues', 'Inês Gonçalves', 'Filipe Matos',
+    'Margarida Carvalho', 'Carlos Pinto', 'Beatriz Sousa', 'Miguel Correia', 'Sara Nunes',
+    'Diogo Teixeira', 'Marta Ribeiro', 'André Cunha', 'Francisca Dias', 'Hugo Ramos',
+]
+
+def _random_name():
+    return random.choice(_PT_NAMES)
 
 # ── Títulos por tipo de empresa ───────────────────────────────────────────────
 
@@ -145,6 +152,7 @@ def load_stages():
     Lê os stages existentes na BD. NÃO cria nenhum stage novo.
     Devolve tuple (won_stage, lost_stage, pipeline_stages).
     Usa APENAS os flags is_won_stage / is_lost_stage — nunca nomes.
+    Auto-corrige flags em falta detetando por nome (Won/Lost).
     """
     all_stages = list(CRMStage.objects.filter(is_active=True).order_by('sequence'))
     if not all_stages:
@@ -153,10 +161,29 @@ def load_stages():
             '   Crie os estágios no admin antes de executar este script.'
         )
 
+    # Auto-fix: se nenhum stage tem is_won_stage/is_lost_stage, detectar por nome
+    has_won = any(s.is_won_stage for s in all_stages)
+    has_lost = any(s.is_lost_stage for s in all_stages)
+    if not has_won or not has_lost:
+        for s in all_stages:
+            name_lower = s.name.lower()
+            if not has_won and ('won' in name_lower or 'ganho' in name_lower or 'ganh' in name_lower):
+                s.is_won_stage = True
+                s.save(update_fields=['is_won_stage'])
+                print(f'  ⚙️  Auto-set is_won_stage=True em "{s.name}"')
+                has_won = True
+            elif not has_lost and ('lost' in name_lower or 'perdi' in name_lower or 'perdid' in name_lower):
+                s.is_lost_stage = True
+                s.save(update_fields=['is_lost_stage'])
+                print(f'  ⚙️  Auto-set is_lost_stage=True em "{s.name}"')
+                has_lost = True
+
     won_stage = None
     lost_stage = None
     pipeline_stages = []
 
+    # Reload after potential updates
+    all_stages = list(CRMStage.objects.filter(is_active=True).order_by('sequence'))
     for s in all_stages:
         if s.is_won_stage:
             won_stage = s
@@ -285,7 +312,7 @@ def generate_historical_leads(won_stage, lost_stage, pipeline_stages, contacts, 
                 lead_date = today - timedelta(days=random.randint(1, 10))
 
             contact = random.choice(contacts) if contacts else None
-            contact_name = contact.name if contact else fake.name()
+            contact_name = contact.name if contact else _random_name()
 
             title = get_generic_title(contact_name)
             estimated_value = Decimal(random.randint(200, 6000))

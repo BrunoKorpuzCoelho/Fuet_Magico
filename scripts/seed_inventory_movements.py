@@ -213,8 +213,11 @@ def run():
                     uom=product.uom,
                     tax_rate=product.tax_rate,
                 )
-            deliv.action_validate()
-            total_deliveries += 1
+            try:
+                deliv.action_validate()
+                total_deliveries += 1
+            except Exception:
+                deliv.delete()
 
         # ── AJUSTE TRIMESTRAL (a cada 3 meses) ───────────────────────
         if months_ago % 3 == 0:
@@ -244,8 +247,11 @@ def run():
                     uom=product.uom,
                     tax_rate=product.tax_rate,
                 )
-            adj.action_validate()
-            total_adjustments += 1
+            try:
+                adj.action_validate()
+                total_adjustments += 1
+            except Exception:
+                adj.delete()
 
         # Progress dot every 6 months
         if months_ago % 6 == 0:
