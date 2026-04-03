@@ -1108,5 +1108,17 @@
         backdrop.addEventListener('click', close);
     })();
     </script>
+
+    <!-- PWA: Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/static/js/sw.js', { scope: '/' })
+                    .catch(function(err) {
+                        console.warn('Service Worker registration failed:', err);
+                    });
+            });
+        }
+    </script>
 </body>
 </html>

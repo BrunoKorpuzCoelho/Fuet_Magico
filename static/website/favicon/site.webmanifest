@@ -1,7 +1,16 @@
 {
   "name": "Fuet Mágico",
   "short_name": "Fuet Mágico",
+  "description": "Gestão integrada para o Fuet Mágico",
+  "start_url": "/",
+  "scope": "/",
   "icons": [
+    {
+      "src": "/static/website/favicon/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/static/website/favicon/web-app-manifest-192x192.png",
       "sizes": "192x192",
@@ -12,10 +21,17 @@
       "src": "/static/website/favicon/web-app-manifest-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/website/favicon/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ],
-  "theme_color": "#1f2937",
+  "theme_color": "#dbc693",
   "background_color": "#1f2937",
-  "display": "standalone"
+  "display": "standalone",
+  "orientation": "portrait-primary"
 }
