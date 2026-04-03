@@ -14,7 +14,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-development-key-change-in-
 FERNET_KEY = os.getenv('FERNET_KEY', '')
 
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,cubixtest.pt,www.cubixtest.pt').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,fuetmagico.pt,www.fuetmagico.pt,89.116.31.139').split(',')
 
 # ---------------------------------------------------------------
 # WhatsApp Business API (Meta Graph API)
