@@ -106,3 +106,6 @@ def run():
 
 if __name__ == '__main__':
     run()
+else:
+    # Allow running via: python manage.py shell < scripts/seed_uom.py
+    run()
