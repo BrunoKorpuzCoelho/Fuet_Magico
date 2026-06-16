@@ -9,13 +9,10 @@
         background: linear-gradient(135deg, rgba(219, 198, 147, 0.03) 0%, rgba(201, 181, 128, 0.05) 100%);
         position: relative;
         min-height: calc(100vh - 80px);
-        display: flex;
-        flex-direction: column;
     }
 
     .dashboard-footer {
-        margin-top: auto;
-        padding: 2rem 1rem 2.5rem;
+        padding: 3rem 0 1rem;
         text-align: center;
     }
 
@@ -117,13 +114,13 @@
             </a>
             {% endfor %}
         </div>
-    </div>
 
-    <footer class="dashboard-footer relative z-10">
-        <p class="text-xs text-gray-500 dark:text-gray-500">
-            made with
-            <a href="https://www.cubixone.eu" target="_blank" rel="noopener noreferrer">cubixone</a>
-        </p>
-    </footer>
+        <footer class="dashboard-footer">
+            <p class="text-xs text-gray-500 dark:text-gray-500">
+                made with
+                <a href="https://www.cubixone.eu" target="_blank" rel="noopener noreferrer">cubixone</a>
+            </p>
+        </footer>
+    </div>
 </div>
 {% endblock %}
