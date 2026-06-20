@@ -308,18 +308,18 @@ class Product(AbstractBaseModel):
 
     # ── Preços ───────────────────────────────────────────────────────
     sale_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
+        max_digits=14,
+        decimal_places=6,
         default=0,
         verbose_name='Preço de Venda',
-        help_text='Preço de venda em € por unidade de stock (UdM principal).',
+        help_text='Preço de venda em € por unidade de stock (UdM principal). Ex: 0,005000 €/g.',
     )
     cost_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
+        max_digits=14,
+        decimal_places=6,
         default=0,
         verbose_name='Preço de Custo',
-        help_text='Custo unitário em € por unidade de stock (UdM principal).',
+        help_text='Custo unitário em € por unidade de stock (UdM principal). Ex: 0,002000 €/g.',
     )
     tax_rate = models.DecimalField(
         max_digits=5,
@@ -710,7 +710,7 @@ class StockMovement(AbstractBaseModel):
                 new_total_value = current_value + qty * line_cost
 
                 new_avg = (
-                    (new_total_value / new_total_qty).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+                    (new_total_value / new_total_qty).quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP)
                     if new_total_qty > 0
                     else line_cost
                 )

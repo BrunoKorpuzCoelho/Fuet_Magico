@@ -31,7 +31,7 @@ def unit_price_to_product_uom(unit_price, line_uom, product) -> Decimal:
     if uom.pk == product_uom.pk:
         return price
     return (price * product_uom.factor / uom.factor).quantize(
-        Decimal('0.0001'), rounding=ROUND_HALF_UP
+        Decimal('0.000001'), rounding=ROUND_HALF_UP
     )
 
 

@@ -336,16 +336,19 @@ def purchase_order_confirm(request, pk):
                 product=line.product,
                 quantity=line.quantity,
                 unit_price=line.unit_price,
-                uom=line.uom,
+                uom=line.uom or line.product.uom_purchase or line.product.uom,
                 tax_rate=line.tax_rate,
                 discount_pct=line.discount_pct,
             )
             for line in po_lines
         ])
 
+        # 4. Validate receipt — updates stock (in product.uom) and cost_price (€/UdM stock)
+        movement.action_validate()
+
         _log(
             order, request.user, 'STATUS_CHANGE',
-            f'Estado alterado: Rascunho → Confirmado. Receção {movement.reference} criada.',
+            f'Estado alterado: Rascunho → Confirmado. Receção {movement.reference} validada.',
             {
                 'field':       'status',
                 'old':         'draft',
@@ -357,7 +360,7 @@ def purchase_order_confirm(request, pk):
 
     messages.success(
         request,
-        f'Encomenda {order.order_number} confirmada. Receção {movement.reference} criada em rascunho.',
+        f'Encomenda {order.order_number} confirmada. Stock e preços de custo actualizados (receção {movement.reference}).',
     )
     return redirect('purchases:order_edit', pk=order.pk)
 
@@ -365,7 +368,9 @@ def purchase_order_confirm(request, pk):
 @login_required
 @require_POST
 def purchase_order_receive(request, pk):
-    """Mark a CONFIRMED order as RECEIVED and create stock movements."""
+    """Mark a CONFIRMED order as RECEIVED (validates receipt if still pending)."""
+    from apps.inventory.models import StockMovement
+
     order = get_object_or_404(
         filter_by_company(PurchaseOrder.objects.prefetch_related('lines__product'), request),
         pk=pk,
@@ -374,11 +379,23 @@ def purchase_order_receive(request, pk):
         messages.error(request, 'Apenas encomendas confirmadas podem ser recebidas.')
         return redirect('purchases:order_detail', pk=order.pk)
 
-    # TODO (7.8): create StockMovements / StockMovementLines for each line
+    movement = StockMovement.objects.filter(
+        origin=order.order_number,
+        movement_type='receipt',
+        owner_company=order.owner_company,
+    ).order_by('-created_at').first()
+
+    if movement and movement.state == 'draft':
+        try:
+            movement.action_validate()
+        except Exception as exc:
+            messages.error(request, f'Erro ao validar receção: {exc}')
+            return redirect('purchases:order_edit', pk=order.pk)
+
     order.status = PurchaseOrder.Status.RECEIVED
     order.save(update_fields=['status'])
     _log(order, request.user, 'STATUS_CHANGE', 'Estado alterado: Confirmado → Recebido.', {'field': 'status', 'old': 'confirmed', 'new': 'received'})
-    messages.success(request, f'Encomenda {order.order_number} recebida. Stock actualizado.')
+    messages.success(request, f'Encomenda {order.order_number} recebida.')
     return redirect('purchases:order_edit', pk=order.pk)
 
 
