@@ -177,6 +177,10 @@ def bom_create(request):
             if not bom.owner_company:
                 bom.owner_company = get_active_company(request)
             bom.save()
+            # Marcar produto como manufaturado ao associar uma receita
+            if not bom.product.is_manufactured:
+                bom.product.is_manufactured = True
+                bom.product.save(update_fields=['is_manufactured', 'updated_at'])
             if bom.product.is_manufactured:
                 bom.sync_to_product()
             messages.success(request, f'Receita "{bom.product.name}" criada com sucesso!')

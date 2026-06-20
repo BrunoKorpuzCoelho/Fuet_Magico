@@ -85,7 +85,7 @@ class ProductForm(forms.ModelForm):
         fields = [
             'name', 'internal_reference', 'reference', 'barcode',
             'product_type', 'category',
-            'uom', 'uom_purchase',
+            'uom', 'uom_purchase', 'conversion_loss_pct',
             'sale_price', 'cost_price', 'tax_rate',
             'description', 'image',
             'min_stock', 'is_manufactured',
@@ -116,6 +116,15 @@ class ProductForm(forms.ModelForm):
         self.fields['uom_purchase'].queryset = uom_qs
         self.fields['uom_purchase'].required = False
         self.fields['uom_purchase'].empty_label = '— Mesma que UdM principal —'
+
+        self.fields['conversion_loss_pct'].required = False
+        self.fields['conversion_loss_pct'].widget.attrs.update({
+            'class': 'form-input w-full',
+            'step': '0.01',
+            'min': '0',
+            'max': '100',
+            'placeholder': '0',
+        })
 
         # Style min_stock widget
         self.fields['min_stock'].required = False

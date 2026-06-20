@@ -105,7 +105,7 @@ class ProductAdmin(admin.ModelAdmin):
             'fields': ['product_type', 'category']
         }),
         ('Unidades de Medida', {
-            'fields': ['uom', 'uom_purchase']
+            'fields': ['uom', 'uom_purchase', 'conversion_loss_pct']
         }),
         ('Preços', {
             'fields': ['sale_price', 'cost_price', 'tax_rate']

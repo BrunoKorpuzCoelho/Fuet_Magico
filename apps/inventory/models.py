@@ -305,6 +305,16 @@ class Product(AbstractBaseModel):
         verbose_name='UdM de Compra',
         help_text='UdM usada nas compras (pode diferir). Ex: compra em caixas, vende à unidade.',
     )
+    conversion_loss_pct = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name='Perda na Conversão (%)',
+        help_text=(
+            'Percentagem de perda ao converter da UdM de compra para a UdM de stock. '
+            'Ex: 10% — compra 1 kg, entram 900 g em stock (UdM principal).'
+        ),
+    )
 
     # ── Preços ───────────────────────────────────────────────────────
     sale_price = models.DecimalField(
@@ -693,15 +703,26 @@ class StockMovement(AbstractBaseModel):
         products_to_save = []
 
         for line in self.lines.select_related('product', 'product__uom', 'uom'):
-            qty = quantity_to_product_uom(line.quantity, line.uom, line.product).copy_abs()
             product = line.product
+
+            if is_in:
+                qty = quantity_to_product_uom(
+                    line.quantity, line.uom, product, apply_loss=True,
+                ).copy_abs()
+            else:
+                qty = quantity_to_product_uom(
+                    line.quantity, line.uom, product, apply_loss=False,
+                ).copy_abs()
+
             current_cost = Decimal(str(product.cost_price or 0))
 
             if is_in:
                 # ── Weighted Average Cost recalculation (all in product.uom) ──
                 current_qty = Decimal(str(product.get_on_hand_quantity()))
                 line_cost = (
-                    unit_price_to_product_uom(line.unit_price, line.uom, product)
+                    unit_price_to_product_uom(
+                        line.unit_price, line.uom, product, apply_loss=True,
+                    )
                     if line.unit_price else current_cost
                 )
 
@@ -776,7 +797,14 @@ class StockMovement(AbstractBaseModel):
             from decimal import Decimal
             from apps.inventory.uom_utils import quantity_to_product_uom
             for line in self.lines.select_related('product', 'product__uom', 'uom'):
-                qty = abs(quantity_to_product_uom(line.quantity, line.uom, line.product))
+                if is_in:
+                    qty = abs(quantity_to_product_uom(
+                        line.quantity, line.uom, line.product, apply_loss=True,
+                    ))
+                else:
+                    qty = abs(quantity_to_product_uom(
+                        line.quantity, line.uom, line.product, apply_loss=False,
+                    ))
                 if is_in:
                     StockQuant.update_quantity(line.product, self.warehouse, qty, 'subtract')
                 elif is_out:
@@ -880,13 +908,15 @@ class StockMovementLine(AbstractBaseModel):
             self.tax_rate = self.product.tax_rate
         super().save(*args, **kwargs)
 
-    def quantity_in_product_uom(self):
+    def quantity_in_product_uom(self, apply_loss=False):
         from apps.inventory.uom_utils import quantity_to_product_uom
-        return quantity_to_product_uom(self.quantity, self.uom, self.product)
+        return quantity_to_product_uom(self.quantity, self.uom, self.product, apply_loss=apply_loss)
 
-    def unit_price_in_product_uom(self):
+    def unit_price_in_product_uom(self, apply_loss=False):
         from apps.inventory.uom_utils import unit_price_to_product_uom
-        return unit_price_to_product_uom(self.unit_price, self.uom, self.product)
+        return unit_price_to_product_uom(
+            self.unit_price, self.uom, self.product, apply_loss=apply_loss,
+        )
 
     @property
     def line_total(self):

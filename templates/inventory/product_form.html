@@ -188,6 +188,26 @@
                         </select>
                     </div>
 
+                    <!-- Perda na Conversão -->
+                    <div>
+                        <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
+                            Perda na Conversão
+                            <span class="text-[10px] text-gray-600">(%)</span>
+                        </label>
+                        <input id="id_conversion_loss_pct"
+                               name="conversion_loss_pct"
+                               type="number"
+                               step="0.01"
+                               min="0"
+                               max="100"
+                               placeholder="0"
+                               class="flex h-9 w-full rounded-md border border-gray-700 bg-[#1a2332] px-3 text-sm text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                               value="{{ form.conversion_loss_pct.value|unlocalize|default:'0' }}">
+                        <p class="mt-1 text-xs text-gray-500">
+                            Ex: 10% — compra 1 kg, entram 900 g em stock (UdM principal).
+                        </p>
+                    </div>
+
                     <!-- Preço de Venda -->
                     <div>
                         <label class="font-medium mb-2 flex items-center gap-2 text-xs text-gray-500">
