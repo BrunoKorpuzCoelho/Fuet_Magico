@@ -1856,7 +1856,6 @@ def product_search(request):
         qs = qs.filter(is_manufactured=True)
 
     if components:
-        qs = qs.filter(product_type__in=['storable', 'consumable'])
         exclude_id = request.GET.get('exclude_product_id', '').strip()
         if exclude_id:
             qs = qs.exclude(pk=exclude_id)
