@@ -1833,27 +1833,26 @@ def product_search(request):
     q             = request.GET.get('q', '').strip()
     movement_type = request.GET.get('movement_type', 'receipt')
     company       = get_active_company(request)
+    bom_product   = request.GET.get('manufactured') == '1'
 
-    if not q:
+    # Lista de produtos manufaturados (BOM): permite pesquisa vazia ao focar o campo
+    if not q and not bom_product:
         return JsonResponse({'results': []})
 
     qs = filter_by_company(
         Product.objects.filter(is_active=True).select_related('uom', 'uom_purchase'),
         request,
-    ).filter(
-        Q(name__icontains=q)
-        | Q(internal_reference__icontains=q)
-        | Q(reference__icontains=q)
     )
 
-    if request.GET.get('manufactured') == '1':
+    if q:
+        qs = qs.filter(
+            Q(name__icontains=q)
+            | Q(internal_reference__icontains=q)
+            | Q(reference__icontains=q)
+        )
+
+    if bom_product:
         qs = qs.filter(is_manufactured=True)
-        # Produto final da BOM: só os que ainda não têm receita (OneToOne)
-        include_id = request.GET.get('include_product_id', '').strip()
-        if include_id:
-            qs = qs.filter(Q(bom__isnull=True) | Q(pk=include_id))
-        else:
-            qs = qs.filter(bom__isnull=True)
 
     if request.GET.get('for_bom') == '1':
         from django.db.models import Q
@@ -1864,7 +1863,8 @@ def product_search(request):
         else:
             qs = qs.filter(bom__isnull=True)
 
-    qs = qs[:7]
+    limit = 20 if (bom_product and not q) else 7
+    qs = qs[:limit]
 
     results = []
     from apps.inventory.uom_utils import unit_price_from_product_uom

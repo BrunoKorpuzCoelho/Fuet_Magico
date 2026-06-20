@@ -71,7 +71,7 @@
                             </div>
 
                             <!-- Dropdown results -->
-                            <div x-show="showResults && (results.length > 0 || (query.length > 0 && !isLoading))"
+                            <div x-show="showResults && (results.length > 0 || isLoading || query.length > 0)"
                                  x-cloak
                                  x-transition
                                  class="absolute z-50 w-full max-w-xl mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-72 overflow-y-auto">
@@ -494,7 +494,14 @@ function productAutocomplete() {
             this.isLoading   = true;
             this.showResults = true;
             try {
-                const url  = `{% url 'inventory:product_search' %}?q=${encodeURIComponent(this.query)}&manufactured=1{% if bom and bom.product_id %}&include_product_id={{ bom.product_id }}{% endif %}`;
+                const params = new URLSearchParams({
+                    manufactured: '1',
+                    q: this.query || '',
+                });
+                {% if bom and bom.product_id %}
+                params.set('include_product_id', '{{ bom.product_id }}');
+                {% endif %}
+                const url = `{% url 'inventory:product_search' %}?${params}`;
                 const resp = await fetch(url);
                 if (!resp.ok) throw new Error(resp.status);
                 const data = await resp.json();
