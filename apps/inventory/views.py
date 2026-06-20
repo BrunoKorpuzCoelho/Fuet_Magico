@@ -1848,6 +1848,12 @@ def product_search(request):
 
     if request.GET.get('manufactured') == '1':
         qs = qs.filter(is_manufactured=True)
+        # Produto final da BOM: só os que ainda não têm receita (OneToOne)
+        include_id = request.GET.get('include_product_id', '').strip()
+        if include_id:
+            qs = qs.filter(Q(bom__isnull=True) | Q(pk=include_id))
+        else:
+            qs = qs.filter(bom__isnull=True)
 
     if request.GET.get('for_bom') == '1':
         from django.db.models import Q
