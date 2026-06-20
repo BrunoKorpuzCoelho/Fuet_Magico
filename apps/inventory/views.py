@@ -1834,8 +1834,9 @@ def product_search(request):
     movement_type = request.GET.get('movement_type', 'receipt')
     company       = get_active_company(request)
     bom_product   = request.GET.get('manufactured') == '1'
+    components    = request.GET.get('components') == '1'
 
-    # Lista de produtos manufaturados (BOM): permite pesquisa vazia ao focar o campo
+    # Produto final BOM: permite pesquisa vazia ao focar; componentes exigem texto
     if not q and not bom_product:
         return JsonResponse({'results': []})
 
@@ -1854,16 +1855,16 @@ def product_search(request):
     if bom_product:
         qs = qs.filter(is_manufactured=True)
 
-    if request.GET.get('for_bom') == '1':
-        from django.db.models import Q
-        qs = qs.filter(product_type='storable')
-        include_id = request.GET.get('include_product_id', '').strip()
-        if include_id:
-            qs = qs.filter(Q(bom__isnull=True) | Q(pk=include_id))
-        else:
-            qs = qs.filter(bom__isnull=True)
+    if components:
+        qs = qs.filter(product_type__in=['storable', 'consumable'])
+        exclude_id = request.GET.get('exclude_product_id', '').strip()
+        if exclude_id:
+            qs = qs.exclude(pk=exclude_id)
 
-    limit = 20 if (bom_product and not q) else 7
+    if request.GET.get('for_bom') == '1':
+        qs = qs.filter(product_type='storable')
+
+    limit = 20 if (bom_product and not q) else (15 if components else 7)
     qs = qs[:limit]
 
     results = []
