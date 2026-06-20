@@ -263,6 +263,11 @@ class PurchaseOrderLine(AbstractBaseModel):
     def __str__(self):
         return f'{self.product.name} × {self.quantity}'
 
+    def save(self, *args, **kwargs):
+        if not self.uom_id and self.product_id:
+            self.uom = self.product.uom_purchase or self.product.uom
+        super().save(*args, **kwargs)
+
     # ── Calculated properties ────────────────────────────────────────
     @property
     def line_total(self):

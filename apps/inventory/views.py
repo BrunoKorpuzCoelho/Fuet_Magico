@@ -1852,22 +1852,27 @@ def product_search(request):
     qs = qs[:7]
 
     results = []
+    from apps.inventory.uom_utils import unit_price_from_product_uom
     for p in qs:
-        price = float(p.cost_price) if movement_type == 'receipt' else float(p.sale_price)
-        # For receipts, suggest the purchase UoM (if defined); otherwise fall back to base UoM
+        base_price = p.cost_price if movement_type == 'receipt' else p.sale_price
+        # Receipts may use purchase UoM; sales/deliveries always use stock UoM
         if movement_type == 'receipt' and p.uom_purchase_id:
+            line_uom        = p.uom_purchase
             line_uom_id     = str(p.uom_purchase.pk)
             line_uom_symbol = p.uom_purchase.symbol
+            default_price   = float(unit_price_from_product_uom(base_price, line_uom, p))
         else:
+            line_uom        = p.uom
             line_uom_id     = str(p.uom.pk) if p.uom else None
             line_uom_symbol = p.uom.symbol if p.uom else ''
+            default_price   = float(base_price or 0)
         results.append({
             'id':                   str(p.pk),
             'name':                 p.name,
             'internal_reference':   p.internal_reference or '',
             'cost_price':           float(p.cost_price),
             'sale_price':           float(p.sale_price),
-            'default_price':        price,
+            'default_price':        default_price,
             'uom_id':               str(p.uom.pk) if p.uom else None,
             'uom_name':             p.uom.name if p.uom else '',
             'uom_symbol':           p.uom.symbol if p.uom else '',
@@ -1875,6 +1880,9 @@ def product_search(request):
             'uom_purchase_symbol':  p.uom_purchase.symbol if p.uom_purchase else '',
             'line_uom_id':          line_uom_id,
             'line_uom_symbol':      line_uom_symbol,
+            'stock_uom_id':         str(p.uom.pk) if p.uom else None,
+            'stock_uom_symbol':     p.uom.symbol if p.uom else '',
+            'on_hand':              float(p.get_on_hand_quantity()),
             'tax_rate':             float(p.tax_rate),
         })
     return JsonResponse({'results': results})

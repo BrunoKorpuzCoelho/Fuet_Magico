@@ -170,6 +170,23 @@ class UoM(AbstractBaseModel):
         from decimal import Decimal
         return Decimal(str(qty)) * self.factor / target_uom.factor
 
+    def convert_price_to(self, price, target_uom):
+        """Convert a unit price from this UoM to target_uom.
+
+        Example: 2 €/kg → 0.002 €/g
+        Formula: price × target.factor / self.factor
+        """
+        from decimal import Decimal, ROUND_HALF_UP
+        if self.category_id != target_uom.category_id:
+            raise ValueError(
+                f'Não é possível converter preço entre "{self.category}" e "{target_uom.category}".'
+            )
+        if self.pk == target_uom.pk:
+            return Decimal(str(price or 0))
+        return (Decimal(str(price or 0)) * target_uom.factor / self.factor).quantize(
+            Decimal('0.0001'), rounding=ROUND_HALF_UP
+        )
+
 
 class Category(AbstractBaseModel):
     """Product category with optional hierarchy (subcategories via parent FK)."""
@@ -277,7 +294,7 @@ class Product(AbstractBaseModel):
         on_delete=models.PROTECT,
         related_name='products',
         verbose_name='Unidade de Medida',
-        help_text='UdM principal (stock e venda).',
+        help_text='UdM principal (stock e venda). Stock, cost_price e sale_price são sempre nesta unidade.',
     )
     uom_purchase = models.ForeignKey(
         UoM,
@@ -295,14 +312,14 @@ class Product(AbstractBaseModel):
         decimal_places=2,
         default=0,
         verbose_name='Preço de Venda',
-        help_text='Preço de venda em €.',
+        help_text='Preço de venda em € por unidade de stock (UdM principal).',
     )
     cost_price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=0,
         verbose_name='Preço de Custo',
-        help_text='Custo unitário em €.',
+        help_text='Custo unitário em € por unidade de stock (UdM principal).',
     )
     tax_rate = models.DecimalField(
         max_digits=5,
@@ -610,9 +627,12 @@ class StockMovement(AbstractBaseModel):
               → stores it in line.cost_price_at_move  (cost of goods sold)
               → Product.cost_price is unchanged (average stays the same)
 
-        Quantities are stored exactly as entered (no UoM conversion).
+        Quantities and prices on movement lines may use any compatible UoM.
+        Stock (StockQuant) and weighted-average cost are always normalised to
+        product.uom via convert_to / unit_price_to_product_uom.
         """
         from decimal import Decimal, ROUND_HALF_UP
+        from apps.inventory.uom_utils import quantity_to_product_uom, unit_price_to_product_uom
         if self.state != 'draft':
             raise ValidationError('Apenas movimentos em rascunho podem ser validados.')
 
@@ -633,29 +653,35 @@ class StockMovement(AbstractBaseModel):
         # de remessa), but the actual stock deduction targets the components.
         if is_out:
             shortages = []
-            for line in self.lines.select_related('product'):
-                qty_needed = abs(Decimal(str(line.quantity)))
+            for line in self.lines.select_related('product', 'product__uom', 'uom'):
                 product = line.product
+                qty_needed = quantity_to_product_uom(line.quantity, line.uom, product)
                 bom = getattr(product, 'bom', None)
                 if product.is_manufactured and bom and bom.qty_produced:
-                    # Check each component
+                    # Check each component (quantities normalised to component.uom)
                     multiplier = qty_needed / Decimal(str(bom.qty_produced))
-                    for bom_line in bom.lines.select_related('component').all():
+                    for bom_line in bom.lines.select_related('component', 'component__uom', 'uom').all():
                         comp = bom_line.component
-                        comp_qty_needed = (
-                            Decimal(str(bom_line.quantity)) * multiplier
-                        ).quantize(Decimal('0.0001'))
+                        raw_comp_qty = Decimal(str(bom_line.quantity)) * multiplier
+                        line_uom = bom_line.uom or comp.uom
+                        try:
+                            comp_qty_needed = line_uom.convert_to(raw_comp_qty, comp.uom)
+                        except ValueError:
+                            comp_qty_needed = raw_comp_qty
+                        comp_qty_needed = comp_qty_needed.quantize(Decimal('0.0001'))
                         available = Decimal(str(comp.get_on_hand_quantity()))
                         if available < comp_qty_needed:
                             shortages.append(
                                 f'{comp.name} (componente de {product.name}): '
-                                f'disponível {available:f}, necessário {comp_qty_needed:f}'
+                                f'disponível {available:f} {comp.uom.symbol}, '
+                                f'necessário {comp_qty_needed:f} {comp.uom.symbol}'
                             )
                 else:
                     available = Decimal(str(product.get_on_hand_quantity()))
                     if available < qty_needed:
                         shortages.append(
-                            f'{product.name}: disponível {available:f}, necessário {qty_needed:f}'
+                            f'{product.name}: disponível {available:f} {product.uom.symbol}, '
+                            f'necessário {qty_needed:f} {product.uom.symbol}'
                         )
             if shortages:
                 raise ValidationError(
@@ -666,15 +692,18 @@ class StockMovement(AbstractBaseModel):
         lines_to_save = []
         products_to_save = []
 
-        for line in self.lines.select_related('product'):
-            qty = abs(Decimal(str(line.quantity)))
+        for line in self.lines.select_related('product', 'product__uom', 'uom'):
+            qty = quantity_to_product_uom(line.quantity, line.uom, line.product).copy_abs()
             product = line.product
             current_cost = Decimal(str(product.cost_price or 0))
 
             if is_in:
-                # ── Weighted Average Cost recalculation ─────────────────
+                # ── Weighted Average Cost recalculation (all in product.uom) ──
                 current_qty = Decimal(str(product.get_on_hand_quantity()))
-                line_cost = Decimal(str(line.unit_price)) if line.unit_price else current_cost
+                line_cost = (
+                    unit_price_to_product_uom(line.unit_price, line.uom, product)
+                    if line.unit_price else current_cost
+                )
 
                 current_value = current_qty * current_cost
                 new_total_qty = current_qty + qty
@@ -687,7 +716,6 @@ class StockMovement(AbstractBaseModel):
                 )
 
                 line.cost_price_at_move = new_avg
-                # Update the product's running average cost
                 product.cost_price = new_avg
                 products_to_save.append(product)
 
@@ -696,19 +724,19 @@ class StockMovement(AbstractBaseModel):
             elif is_out:
                 bom = getattr(product, 'bom', None)
                 if product.is_manufactured and bom and bom.qty_produced:
-                    # ── Manufactured product: deduct BOM components ──────
-                    # The line records the finished product cost for the delivery note.
-                    # Stock is deducted from each component proportionally.
                     multiplier = qty / Decimal(str(bom.qty_produced))
                     line.cost_price_at_move = Decimal(str(product.cost_price or 0))
-                    for bom_line in bom.lines.select_related('component', 'uom').all():
+                    for bom_line in bom.lines.select_related('component', 'component__uom', 'uom').all():
                         comp = bom_line.component
-                        comp_qty = (
-                            Decimal(str(bom_line.quantity)) * multiplier
-                        ).quantize(Decimal('0.0001'))
+                        raw_comp_qty = Decimal(str(bom_line.quantity)) * multiplier
+                        line_uom = bom_line.uom or comp.uom
+                        try:
+                            comp_qty = line_uom.convert_to(raw_comp_qty, comp.uom)
+                        except ValueError:
+                            comp_qty = raw_comp_qty
+                        comp_qty = comp_qty.quantize(Decimal('0.0001'))
                         StockQuant.update_quantity(comp, self.warehouse, comp_qty, 'subtract')
                 else:
-                    # ── Regular product: deduct directly ────────────────
                     line.cost_price_at_move = current_cost
                     StockQuant.update_quantity(product, self.warehouse, qty, 'subtract')
 
@@ -746,13 +774,12 @@ class StockMovement(AbstractBaseModel):
                 or (self.movement_type == 'adjustment' and self.adjustment_direction == 'out')
             )
             from decimal import Decimal
-            for line in self.lines.select_related('product'):
-                qty = abs(Decimal(str(line.quantity)))
+            from apps.inventory.uom_utils import quantity_to_product_uom
+            for line in self.lines.select_related('product', 'product__uom', 'uom'):
+                qty = abs(quantity_to_product_uom(line.quantity, line.uom, line.product))
                 if is_in:
-                    # Was an entry → subtract it back
                     StockQuant.update_quantity(line.product, self.warehouse, qty, 'subtract')
                 elif is_out:
-                    # Was an exit → add it back
                     StockQuant.update_quantity(line.product, self.warehouse, qty, 'add')
 
         self.state = 'cancelled'
@@ -843,11 +870,23 @@ class StockMovementLine(AbstractBaseModel):
     def save(self, *args, **kwargs):
         # Inherit uom from product if not set
         if not self.uom_id and self.product_id:
-            self.uom = self.product.uom
+            movement = getattr(self, 'stock_movement', None)
+            if movement and movement.movement_type == 'receipt' and self.product.uom_purchase_id:
+                self.uom = self.product.uom_purchase
+            else:
+                self.uom = self.product.uom
         # Copy tax_rate from product on first save
         if not self.pk and self.product_id and not self.tax_rate:
             self.tax_rate = self.product.tax_rate
         super().save(*args, **kwargs)
+
+    def quantity_in_product_uom(self):
+        from apps.inventory.uom_utils import quantity_to_product_uom
+        return quantity_to_product_uom(self.quantity, self.uom, self.product)
+
+    def unit_price_in_product_uom(self):
+        from apps.inventory.uom_utils import unit_price_to_product_uom
+        return unit_price_to_product_uom(self.unit_price, self.uom, self.product)
 
     @property
     def line_total(self):

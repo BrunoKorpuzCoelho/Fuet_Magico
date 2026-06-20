@@ -437,10 +437,12 @@ def purchase_order_line_add(request, pk):
         except UoM.DoesNotExist:
             pass
     if not uom:
-        uom = product.uom
+        uom = product.uom_purchase or product.uom
 
     quantity   = data.get('quantity', 1)
-    unit_price = data.get('unit_price', float(product.cost_price or 0))
+    from apps.inventory.uom_utils import unit_price_from_product_uom
+    default_cost = float(unit_price_from_product_uom(product.cost_price, uom, product))
+    unit_price = data.get('unit_price', default_cost)
     tax_rate   = data.get('tax_rate', 0)
     discount_pct = data.get('discount_pct', 0)
 

@@ -306,7 +306,7 @@ def _save_line(bom, line, payload):
         return 'Componente não encontrado.', None
 
     try:
-        uom = UoM.objects.get(pk=uom_id)
+        uom = UoM.objects.get(pk=uom_id) if uom_id else component.uom
     except UoM.DoesNotExist:
         return 'Unidade de medida não encontrada.', None
 
